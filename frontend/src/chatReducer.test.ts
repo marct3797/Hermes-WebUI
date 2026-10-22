@@ -73,8 +73,47 @@ describe("chatReducer", () => {
   it("ignores events it does not render yet", () => {
     const s = chatReducer(initialState, { type: "run-accepted", runId: "r" });
     expect(ev(s, { type: "run.steered", accepted: true })).toBe(s);
-    expect(ev(s, { type: "subagent.started", id: "a", data: {} })).toBe(s);
     expect(ev(s, { type: "unknown", name: "neu", data: {} })).toBe(s);
+  });
+
+  it("shows a subagent while it runs and closes it with the reported result", () => {
+    let s = chatReducer(initialState, { type: "run-accepted", runId: "r" });
+    s = ev(s, { type: "subagent.started", id: "w1", data: { goal: "Tests schreiben", model: "mock-small" } });
+    s = ev(s, { type: "subagent.started", id: "w1", data: {} }); // doppelt gemeldet
+    expect(s.items).toHaveLength(1);
+    expect(s.items[0]).toMatchObject({ kind: "subagent", id: "w1", title: "Tests schreiben", status: "running", meta: ["mock-small"] });
+    s = ev(s, { type: "subagent.completed", id: "w1", data: { duration_s: 12.5, input_tokens: 2400, output_tokens: 310, summary: "fertig" } });
+    expect(s.items[0]).toMatchObject({ status: "ok", note: "fertig", meta: ["12,5 s", "2,4k ein · 310 aus"] });
+    s = ev(s, { type: "subagent.completed", id: "w2", data: { status: "failed", error: "Zeitlimit" } });
+    expect(s.items[1]).toMatchObject({ id: "w2", status: "error", note: "Zeitlimit", title: "Subagent" });
+  });
+
+  it("marks a steered message and reports a refused steer", () => {
+    let s = chatReducer(initialState, { type: "user-sent", text: "hi", images: [] });
+    s = chatReducer(s, { type: "run-accepted", runId: "r" });
+    s = chatReducer(s, { type: "steered", text: "lieber kurz" });
+    expect(s.items[1]).toMatchObject({ role: "user", text: "lieber kurz", mode: "steer" });
+    expect(s.runStatus).toBe("running");
+    expect(ev(s, { type: "run.steered", accepted: false }).error).toMatch(/nicht angenommen/);
+  });
+
+  it("keeps queued messages apart from the conversation until they are sent", () => {
+    let s = chatReducer(initialState, { type: "queue-add", text: "danach bitte", images: [] });
+    s = chatReducer(s, { type: "queue-add", text: "und das", images: ["data:image/png;base64,AA"] });
+    expect(s.items).toHaveLength(0);
+    expect(s.queued.map((q) => q.text)).toEqual(["danach bitte", "und das"]);
+    s = chatReducer(s, { type: "queue-remove", id: s.queued[0].id });
+    expect(s.queued.map((q) => q.text)).toEqual(["und das"]);
+  });
+
+  it("stamps approvals with the request and decision time", () => {
+    let s = chatReducer(initialState, { type: "run-accepted", runId: "r" });
+    s = ev(s, { type: "approval.requested", command: "rm -r build", reason: "", timeout_s: 300, choices: ["once", "deny"], smart_denied: true });
+    const ask = s.items[0];
+    expect(ask).toMatchObject({ kind: "approval", timeoutS: 300, smartDenied: true, choices: ["once", "deny"] });
+    expect(ask.kind === "approval" && ask.at).toBeGreaterThan(0);
+    s = ev(s, { type: "approval.responded", choice: "once" });
+    expect(s.items[0].kind === "approval" && s.items[0].decidedAt).toBeGreaterThan(0);
   });
 
   it("flags a lost connection only while running", () => {
@@ -95,5 +134,13 @@ describe("parsers", () => {
     expect(sessionList({ sessions: [{ id: "1", title: "T" }] })[0].title).toBe("T");
     expect(sessionList([{ id: "2" }])[0].title).toBe("Ohne Titel");
     expect(sessionList(null)).toEqual([]);
+  });
+  it("reads the session list the way the real Hermes gateway sends it", () => {
+    const list = sessionList({ object: "list", data: [
+      { id: "a", title: "Erste", source: "cron", message_count: 4, last_active_at: 1_790_000_000, pinned: true },
+      { id: "b", title: "Weg", archived: true },
+    ], limit: 50, offset: 0, has_more: false });
+    expect(list.map((x) => x.id)).toEqual(["a"]);
+    expect(list[0]).toMatchObject({ source: "cron", messageCount: 4, pinned: true });
   });
 });

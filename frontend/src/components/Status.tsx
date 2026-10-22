@@ -17,7 +17,9 @@ const DOT_CLASS: Record<string, string> = {
   unsupported: "dot-off",
 };
 
+export const dotClass = (status: string) => DOT_CLASS[status] ?? "dot-off";
+
 export function StatusDot({ status }: { status: string }) {
   const text = STATUS_LABEL[status] ?? status;
-  return <span className={`dot ${DOT_CLASS[status] ?? "dot-off"}`.trim()} role="img" aria-label={text} title={text} />;
+  return <span className={`dot ${dotClass(status)}`.trim()} role="img" aria-label={text} title={text} />;
 }

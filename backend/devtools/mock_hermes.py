@@ -90,7 +90,7 @@ def create_mock(
         sid = body.get("session_id") or f"sess_{uuid.uuid4().hex[:8]}"
         s = st["sessions"].setdefault(sid, {"title": text[:40], "messages": [], "updated_at": 0})
         s["messages"].append({"role": "user", "content": text})
-        s["updated_at"] = time.time_ns()
+        s["updated_at"] = time.time()  # Sekunden wie bei Hermes
         rid = f"run_{uuid.uuid4().hex[:8]}"
         st["runs"][rid] = {
             "status": "running", "text": text, "session_id": sid, "subscribed": False, "answer": None,

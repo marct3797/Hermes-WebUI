@@ -23,24 +23,40 @@ export const TERMINAL_EVENTS = new Set<StreamEvent["type"]>(["run.completed", "r
 
 export type Decision = "once" | "session" | "always" | "deny";
 
+/** Wie eine Nachricht an einen laufenden Run geht: Steer schiebt sie ein, Queue stellt sie hinten an. */
+export type SendMode = "steer" | "queue";
+
 export type Item =
-  | { kind: "message"; id: string; role: "user" | "assistant"; text: string; reasoning: string; streaming: boolean; images: string[] }
-  | { kind: "tool"; id: string; name: string; preview?: string; output?: string; status: "running" | "ok" | "error"; durationMs?: number }
-  | { kind: "approval"; id: string; command: string; reason: string; timeoutS: number; choices: Decision[]; smartDenied: boolean; decision?: Decision }
-  | { kind: "clarify"; id: string; clarifyId?: string; question: string; choices: string[]; answer?: string };
+  | { kind: "message"; id: string; role: "user" | "assistant"; text: string; reasoning: string; streaming: boolean; images: string[]; mode?: SendMode; at?: number }
+  | { kind: "tool"; id: string; name: string; preview?: string; output?: string; status: "running" | "ok" | "error"; durationMs?: number; at?: number }
+  | { kind: "approval"; id: string; command: string; reason: string; timeoutS: number; choices: Decision[]; smartDenied: boolean; decision?: Decision; at: number; decidedAt?: number }
+  | { kind: "clarify"; id: string; clarifyId?: string; question: string; choices: string[]; answer?: string; at?: number }
+  | { kind: "subagent"; id: string; title: string; status: "running" | "ok" | "error"; meta: string[]; note?: string; at?: number };
 
 export type RunStatus = "idle" | "starting" | "running" | "done" | "failed" | "stopped" | "lost";
+
+/** Eine vorgemerkte Nachricht (Queue): wird gesendet, sobald der laufende Run fertig ist. */
+export type Queued = { id: string; text: string; images: string[] };
 
 export type ChatState = {
   items: Item[];
   runStatus: RunStatus;
   runId?: string;
+  startedAt?: number;
   error?: string;
   errorCode?: string;
   usage?: Usage;
+  queued: Queued[];
 };
 
-export type SessionSummary = { id: string; title: string; updatedAt?: number | string; source?: string };
+export type SessionSummary = {
+  id: string;
+  title: string;
+  updatedAt?: number | string;
+  source?: string;
+  pinned?: boolean;
+  messageCount?: number;
+};
 
 /** Ein Agent ist Host plus Runtime plus Profil bzw. Projekt: die Einheit in URL, Auswahl und API. */
 export type AgentRef = { host: string; runtime: string; agent: string };

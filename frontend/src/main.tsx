@@ -9,6 +9,6 @@ import "./styles/base.css";
 import "./styles/components.css";
 import "./styles/shell.css";
 import "./styles/cockpit.css";
-import "./styles/legacy.css";
+import "./styles/chat.css";
 
 createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);

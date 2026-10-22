@@ -65,6 +65,8 @@ export const api = {
   stop: (a: AgentRef, rid: string) => call<unknown>("POST", `${base(a)}/runs/${id(rid)}/stop`, {}),
   approve: (a: AgentRef, rid: string, decision: Decision) =>
     call<unknown>("POST", `${base(a)}/runs/${id(rid)}/approval`, { decision }),
+  steer: (a: AgentRef, rid: string, text: string) =>
+    call<unknown>("POST", `${base(a)}/runs/${id(rid)}/steer`, { text }),
   clarify: (a: AgentRef, rid: string, answer: string, clarifyId?: string) =>
     call<unknown>("POST", `${base(a)}/runs/${id(rid)}/clarify`, { answer, clarify_id: clarifyId }),
   eventsUrl: (a: AgentRef, rid: string) => `${base(a)}/runs/${id(rid)}/events`,

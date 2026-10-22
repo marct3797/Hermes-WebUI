@@ -1,32 +1,38 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Icon } from "./Icon";
 
 function CodeBlock({ children }: { children?: React.ReactNode }) {
   const [copied, setCopied] = useState(false);
   const code = (children as React.ReactElement<{ children?: string; className?: string }>)?.props;
   const lang = /language-(\w+)/.exec(code?.className ?? "")?.[1];
+  const text = String(code?.children ?? "").replace(/\n$/, "");
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(String(code?.children ?? "").replace(/\n$/, ""));
+      await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch { /* Zwischenablage nicht verfügbar */ }
   };
   return (
-    <div className="codeblock">
-      <div className="codeblock-bar">
-        <span className="mono tag">{lang ?? "text"}</span>
-        <button type="button" className="ghost small" onClick={copy}>{copied ? "Kopiert" : "Kopieren"}</button>
+    <div className="codeb">
+      <div className="hd">
+        <Icon name="file" size={12} />{lang ?? "text"}
+        <span className="row" style={{ marginLeft: "auto" }}>
+          <button type="button" className="btn btn-s btn-g codeb-copy" onClick={copy}><Icon name="copy" size={12} />{copied ? "Kopiert" : "Kopieren"}</button>
+        </span>
       </div>
-      <pre>{children}</pre>
+      <div className="pre numbered">
+        {text.split("\n").map((line, i) => <div className="cl" key={i}><span className="ln">{i + 1}</span>{line || " "}</div>)}
+      </div>
     </div>
   );
 }
 
-export function Markdown({ text }: { text: string }) {
+export function Markdown({ text, caret = false }: { text: string; caret?: boolean }) {
   return (
-    <div className="md">
+    <div className={`md${caret ? " caret" : ""}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{

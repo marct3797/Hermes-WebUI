@@ -36,9 +36,9 @@ backend/devtools/    Hermes-Mock im echten Format
 frontend/src/
   router.ts          URL-Schema ohne Router-Bibliothek
   hosts.tsx          Hosts/Agents samt Status (alle 30 s aufgefrischt)
-  components/        Shell, Sidebar (nach Host gruppiert), Chat-Bausteine
+  components/        Shell, Sidebar (nach Host gruppiert), Sigil, Icon; chat/: Rail, Session-Spalte, Verlauf, Dock, Inspector
   pages/             Cockpit, Inbox (Platzhalter), Hosts, Agent/Chat
-  tokens.css         Look A: alle Farben und Maße; styles.css nutzt nur Tokens
+  tokens.css         Look A: alle Farben und Maße; styles/*.css nutzen nur diese Tokens
 ```
 
 ### Ereignisformat

@@ -1,17 +1,24 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { api } from "./api";
 import { sessionList } from "./chatReducer";
-import type { AgentRef, SessionSummary } from "./types";
+import type { AgentRef, RunStatus, SessionSummary } from "./types";
+
+/** Zustand des Runs in der geöffneten Chat-Ansicht, damit Rail und Session-Liste ihn anzeigen können. */
+export type RunInfo = { status: RunStatus; waiting: boolean };
+export const NO_RUN: RunInfo = { status: "idle", waiting: false };
 
 type ShellState = {
   openMenu: () => void;
   sessions: SessionSummary[];
   sessionsLoading: boolean;
   refreshSessions: () => void;
+  run: RunInfo;
+  setRun: (r: RunInfo) => void;
 };
 
 export const ShellContext = createContext<ShellState>({
   openMenu: () => undefined, sessions: [], sessionsLoading: false, refreshSessions: () => undefined,
+  run: NO_RUN, setRun: () => undefined,
 });
 
 export const useShell = () => useContext(ShellContext);

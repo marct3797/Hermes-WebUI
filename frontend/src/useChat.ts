@@ -87,6 +87,28 @@ export function useChat({ agent, sessionId, model, onSession, onRunEnd }: Opts) 
     }
   }, [agent, model, attach]);
 
+  /** Nachricht in den laufenden Run einschieben (Steer). */
+  const steer = useCallback(async (text: string) => {
+    if (!agent || !state.runId) return;
+    dispatch({ type: "steered", text });
+    await api.steer(agent, state.runId, text).catch((e: Error) => dispatch({ type: "notice", error: e.message }));
+  }, [agent, state.runId]);
+
+  const enqueue = useCallback((text: string, images: string[]) => dispatch({ type: "queue-add", text, images }), []);
+  const dropQueued = useCallback((id: string) => dispatch({ type: "queue-remove", id }), []);
+  const sendQueued = useCallback((id: string) => {
+    const item = state.queued.find((q) => q.id === id);
+    if (!item) return;
+    dispatch({ type: "queue-remove", id });
+    void send(item.text, item.images);
+  }, [state.queued, send]);
+
+  // Vorgemerkte Nachrichten gehen erst nach einem sauberen Ende los; nach Fehler oder Stopp entscheidet die Person.
+  useEffect(() => {
+    if (state.runStatus !== "done" || state.queued.length === 0) return;
+    sendQueued(state.queued[0].id);
+  }, [state.runStatus, state.queued, sendQueued]);
+
   const stop = useCallback(async () => {
     if (agent && state.runId) await api.stop(agent, state.runId).catch(() => undefined);
   }, [agent, state.runId]);
@@ -111,5 +133,5 @@ export function useChat({ agent, sessionId, model, onSession, onRunEnd }: Opts) 
 
   const reconnect = useCallback(() => { if (agent && state.runId) attach(state.runId, agent); }, [agent, state.runId, attach]);
 
-  return { state, send, stop, decide, answer, reconnect };
+  return { state, send, steer, enqueue, dropQueued, sendQueued, stop, decide, answer, reconnect };
 }

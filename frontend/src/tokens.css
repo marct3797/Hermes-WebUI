@@ -14,15 +14,3 @@
   --sans:"Inter Variable",Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:"JetBrains Mono Variable","JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
-
-/* Übergangs-Aliase für den alten Chat (legacy.css). Entfallen, sobald der Chat im neuen Design steht (Block 2). */
-:root{
-  --panel:var(--s1); --raised:var(--s2);
-  --accent:var(--crim); --accent-hover:#f43f5e; --accent-press:var(--crim-lo);
-  --alarm:var(--ruby); --wine:var(--crim-lo); --alarm-wash:rgba(153,27,27,.2); --scrim:rgba(0,0,0,.6);
-  --text:var(--t1); --text-2:var(--t2); --text-3:var(--t3);
-  --font:var(--sans); --radius:4px; --radius-lg:8px;
-  --space-xs:4px; --space-sm:8px; --space-md:12px; --space-lg:16px; --space-xl:24px;
-  --gutter:20px; --reading:768px; --sidebar:272px;
-  color-scheme:dark;
-}

@@ -103,7 +103,9 @@ describe("App-Shell", () => {
     open("/h/hikari/hermes/raiden/chat");
     render(<App />);
     expect(await screen.findByPlaceholderText("Nachricht an raiden…")).toBeEnabled();
-    expect(await screen.findByRole("link", { name: /Erster Chat/ })).toHaveAttribute("href", "/h/hikari/hermes/raiden/chat/s1");
+    // Die Session-Spalte zeigt die Liste; die Schublade der Seitenleiste (nur auf schmalen Schirmen sichtbar) führt dieselben Ziele.
+    const column = await screen.findByRole("complementary", { name: "Sessions von raiden" });
+    expect(await within(column).findByRole("link", { name: /Erster Chat/ })).toHaveAttribute("href", "/h/hikari/hermes/raiden/chat/s1");
     expect(await screen.findByText("Hermes 0.20.4")).toBeInTheDocument();
     expect(await screen.findByRole("combobox", { name: "Modell" })).toBeInTheDocument();
   });
