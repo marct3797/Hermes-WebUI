@@ -8,9 +8,12 @@
   --line: #27272a;        /* Haarlinien */
 
   --accent: #e11d48;      /* Senden, Freigabe nötig, laufender Stream, Fokus */
+  --accent-hover: #f0285a;
   --accent-press: #991b1b;/* gedrückt, Rand von Abzeichen */
   --alarm: #ef4444;       /* Stopp, Fehler */
   --wine: #991b1b;
+  --alarm-wash: rgb(153 27 27 / .2);  /* Fläche hinter Fehlern und Stopp */
+  --scrim: rgb(0 0 0 / .6);           /* Abdunkelung hinter der Schublade */
 
   --text: #f4f4f5;
   --text-2: #a1a1aa;
