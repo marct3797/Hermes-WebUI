@@ -118,6 +118,7 @@ Das Eventformat und die Routen stammen aus der Quelltext-Lesung (Hermes 0.20.4),
 Abweichungen zeigen sich als `unknown`-Events oder Probe-Fehler und werden im Hermes-Adapter behoben.
 
 - Antwortet `/p/<profil>/…` am Container-Gateway wie erwartet? Passen Payloads und Events (ein Test-Run mit Key, Marc gibt frei)?
+  Dafür gibt es `backend/devtools/probe_hermes.py`: schickt einen harmlosen Prompt und gibt nur die **Form** der Antworten aus (Texte als Länge, nie den Key).
 - Liefert `POST /v1/runs` eine `session_id`, und wie setzt der Client eine neue Session fort (`session_id` im Body oder vorher `POST /api/sessions`)?
 - Form von `/v1/capabilities` (Flags für die Fähigkeiten) und Name/Route der Rückfrage (Clarify): im Quelltext nicht belegt.
 - Forgejo: OIDC-Discovery, `sub`-Kennung, ob `prompt=login` und `max_age=0` eine neue Anmeldung erzwingen (Step-up).
