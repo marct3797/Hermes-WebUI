@@ -1,13 +1,14 @@
 [project]
 name = "hermes-webui-bff"
-version = "0.1.0"
-description = "Backend for Frontend der Hermes WebUI: bündelt den Hermes API-Server pro Profil"
+version = "0.2.0"
+description = "Backend for Frontend der Hermes WebUI: Hosts, Runtime-Adapter, Login und Sicherheitsbasis"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.115",
   "uvicorn[standard]>=0.30",
   "httpx>=0.27",
   "pydantic-settings>=2.4",
+  "PyJWT[crypto]>=2.8",
 ]
 
 [project.optional-dependencies]

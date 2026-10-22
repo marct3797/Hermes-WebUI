@@ -6,3 +6,6 @@ __pycache__/
 .venv/
 .env
 backend/profiles.json
+*.egg-info/
+audit.log
+backend/hosts.json

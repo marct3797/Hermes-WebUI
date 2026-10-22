@@ -12,12 +12,22 @@ from .config import Settings
 
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 
-# Das UI lädt alles von sich selbst. Bilder als data:/blob: für Anhänge und Markdown-Bilder.
+# Das UI lädt alles von sich selbst (Schriften und Skripte werden mitgebaut, kein CDN).
+# Bilder als data:/blob: für Anhänge und Markdown-Bilder.
 CSP = (
     "default-src 'self'; script-src 'self'; style-src 'self'; "
     "img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; "
     "frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'"
 )
+
+
+def client_ip(request: Request, settings: Settings) -> str | None:
+    """Adresse des Clients. X-Forwarded-For zählt nur, wenn die Verbindung vom vertrauten Proxy kommt."""
+    peer = request.client.host if request.client else None
+    fwd = request.headers.get("x-forwarded-for")
+    if peer and fwd and peer in settings.proxy_list():
+        return fwd.split(",")[-1].strip() or peer  # letzter Eintrag: den hat unser Proxy angehängt
+    return peer
 
 
 class SecurityMiddleware(BaseHTTPMiddleware):
@@ -49,13 +59,13 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         h["Cross-Origin-Resource-Policy"] = "same-origin"
         if self.s.env == "prod":
             h["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
-        if request.url.path.startswith("/bff/"):
+        if request.url.path.startswith(("/bff/", "/auth/")):
             h["Cache-Control"] = "no-store"
         return response
 
 
 class RateLimiter:
-    """Einfaches Fenster pro Client. Reicht für einen Einzelnutzer-BFF; bei Mehrnutzer ersetzen."""
+    """Einfaches Fenster pro Schlüssel. Reicht für einen Einzelnutzer-BFF; bei Mehrnutzer ersetzen."""
 
     def __init__(self, per_minute: int):
         self.per_minute = per_minute
