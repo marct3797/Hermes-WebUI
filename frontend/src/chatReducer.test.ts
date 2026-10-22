@@ -33,11 +33,48 @@ describe("chatReducer", () => {
     expect(s.error).toBe("boom");
   });
 
-  it("records approval decisions", () => {
-    let s = ev(initialState, { type: "approval.requested", approval_id: "a", command: "rm", reason: "", timeout_s: 300 });
+  it("records approval decisions and keeps the choices the agent allows", () => {
+    let s = ev(initialState, { type: "approval.requested", command: "rm", reason: "", timeout_s: 300, choices: ["once", "deny"], smart_denied: true });
     const id = s.items[0].id;
+    expect(s.items[0]).toMatchObject({ kind: "approval", choices: ["once", "deny"], smartDenied: true });
     s = chatReducer(s, { type: "decided", id, decision: "deny" });
     expect(s.items[0]).toMatchObject({ decision: "deny" });
+  });
+
+  it("re-opens an approval card when the answer could not be sent, without failing the run", () => {
+    let s = chatReducer(initialState, { type: "run-accepted", runId: "r" });
+    s = ev(s, { type: "approval.requested", command: "x", reason: "", timeout_s: 300, choices: ["once", "always", "deny"] });
+    const id = s.items[0].id;
+    s = chatReducer(s, { type: "decided", id, decision: "always" });
+    s = chatReducer(s, { type: "decision-failed", id });
+    s = chatReducer(s, { type: "notice", error: "Bitte erneut anmelden", code: "step_up_required" });
+    expect(s.items[0]).toMatchObject({ decision: undefined });
+    expect(s).toMatchObject({ runStatus: "running", error: "Bitte erneut anmelden", errorCode: "step_up_required" });
+  });
+
+  it("closes the open approval when it was answered elsewhere", () => {
+    let s = ev(initialState, { type: "approval.requested", command: "x", reason: "", timeout_s: 300, choices: ["once", "deny"] });
+    s = ev(s, { type: "approval.responded", choice: "once", resolved: 1 });
+    expect(s.items[0]).toMatchObject({ decision: "once" });
+    expect(ev(s, { type: "approval.responded", choice: "deny" })).toBe(s); // nichts mehr offen
+  });
+
+  it("uses the final text when no deltas were streamed", () => {
+    let s = chatReducer(initialState, { type: "user-sent", text: "hi", images: [] });
+    s = ev(s, { type: "run.completed", text: "Antwort ohne Strom", usage: { total_tokens: 7 } });
+    expect(s.items[1]).toMatchObject({ role: "assistant", text: "Antwort ohne Strom", streaming: false });
+    // mit Strom wird der Text nicht doppelt angehängt
+    let t = chatReducer(initialState, { type: "user-sent", text: "hi", images: [] });
+    t = ev(t, { type: "message.delta", text: "Hallo" });
+    t = ev(t, { type: "run.completed", text: "Hallo" });
+    expect(t.items).toHaveLength(2);
+  });
+
+  it("ignores events it does not render yet", () => {
+    const s = chatReducer(initialState, { type: "run-accepted", runId: "r" });
+    expect(ev(s, { type: "run.steered", accepted: true })).toBe(s);
+    expect(ev(s, { type: "subagent.started", id: "a", data: {} })).toBe(s);
+    expect(ev(s, { type: "unknown", name: "neu", data: {} })).toBe(s);
   });
 
   it("flags a lost connection only while running", () => {

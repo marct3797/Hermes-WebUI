@@ -1,9 +1,9 @@
 import { useRef, useState } from "react";
 import { fileToDataUrl } from "../images";
 
-type Props = { busy: boolean; disabled: boolean; onSend: (text: string, images: string[]) => void; onStop: () => void };
+type Props = { busy: boolean; disabled: boolean; name: string; onSend: (text: string, images: string[]) => void; onStop: () => void };
 
-export function Composer({ busy, disabled, onSend, onStop }: Props) {
+export function Composer({ busy, disabled, name, onSend, onStop }: Props) {
   const [text, setText] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [error, setError] = useState<string>();
@@ -46,7 +46,7 @@ export function Composer({ busy, disabled, onSend, onStop }: Props) {
         <textarea
           value={text}
           rows={1}
-          placeholder={disabled ? "Hermes ist nicht erreichbar" : "Nachricht an Hermes…"}
+          placeholder={disabled ? `${name} ist nicht erreichbar` : `Nachricht an ${name}…`}
           aria-label="Nachricht"
           onChange={(e) => setText(e.target.value)}
           onPaste={(e) => {

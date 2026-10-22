@@ -1,0 +1,36 @@
+/* Look A: Void, Zinc, ein Akzent. Alle Farben, Radien und Abstände stehen nur hier; styles.css nutzt nur diese Tokens.
+   Quelle: Palette aus dem Prosatext der Stitch-Referenz (DESIGN.md, "Obsidian Crimson"), nicht die Material-3-Tokens.
+   Kein Glas-Blur, kein WebGL, keine CDN-Dateien. Crimson gehört nur Aktion und Aufmerksamkeit. */
+:root {
+  --void: #09090b;        /* Grund */
+  --panel: #121214;       /* Antworten, Karten, Streams (mit 1 px --line) */
+  --raised: #18181b;      /* Eingaben, Menüs, Auswahl */
+  --line: #27272a;        /* Haarlinien */
+
+  --accent: #e11d48;      /* Senden, Freigabe nötig, laufender Stream, Fokus */
+  --accent-press: #991b1b;/* gedrückt, Rand von Abzeichen */
+  --alarm: #ef4444;       /* Stopp, Fehler */
+  --wine: #991b1b;
+
+  --text: #f4f4f5;
+  --text-2: #a1a1aa;
+  --text-3: #52525b;
+
+  --radius: 4px;          /* Eingaben, Knöpfe, Karten */
+  --radius-lg: 8px;       /* Overlays, Schubladen */
+  --glow: 0 0 0 1px #e11d48, 0 8px 24px -4px rgba(225, 29, 72, 0.18);
+
+  --font: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --gutter: 20px;
+  --reading: 768px;       /* maximale Breite des Chats */
+  --sidebar: 272px;
+
+  color-scheme: dark;
+}

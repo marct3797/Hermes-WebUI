@@ -1,11 +1,58 @@
 # Hermes-WebUI
 
-Eigene WebUI für den Hermes Agent. Aufbau: React/Vite-Frontend (`frontend/`) und ein schlankes
-FastAPI-Backend (`backend/`, „BFF“), das die Hermes-API-Server der Profile bündelt. Der Browser
-spricht nur mit dem BFF; API-Keys bleiben serverseitig.
+Eigene WebUI für Agents: erst Hermes, später weitere Agent-Systeme (OpenCode, Claude Code, Antigravity)
+auf mehreren Rechnern. Aufbau: React/Vite-Frontend (`frontend/`) und ein schlankes FastAPI-Backend
+(`backend/`, „BFF“). Der Browser spricht nur mit dem BFF; Keys bleiben serverseitig.
 
-Stand: **Chat-Seite** (Streaming, Tool-Karten, Approval, Rückfragen, Bildanhang, Sessions-Liste,
-Profilwechsel). Die weiteren Module folgen einzeln.
+Stand: **Phase 0 (Fundament)**. Entwurfsdokument: Architektur v3 im Projekt. Sicherheit: [SECURITY.md](SECURITY.md).
+
+## Begriffe
+
+| | Bedeutung | Beispiel |
+| --- | --- | --- |
+| **Host** | Rechner mit Name, Adresse und Status (online, schläft, nicht erreichbar) | `hikari` (lokal), `laptop` (entfernt) |
+| **Runtime** | Agent-System auf einem Host, je ein Adapter im BFF | `hermes` |
+| **Agent** | Profil (Hermes) oder Projektordner (Coding-Agents): die Einheit in URL und Auswahl | `raiden` |
+
+URL-Schema im Browser: `/` (Cockpit), `/inbox`, `/hosts`, `/h/<host>/<runtime>/<agent>/chat/<sessionId>`.
+Weitere Module hängen sich an denselben Präfix. API des BFF: `/bff/h/<host>/<runtime>/<agent>/…`.
+Alte Links `/p/<profil>/…` leiten auf `hikari/hermes` um.
+
+## Aufbau
+
+```
+backend/app/
+  registry.py        Hosts, Runtimes, Agents aus hosts.json (Hot-Reload, Fehler melden statt abstürzen)
+  hosts.py           Host-Status, Adapter je Host/Runtime, Platzhalter für Hosts ohne Verbindung
+  adapters/
+    __init__.py      Adapter-Schnittstelle (RuntimeAdapter), Fehler, Zustände
+    hermes.py        Hermes-Adapter: der einzige Ort mit Hermes-Pfaden, Feldnamen und Eventnamen
+  events.py          Gemeinsames Ereignisformat und Prüfung
+  auth.py, oidc.py   Sitzungen, Forgejo-Login (PKCE), Step-up
+  audit.py           Audit-Log (ohne Inhalte)
+  security.py        CSP, CSRF, Limits
+  routes/            auth, hosts (/bff/me, /bff/hosts), agents (/bff/h/…)
+backend/devtools/    Hermes-Mock im echten Format
+frontend/src/
+  router.ts          URL-Schema ohne Router-Bibliothek
+  hosts.tsx          Hosts/Agents samt Status (alle 30 s aufgefrischt)
+  components/        Shell, Sidebar (nach Host gruppiert), Chat-Bausteine
+  pages/             Cockpit, Inbox (Platzhalter), Hosts, Agent/Chat
+  tokens.css         Look A: alle Farben und Maße; styles.css nutzt nur Tokens
+```
+
+### Ereignisformat
+
+Alle Adapter liefern dasselbe: `run.started`, `message.delta`, `reasoning.delta`, `tool.started`,
+`tool.completed`, `approval.requested` (mit erlaubten `choices`), `approval.responded`, `clarify.requested`,
+`run.steered`, `subagent.started|completed`, `run.completed`, `run.failed`, `run.stopped`, `stream.error`.
+Was eine Runtime nicht kann, meldet sie als Fähigkeit (`features` im Status); das UI blendet es aus.
+Das BFF sendet unbenannte SSE-Frames, der Typ steckt im JSON (`backend/app/events.py`).
+
+### Neue Runtime anbinden
+
+Adapter von `RuntimeAdapter` ableiten, in `adapters/__init__.py:adapter_classes` eintragen, Runtime in
+`hosts.json` nennen. Das Frontend bleibt unverändert.
 
 ## Entwicklung
 
@@ -13,39 +60,65 @@ Profilwechsel). Die weiteren Module folgen einzeln.
 # Backend
 cd backend
 python -m venv .venv && . .venv/bin/activate && pip install -e '.[dev]'
-cp profiles.example.json profiles.json          # Profile + Keys (api_key_env = Name der Env-Variable)
-uvicorn devtools.mock_hermes:app --port 8642 &  # Hermes-Mock (Key: dev-key), optional
+cp hosts.example.json hosts.json           # Hosts, Runtimes, Agents; Keys per api_key_env
+uvicorn devtools.mock_hermes:app --port 8642 &   # Hermes-Mock (Key: dev-key), optional
 uvicorn app.main:app_factory --factory --port 8000
 pytest
 
-# Frontend (Proxy /bff -> :8000)
+# Frontend (Proxy /bff und /auth -> :8000)
 cd frontend && npm install && npm run dev
 npm test && npm run build
 ```
 
-Für den Mock in `profiles.json`: `"base_url": "http://127.0.0.1:8642", "api_key": "dev-key"`.
+Für den Mock in `hosts.json`: `"base_url": "http://127.0.0.1:8642", "api_key": "dev-key"` und die Agents
+`default`, `omoikane` (die der Mock kennt).
+
+### hosts.json
+
+```json
+{ "hosts": [
+  { "id": "hikari", "label": "Hikari", "kind": "local", "runtimes": [
+    { "id": "hermes", "base_url": "http://127.0.0.1:9121", "api_key_env": "HERMES_KEY_HIKARI",
+      "multiplex": true, "agents": ["benzai", "default", "…"] } ] },
+  { "id": "laptop", "label": "Laptop", "kind": "remote", "address": "100.100.3.4", "runtimes": [ … ] }
+] }
+```
+
+- `multiplex: true`: ein Gateway bedient mehrere Profile unter `/p/<profil>/…`. Ohne Multiplex ist genau ein Agent erlaubt (Hermes ignoriert dann das Präfix).
+- Die Agent-Liste ist vorerst fest in der Datei (Anzeigename = Ordnername). Auto-Erkennung folgt, sobald ein lesbarer Weg zu den Profilordnern im Container steht.
+- Remote-Hosts erscheinen in der Registry, sind aber bis Phase 2 (Host-Dienst) „nicht erreichbar“.
+- Ungültige Datei: das BFF behält die letzte gültige Fassung und meldet den Fehler unter `/bff/hosts` (`config_error`).
 
 ## Betrieb (hinter Caddy)
 
-Caddy terminiert TLS und leitet an den BFF (`127.0.0.1:8000`) weiter. Der BFF liefert das gebaute
-Frontend selbst aus (`HERMES_WEBUI_STATIC_DIR=frontend/dist`).
+Caddy terminiert TLS und leitet an den BFF (`127.0.0.1:8000`). Der BFF liefert das gebaute Frontend selbst aus
+(`HERMES_WEBUI_STATIC_DIR=frontend/dist`). Auf Hikari muss der BFF das Container-Gateway auf `127.0.0.1:9121`
+erreichen (Host-Netzwerk).
 
 | Variable | Bedeutung |
 | --- | --- |
-| `HERMES_WEBUI_ENV` | `dev` (Standard) oder `prod` (HSTS, kein `/bff/docs`, verlangt Login-Modus) |
-| `HERMES_WEBUI_AUTH_MODE` | `none` (nur dev) oder `oidc` (Forgejo, noch nicht implementiert) |
-| `HERMES_WEBUI_PROFILES_FILE` | Pfad zur Profil-Datei; wird bei Änderung ohne Neustart neu gelesen |
+| `HERMES_WEBUI_ENV` | `dev` (Standard) oder `prod` (HSTS, keine API-Doku, verlangt vollständigen Login) |
+| `HERMES_WEBUI_AUTH_MODE` | `none` (nur dev) oder `oidc` |
+| `HERMES_WEBUI_HOSTS_FILE` | Pfad zur `hosts.json`; wird bei Änderung ohne Neustart neu gelesen |
 | `HERMES_WEBUI_STATIC_DIR` | gebautes Frontend |
-| `HERMES_WEBUI_ALLOWED_HOSTS` | erlaubte Host-Header, kommagetrennt |
+| `HERMES_WEBUI_ALLOWED_HOSTS` | erlaubte Host-Header, kommagetrennt (prod: `agents.thiel.digital`) |
+| `HERMES_WEBUI_PUBLIC_URL` | Öffentliche Adresse, Grundlage der Redirect-URI (`https://agents.thiel.digital`) |
+| `HERMES_WEBUI_TRUSTED_PROXIES` | Adressen, deren `X-Forwarded-For` gilt (Standard: Loopback) |
+| `HERMES_WEBUI_AUDIT_FILE` | Audit-Log (Standard `audit.log`, Modus 0600) |
+| `FORGEJO_ISSUER` | z. B. `https://git.thiel.digital` |
+| `FORGEJO_OIDC_CLIENT_ID`, `FORGEJO_OIDC_CLIENT_SECRET` | OAuth2-Anwendung in Forgejo (vertraulicher Client, Redirect `<PUBLIC_URL>/auth/callback`, Scopes `openid profile`) |
+| `OIDC_ALLOWED_SUB` | Erlaubte Forgejo-Kennungen (`sub`), kommagetrennt |
+| `HERMES_KEY_*` | API-Keys der Runtimes, Namen frei über `api_key_env` in der Config |
 
-## Sicherheit (Stand Chat-Seite)
+Secrets nie in Repo, Chat oder Frontend: Umgebung oder Datei mit Modus 0600.
 
-CSP ohne `unsafe-inline`/`unsafe-eval`, `frame-ancestors 'none'`, `nosniff`, `no-store` auf
-`/bff/*`, Host-Allowlist, Origin- und `X-Requested-With`-Prüfung bei schreibenden Aufrufen,
-Body-Limit, Rate-Limit für Runs, strikte ID-Validierung vor Upstream-Pfaden, Keys nie in Antworten.
-Offen: Forgejo-Login (siehe `backend/app/auth.py`).
+## Offene Prüfpunkte für Phase 1 (gegen die echte Instanz)
 
-## Annahmen über Hermes
+Das Eventformat und die Routen stammen aus der Quelltext-Lesung (Hermes 0.20.4), noch nicht aus einem Lauf mit Key.
+Abweichungen zeigen sich als `unknown`-Events oder Probe-Fehler und werden im Hermes-Adapter behoben.
 
-Pfade und Event-Namen stammen aus der Doku-Zusammenfassung, nicht aus einem laufenden Hermes.
-Alles Hermes-spezifische steht in `backend/app/hermes.py`; erst gegen eine echte Instanz testen.
+- Antwortet `/p/<profil>/…` am Container-Gateway wie erwartet? Passen Payloads und Events (ein Test-Run mit Key, Marc gibt frei)?
+- Liefert `POST /v1/runs` eine `session_id`, und wie setzt der Client eine neue Session fort (`session_id` im Body oder vorher `POST /api/sessions`)?
+- Form von `/v1/capabilities` (Flags für die Fähigkeiten) und Name/Route der Rückfrage (Clarify): im Quelltext nicht belegt.
+- Forgejo: OIDC-Discovery, `sub`-Kennung, ob `prompt=login` und `max_age=0` eine neue Anmeldung erzwingen (Step-up).
+- Laptop (Phase 2): Hermes-API-Server dort läuft inzwischen auf `127.0.0.1:8642`; der Host-Dienst bringt den Transport.

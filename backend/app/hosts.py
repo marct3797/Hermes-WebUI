@@ -106,7 +106,7 @@ class HostService:
         hosts = self.registry.hosts()
         pairs = [(h, r) for h in hosts for r in h.runtimes]
         results = await asyncio.gather(*(self._runtime_health(h, r) for h, r in pairs))
-        by_key = {(h.id, r.id): res for (h, r), res in zip(pairs, results)}
+        by_key = {(h.id, r.id): res for (h, r), res in zip(pairs, results, strict=True)}
 
         out = []
         for h in hosts:

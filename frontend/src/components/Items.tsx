@@ -4,9 +4,9 @@ import { Markdown } from "./Markdown";
 
 type Message = Extract<Item, { kind: "message" }>;
 
-export function MessageView({ m }: { m: Message }) {
+export function MessageView({ m, name }: { m: Message; name: string }) {
   return (
-    <article className={`msg ${m.role}${m.streaming ? " streaming" : ""}`} aria-label={m.role === "user" ? "Du" : "Hermes"}>
+    <article className={`msg ${m.role}${m.streaming ? " streaming" : ""}`} aria-label={m.role === "user" ? "Du" : name}>
       {m.reasoning && (
         <details className="reasoning">
           <summary>Überlegung</summary>
@@ -16,7 +16,7 @@ export function MessageView({ m }: { m: Message }) {
       {m.images.length > 0 && (
         <div className="thumbs">{m.images.map((src, i) => <img key={i} src={src} alt={`Anhang ${i + 1}`} />)}</div>
       )}
-      {m.role === "user" ? <p className="plain">{m.text}</p> : m.text ? <Markdown text={m.text} /> : <span className="dots" aria-label="Hermes schreibt">…</span>}
+      {m.role === "user" ? <p className="plain">{m.text}</p> : m.text ? <Markdown text={m.text} /> : <span className="dots" aria-label={`${name} schreibt`}>…</span>}
     </article>
   );
 }
@@ -39,7 +39,9 @@ export function ToolCard({ t }: { t: Extract<Item, { kind: "tool" }> }) {
   );
 }
 
-const DECISIONS: Array<[Decision, string]> = [["once", "Einmal erlauben"], ["session", "Für Session"], ["always", "Immer"], ["deny", "Ablehnen"]];
+const DECISION_LABEL: Record<Decision, string> = {
+  once: "Einmal erlauben", session: "Für Session", always: "Immer", deny: "Ablehnen",
+};
 
 export function ApprovalCard({ a, onDecide, disabled }: { a: Extract<Item, { kind: "approval" }>; onDecide: (d: Decision) => void; disabled: boolean }) {
   return (
@@ -48,14 +50,18 @@ export function ApprovalCard({ a, onDecide, disabled }: { a: Extract<Item, { kin
       {a.reason && <p className="muted">{a.reason}</p>}
       <pre className="mono">{a.command}</pre>
       {a.decision ? (
-        <p className="muted">Entscheidung: {DECISIONS.find(([d]) => d === a.decision)?.[1]}</p>
+        <p className="muted">Entscheidung: {DECISION_LABEL[a.decision]}</p>
       ) : (
         <div className="row">
-          {DECISIONS.map(([d, label]) => (
-            <button key={d} type="button" className={d === "deny" ? "danger" : d === "once" ? "primary" : "ghost"} disabled={disabled} onClick={() => onDecide(d)}>{label}</button>
+          {/* Nur, was der Agent für diese Anfrage erlaubt (bei smart_denied z. B. nur einmal oder ablehnen). */}
+          {a.choices.map((d) => (
+            <button key={d} type="button" className={d === "deny" ? "danger" : d === "once" ? "primary" : "ghost"} disabled={disabled} onClick={() => onDecide(d)}>
+              {DECISION_LABEL[d]}
+            </button>
           ))}
         </div>
       )}
+      {!a.decision && a.smartDenied && <p className="muted small">Die automatische Prüfung hat diesen Befehl zunächst abgelehnt.</p>}
       {!a.decision && <p className="muted small">Die Anfrage erlischt nach {Math.round(a.timeoutS / 60)} Minuten.</p>}
     </div>
   );
@@ -64,7 +70,7 @@ export function ApprovalCard({ a, onDecide, disabled }: { a: Extract<Item, { kin
 export function ClarifyCard({ c, onAnswer }: { c: Extract<Item, { kind: "clarify" }>; onAnswer: (a: string) => void }) {
   const [text, setText] = useState("");
   return (
-    <div className="card clarify" role="group" aria-label="Rückfrage von Hermes">
+    <div className="card clarify" role="group" aria-label="Rückfrage des Agents">
       <strong>Rückfrage</strong>
       <p>{c.question}</p>
       {c.answer ? (

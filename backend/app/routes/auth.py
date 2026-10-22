@@ -61,9 +61,9 @@ async def login(request: Request, next: str = "/", step_up: bool = False):
     state, nonce, verifier, browser = (secrets.token_urlsafe(n) for n in (32, 32, 64, 32))
     try:
         url = await oidc.authorization_url(state, nonce, pkce_pair(verifier), step_up)
-    except OidcError:
-        request.app.state.audit.record("login.start", ip=ip, outcome="error", reason="discovery")
-        raise HTTPException(502, "Forgejo ist nicht erreichbar")
+    except OidcError as e:
+        request.app.state.audit.record("login.start", ip=ip, outcome="error", reason=str(e))
+        raise HTTPException(502, "Forgejo ist nicht erreichbar") from e
     store[state] = Pending(nonce, verifier, browser, safe_next(next), time.monotonic())
     response = RedirectResponse(url, status_code=302)
     # Lax, weil der Browser vom Anbieter (anderer Site) zurückkehrt; Strict würde das Cookie nicht mitschicken.
