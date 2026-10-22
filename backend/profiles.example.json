@@ -1,0 +1,6 @@
+{
+  "profiles": [
+    { "name": "default", "label": "Default", "base_url": "http://127.0.0.1:8642", "api_key_env": "HERMES_KEY_DEFAULT" },
+    { "name": "coder", "label": "Coder", "base_url": "http://127.0.0.1:8642/p/coder", "api_key_env": "HERMES_KEY_CODER" }
+  ]
+}
