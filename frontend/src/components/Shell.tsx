@@ -4,6 +4,7 @@ import { ShellContext, useSessions } from "../shell";
 import type { Me } from "../types";
 import { sameAgent, type Page } from "../router";
 import { useActivity, useRunStore } from "../runs";
+import { BgFx } from "./BgFx";
 import { Icon } from "./Icon";
 import { Sidebar } from "./Sidebar";
 import { Rail } from "./chat/Rail";
@@ -16,6 +17,7 @@ function crumbs(page: Page): string[] {
     case "cockpit": return ["cockpit"];
     case "inbox": return ["inbox"];
     case "hosts": return ["hosts"];
+    case "settings": return ["darstellung"];
     case "agent": return [page.ref.host, page.ref.runtime, page.ref.agent, page.sessionId ? `${page.module}/${page.sessionId}` : page.module];
     default: return [];
   }
@@ -48,6 +50,7 @@ export function Shell({ me, path, page, onLogout, children }: Props) {
     return (
       <ShellContext.Provider value={value}>
         <div className="ch">
+          <BgFx />
           <Rail me={me} active={active} onLogout={onLogout} />
           <SessionColumn agent={active} label={resolved.label} runtimeLabel={resolved.runtimeLabel} sessionId={sessionId} />
           {children}
@@ -62,6 +65,7 @@ export function Shell({ me, path, page, onLogout, children }: Props) {
       <div className="shell">
         {sidebar}
         <div className="main">
+          <BgFx />
           <div className="top">
             <button type="button" className="btn btn-i btn-g menu-btn" aria-label="Menü" onClick={() => setMenu(true)}><Icon name="menu" size={18} /></button>
             <nav className="crumb" aria-label="Pfad">

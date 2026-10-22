@@ -38,7 +38,8 @@ frontend/src/
   hosts.tsx          Hosts/Agents samt Status (alle 30 s aufgefrischt)
   runStore.ts        Run-Zustand aller Unterhaltungen (läuft beim Seitenwechsel weiter); attention.ts leitet daraus Inbox, Cockpit und Zähler ab
   components/        Shell, Sidebar (nach Host gruppiert), Sigil, Icon; chat/: Rail, Session-Spalte, Verlauf, Dock, Inspector
-  pages/             Cockpit, Inbox, Hosts, Agent/Chat
+  pages/             Cockpit, Inbox, Hosts, Agent/Chat, Profil bearbeiten, Darstellung
+  bgfx.ts            Hintergrund-Shader (WebGL 1, gebündelt); components/BgFx.tsx hängt ihn hinter die Seiten
   tokens.css         Look A: alle Farben und Maße; styles/*.css nutzen nur diese Tokens
 ```
 
@@ -118,6 +119,15 @@ Neben der Datei dürfen `sigils/<name>.svg` und `packs/<id>.json` liegen. Änder
 - `hue`: Zahl 0 bis 360, `"auto"` (aus dem Namen) oder `null` (neutral grau). Helligkeit und Sättigung sind fest, damit der Kontrast stimmt.
 - Eigene SVGs und Pack-Symbole: einfarbig, höchstens 20 KB, nur Formen (`path`, `circle`, `rect` …). Das BFF bereinigt sie beim Laden, lehnt alles Aktive oder Externe ab und liefert sie aus dem Speicher mit eigener, strenger CSP aus; das Frontend rendert sie als Maske, nie als Inline-SVG.
 - Im Standard steckt nichts Japanisches: `backend/examples/japan/` ist ein fertiger Beispielordner mit den neun Profil-Symbolen zum optionalen Einsatz.
+- `label` (1 bis 40 Zeichen) je Profil ist ein Anzeigename; ohne ihn gilt der Ordnername aus Hermes. Ein Eintrag darf auch nur ein `label` enthalten.
+
+**Bearbeiten in der WebUI.** Die Profil-Seite (`/h/<host>/<runtime>/<agent>/profil`, Stift in der Session-Spalte und auf der Host-Seite) wählt Symbol, Initialen oder ein eigenes SVG, Farbton und Anzeigename mit Vorschau und schreibt das in die `ui.json`
+(`PUT /bff/ui/profiles/<schlüssel>`; Schlüssel immer `host/runtime/agent`, ein allgemeiner Eintrag für den Profilnamen bleibt als Rückfall bestehen). Der Hintergrund-Shader hat auf `/settings` („Darstellung“) Regler für Stärke und Tempo,
+die zuerst nur für das Gerät gelten (Browser-Speicher) und dort als Vorgabe für alle Geräte gespeichert werden können (`PUT /bff/ui/shader`).
+
+- Geschrieben wird nur, wenn die WebUI die Datei ändern darf. Sonst zeigt `GET /bff/ui` `"writable": false` samt Grund, das Speichern ist abgeschaltet und die Profil-Seite zeigt den fertigen Eintrag zum Kopieren. Im Container also den Config-Ordner schreibbar einbinden, wenn die Seite speichern soll; ein einzelner Bind-Mount der Datei geht auch (dann wird ohne Austausch der Datei direkt geschrieben).
+- Es ändert sich nur der Teil, den die Seite bearbeitet: unbekannte Schlüssel und andere Profile bleiben, der Stand davor liegt als `ui.json.bak` daneben, geschrieben wird atomar. Eine Datei, die kein gültiges JSON ist, wird nie überschrieben (409).
+- Neue SVG-Dateien gehen als Text an das BFF, werden wie beim Laden bereinigt und landen als `sigils/<profil>-<kurzhash>.svg`; bei einem Fehler wird nichts geändert. Jede Änderung steht im Audit-Log (`ui.profile`, `ui.shader`), ohne Namen oder Inhalte.
 
 ## Betrieb (hinter Caddy)
 

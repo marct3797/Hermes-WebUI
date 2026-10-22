@@ -1,6 +1,7 @@
 import { agentKey, type Page } from "../router";
 import { useAgentRef, useResolvedAgent } from "../hosts";
 import { ChatPage } from "./ChatPage";
+import { ProfilePage } from "./ProfilePage";
 import { ModulePage, NotFoundPage } from "./Placeholders";
 
 /** Seite eines Agents: löst Host/Runtime/Agent in der Registry auf und zeigt das gewählte Modul. */
@@ -12,6 +13,7 @@ export function AgentPage({ page }: { page: Extract<Page, { name: "agent" }> }) 
     // Profile kommen und gehen: ein gelöschtes Profil zeigt einen klaren Hinweis statt Fehlern.
     return <NotFoundPage what={`Der Agent „${page.ref.agent}“ auf ${page.ref.host}`} />;
   }
+  if (page.module === "profil") return <ProfilePage key={agentKey(page.ref)} agent={agent} label={resolved.label} hostLabel={resolved.host.label} runtimeLabel={resolved.runtimeLabel} />;
   if (page.module !== "chat") return <ModulePage module={page.module} />;
   return <ChatPage key={agentKey(page.ref)} agent={agent} label={resolved.label} runtimeLabel={resolved.runtimeLabel} sessionId={page.sessionId} />;
 }

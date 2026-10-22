@@ -113,6 +113,9 @@ export function Sidebar(p: Props) {
         <footer className="side-foot">
           <span className="avatar" aria-hidden>{p.me.user.name.slice(0, 1).toUpperCase()}</span>
           <span className="who"><b title={p.me.user.id}>{p.me.user.name}</b></span>
+          <Link to="/settings" className={`btn btn-s btn-i btn-g${p.path === "/settings" ? " on" : ""}`} aria-label="Darstellung" title="Darstellung" onClick={p.onClose}>
+            <Icon name="sliders" size={16} />
+          </Link>
           {p.me.auth_mode === "oidc" && <button type="button" className="btn btn-s btn-g" onClick={p.onLogout}>Abmelden</button>}
         </footer>
       </aside>

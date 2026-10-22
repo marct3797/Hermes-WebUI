@@ -1,4 +1,4 @@
-import type { AgentRef, AgentStatus, Decision, HostsResponse, Me, UiConfig } from "./types";
+import type { AgentRef, AgentStatus, Decision, HostsResponse, Me, ProfileInput, ShaderConfig, UiConfig } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string) {
@@ -55,6 +55,9 @@ export const api = {
   logout: () => call<void>("POST", "/auth/logout"),
   hosts: () => call<HostsResponse>("GET", "/bff/hosts"),
   ui: () => call<UiConfig>("GET", "/bff/ui"),
+  saveProfile: (key: string, body: ProfileInput) =>
+    call<UiConfig>("PUT", `/bff/ui/profiles/${key.split("/").map(encodeURIComponent).join("/")}`, body),
+  saveShader: (body: ShaderConfig) => call<UiConfig>("PUT", "/bff/ui/shader", body),
   status: (a: AgentRef) => call<AgentStatus>("GET", `${base(a)}/status`),
   models: (a: AgentRef) => call<unknown>("GET", `${base(a)}/models`),
   sessions: (a: AgentRef) => call<unknown>("GET", `${base(a)}/sessions`),

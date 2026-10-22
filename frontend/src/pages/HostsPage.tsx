@@ -43,8 +43,9 @@ export function HostsPage() {
                     {r.agents.map((a) => {
                       const ref = { host: h.id, runtime: r.id, agent: a.id };
                       return (
-                        <li key={a.id}>
+                        <li key={a.id} className="row" style={{ gap: 2 }}>
                           <Link to={agentPath(ref)} className="chip"><Sigil name={a.label} config={sigilFor(sigils, ref)} size="xs" />{a.label}</Link>
+                          <Link to={agentPath(ref, "profil")} className="btn btn-s btn-i btn-g" aria-label={`Profil von ${a.label} bearbeiten`} title="Profil bearbeiten"><Icon name="edit" size={12} /></Link>
                         </li>
                       );
                     })}

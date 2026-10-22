@@ -73,6 +73,7 @@ export function SessionColumn({ agent, label, runtimeLabel, sessionId }: Props) 
             <span className="sess-name trunc">{label}</span>
             <span className="mono t3 trunc" style={{ fontSize: 10.5 }}>{agent.host} · {runtimeLabel.toLowerCase()}</span>
           </div>
+          <Link to={agentPath(agent, "profil")} className="btn btn-s btn-i btn-g" aria-label={`Profil von ${label} bearbeiten`} title="Profil bearbeiten"><Icon name="edit" size={14} /></Link>
         </div>
         <Link to={agentPath(agent)} className="btn btn-p" style={{ width: "100%" }}><Icon name="plus" size={14} />Neuer Chat<span className="kbd">N</span></Link>
         <label className="search">

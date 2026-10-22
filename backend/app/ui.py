@@ -3,15 +3,27 @@
 Die Datei `ui.json` gehört zur WebUI-Config, nie zu Hermes: Hermes-Profile bleiben unangetastet. Neben der Datei dürfen
 `sigils/*.svg` (eigene Symbole) und `packs/<id>.json` (Symbol-Packs) liegen. Alle SVGs werden beim Laden bereinigt und
 aus dem Speicher ausgeliefert; die URL wählt nie einen Dateipfad.
+
+Die Profil-Seite der WebUI darf Sigil, Anzeigename und Shader-Vorgabe zurückschreiben (`save_profile`, `save_shader`).
+Das passiert nur, wenn die Datei schreibbar ist; sonst bleibt die Datei Quelle und die WebUI zeigt den fertigen Ausschnitt
+zum Kopieren. Geschrieben wird atomar, der vorige Stand bleibt als `ui.json.bak` liegen, unbekannte Schlüssel bleiben erhalten.
 """
 from __future__ import annotations
 
+import hashlib
 import json
+import logging
+import os
 import re
+import shutil
+import threading
 import xml.etree.ElementTree as ET
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+log = logging.getLogger("hermes_webui.ui")
 
 SVG_NS = "http://www.w3.org/2000/svg"
 MAX_SVG_BYTES = 20 * 1024
@@ -21,6 +33,8 @@ MAX_DEPTH = 8
 NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 KEY_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}(/[a-z0-9][a-z0-9-]{0,31}/[A-Za-z0-9][A-Za-z0-9_-]{0,63})?$")
 SIGIL_TYPES = ("glyph", "initials", "svg")
+LABEL_MAX = 40
+MAX_PROFILES = 500
 BUILTIN_PACK = "neutral"  # die Symbole des Standards stecken im Frontend
 
 ALLOWED_TAGS = {"svg", "g", "path", "circle", "ellipse", "rect", "line", "polyline", "polygon"}
@@ -84,6 +98,8 @@ def sanitize_svg(source: str | bytes) -> str:
 class UiState:
     shader: dict[str, Any]
     sigils: dict[str, dict[str, Any]] = field(default_factory=dict)
+    labels: dict[str, str] = field(default_factory=dict)  # Anzeigenamen; ohne Eintrag gilt der Profilordner
+    packs: dict[str, list[str]] = field(default_factory=dict)  # geladene Packs und ihre Symbolnamen (neutral steckt im Frontend)
     svgs: dict[str, str] = field(default_factory=dict)  # "sigil/<name>" und "glyph/<pack>/<name>" -> bereinigtes SVG
     warnings: list[str] = field(default_factory=list)
 
@@ -104,6 +120,14 @@ def _shader(raw: Any) -> dict[str, Any]:
         "strength": _number(raw.get("strength"), DEFAULT_SHADER["strength"], 0, 3),
         "speed": _number(raw.get("speed"), DEFAULT_SHADER["speed"], 0, 3),
     }
+
+
+def _label(raw: Any) -> str | None:
+    if isinstance(raw, str):
+        text = raw.strip()
+        if 1 <= len(text) <= LABEL_MAX and text.isprintable():
+            return text
+    return None
 
 
 def _read_json(path: Path) -> Any:
@@ -187,15 +211,48 @@ def parse_ui(data: Any, base: Path) -> UiState:
     ui = data.get("ui") if isinstance(data.get("ui"), dict) else {}
     state = UiState(shader=_shader(ui.get("backgroundShader")))
     packs = _load_packs(base, data.get("packs"), state)
+    state.packs = {pack_id: sorted(names) for pack_id, names in packs.items()}
     profiles = data.get("profiles")
     for key, entry in (profiles.items() if isinstance(profiles, dict) else []):
         if not isinstance(key, str) or not KEY_RE.match(key):
             state.warnings.append(f"Profilschlüssel ungültig: {key!r}")
             continue
-        sigil = _sigil(key, entry.get("sigil") if isinstance(entry, dict) else None, base, packs, state)
-        if sigil:
-            state.sigils[key] = sigil
+        entry = entry if isinstance(entry, dict) else {}
+        if "label" in entry:
+            label = _label(entry["label"])
+            if label:
+                state.labels[key] = label
+            else:
+                state.warnings.append(f"{key}: label muss 1 bis {LABEL_MAX} druckbare Zeichen haben")
+        # Ein Eintrag nur mit Anzeigenamen ist gültig; ohne beides gibt es den bisherigen Hinweis.
+        if "sigil" in entry or "label" not in entry:
+            sigil = _sigil(key, entry.get("sigil"), base, packs, state)
+            if sigil:
+                state.sigils[key] = sigil
     return state
+
+
+class UiWriteError(Exception):
+    """Speichern nicht möglich; `status` ist der passende HTTP-Status."""
+
+    def __init__(self, message: str, status: int = 422):
+        super().__init__(message)
+        self.status = status
+
+
+def _write_text(path: Path, text: str) -> None:
+    """Atomar ersetzen. Liegt die Datei als einzelner Bind-Mount, geht Ersetzen nicht: dann direkt schreiben."""
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        tmp.write_text(text, encoding="utf-8")
+        os.replace(tmp, path)
+        return
+    except OSError:
+        tmp.unlink(missing_ok=True)  # nur die eigene Zwischendatei
+    try:
+        path.write_text(text, encoding="utf-8")
+    except OSError as e:
+        raise UiWriteError(f"{path.name} lässt sich nicht schreiben ({type(e).__name__})", 503) from e
 
 
 class UiConfig:
@@ -206,6 +263,7 @@ class UiConfig:
         self._mtime: float | None = None
         self._state = UiState(shader=dict(DEFAULT_SHADER))
         self.error: str | None = None
+        self._lock = threading.Lock()
 
     def state(self) -> UiState:
         if self.path is None:
@@ -225,9 +283,128 @@ class UiConfig:
             self._mtime = mtime
         return self._state
 
+    def write_error(self) -> str | None:
+        """Grund, warum die WebUI die Datei nicht ändern darf; `None` heißt schreibbar."""
+        if self.path is None:
+            return "Es ist keine ui.json konfiguriert (HERMES_WEBUI_UI_FILE)."
+        if self.path.exists():
+            ok = os.access(self.path, os.W_OK)
+        else:
+            ok = self.path.parent.is_dir() and os.access(self.path.parent, os.W_OK)
+        return None if ok else "Die ui.json ist für die WebUI schreibgeschützt."
+
     def public(self) -> dict[str, Any]:
         s = self.state()
-        return {"ui": {"backgroundShader": s.shader}, "sigils": s.sigils, "warnings": s.warnings, "error": self.error}
+        reason = self.write_error()
+        return {
+            "ui": {"backgroundShader": s.shader}, "sigils": s.sigils, "labels": s.labels, "packs": s.packs,
+            "writable": reason is None, "write_error": reason, "warnings": s.warnings, "error": self.error,
+        }
 
     def svg(self, key: str) -> str | None:
         return self.state().svgs.get(key)
+
+    # --- Speichern -------------------------------------------------------------------------------
+    def _update(self, change: Callable[[dict[str, Any]], None], check: Callable[[UiState], None] | None = None) -> None:
+        with self._lock:
+            reason = self.write_error()
+            if reason or self.path is None:
+                raise UiWriteError(reason or "ui.json nicht schreibbar", 409)
+            raw: Any = {}
+            if self.path.exists():
+                try:
+                    raw = _read_json(self.path)
+                except (OSError, ValueError) as e:
+                    raise UiWriteError("Die ui.json ist kein gültiges JSON und wird nicht überschrieben.", 409) from e
+                if not isinstance(raw, dict):
+                    raise UiWriteError("Die ui.json ist kein JSON-Objekt und wird nicht überschrieben.", 409)
+            change(raw)
+            if check:
+                check(parse_ui(raw, self.path.parent))
+            if self.path.exists():
+                try:
+                    shutil.copyfile(self.path, self.path.with_name(self.path.name + ".bak"))
+                except OSError:
+                    log.warning("Sicherung %s.bak nicht möglich", self.path.name)
+            _write_text(self.path, json.dumps(raw, ensure_ascii=False, indent=2) + "\n")
+            self._mtime = None  # beim nächsten Lesen neu parsen
+
+    def save_shader(self, enabled: bool, strength: float, speed: float) -> None:
+        def change(raw: dict[str, Any]) -> None:
+            ui = raw.get("ui") if isinstance(raw.get("ui"), dict) else {}
+            ui["backgroundShader"] = {"enabled": enabled, "strength": strength, "speed": speed}
+            raw["ui"] = ui
+
+        self._update(change)
+
+    def save_profile(self, key: str, label: str | None, sigil: dict[str, Any] | None, svg: str | None = None) -> None:
+        """Setzt Anzeigename und Sigil dieses Profils. Beides `None` entfernt den Eintrag (zurück zu Standard)."""
+        if not KEY_RE.match(key):
+            raise UiWriteError("Ungültiger Profilschlüssel")
+        label = label.strip() if label else None
+        if label and not _label(label):
+            raise UiWriteError(f"Der Anzeigename darf höchstens {LABEL_MAX} druckbare Zeichen haben")
+        if self.path is None:
+            raise UiWriteError(self.write_error() or "", 409)
+        base = self.path.parent
+
+        def entry_of(raw: dict[str, Any]) -> dict[str, Any]:
+            profiles = raw.get("profiles")
+            old = profiles.get(key) if isinstance(profiles, dict) else None
+            return old if isinstance(old, dict) else {}
+
+        built: dict[str, Any] | None = None
+        clean_svg: str | None = None
+        stem = ""
+        if sigil:
+            built = {"type": sigil["type"], "hue": sigil.get("hue", "auto")}
+            if sigil["type"] == "glyph":
+                built["glyph"] = sigil.get("glyph") or ""
+            elif sigil["type"] == "initials":
+                if sigil.get("text"):
+                    built["text"] = sigil["text"]
+            elif svg:
+                try:
+                    clean_svg = sanitize_svg(svg)
+                except (SvgError, UnicodeError) as e:
+                    raise UiWriteError(f"SVG abgelehnt: {e}") from e
+                stem = re.sub(r"[^a-z0-9_-]+", "-", key.lower()).strip("-")[:40] or "sigil"
+                stem += "-" + hashlib.sha1(key.encode()).hexdigest()[:6]
+                built["src"] = f"sigils/{stem}.svg"
+        if built and built["type"] == "svg" and "src" not in built:
+            # Ohne neue SVG-Datei muss der Eintrag schon eine haben (nur Farbton oder Name ändern).
+            try:
+                old = entry_of(_read_json(self.path))
+            except (OSError, ValueError):
+                old = {}
+            old_sigil = old.get("sigil") if isinstance(old.get("sigil"), dict) else {}
+            if old_sigil.get("type") != "svg" or not old_sigil.get("src"):
+                raise UiWriteError("Für ein eigenes Symbol fehlt die SVG-Datei")
+            built["src"] = old_sigil["src"]
+
+        def change(raw: dict[str, Any]) -> None:
+            profiles = raw.get("profiles")
+            if not isinstance(profiles, dict):
+                profiles = raw["profiles"] = {}
+            if key not in profiles and len(profiles) >= MAX_PROFILES:
+                raise UiWriteError("Zu viele Profile in der ui.json")
+            entry = {k: v for k, v in entry_of(raw).items() if k not in ("label", "sigil")}  # Unbekanntes bleibt
+            if label:
+                entry["label"] = label
+            if built:
+                entry["sigil"] = built
+            if entry:
+                profiles[key] = entry
+            else:
+                profiles.pop(key, None)
+
+        def check(state: UiState) -> None:
+            if (built and key not in state.sigils) or (label and key not in state.labels):
+                hints = "; ".join(w for w in state.warnings if w.startswith(f"{key}:")) or "Eintrag ungültig"
+                raise UiWriteError(hints)
+
+        if clean_svg is not None:
+            # Die Datei zuerst, damit die Prüfung sie findet; bei einem Fehler bleibt höchstens eine harmlose SVG liegen.
+            (base / "sigils").mkdir(exist_ok=True)
+            _write_text(base / "sigils" / f"{stem}.svg", clean_svg)
+        self._update(change, check)

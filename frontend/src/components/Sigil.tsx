@@ -11,7 +11,9 @@ export type SigilSize = "xs" | "s" | "m" | "l" | "xl";
 export type SigilState = "live" | "wait" | "err";
 
 const SIZE_CLASS: Record<SigilSize, string> = { xs: " sg-xs", s: " sg-s", m: "", l: " sg-l", xl: " sg-xl" };
-const SAFE_SRC = /^\/bff\/ui\/(sigils\/[a-z0-9_-]+|glyphs\/[a-z0-9_-]+\/[a-z0-9_-]+)\.svg$/;
+// Vom BFF kommen nur diese Pfade. Die base64-Form dient der Vorschau einer gerade gewählten Datei, bevor sie gespeichert ist;
+// als Maske wird ein SVG nie ausgeführt.
+const SAFE_SRC = /^(\/bff\/ui\/(sigils\/[a-z0-9_-]+|glyphs\/[a-z0-9_-]+\/[a-z0-9_-]+)\.svg|data:image\/svg\+xml;base64,[A-Za-z0-9+/=]+)$/;
 
 export function hashHue(name: string): number {
   let h = 5381;

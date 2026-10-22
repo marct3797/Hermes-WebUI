@@ -1,6 +1,6 @@
 import { act } from "@testing-library/react";
 import { vi } from "vitest";
-import type { HostInfo, StreamEvent } from "./types";
+import type { HostInfo, ProfileInput, SigilConfig, StreamEvent, UiConfig } from "./types";
 
 /** Gemeinsame Test-Attrappen: BFF-Antworten und EventSource für die Seiten-Tests. */
 
@@ -29,8 +29,16 @@ export function emit(ev: StreamEvent, agent?: string) {
 
 export type Call = { method: string; url: string; body?: Record<string, unknown> };
 
-export function installBackend(agents: string[] = ["raiden"], features = ["runs", "steer"]) {
+/** Standard-Config der Attrappe: Shader aus (jsdom hat kein WebGL), Config nicht schreibbar. */
+export const baseUi = (): UiConfig => ({
+  ui: { backgroundShader: { enabled: false, strength: 1, speed: 1 } }, sigils: {}, labels: {}, packs: {},
+  writable: false, write_error: "Die ui.json ist für die WebUI schreibgeschützt.", warnings: [], error: null,
+});
+
+export function installBackend(agents: string[] = ["raiden"], features = ["runs", "steer"], uiOverride: Partial<UiConfig> = {}) {
   FakeEventSource.all = [];
+  // Wie das BFF: Speichern ändert die Config, die Antwort ist die ganze Config.
+  const uiState: UiConfig = { ...baseUi(), ...uiOverride };
   const calls: Call[] = [];
   let runs = 0;
   const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -40,7 +48,25 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
     calls.push({ method, url, body: init?.body ? JSON.parse(String(init.body)) : undefined });
     if (url === "/bff/me") return json({ user: { id: "42", name: "marc" }, auth_mode: "none", fresh: true });
     if (url === "/bff/hosts") return json({ hosts: hostsFor(agents), config_error: null });
-    if (url === "/bff/ui") return json({ ui: { backgroundShader: { enabled: false, strength: 1, speed: 1 } }, sigils: {}, warnings: [], error: null });
+    if (url === "/bff/ui") return json(uiState);
+    const put = method === "PUT" ? init?.body && JSON.parse(String(init.body)) : undefined;
+    if (method === "PUT" && url.startsWith("/bff/ui/")) {
+      if (!uiState.writable) return json({ detail: uiState.write_error }, 409);
+      if (url === "/bff/ui/shader") { uiState.ui = { backgroundShader: put }; return json(uiState); }
+      const key = decodeURIComponent(url.slice("/bff/ui/profiles/".length));
+      const body = put as ProfileInput;
+      delete uiState.sigils[key]; delete uiState.labels[key];
+      if (body.label) uiState.labels[key] = body.label;
+      if (body.sigil) {
+        const { svg, ...rest } = body.sigil;
+        const sg: SigilConfig = { ...rest };
+        if (rest.type === "svg") sg.src = `/bff/ui/sigils/${key.replace(/[^a-z0-9]+/g, "-")}.svg`;
+        if (rest.type === "glyph" && !rest.glyph?.startsWith("neutral/")) sg.src = `/bff/ui/glyphs/${rest.glyph}.svg`;
+        void svg;
+        uiState.sigils[key] = sg;
+      }
+      return json(uiState);
+    }
     const m = /^\/bff\/h\/hikari\/hermes\/([^/]+)(\/.*)$/.exec(url);
     if (m && agents.includes(m[1])) {
       const rest = m[2];

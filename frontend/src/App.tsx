@@ -8,6 +8,7 @@ import { AgentPage } from "./pages/AgentPage";
 import { HostsPage } from "./pages/HostsPage";
 import { CockpitPage } from "./pages/CockpitPage";
 import { InboxPage } from "./pages/InboxPage";
+import { SettingsPage } from "./pages/SettingsPage";
 import { NotFoundPage } from "./pages/Placeholders";
 import { navigate, parsePath, usePath } from "./router";
 import type { Me } from "./types";
@@ -51,6 +52,7 @@ export function App() {
             case "cockpit": return <CockpitPage />;
             case "inbox": return <InboxPage />;
             case "hosts": return <HostsPage />;
+            case "settings": return <SettingsPage />;
             case "agent": return <AgentPage page={page} />;
             case "redirect": return null;
             case "notfound": return <NotFoundPage />;

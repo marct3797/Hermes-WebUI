@@ -43,6 +43,7 @@ export function Rail({ me, active, onLogout }: Props) {
           }))}
         </div>
       ))}
+      <Link to="/settings" className="ib rail-user-link" aria-label="Darstellung" title="Darstellung"><Icon name="sliders" size={18} /></Link>
       <span className="avatar rail-user" title={me.user.name} role="img" aria-label={`Angemeldet als ${me.user.name}`}>{me.user.name.slice(0, 1).toUpperCase()}</span>
       {me.auth_mode === "oidc" && (
         <button type="button" className="ib" aria-label="Abmelden" title="Abmelden" onClick={onLogout}><Icon name="power" size={18} /></button>

@@ -38,7 +38,14 @@ describe("Sigil", () => {
     const own = render(<Sigil name="a" config={{ type: "svg", src: "/bff/ui/sigils/mein-symbol.svg" }} />);
     expect(sigil(own.container).style.getPropertyValue("--g")).toBe('url("/bff/ui/sigils/mein-symbol.svg")');
     // fremde Adresse oder Anführungszeichen: nicht als Maske verwenden
-    for (const src of ["https://evil.example/x.svg", '/bff/ui/sigils/a");background:url(x.svg', "//evil/x.svg"]) {
+    // Auch die Vorschau-Form (base64) lässt nichts anderes durch: kein Text-SVG, kein anderer Typ, keine Anführungszeichen.
+    const preview = render(<Sigil name="a" config={{ type: "svg", src: "data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=" }} />);
+    expect(sigil(preview.container).style.getPropertyValue("--g")).toBe('url("data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=")');
+    for (const src of [
+      "https://evil.example/x.svg", '/bff/ui/sigils/a");background:url(x.svg', "//evil/x.svg",
+      "data:image/svg+xml,<svg onload=alert(1)>", "data:text/html;base64,PGgxPg==", 'data:image/svg+xml;base64,AAAA");background:url(x',
+      "javascript:alert(1)",
+    ]) {
       const bad = render(<Sigil name="ab" config={{ type: "svg", src }} />);
       expect(sigil(bad.container)).toHaveClass("ini");
       expect(sigil(bad.container).style.getPropertyValue("--g")).toBe("");

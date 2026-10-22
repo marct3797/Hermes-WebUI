@@ -121,7 +121,8 @@
 .irail .mk{margin:6px 0 12px}
 .mk-link{display:flex}
 .rail-group{display:flex;flex-direction:column;align-items:center}
-.rail-user{margin-top:auto;flex:none}
+.rail-user-link{margin-top:auto;flex:none}
+.rail-user{flex:none}
 .ib.soon{color:var(--t3);opacity:.6;cursor:default}
 .ib.soon:hover{background:none;color:var(--t3)}
 .ib:focus-visible,.pf:focus-visible{border-radius:6px}

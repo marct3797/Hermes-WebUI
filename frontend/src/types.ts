@@ -90,6 +90,17 @@ export type ShaderConfig = { enabled: boolean; strength: number; speed: number }
 export type UiConfig = {
   ui: { backgroundShader: ShaderConfig };
   sigils: Record<string, SigilConfig>;
+  /** Anzeigenamen je Profil (`host/runtime/agent` oder nur Profilname); ohne Eintrag gilt der Ordnername. */
+  labels: Record<string, string>;
+  /** Geladene Symbol-Packs und ihre Symbolnamen. Das Pack „neutral“ steckt im Frontend. */
+  packs: Record<string, string[]>;
+  /** Darf die WebUI die ui.json ändern? Sonst steht der Grund in `write_error`. */
+  writable: boolean;
+  write_error: string | null;
   warnings: string[];
   error: string | null;
 };
+
+/** Was die Profil-Seite zum Speichern schickt. `svg` nur bei einer neuen Datei; der Server bereinigt sie. */
+export type SigilInput = { type: SigilConfig["type"]; glyph?: string; text?: string; hue: number | "auto" | null; svg?: string };
+export type ProfileInput = { label: string | null; sigil: SigilInput | null };

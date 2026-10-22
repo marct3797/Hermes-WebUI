@@ -60,7 +60,8 @@
 .side-scroll{flex:1;min-height:0;overflow-y:auto}
 .side-foot .who{min-width:0;display:flex;flex-direction:column}
 .side-foot .who b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.side-foot .btn{margin-left:auto}
+.side-foot .who{flex:1}
+.side-foot .btn.on{background:var(--s2);color:var(--t1);border-color:var(--line)}
 @media (max-width:800px){
   .shell{flex-wrap:wrap}
   .side{position:fixed;inset:0 auto 0 0;width:min(300px,85vw);z-index:20;transform:translateX(-100%);transition:transform .2s}
