@@ -36,8 +36,9 @@ backend/devtools/    Hermes-Mock im echten Format
 frontend/src/
   router.ts          URL-Schema ohne Router-Bibliothek
   hosts.tsx          Hosts/Agents samt Status (alle 30 s aufgefrischt)
+  runStore.ts        Run-Zustand aller Unterhaltungen (läuft beim Seitenwechsel weiter); attention.ts leitet daraus Inbox, Cockpit und Zähler ab
   components/        Shell, Sidebar (nach Host gruppiert), Sigil, Icon; chat/: Rail, Session-Spalte, Verlauf, Dock, Inspector
-  pages/             Cockpit, Inbox (Platzhalter), Hosts, Agent/Chat
+  pages/             Cockpit, Inbox, Hosts, Agent/Chat
   tokens.css         Look A: alle Farben und Maße; styles/*.css nutzen nur diese Tokens
 ```
 
@@ -53,6 +54,14 @@ Das BFF sendet unbenannte SSE-Frames, der Typ steckt im JSON (`backend/app/event
 
 Adapter von `RuntimeAdapter` ableiten, in `adapters/__init__.py:adapter_classes` eintragen, Runtime in
 `hosts.json` nennen. Das Frontend bleibt unverändert.
+
+### Cockpit und Inbox: woher die Zahlen kommen
+
+Cockpit, Inbox, Seitenleiste und Tab-Titel lesen denselben Zustand (`runStore.ts`). Er enthält **die Runs, die diese WebUI selbst gestartet hat**:
+Der Stream bleibt offen, auch wenn man zum Cockpit wechselt, und eine offene Freigabe oder Rückfrage erscheint sofort in der Inbox.
+Runs aus CLI, Cron oder anderen Fenstern kennt die WebUI noch nicht, weil Hermes' API sie nicht als Liste anbietet; ein Neuladen der Seite beendet die Anzeige
+(die Runs laufen in Hermes weiter). Was Hermes nicht bestätigt hat, steht nicht in der Oberfläche: Kosten, Kontext-Füllstand, TTFT, Auswertung je Profil.
+Die Karten zeigen Zustand, Tätigkeit und den letzten Chat aus `/api/sessions`.
 
 ## Entwicklung
 

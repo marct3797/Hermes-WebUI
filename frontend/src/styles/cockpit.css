@@ -11,3 +11,54 @@
 .cnt b{font-weight:600;color:var(--t2)}
 .pcard:hover .sg{box-shadow:inset 0 0 0 1px color-mix(in oklch,var(--id) 55%,transparent),0 0 22px -4px color-mix(in oklch,var(--id) 60%,transparent)}
 .pcard.simple{min-height:0}
+
+/* KPI-Leiste */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border:1px solid var(--line);border-radius:4px;background:var(--s1)}
+.kpi{padding:12px 14px;display:flex;flex-direction:column;gap:6px;border-right:1px solid var(--line);min-width:0}
+.kpi:last-child{border-right:0}
+.kpi .v{font:500 24px/28px var(--mono);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.kpi .v small{font:500 12px var(--mono);color:var(--t3);letter-spacing:0;margin-left:4px}
+.kpi.hot .v{color:var(--crim-hi)}
+.kpi.hot{background:linear-gradient(180deg,rgba(225,29,72,.07),transparent)}
+.kpi-note{font:500 10.5px/14px var(--mono);color:var(--t3)}
+.kpi.hot .kpi-note{color:var(--t2)}
+
+/* Profilkarten: Zusätze der App */
+.pcard{min-height:0}
+.pcard .quote{min-height:0}
+.pcard .quote.dim{color:var(--t3)}
+.livebox{display:flex;align-items:center;gap:8px;min-height:28px;padding:5px 9px;border-radius:4px;background:var(--void);border:1px solid var(--line);font:500 11px/16px var(--mono);color:var(--t2);min-width:0}
+.livebox .ic{flex:none;color:var(--t3)}
+.livebox.run{border-color:var(--crim-line)}
+.livebox.run .ic{color:var(--crim-hi)}
+.livebox.run span.v{color:var(--t1)}
+.livebox.wait{border-color:var(--crim);color:var(--t1)}
+.livebox.wait .ic{color:var(--crim-hi)}
+.livebox.err{border-color:rgba(239,68,68,.45)}
+.livebox.err .ic{color:var(--ruby-t)}
+.pfoot{display:flex;align-items:center;gap:10px;margin-top:auto;font:500 10.5px var(--mono);color:var(--t3)}
+.pcard:focus-visible{border-radius:4px}
+.hostline{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px}
+.hostline .meta{font:500 11px var(--mono);color:var(--t3)}
+
+/* Zwei Spalten: Karten links, Panels rechts */
+.two{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+.two>.l{flex:999 1 520px;min-width:0;display:flex;flex-direction:column;gap:18px}
+.two>.r{flex:1 1 300px;max-width:340px;min-width:280px}
+.aside{display:flex;flex-direction:column;gap:14px;min-width:0}
+.qrow{display:flex;align-items:center;gap:10px;padding:11px 14px;border-top:1px solid var(--line)}
+.qrow:first-of-type{border-top:0}
+.qrow .tt{font:500 12.5px/16px var(--sans);color:var(--t1)}
+.qrow .ss{font:500 10.5px/14px var(--mono);color:var(--t3)}
+.wrow{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-top:1px solid var(--line)}
+.sysrow{white-space:nowrap;display:flex;align-items:center;gap:10px;padding:9px 14px;border-top:1px solid var(--line);font:500 11.5px var(--mono);color:var(--t2)}
+.sysrow .r{margin-left:auto;color:var(--t3);overflow:hidden;text-overflow:ellipsis}
+.card-h .ct{margin-left:0}
+.panel-empty{margin:0;padding:14px;color:var(--t3);font:400 12.5px/18px var(--sans)}
+
+/* Fortschritt ohne bekannten Anteil: ein Streifen läuft durch, wartet der Run, steht er still */
+.prog.ind b{width:34%;animation:slide 1.7s ease-in-out infinite}
+.prog.hold b{width:100%;background:var(--crim-lo)}
+@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
+@media (prefers-reduced-motion:reduce){.prog.ind b{animation:none;width:100%;opacity:.45}}
+@media (max-width:800px){.two>.r{max-width:none;flex-basis:100%}}

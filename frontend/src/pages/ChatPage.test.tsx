@@ -1,51 +1,10 @@
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { resetRedirect } from "../api";
-import type { HostInfo, StreamEvent } from "../types";
+import { FakeEventSource, emit, installBackend } from "../test-backend";
 
-const HOSTS: HostInfo[] = [
-  { id: "hikari", label: "Hikari", kind: "local", address: null, status: "online", detail: null, runtimes: [
-    { id: "hermes", label: "Hermes", status: "online", version: "0.21.6", detail: null, multiplex: true, agents: [{ id: "raiden", label: "raiden" }] }] },
-];
-
-class FakeEventSource {
-  static all: FakeEventSource[] = [];
-  onmessage: ((e: MessageEvent) => void) | null = null;
-  onerror: (() => void) | null = null;
-  closed = false;
-  constructor(public url: string) { FakeEventSource.all.push(this); }
-  close() { this.closed = true; }
-}
-const emit = (ev: StreamEvent, i = FakeEventSource.all.length - 1) =>
-  act(() => { FakeEventSource.all[i].onmessage?.(new MessageEvent("message", { data: JSON.stringify(ev) })); });
-
-type Call = { method: string; url: string; body?: Record<string, unknown> };
-let calls: Call[];
-let runCount: number;
-
-function backend() {
-  calls = [];
-  runCount = 0;
-  const A = "/bff/h/hikari/hermes/raiden";
-  const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
-  vi.stubGlobal("EventSource", FakeEventSource);
-  vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
-    const method = init?.method ?? "GET";
-    calls.push({ method, url, body: init?.body ? JSON.parse(String(init.body)) : undefined });
-    if (url === "/bff/me") return json({ user: { id: "42", name: "marc" }, auth_mode: "none", fresh: true });
-    if (url === "/bff/hosts") return json({ hosts: HOSTS, config_error: null });
-    if (url === "/bff/ui") return json({ ui: { backgroundShader: { enabled: false, strength: 1, speed: 1 } }, sigils: {}, warnings: [], error: null });
-    if (url === `${A}/status`) return json({ state: "online", online: true, version: "0.21.6", features: ["runs", "steer"], error: null });
-    if (url === `${A}/models`) return json({ models: [{ id: "mock-large" }] });
-    if (url === `${A}/sessions`) return json({ data: [] });
-    if (method === "POST" && url === `${A}/runs`) return json({ run_id: `run_${++runCount}`, session_id: "s9" });
-    if (method === "POST" && /\/runs\/run_\d+\/(approval|steer|stop)$/.test(url)) return json({});
-    return json({ detail: "nicht da" }, 404);
-  }));
-}
-
-const posted = (suffix: string) => calls.filter((c) => c.method === "POST" && c.url.endsWith(suffix));
+let posted: ReturnType<typeof installBackend>["posted"];
 
 async function startRun(text = "Prüfe die Tests") {
   history.pushState(null, "", "/h/hikari/hermes/raiden/chat");
@@ -58,7 +17,7 @@ async function startRun(text = "Prüfe die Tests") {
   return text;
 }
 
-beforeEach(() => { resetRedirect(); FakeEventSource.all = []; backend(); });
+beforeEach(() => { resetRedirect(); ({ posted } = installBackend(["raiden"])); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("Chat", () => {
@@ -137,7 +96,7 @@ describe("Chat", () => {
 
     emit({ type: "run.completed" });
     await waitFor(() => expect(posted("/runs")).toHaveLength(2));
-    expect(posted("/runs")[1].body).toMatchObject({ text: "danach die Doku", session_id: "s9" });
+    expect(posted("/runs")[1].body).toMatchObject({ text: "danach die Doku", session_id: "s1" });
     expect(screen.queryByRole("list", { name: "Vorgemerkte Nachrichten" })).toBeNull();
   });
 

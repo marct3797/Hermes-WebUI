@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DAY_LABEL, dayGroup, fmtDay, fmtTime, toMs, type DayGroup } from "../../format";
 import { isEditable } from "../../keys";
-import { agentPath, navigate } from "../../router";
+import { agentKey, agentPath, navigate } from "../../router";
+import { convKey } from "../../runStore";
+import { useActivity, useRunSnapshot } from "../../runs";
 import { useShell } from "../../shell";
 import type { AgentRef, SessionSummary } from "../../types";
 import { sigilFor, useUi } from "../../ui";
@@ -16,7 +18,9 @@ type Filter = "chats" | "automation";
 
 /** Sessions des Agents nach Tag gruppiert, mit Suche, Filter und Tastenkürzeln (N = neuer Chat, / = Suche). */
 export function SessionColumn({ agent, label, runtimeLabel, sessionId }: Props) {
-  const { sessions, sessionsLoading, run } = useShell();
+  const { sessions, sessionsLoading } = useShell();
+  const snap = useRunSnapshot();
+  const { byAgent } = useActivity();
   const { sigils } = useUi();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("chats");
@@ -50,15 +54,21 @@ export function SessionColumn({ agent, label, runtimeLabel, sessionId }: Props) 
     return out;
   }, [sessions, query, filter, pinnedOnly]);
 
-  const active = run.status === "starting" || run.status === "running";
-  const state = run.waiting ? "wait" : active ? "live" : undefined;
+  // Zustand je Session aus dem Run-Zustand: auch eine Session im Hintergrund zeigt „läuft“ oder „wartet“.
+  const stateOf = (sid: string): "wait" | "live" | undefined => {
+    const st = snap.convs.get(convKey(agent, sid))?.state;
+    if (!st || (st.runStatus !== "running" && st.runStatus !== "starting")) return undefined;
+    return st.items.some((i) => (i.kind === "approval" && !i.decision) || (i.kind === "clarify" && !i.answer)) ? "wait" : "live";
+  };
+  const act = byAgent.get(agentKey(agent));
+  const agentState = act?.waiting ? "wait" : act?.running ? "live" : undefined;
   const empty = !groups.today.length && !groups.yesterday.length && !groups.older.length;
 
   return (
     <aside className="sess" aria-label={`Sessions von ${label}`}>
       <div className="sess-h">
         <div className="row" style={{ gap: 12 }}>
-          <Sigil name={label} config={sigilFor(sigils, agent)} size="m" state={state} />
+          <Sigil name={label} config={sigilFor(sigils, agent)} size="m" state={agentState} />
           <div className="col grow" style={{ gap: 2, minWidth: 0 }}>
             <span className="sess-name trunc">{label}</span>
             <span className="mono t3 trunc" style={{ fontSize: 10.5 }}>{agent.host} · {runtimeLabel.toLowerCase()}</span>
@@ -89,11 +99,12 @@ export function SessionColumn({ agent, label, runtimeLabel, sessionId }: Props) 
             <div className="sgrp lbl">{DAY_LABEL[g]}</div>
             {groups[g].map((s) => {
               const on = s.id === sessionId;
+              const state = stateOf(s.id);
               const at = toMs(s.updatedAt);
               return (
-                <Link key={s.id} to={agentPath(agent, "chat", s.id)} className={`srow${on ? " on" : ""}${on && state ? " live" : ""}`} aria-current={on ? "page" : undefined}>
+                <Link key={s.id} to={agentPath(agent, "chat", s.id)} className={`srow${on ? " on" : ""}${state ? " live" : ""}`} aria-current={on ? "page" : undefined}>
                   <span className="t">
-                    {on && state && <i className={`dot ${state === "wait" ? "dot-wait" : "dot-run"}`} />}
+                    {state && <i className={`dot ${state === "wait" ? "dot-wait" : "dot-run"}`} />}
                     {s.pinned && <Icon name="pin" size={12} className="t3" />}
                     {isAuto(s) && <Icon name="clock" size={12} className="t3" />}
                     <span className="trunc">{s.title}</span>
@@ -101,7 +112,7 @@ export function SessionColumn({ agent, label, runtimeLabel, sessionId }: Props) 
                   <span className="m">
                     {s.messageCount != null && <span>{s.messageCount} Nachr.</span>}
                     {at !== undefined && <span>{g === "older" ? fmtDay(at) : fmtTime(at)}</span>}
-                    {on && state && <span className="crimt">{state === "wait" ? "wartet" : "läuft"}</span>}
+                    {state && <span className="crimt">{state === "wait" ? "wartet" : "läuft"}</span>}
                   </span>
                 </Link>
               );

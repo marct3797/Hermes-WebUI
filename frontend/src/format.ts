@@ -55,3 +55,19 @@ export function toolIcon(name: string): string {
   if (/memory|recall|remember/.test(n)) return "memory";
   return "wrench";
 }
+
+/** vor 5 Min · vor 2 Std · vor 3 T; unter einer Minute „gerade eben“. */
+export function fmtAgo(ms: number, now = Date.now()): string {
+  const s = Math.max(0, (now - ms) / 1000);
+  if (s < 60) return "gerade eben";
+  if (s < 3600) return `vor ${Math.floor(s / 60)} Min`;
+  if (s < 86_400) return `vor ${Math.floor(s / 3600)} Std`;
+  return `vor ${Math.floor(s / 86_400)} T`;
+}
+
+/** Do 22.10. */
+export function fmtDate(ms: number): string {
+  const d = new Date(ms);
+  const day = d.toLocaleDateString("de-DE", { weekday: "short" }).replace(".", "");
+  return `${day} ${d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}`;
+}

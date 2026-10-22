@@ -1,7 +1,11 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { NO_RUN, ShellContext } from "../../shell";
-import type { SessionSummary } from "../../types";
+import { act } from "@testing-library/react";
+import { vi } from "vitest";
+import { RunsProvider } from "../../runs";
+import { createRunStore } from "../../runStore";
+import { ShellContext } from "../../shell";
+import type { AgentRef, SessionSummary, StreamEvent } from "../../types";
 import { SessionColumn } from "./SessionColumn";
 
 afterEach(cleanup);
@@ -14,11 +18,26 @@ const SESSIONS: SessionSummary[] = [
   { id: "d", title: "Nightly Lint", updatedAt: now, source: "cron" },
 ];
 
-function mount(sessionId?: string, run = NO_RUN) {
+const AGENT: AgentRef = { host: "hikari", runtime: "hermes", agent: "raiden" };
+
+/** Ein Run in Session „a“, der auf eine Freigabe wartet. */
+async function waitingRun() {
+  let es: { onmessage: ((e: MessageEvent) => void) | null } | undefined;
+  const api = { startRun: vi.fn(async () => ({ run_id: "r1", session_id: "a" })), eventsUrl: () => "/e", messages: vi.fn(), runStatus: vi.fn() };
+  const store = createRunStore({ api: api as never, eventSource: () => (es = { onmessage: null, onerror: null, close: () => undefined } as never) as never });
+  await store.send(AGENT, "a", "los", []);
+  const emit = (ev: StreamEvent) => act(() => { es!.onmessage?.(new MessageEvent("message", { data: JSON.stringify(ev) })); });
+  emit({ type: "approval.requested", command: "ls", reason: "", choices: ["once", "deny"], timeout_s: 300 });
+  return store;
+}
+
+function mount(sessionId?: string, store = createRunStore()) {
   render(
-    <ShellContext.Provider value={{ openMenu: () => undefined, sessions: SESSIONS, sessionsLoading: false, refreshSessions: () => undefined, run, setRun: () => undefined }}>
-      <SessionColumn agent={{ host: "hikari", runtime: "hermes", agent: "raiden" }} label="raiden" runtimeLabel="Hermes" sessionId={sessionId} />
-    </ShellContext.Provider>,
+    <RunsProvider store={store}>
+      <ShellContext.Provider value={{ openMenu: () => undefined, sessions: SESSIONS, sessionsLoading: false, refreshSessions: () => undefined }}>
+        <SessionColumn agent={AGENT} label="raiden" runtimeLabel="Hermes" sessionId={sessionId} />
+      </ShellContext.Provider>
+    </RunsProvider>,
   );
 }
 
@@ -47,12 +66,12 @@ describe("SessionColumn", () => {
     expect(screen.queryByText("Tests prüfen")).toBeNull();
   });
 
-  it("shows the run state on the open session only", () => {
-    mount("a", { status: "running", waiting: true });
-    const open = screen.getByRole("link", { name: /Tests prüfen/ });
+  it("shows the run state of each session, also of one that is not open", async () => {
+    mount("b", await waitingRun());
+    expect(screen.getByRole("link", { name: /Tests prüfen/ })).toHaveTextContent("wartet");
+    const open = screen.getByRole("link", { name: /Adapter lesen/ });
     expect(open).toHaveAttribute("aria-current", "page");
-    expect(open).toHaveTextContent("wartet");
-    expect(screen.getByRole("link", { name: /Adapter lesen/ })).not.toHaveTextContent("wartet");
+    expect(open).not.toHaveTextContent("wartet");
   });
 
   it("focuses the search with the slash key", () => {

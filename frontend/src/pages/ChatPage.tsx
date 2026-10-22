@@ -8,7 +8,7 @@ import { STATUS_LABEL } from "../components/Status";
 import { fmtClock, fmtCount } from "../format";
 import { isEditable } from "../keys";
 import { agentPath, navigate } from "../router";
-import { NO_RUN, useShell } from "../shell";
+import { useShell } from "../shell";
 import type { AgentRef, AgentStatus, Decision, Item, SendMode } from "../types";
 import { sigilFor, useUi } from "../ui";
 import { useChat } from "../useChat";
@@ -36,7 +36,7 @@ const RUN_LABEL = { idle: "bereit", starting: "startet …", running: "arbeitet 
 type Approval = Extract<Item, { kind: "approval" }>;
 
 export function ChatPage({ agent, label, runtimeLabel, sessionId }: Props) {
-  const { refreshSessions, sessions, setRun, openMenu } = useShell();
+  const { refreshSessions, sessions, openMenu } = useShell();
   const { sigils } = useUi();
   const [status, setStatus] = useState<AgentStatus>();
   const [models, setModels] = useState<string[]>([]);
@@ -65,7 +65,6 @@ export function ChatPage({ agent, label, runtimeLabel, sessionId }: Props) {
   const chat = useChat({
     agent, sessionId, model,
     onSession: (id) => { navigate(agentPath(agent, "chat", id), true); refreshSessions(); },
-    onRunEnd: refreshSessions,
   });
   const { state } = chat;
   const busy = state.runStatus === "starting" || state.runStatus === "running";
@@ -79,10 +78,6 @@ export function ChatPage({ agent, label, runtimeLabel, sessionId }: Props) {
   );
   const asking = state.items.some((i) => i.kind === "clarify" && !i.answer);
   const waiting = busy && (!!pending || asking);
-
-  // Rail und Session-Liste zeigen den Zustand dieses Chats.
-  useEffect(() => { setRun({ status: state.runStatus, waiting }); }, [state.runStatus, waiting, setRun]);
-  useEffect(() => () => setRun(NO_RUN), [setRun]);
 
   // Tastatur für die offene Freigabe: Enter einmal, S Session, Umschalt+A immer, Esc ablehnen.
   useEffect(() => {

@@ -2,10 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { ApiError, api, page as browser } from "./api";
 import { Shell } from "./components/Shell";
 import { HostsProvider } from "./hosts";
+import { RunsProvider } from "./runs";
 import { UiProvider } from "./ui";
 import { AgentPage } from "./pages/AgentPage";
 import { HostsPage } from "./pages/HostsPage";
-import { CockpitPage, InboxPage, NotFoundPage } from "./pages/Placeholders";
+import { CockpitPage } from "./pages/CockpitPage";
+import { InboxPage } from "./pages/InboxPage";
+import { NotFoundPage } from "./pages/Placeholders";
 import { navigate, parsePath, usePath } from "./router";
 import type { Me } from "./types";
 
@@ -41,6 +44,7 @@ export function App() {
   return (
     <UiProvider>
     <HostsProvider>
+    <RunsProvider>
       <Shell me={me} path={path} page={page} onLogout={logout}>
         {(() => {
           switch (page.name) {
@@ -53,6 +57,7 @@ export function App() {
           }
         })()}
       </Shell>
+    </RunsProvider>
     </HostsProvider>
     </UiProvider>
   );

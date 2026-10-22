@@ -1,0 +1,35 @@
+/* Quelle: Design-Entwurf v2 (hermes.css), Inbox: Liste + Detail */
+.split{flex:1 0 auto;display:flex;flex-wrap:wrap;border-top:1px solid var(--line);min-height:640px}
+.ilist{flex:0 0 408px;min-width:0;display:flex;flex-direction:column;border-right:1px solid var(--line);background:rgba(9,9,11,.55)}
+.grp{display:flex;align-items:center;gap:10px;padding:16px 16px 8px}
+.irow{position:relative;display:flex;align-items:flex-start;gap:12px;width:100%;padding:12px 16px 14px;border:0;border-top:1px solid var(--line);background:none;text-align:left;color:inherit}
+.irow:hover{background:var(--s1)}
+.irow.sel{background:var(--s2);box-shadow:inset 2px 0 0 var(--crim)}
+.irow .tt{font:500 12.5px/17px var(--sans);color:var(--t1)}
+.irow .ss{font:500 11px/15px var(--mono);color:var(--t2)}
+.irow .bar{position:absolute;left:16px;right:16px;bottom:5px;height:2px;border-radius:1px;background:var(--s3)}
+.irow .bar b{display:block;height:100%;border-radius:1px;background:var(--crim)}
+.detail{flex:999 1 520px;min-width:0;padding:26px 32px 44px;display:flex;flex-direction:column;gap:18px}
+.detail h2{margin:0;font:600 22px/28px var(--sans);letter-spacing:-.02em}
+.dhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.ttl{display:flex;flex-direction:column;gap:6px;min-width:150px;margin-left:auto}
+.ttl .v{font:500 12px var(--mono);color:var(--crim-hi);text-align:right}
+.ttl .prog{height:3px;width:100%}
+.decide{display:flex;flex-direction:column;gap:12px;padding:16px;border:1px solid var(--crim-line);border-radius:4px;background:linear-gradient(180deg,rgba(225,29,72,.07),rgba(225,29,72,0) 70%),var(--s1);box-shadow:0 0 0 1px rgba(225,29,72,.25),0 12px 32px -10px rgba(225,29,72,.3)}
+.decide .btns{display:flex;flex-wrap:wrap;gap:8px}
+.opt{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:4px;background:var(--s1);text-align:left;color:var(--t1);font:500 13px var(--sans)}
+.opt:hover{border-color:var(--line2)}
+.opt.on{border-color:var(--crim);box-shadow:var(--glow)}
+.radio{width:16px;height:16px;border-radius:50%;border:1px solid var(--line2);background:var(--void);flex:none;display:flex;align-items:center;justify-content:center}
+.opt.on .radio{border-color:var(--crim);background:var(--crim)}
+.opt.on .radio::after{content:"";width:6px;height:6px;border-radius:50%;background:#fff}
+.okmark{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--s2);box-shadow:inset 0 0 0 1px var(--line2)}
+.nothing{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;flex:1;min-height:420px;color:var(--t2);text-align:center}
+.nothing p{max-width:360px;margin:0}
+.stream-q{position:relative;padding:14px 16px 14px 18px;background:var(--s1);border:1px solid var(--line);border-radius:4px}
+.stream-q .q{font:400 15px/24px var(--sans);letter-spacing:-.01em}
+.done-row{display:flex;align-items:center;gap:10px;padding:8px 16px;border-top:1px solid var(--line);color:var(--t2)}
+.keys{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+.irow:focus-visible{border-radius:0}
+@media (max-width:1000px){.ilist{flex:1 1 100%;border-right:0}.detail{padding:20px 16px 32px}}
+.inbox{flex:1 0 auto;display:flex;flex-direction:column;min-width:0}

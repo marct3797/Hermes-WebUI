@@ -140,7 +140,7 @@ describe("App-Shell", () => {
     open("/");
     render(<App />);
     fireEvent.click(await screen.findByRole("link", { name: "Inbox" }));
-    expect(await screen.findByRole("heading", { name: "Inbox" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Braucht dich", level: 1 })).toBeInTheDocument();
     expect(location.pathname).toBe("/inbox");
   });
 });

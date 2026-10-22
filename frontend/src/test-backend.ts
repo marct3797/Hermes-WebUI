@@ -1,0 +1,57 @@
+import { act } from "@testing-library/react";
+import { vi } from "vitest";
+import type { HostInfo, StreamEvent } from "./types";
+
+/** Gemeinsame Test-Attrappen: BFF-Antworten und EventSource für die Seiten-Tests. */
+
+export const hostsFor = (agents: string[]): HostInfo[] => [
+  { id: "hikari", label: "Hikari", kind: "local", address: null, status: "online", detail: null, runtimes: [
+    { id: "hermes", label: "Hermes", status: "online", version: "0.21.6", detail: null, multiplex: true, agents: agents.map((id) => ({ id, label: id })) }] },
+  { id: "laptop", label: "Laptop", kind: "remote", address: "100.100.3.4", status: "unreachable", detail: "Host-Dienst nicht verbunden", runtimes: [
+    { id: "hermes", label: "Hermes", status: "unreachable", version: null, detail: "Host-Dienst nicht verbunden", multiplex: false, agents: [{ id: "default", label: "default" }] }] },
+];
+
+export class FakeEventSource {
+  static all: FakeEventSource[] = [];
+  onmessage: ((e: MessageEvent) => void) | null = null;
+  onerror: (() => void) | null = null;
+  closed = false;
+  constructor(public url: string) { FakeEventSource.all.push(this); }
+  close() { this.closed = true; }
+}
+
+/** Ereignis auf einem Stream auslösen; ohne Index der zuletzt geöffnete, sonst der Stream, dessen URL den Agent nennt. */
+export function emit(ev: StreamEvent, agent?: string) {
+  const list = FakeEventSource.all;
+  const es = agent ? [...list].reverse().find((s) => s.url.includes(`/${agent}/runs/`)) : list[list.length - 1];
+  act(() => { es?.onmessage?.(new MessageEvent("message", { data: JSON.stringify(ev) })); });
+}
+
+export type Call = { method: string; url: string; body?: Record<string, unknown> };
+
+export function installBackend(agents: string[] = ["raiden"], features = ["runs", "steer"]) {
+  FakeEventSource.all = [];
+  const calls: Call[] = [];
+  let runs = 0;
+  const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+  vi.stubGlobal("EventSource", FakeEventSource);
+  vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+    const method = init?.method ?? "GET";
+    calls.push({ method, url, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+    if (url === "/bff/me") return json({ user: { id: "42", name: "marc" }, auth_mode: "none", fresh: true });
+    if (url === "/bff/hosts") return json({ hosts: hostsFor(agents), config_error: null });
+    if (url === "/bff/ui") return json({ ui: { backgroundShader: { enabled: false, strength: 1, speed: 1 } }, sigils: {}, warnings: [], error: null });
+    const m = /^\/bff\/h\/hikari\/hermes\/([^/]+)(\/.*)$/.exec(url);
+    if (m && agents.includes(m[1])) {
+      const rest = m[2];
+      if (rest === "/status") return json({ state: "online", online: true, version: "0.21.6", features, error: null });
+      if (rest === "/models") return json({ models: [{ id: "mock-large" }] });
+      if (rest === "/sessions") return json({ data: [{ id: `alt-${m[1]}`, title: `Alter Chat von ${m[1]}`, last_active_at: Math.floor(Date.now() / 1000) - 7200 }] });
+      if (method === "POST" && rest === "/runs") { runs += 1; return json({ run_id: `run_${runs}`, session_id: `s${runs}` }); }
+      if (method === "POST" && /^\/runs\/run_\d+\/(approval|steer|stop|clarify)$/.test(rest)) return json({});
+    }
+    return json({ detail: "nicht da" }, 404);
+  }));
+  const posted = (suffix: string) => calls.filter((c) => c.method === "POST" && c.url.endsWith(suffix));
+  return { calls, posted };
+}

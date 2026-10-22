@@ -1,8 +1,9 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useAgentRef, useResolvedAgent } from "../hosts";
-import { NO_RUN, ShellContext, useSessions, type RunInfo } from "../shell";
+import { ShellContext, useSessions } from "../shell";
 import type { Me } from "../types";
-import { type Page } from "../router";
+import { sameAgent, type Page } from "../router";
+import { useActivity, useRunStore } from "../runs";
 import { Icon } from "./Icon";
 import { Sidebar } from "./Sidebar";
 import { Rail } from "./chat/Rail";
@@ -22,11 +23,16 @@ function crumbs(page: Page): string[] {
 
 export function Shell({ me, path, page, onLogout, children }: Props) {
   const [menu, setMenu] = useState(false);
-  const [run, setRun] = useState<RunInfo>(NO_RUN);
   const active = useAgentRef(page.name === "agent" ? page.ref : undefined);
   // Sessions nur von erreichbaren Runtimes holen: Offline-Hosts würden sonst bei jedem Öffnen Fehler melden.
   const resolved = useResolvedAgent(active);
   const { sessions, loading, refresh } = useSessions(resolved?.runtimeOnline ? active : undefined);
+  // Ein Run des geöffneten Agents ist zu Ende: neue Session und neuer Titel erscheinen in der Liste.
+  const store = useRunStore();
+  useEffect(() => store.onRunEnd((a) => { if (sameAgent(a, active)) refresh(); }), [store, active, refresh]);
+  // Der Tab zeigt, dass etwas auf die Person wartet.
+  const { needs } = useActivity();
+  useEffect(() => { document.title = needs.length ? `(${needs.length}) Hermes` : "Hermes"; }, [needs.length]);
   const trail = crumbs(page);
   const sessionId = page.name === "agent" ? page.sessionId : undefined;
   const sidebar = (
@@ -35,7 +41,7 @@ export function Shell({ me, path, page, onLogout, children }: Props) {
       sessions={sessions} sessionsLoading={loading} open={menu} onClose={() => setMenu(false)} onLogout={onLogout}
     />
   );
-  const value = { openMenu: () => setMenu(true), sessions, sessionsLoading: loading, refreshSessions: refresh, run, setRun };
+  const value = { openMenu: () => setMenu(true), sessions, sessionsLoading: loading, refreshSessions: refresh };
 
   // Chat: schmale Leiste, Session-Spalte, Verlauf und Inspector füllen die Höhe. Auf schmalen Schirmen ersetzt die Schublade Leiste und Spalte.
   if (page.name === "agent" && page.module === "chat" && active && resolved) {

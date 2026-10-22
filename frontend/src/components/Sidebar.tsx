@@ -1,11 +1,12 @@
 import { useHosts } from "../hosts";
-import { agentPath, sameAgent } from "../router";
+import { agentKey, agentPath, sameAgent } from "../router";
+import { useActivity } from "../runs";
 import type { AgentRef, Me, SessionSummary } from "../types";
 import { sigilFor, useUi } from "../ui";
 import { Icon } from "./Icon";
 import { Link } from "./Link";
 import { Sigil } from "./Sigil";
-import { StatusDot } from "./Status";
+import { AgentDot, StatusDot } from "./Status";
 
 type Props = {
   me: Me;
@@ -33,6 +34,7 @@ const SOON = [
 export function Sidebar(p: Props) {
   const { hosts, error } = useHosts();
   const { sigils } = useUi();
+  const { needs, byAgent } = useActivity();
   return (
     <>
       {p.open && <div className="scrim" onClick={p.onClose} aria-hidden />}
@@ -48,6 +50,7 @@ export function Sidebar(p: Props) {
             {NAV.map((n) => (
               <Link key={n.to} to={n.to} className={p.path === n.to ? "on" : undefined} aria-current={p.path === n.to ? "page" : undefined} onClick={p.onClose}>
                 <Icon name={n.icon} size={18} />{n.label}
+                {n.to === "/inbox" && needs.length > 0 && <span className="ct" aria-label={`${needs.length} offen`}>{needs.length}</span>}
               </Link>
             ))}
             {SOON.map((n) => (
@@ -74,6 +77,7 @@ export function Sidebar(p: Props) {
                   {r.agents.map((a) => {
                     const ref = { host: h.id, runtime: r.id, agent: a.id };
                     const isActive = sameAgent(p.active, ref);
+                    const act = byAgent.get(agentKey(ref));
                     return (
                       <div key={a.id}>
                         <Link to={agentPath(ref)} className={`agent${isActive ? " on" : ""}`}
@@ -81,7 +85,8 @@ export function Sidebar(p: Props) {
                           style={r.status !== "online" ? { opacity: 0.7 } : undefined}>
                           <Sigil name={a.label} config={sigilFor(sigils, ref)} size="xs" />
                           <span className="grow trunc">{a.label}</span>
-                          <StatusDot status={r.status} />
+                          {act && act.waiting > 0 && <span className="ct" aria-label={`${act.waiting} wartet auf dich`}>{act.waiting}</span>}
+                          <AgentDot act={act} status={r.status} />
                         </Link>
                         {isActive && (
                           <div className="side-sessions" role="group" aria-label={`Sessions von ${a.label}`}>
