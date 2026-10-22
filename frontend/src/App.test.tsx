@@ -139,7 +139,7 @@ describe("App-Shell", () => {
     fakeBackend();
     open("/");
     render(<App />);
-    fireEvent.click(await screen.findByRole("link", { name: "Inbox" }));
+    fireEvent.click(await within(await screen.findByRole("complementary", { name: "Navigation" })).findByRole("link", { name: "Inbox" }));
     expect(await screen.findByRole("heading", { name: "Braucht dich", level: 1 })).toBeInTheDocument();
     expect(location.pathname).toBe("/inbox");
   });

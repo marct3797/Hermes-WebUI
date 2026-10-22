@@ -62,3 +62,5 @@
 @keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
 @media (prefers-reduced-motion:reduce){.prog.ind b{animation:none;width:100%;opacity:.45}}
 @media (max-width:800px){.two>.r{max-width:none;flex-basis:100%}}
+
+.filters{gap:8px;margin-left:auto;flex-wrap:wrap}

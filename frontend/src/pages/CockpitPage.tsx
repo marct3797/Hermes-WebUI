@@ -68,7 +68,7 @@ export function CockpitPage() {
         <span className="ph-sub" style={{ marginBottom: 5 }}>
           {fmtDate(now)} · {fmtTime(now)} · {hosts.length} {hosts.length === 1 ? "Host" : "Hosts"} · {all.length} Agents
         </span>
-        <div className="row" style={{ gap: 8, marginLeft: "auto", flexWrap: "wrap" }} role="group" aria-label="Filter">
+        <div className="row filters" role="group" aria-label="Filter">
           {chips.map((c) => (
             <button key={c.id} type="button" className={`chip${filter === c.id ? " on" : ""}`} aria-pressed={filter === c.id} onClick={() => setFilter(c.id)}>
               {c.label}<span className="n">{c.n}</span>

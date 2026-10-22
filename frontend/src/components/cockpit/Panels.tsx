@@ -17,7 +17,7 @@ export function NeedsPanel({ needs, log, sigils, now }: { needs: Need[]; log: re
   const store = useRunStore();
   const recent = log[0] && now - log[0].at < 8000 ? log[0] : undefined;
   return (
-    <section className={`card${needs.length ? " need" : ""}`} aria-label="Braucht dich">
+    <section className={`card needs-panel${needs.length ? " need" : (recent ? "" : " none")}`} aria-label="Braucht dich">
       <header className="card-h">
         <Icon name="bell" size={16} className={needs.length ? "crimt" : "t2"} />
         <h2>Braucht dich</h2>
@@ -84,7 +84,7 @@ export function NeedsPanel({ needs, log, sigils, now }: { needs: Need[]; log: re
 /** Runs, die gerade laufen: wer, seit wann, was gerade passiert. Der Balken zeigt nur Bewegung, keinen Fortschritt. */
 export function RunningPanel({ live, sigils, now }: { live: LiveRun[]; sigils: Sigils; now: number }) {
   return (
-    <section className="card" aria-label="Läuft gerade">
+    <section className="card run-panel" aria-label="Läuft gerade">
       <header className="card-h">
         <Icon name="cpu" size={16} className="t2" />
         <h2>Läuft gerade</h2>
@@ -111,7 +111,7 @@ export function RunningPanel({ live, sigils, now }: { live: LiveRun[]; sigils: S
 /** Erreichbarkeit der Hosts und Runtimes, wie die Registry sie meldet. */
 export function SystemPanel({ hosts, configError }: { hosts: HostInfo[]; configError?: string | null }) {
   return (
-    <section className="card" aria-label="System">
+    <section className="card sys-panel" aria-label="System">
       <header className="card-h"><Icon name="server" size={16} className="t2" /><h2>System</h2></header>
       {hosts.map((h) => h.runtimes.length === 0
         ? <div key={h.id} className="sysrow"><StatusDot status={h.status} />{h.label}<span className="r">{h.address ?? "lokal"}</span></div>

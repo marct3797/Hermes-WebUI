@@ -9,6 +9,7 @@ import { useActivity, useRunSnapshot, useRunStore } from "../runs";
 import type { Decision } from "../types";
 import { sigilFor, useUi } from "../ui";
 import { useNow } from "../useNow";
+import { useMedia } from "../useMedia";
 
 type Tab = "all" | "approval" | "clarify" | "failed";
 const TABS: Array<{ id: Tab; label: string }> = [
@@ -36,6 +37,13 @@ export function InboxPage() {
   const now = useNow(true);
   const [tab, setTab] = useState<Tab>("all");
   const [sel, setSel] = useState<string>();
+  // Untereinander (schmaler Schirm) steht die Meldung über der Liste: nach der Wahl dorthin scrollen.
+  const stacked = useMedia("(max-width: 1000px)");
+  const reduce = useMedia("(prefers-reduced-motion: reduce)");
+  const pick = (id: string) => {
+    setSel(id);
+    if (stacked) document.querySelector(".detail")?.scrollIntoView?.({ block: "start", behavior: reduce ? "auto" : "smooth" });
+  };
 
   const visible = useMemo(() => needs.filter((n) => tab === "all" || tabOf(n) === tab), [needs, tab]);
   const current = visible.find((n) => n.id === sel) ?? visible[0];
@@ -93,7 +101,7 @@ export function InboxPage() {
                   const secs = secondsLeft(n, now);
                   const tag = TAG[tabOf(n)];
                   return (
-                    <button key={n.id} type="button" className={`irow${current?.id === n.id ? " sel" : ""}`} aria-current={current?.id === n.id} onClick={() => setSel(n.id)}>
+                    <button key={n.id} type="button" className={`irow${current?.id === n.id ? " sel" : ""}`} aria-current={current?.id === n.id} onClick={() => pick(n.id)}>
                       <Sigil name={n.agent.agent} config={sigilFor(sigils, n.agent)} size="m" state={n.kind === "failed" || n.kind === "lost" ? "err" : "wait"} />
                       <div className="col grow" style={{ gap: 3, minWidth: 0 }}>
                         <span className="tt trunc">{title(n)}</span>

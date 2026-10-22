@@ -149,7 +149,7 @@ export function ApprovalCard({ a, disabled, onDecide }: { a: Approval; disabled:
       </div>
       {a.reason && <span className="t2" style={{ fontSize: 13 }}>{a.reason}</span>}
       <div className="cmd"><span className="t3">$</span><span className="cmd-text">{a.command}</span></div>
-      <div className="btns">
+      <div className="btns ways">
         {/* Nur, was der Agent für diese Anfrage erlaubt (bei smart_denied z. B. nur einmal oder ablehnen). */}
         {a.choices.map((d) => (
           <button key={d} type="button" className={`btn${d === "once" ? " btn-p" : d === "deny" ? " btn-d" : ""}`}

@@ -86,7 +86,7 @@ function Approval({ need, sigils, now }: Props & { need: Extract<Need, { kind: "
           <Icon name="shield" size={16} className="crimt" /><span style={{ fontWeight: 600 }}>Deine Entscheidung</span>
           <span className="hint" style={{ marginLeft: "auto" }}>geht ins Audit-Log</span>
         </div>
-        <div className="btns">
+        <div className="btns ways">
           {DECIDE.filter((x) => a.choices.includes(x.d)).map((x) => (
             <button key={x.d} type="button" disabled={expired} onClick={() => void store.decide(need.convKey, itemIdOf(need), x.d)}
               className={`btn btn-l${x.d === "once" ? " btn-p" : x.d === "deny" ? " btn-d" : ""}`} style={x.d === "deny" ? { marginLeft: "auto" } : undefined}>

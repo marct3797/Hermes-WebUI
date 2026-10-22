@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, toLogin } from "../api";
 import { Icon } from "../components/Icon";
+import { Link } from "../components/Link";
+import { Sigil } from "../components/Sigil";
 import { AgentCard, UserMessage, groupTurns, runLabelOf } from "../components/chat/Convo";
 import { Dock } from "../components/chat/Dock";
 import { Inspector } from "../components/chat/Inspector";
@@ -126,7 +128,8 @@ export function ChatPage({ agent, label, runtimeLabel, sessionId }: Props) {
 
   const runTag = !status ? null
     : !status.online ? <span className="tag tag-e">{(STATUS_LABEL[status.state] ?? status.state).toUpperCase()}</span>
-    : waiting ? <span className="tag tag-s"><i className="dot dot-wait" />{pending ? "WARTET AUF FREIGABE" : "WARTET AUF ANTWORT"}</span>
+    : waiting ? <span className="tag tag-s"><i className="dot dot-wait" />
+        <span className="d-only">{pending ? "WARTET AUF FREIGABE" : "WARTET AUF ANTWORT"}</span><span className="m-only">WARTET</span></span>
     : state.runStatus === "running" || state.runStatus === "starting"
       ? <span className="tag tag-c"><i className="dot dot-run" />LÄUFT{state.startedAt ? ` · ${fmtClock((now - state.startedAt) / 1000)}` : ""}</span>
     : state.runStatus === "failed" ? <span className="tag tag-e">FEHLER</span>
@@ -138,15 +141,24 @@ export function ChatPage({ agent, label, runtimeLabel, sessionId }: Props) {
     <>
       <section className="cmain">
         <header className="chead">
-          <button type="button" className="btn btn-s btn-i btn-g menu-btn" aria-label="Menü" onClick={openMenu}><Icon name="menu" size={18} /></button>
-          <div className="col grow" style={{ gap: 3, minWidth: 0 }}>
+          {/* Handy: zurück zum Cockpit, Sigil und Name öffnen die Schublade mit Agents und Sessions */}
+          <Link to="/" className="btn btn-i btn-g m-only back-btn" aria-label="Zurück zum Cockpit"><Icon name="chevr" size={18} className="rot180" /></Link>
+          <h1 className="sr-only m-only">{title}</h1>
+          <button type="button" className="menu-btn m-only chead-open" aria-label="Agents und Sessions öffnen" onClick={openMenu}>
+            <Sigil name={label} config={sigilFor(sigils, agent)} size="m" state={waiting ? "wait" : busy ? "live" : undefined} />
+            <span className="col grow" style={{ minWidth: 0, textAlign: "left" }}>
+              <b className="trunc">{label}</b>
+              <span className="mono t3 trunc">{agent.host} · {title}</span>
+            </span>
+          </button>
+          <div className="col grow d-only" style={{ gap: 3, minWidth: 0 }}>
             <nav className="crumb" style={{ fontSize: 11 }} aria-label="Pfad">
               <span>{agent.host}</span><Icon name="chevr" size={12} /><span>{agent.runtime}</span><Icon name="chevr" size={12} /><span>{agent.agent}</span>
               {sessionId && <><Icon name="chevr" size={12} /><b>chat/{sessionId.slice(0, 8)}</b></>}
             </nav>
             <h1 className="trunc">{title}</h1>
           </div>
-          {status?.online && <span className="tag">{runtimeLabel}{status.version ? ` ${status.version}` : ""}</span>}
+          {status?.online && <span className="tag d-only">{runtimeLabel}{status.version ? ` ${status.version}` : ""}</span>}
           {runTag}
         </header>
 

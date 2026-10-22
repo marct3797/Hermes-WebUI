@@ -41,6 +41,7 @@ frontend/src/
   pages/             Cockpit, Inbox, Hosts, Agent/Chat, Profil bearbeiten, Darstellung
   bgfx.ts            Hintergrund-Shader (WebGL 1, gebündelt); components/BgFx.tsx hängt ihn hinter die Seiten
   tokens.css         Look A: alle Farben und Maße; styles/*.css nutzen nur diese Tokens
+  styles/mobile.css  Handy (bis 800 px): Tab-Leiste unten (components/BottomNav.tsx), Touch-Ziele ab 44 px, kompakte Karten, Shader aus
 ```
 
 ### Ereignisformat

@@ -5,6 +5,7 @@ import type { Me } from "../types";
 import { sameAgent, type Page } from "../router";
 import { useActivity, useRunStore } from "../runs";
 import { BgFx } from "./BgFx";
+import { BottomNav } from "./BottomNav";
 import { Icon } from "./Icon";
 import { Sidebar } from "./Sidebar";
 import { Rail } from "./chat/Rail";
@@ -80,6 +81,7 @@ export function Shell({ me, path, page, onLogout, children }: Props) {
           </div>
           {children}
         </div>
+        <BottomNav me={me} path={path} onChats={() => setMenu(true)} onLogout={onLogout} />
       </div>
     </ShellContext.Provider>
   );

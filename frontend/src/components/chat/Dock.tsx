@@ -54,7 +54,7 @@ export function Dock(p: Props) {
 
   return (
     <div className="dockw">
-      <form className="dock" onSubmit={(e) => { e.preventDefault(); submit(); }}>
+      <form className={`dock${p.busy ? " busy" : ""}`} onSubmit={(e) => { e.preventDefault(); submit(); }}>
         {p.queued.length > 0 && (
           <ul className="queue" aria-label="Vorgemerkte Nachrichten">
             {p.queued.map((q) => (
