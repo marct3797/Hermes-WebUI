@@ -21,6 +21,8 @@ class Settings(BaseSettings):
 
     # Hosts, Runtimes und Agents (siehe hosts.example.json). Wird bei Änderung ohne Neustart neu gelesen.
     hosts_file: Path = Path("hosts.json")
+    # UI-Einstellungen (Sigils, Packs, Shader), siehe ui.example.json. Fehlt die Datei, gelten Standardwerte.
+    ui_file: Path | None = None
     # Host, auf den alte /p/<profil>-Links zeigen.
     legacy_host: str = "hikari"
 

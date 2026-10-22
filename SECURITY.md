@@ -30,6 +30,7 @@ Browser ──HTTPS── Caddy (TLS) ── BFF (FastAPI) ──┬── Herme
 | | Ausgeliehene Sitzung (gestohlenes Cookie) | Sitzung nur serverseitig, Logout und Neuanmeldung machen sie ungültig, Leerlauf- und Höchstdauer, neue ID nach jedem Login | umgesetzt |
 | | Dauerhafte Freigaben („immer erlauben“) per gekaperter Sitzung | **Step-up:** verlangt eine Anmeldung, die höchstens 10 Minuten alt ist | umgesetzt (siehe Grenzen) |
 | | Manipulierte URL-Segmente erreichen fremde Upstream-Pfade | Strikte Muster für Host, Runtime, Agent und IDs; das BFF ruft nur konfigurierte Adressen | umgesetzt |
+| | Eigene SVG-Symbole aus der Config (Sigils, Packs) | Nur Formen mit festen Attributen, kein `script`, `style`, `use`, `image`, keine `url(...)`, DOCTYPE oder ENTITY; höchstens 20 KB; Auslieferung aus dem Speicher (die URL wählt nie einen Dateipfad) mit `default-src 'none'; sandbox`; Darstellung nur als CSS-Maske, nie als Inline-SVG | umgesetzt |
 | | XSS über Agent-Ausgabe | Markdown ohne rohes HTML, Links mit `rel=noopener noreferrer nofollow`, CSP ohne `unsafe-inline` und `unsafe-eval`, Bilder nur als geprüfte Data-URL | umgesetzt |
 | **R**epudiation | „Das war ich nicht“ | Audit-Log (JSON-Zeilen, Datei 0600): Anmeldung, Abmeldung, Run-Start, Stopp, Freigabe, Steer, Rückfrage. Nur Umfang und Ziel, nie Inhalt, Keys oder Tokens. | umgesetzt |
 | **I**nfo disclosure | Keys im Browser, in Logs oder Fehlermeldungen | Keys nur im BFF (Env), `repr` und Antworten enthalten sie nicht, Upstream-Fehler werden gekürzt, 401/403 der Runtime erscheinen als 502 | umgesetzt |

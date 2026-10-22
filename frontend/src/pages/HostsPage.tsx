@@ -1,54 +1,59 @@
+import { Icon } from "../components/Icon";
 import { Link } from "../components/Link";
-import { PageHeader } from "../components/PageHeader";
-import { Monogram, StatusDot, STATUS_LABEL } from "../components/Status";
+import { PageHead } from "../components/PageHead";
+import { Sigil } from "../components/Sigil";
+import { StatusDot, STATUS_LABEL } from "../components/Status";
 import { useHosts } from "../hosts";
 import { agentPath } from "../router";
+import { sigilFor, useUi } from "../ui";
 
 export function HostsPage() {
   const { hosts, configError, error, refresh } = useHosts();
+  const { sigils } = useUi();
   return (
     <main className="page">
-      <PageHeader title="Hosts">
-        <button type="button" className="ghost small" onClick={refresh}>Aktualisieren</button>
-      </PageHeader>
-      <div className="page-body">
-        {error && <p className="banner error" role="alert">Hosts nicht ladbar: {error}</p>}
-        {configError && <p className="banner error" role="alert">Konfiguration: {configError}</p>}
-        {!hosts && !error && <p className="muted">Lade…</p>}
-        <div className="cards">
-          {hosts?.map((h) => (
-            <section key={h.id} className="panel host-card" aria-label={h.label}>
-              <header className="host-card-head">
-                <StatusDot status={h.status} />
-                <h2>{h.label}</h2>
-                <span className="mono tag">{h.kind === "local" ? "lokal" : "remote"}</span>
-                <span className="muted small">{STATUS_LABEL[h.status]}</span>
-              </header>
-              <p className="muted small mono">{h.id}{h.address ? ` · ${h.address}` : ""}</p>
+      <PageHead title="Hosts" sub={hosts ? `${hosts.length} ${hosts.length === 1 ? "Host" : "Hosts"}` : undefined}>
+        <button type="button" className="btn btn-s" onClick={refresh}><Icon name="refresh" size={14} />Aktualisieren</button>
+      </PageHead>
+      {error && <p className="banner" role="alert"><Icon name="alert" />Hosts nicht ladbar: {error}</p>}
+      {configError && <p className="banner" role="alert"><Icon name="alert" />Konfiguration: {configError}</p>}
+      {!hosts && !error && <p className="muted">Lade…</p>}
+      <div className="pgrid">
+        {hosts?.map((h) => (
+          <section key={h.id} className={`card host-card${h.status === "online" ? "" : " err"}`} aria-label={h.label}>
+            <header className="card-h">
+              <StatusDot status={h.status} />
+              <h2>{h.label}</h2>
+              <span className="tag">{h.kind === "local" ? "lokal" : "remote"}</span>
+              <span className="muted small" style={{ marginLeft: "auto" }}>{STATUS_LABEL[h.status]}</span>
+            </header>
+            <div className="host-body">
+              <p className="mono t3 small">{h.id}{h.address ? ` · ${h.address}` : ""}</p>
               {h.detail && <p className="muted small">{h.detail}</p>}
               {h.runtimes.length === 0 && <p className="muted small">Keine Runtime konfiguriert.</p>}
               {h.runtimes.map((r) => (
                 <div key={r.id} className="runtime-block">
-                  <p className="runtime-line">
+                  <p className="row" style={{ gap: 8 }}>
                     <StatusDot status={r.status} />
                     <strong>{r.label}</strong>
-                    {r.version && <span className="mono muted small">{r.version}</span>}
+                    {r.version && <span className="mono t3 small">{r.version}</span>}
                     <span className="muted small">{r.agents.length} {r.agents.length === 1 ? "Agent" : "Agents"}</span>
                   </p>
-                  <ul className="chips">
-                    {r.agents.map((a) => (
-                      <li key={a.id}>
-                        <Link to={agentPath({ host: h.id, runtime: r.id, agent: a.id })} className="chip">
-                          <Monogram name={a.label} />{a.label}
-                        </Link>
-                      </li>
-                    ))}
+                  <ul className="chip-list">
+                    {r.agents.map((a) => {
+                      const ref = { host: h.id, runtime: r.id, agent: a.id };
+                      return (
+                        <li key={a.id}>
+                          <Link to={agentPath(ref)} className="chip"><Sigil name={a.label} config={sigilFor(sigils, ref)} size="xs" />{a.label}</Link>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               ))}
-            </section>
-          ))}
-        </div>
+            </div>
+          </section>
+        ))}
       </div>
     </main>
   );

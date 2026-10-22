@@ -19,6 +19,9 @@ function fakeBackend(overrides: Routes = {}) {
   const routes: Routes = {
     "/bff/me": { body: { user: { id: "42", name: "marc" }, auth_mode: "oidc", fresh: true } },
     "/bff/hosts": { body: { hosts: HOSTS, config_error: null } },
+    "/bff/ui": { body: { ui: { backgroundShader: { enabled: true, strength: 1.6, speed: 1 } }, sigils: {
+      raiden: { type: "glyph", glyph: "neutral/bolt", hue: 98 }, "laptop/hermes/default": { type: "initials", text: "LT", hue: null },
+    }, warnings: [], error: null } },
     "/bff/h/hikari/hermes/raiden/status": { body: { state: "online", online: true, version: "0.20.4", features: ["runs"], error: null } },
     "/bff/h/hikari/hermes/raiden/models": { body: { models: [{ id: "mock-large" }] } },
     "/bff/h/hikari/hermes/raiden/sessions": { body: { sessions: [{ id: "s1", title: "Erster Chat" }] } },
@@ -54,7 +57,35 @@ describe("App-Shell", () => {
     expect(within(laptop).getByText("remote")).toBeInTheDocument();
     expect(within(laptop).getByText(/Host-Dienst nicht verbunden/)).toBeInTheDocument();
     for (const name of ["Cockpit", "Inbox", "Hosts"]) expect(within(side).getByRole("link", { name })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Cockpit" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Alle Agents" })).toBeInTheDocument();
+  });
+
+  it("draws sigils from the UI config and falls back to initials without an entry", async () => {
+    fakeBackend();
+    open("/");
+    render(<App />);
+    const side = await screen.findByRole("complementary", { name: "Navigation" });
+    const raiden = (await within(side).findByRole("link", { name: /raiden/ })).querySelector(".sg") as HTMLElement;
+    await waitFor(() => expect(raiden.style.getPropertyValue("--g")).toBe("var(--i-bolt)"));
+    expect(raiden.style.getPropertyValue("--id")).toBe("oklch(.82 .12 98)");
+    expect(raiden).not.toHaveClass("ini");
+    // kein Eintrag: Initialen und Farbton aus dem Namen
+    const sora = within(side).getByRole("link", { name: /sora/ }).querySelector(".sg") as HTMLElement;
+    expect(sora).toHaveClass("ini");
+    expect(sora).toHaveAttribute("data-i", "SO");
+    // Eintrag nur für diesen Host: Initialen aus der Config, neutral eingefärbt
+    const laptop = within(side).getByRole("link", { name: /default/ }).querySelector(".sg") as HTMLElement;
+    await waitFor(() => expect(laptop).toHaveAttribute("data-i", "LT"));
+    expect(laptop.style.getPropertyValue("--id")).toBe("oklch(.92 0 0)");
+  });
+
+  it("keeps working without a UI config", async () => {
+    fakeBackend({ "/bff/ui": { status: 404, body: { detail: "nicht da" } } });
+    open("/");
+    render(<App />);
+    const side = await screen.findByRole("complementary", { name: "Navigation" });
+    expect(await within(side).findByRole("link", { name: /raiden/ })).toBeInTheDocument();
+    expect(side.querySelectorAll(".sg.ini").length).toBe(3);
   });
 
   it("shows the user and offers logout only with login enabled", async () => {

@@ -50,7 +50,8 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         response = await call_next(request)
         h = response.headers
-        h["Content-Security-Policy"] = CSP
+        if "content-security-policy" not in h:  # Routen dürfen strenger sein (z. B. SVG-Bilder)
+            h["Content-Security-Policy"] = CSP
         h["X-Content-Type-Options"] = "nosniff"
         h["X-Frame-Options"] = "DENY"
         h["Referrer-Policy"] = "no-referrer"

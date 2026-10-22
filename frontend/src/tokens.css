@@ -1,39 +1,28 @@
-/* Look A: Void, Zinc, ein Akzent. Alle Farben, Radien und Abstände stehen nur hier; styles.css nutzt nur diese Tokens.
-   Quelle: Palette aus dem Prosatext der Stitch-Referenz (DESIGN.md, "Obsidian Crimson"), nicht die Material-3-Tokens.
-   Kein Glas-Blur, kein WebGL, keine CDN-Dateien. Crimson gehört nur Aktion und Aufmerksamkeit. */
-:root {
-  --void: #09090b;        /* Grund */
-  --panel: #121214;       /* Antworten, Karten, Streams (mit 1 px --line) */
-  --raised: #18181b;      /* Eingaben, Menüs, Auswahl */
-  --line: #27272a;        /* Haarlinien */
+/* Look A "Obsidian Crimson": alle Farben, Schriften und Radien der App stehen nur hier.
+   Quelle: Design-Entwurf v2 (hermes.css, abgenommen von Marc). Die Stylesheets in styles/ nutzen nur diese Tokens.
+   Kein Glas-Blur, keine CDN-Dateien. Crimson heißt Aktion oder Aufmerksamkeit, nie Dekoration. */
+:root{
+  /* Flächen */
+  --void:#09090b; --s0:#0c0c0f; --s1:#111114; --s2:#18181b; --s3:#202024;
+  --line:#27272a; --line2:#3a3a41;
+  /* Text (t3 gegenüber DESIGN.md #52525b angehoben, damit 11px-Labels 4.5:1 halten) */
+  --t1:#f4f4f5; --t2:#a1a1aa; --t3:#868690; --t4:#52525b;
+  /* Akzent: Crimson als einziger Aktionsakzent */
+  --crim:#e11d48; --crim-hi:#fb7185; --crim-lo:#991b1b; --ruby:#ef4444; --ruby-t:#f87171;
+  --crim-tint:rgba(225,29,72,.10); --crim-line:rgba(225,29,72,.46);
+  --glow:0 0 0 1px #e11d48,0 8px 24px -4px rgba(225,29,72,.18);
+  --sans:"Inter Variable",Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono Variable","JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
 
-  --accent: #e11d48;      /* Senden, Freigabe nötig, laufender Stream, Fokus */
-  --accent-hover: #f0285a;
-  --accent-press: #991b1b;/* gedrückt, Rand von Abzeichen */
-  --alarm: #ef4444;       /* Stopp, Fehler */
-  --wine: #991b1b;
-  --alarm-wash: rgb(153 27 27 / .2);  /* Fläche hinter Fehlern und Stopp */
-  --scrim: rgb(0 0 0 / .6);           /* Abdunkelung hinter der Schublade */
-
-  --text: #f4f4f5;
-  --text-2: #a1a1aa;
-  --text-3: #52525b;
-
-  --radius: 4px;          /* Eingaben, Knöpfe, Karten */
-  --radius-lg: 8px;       /* Overlays, Schubladen */
-  --glow: 0 0 0 1px #e11d48, 0 8px 24px -4px rgba(225, 29, 72, 0.18);
-
-  --font: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-
-  --space-xs: 4px;
-  --space-sm: 8px;
-  --space-md: 12px;
-  --space-lg: 16px;
-  --space-xl: 24px;
-  --gutter: 20px;
-  --reading: 768px;       /* maximale Breite des Chats */
-  --sidebar: 272px;
-
-  color-scheme: dark;
+/* Übergangs-Aliase für den alten Chat (legacy.css). Entfallen, sobald der Chat im neuen Design steht (Block 2). */
+:root{
+  --panel:var(--s1); --raised:var(--s2);
+  --accent:var(--crim); --accent-hover:#f43f5e; --accent-press:var(--crim-lo);
+  --alarm:var(--ruby); --wine:var(--crim-lo); --alarm-wash:rgba(153,27,27,.2); --scrim:rgba(0,0,0,.6);
+  --text:var(--t1); --text-2:var(--t2); --text-3:var(--t3);
+  --font:var(--sans); --radius:4px; --radius-lg:8px;
+  --space-xs:4px; --space-sm:8px; --space-md:12px; --space-lg:16px; --space-xl:24px;
+  --gutter:20px; --reading:768px; --sidebar:272px;
+  color-scheme:dark;
 }

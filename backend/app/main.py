@@ -15,8 +15,9 @@ from .config import Settings, get_settings
 from .hosts import HostService
 from .oidc import OidcClient
 from .registry import AGENT_RE, Registry
-from .routes import agents, auth, hosts
+from .routes import agents, auth, hosts, ui as ui_routes
 from .security import RateLimiter, SecurityMiddleware
+from .ui import UiConfig
 
 
 def create_app(
@@ -50,6 +51,7 @@ def create_app(
     )
     app.state.settings = settings
     app.state.registry = Registry(settings.hosts_file)
+    app.state.ui = UiConfig(settings.ui_file)
     app.state.limiter = RateLimiter(settings.runs_per_minute)
     app.state.login_limiter = RateLimiter(settings.logins_per_minute)
     app.state.sessions = SessionStore(settings.session_idle_s, settings.session_max_s)
@@ -61,6 +63,7 @@ def create_app(
     app.include_router(auth.router)
     app.include_router(hosts.router)
     app.include_router(agents.router)
+    app.include_router(ui_routes.router)
 
     @app.get("/healthz", include_in_schema=False)
     async def healthz():

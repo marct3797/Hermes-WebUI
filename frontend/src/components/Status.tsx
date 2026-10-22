@@ -1,4 +1,4 @@
-/** Zustände ohne Farbton: Form und Helligkeit tragen die Bedeutung, Crimson bleibt dem Handlungsbedarf vorbehalten. */
+/** Zustände tragen Form und Farbe, nie nur Farbe: bereit = heller Punkt, offline = hohler Ring, Zugangsfehler = Raute. */
 export const STATUS_LABEL: Record<string, string> = {
   online: "online",
   sleeping: "schläft",
@@ -8,14 +8,16 @@ export const STATUS_LABEL: Record<string, string> = {
   unsupported: "nicht unterstützt",
 };
 
+const DOT_CLASS: Record<string, string> = {
+  online: "dot-on",
+  sleeping: "",
+  unreachable: "dot-off",
+  auth_error: "dot-err",
+  gone: "dot-off",
+  unsupported: "dot-off",
+};
+
 export function StatusDot({ status }: { status: string }) {
   const text = STATUS_LABEL[status] ?? status;
-  return <span className={`status s-${status}`} role="img" aria-label={text} title={text} />;
-}
-
-/** Zwei Buchstaben plus eines von sechs Mustern (aus dem Namen abgeleitet): unterscheidbar ohne weitere Farben. */
-export function Monogram({ name }: { name: string }) {
-  let h = 5381;
-  for (const ch of name) h = ((h << 5) + h + ch.charCodeAt(0)) >>> 0;
-  return <span className={`monogram pat-${h % 6}`} aria-hidden>{name.slice(0, 2).toUpperCase()}</span>;
+  return <span className={`dot ${DOT_CLASS[status] ?? "dot-off"}`.trim()} role="img" aria-label={text} title={text} />;
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ApiError, api, page as browser } from "./api";
 import { Shell } from "./components/Shell";
 import { HostsProvider } from "./hosts";
+import { UiProvider } from "./ui";
 import { AgentPage } from "./pages/AgentPage";
 import { HostsPage } from "./pages/HostsPage";
 import { CockpitPage, InboxPage, NotFoundPage } from "./pages/Placeholders";
@@ -38,6 +39,7 @@ export function App() {
   const logout = () => { api.logout().finally(() => browser.assign("/")); };
 
   return (
+    <UiProvider>
     <HostsProvider>
       <Shell me={me} path={path} page={page} onLogout={logout}>
         {(() => {
@@ -52,5 +54,6 @@ export function App() {
         })()}
       </Shell>
     </HostsProvider>
+    </UiProvider>
   );
 }

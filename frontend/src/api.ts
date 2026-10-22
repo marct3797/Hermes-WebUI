@@ -1,4 +1,4 @@
-import type { AgentRef, AgentStatus, Decision, HostsResponse, Me } from "./types";
+import type { AgentRef, AgentStatus, Decision, HostsResponse, Me, UiConfig } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string) {
@@ -54,6 +54,7 @@ export const api = {
   me: () => call<Me>("GET", "/bff/me"),
   logout: () => call<void>("POST", "/auth/logout"),
   hosts: () => call<HostsResponse>("GET", "/bff/hosts"),
+  ui: () => call<UiConfig>("GET", "/bff/ui"),
   status: (a: AgentRef) => call<AgentStatus>("GET", `${base(a)}/status`),
   models: (a: AgentRef) => call<unknown>("GET", `${base(a)}/models`),
   sessions: (a: AgentRef) => call<unknown>("GET", `${base(a)}/sessions`),

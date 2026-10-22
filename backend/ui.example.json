@@ -1,0 +1,32 @@
+{
+  "ui": {
+    "backgroundShader": {
+      "enabled": true,
+      "strength": 1.6,
+      "speed": 1.0
+    }
+  },
+  "profiles": {
+    "default": {
+      "sigil": {
+        "type": "glyph",
+        "glyph": "neutral/bolt",
+        "hue": "auto"
+      }
+    },
+    "hikari/hermes/helper": {
+      "sigil": {
+        "type": "initials",
+        "text": "HE",
+        "hue": 200
+      }
+    },
+    "docs": {
+      "sigil": {
+        "type": "svg",
+        "src": "sigils/docs.svg",
+        "hue": null
+      }
+    }
+  }
+}

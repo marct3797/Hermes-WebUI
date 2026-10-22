@@ -1,0 +1,82 @@
+/* Quelle: Design-Entwurf v2 (hermes.css), 1:1 übernommen; Änderungen sind im Kopf der jeweiligen Datei vermerkt. */
+
+/* ── Shell: Seitenleiste + Kopfzeile ─────────────────── */
+.shell{display:flex;flex-wrap:wrap;min-height:100vh;background:var(--void)}
+.side{flex:0 0 248px;display:flex;flex-direction:column;background:var(--s0);border-right:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;height:52px;padding:0 16px;border-bottom:1px solid var(--line)}
+.brand .mk{width:22px;height:22px;background:var(--crim);-webkit-mask:var(--i-brand) center/contain no-repeat;mask:var(--i-brand) center/contain no-repeat}
+.brand b{font:700 12px var(--mono);letter-spacing:.3em}
+.nav{display:flex;flex-direction:column;gap:2px;padding:12px 8px 8px}
+.nav a{display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;border-radius:4px;color:var(--t2);font-weight:500}
+.nav a:hover{background:var(--s2);color:var(--t1)}
+.nav a.on{background:var(--s2);color:var(--t1);box-shadow:inset 2px 0 0 var(--crim)}
+.nav a.soon{color:var(--t3)}
+.nav .tag{margin-left:auto;height:17px;font-size:9px}
+.ct{margin-left:auto;min-width:20px;height:18px;padding:0 6px;border-radius:9px;background:var(--crim);color:#fff;font:600 11px/18px var(--mono);text-align:center}
+.hostbar{display:flex;align-items:center;gap:8px;padding:14px 16px 6px;color:var(--t3)}
+.hostbar b{font:700 10px var(--mono);letter-spacing:.14em;color:var(--t2)}
+.hostbar .r{margin-left:auto;font:500 10px var(--mono)}
+.agent{display:flex;align-items:center;gap:10px;height:32px;padding:0 10px;margin:0 8px;border-radius:4px;color:var(--t2);font-weight:500}
+.agent:hover{background:var(--s2);color:var(--t1)}
+.agent.on{background:var(--s2);color:var(--t1)}
+.agent .ct{height:16px;min-width:16px;font-size:10px;line-height:16px;padding:0 5px}
+.side-foot{margin-top:auto;padding:12px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--s3);box-shadow:inset 0 0 0 1px var(--line2);display:flex;align-items:center;justify-content:center;font:600 12px var(--mono);color:var(--t1)}
+
+.main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;
+  background:radial-gradient(900px 340px at 88% -80px,rgba(225,29,72,.085),transparent 70%),radial-gradient(circle at 1px 1px,rgba(255,255,255,.035) 1px,transparent 0) 0 0/22px 22px,var(--void)}
+.top{display:flex;align-items:center;gap:14px;height:52px;padding:0 24px;border-bottom:1px solid var(--line);background:rgba(9,9,11,.82)}
+.crumb{display:flex;align-items:center;gap:8px;font:500 12px var(--mono);color:var(--t3);min-width:0}
+.crumb b{font-weight:500;color:var(--t1)}
+.cmdk{display:flex;align-items:center;gap:10px;height:32px;flex:0 1 340px;min-width:0;padding:0 10px;border-radius:4px;border:1px solid var(--line);background:var(--s1);color:var(--t3);font:400 12.5px var(--sans);margin-left:auto}
+.cmdk:hover{border-color:var(--line2)}
+.cmdk .kbd{margin-left:auto}
+.page{padding:22px 24px 40px;display:flex;flex-direction:column;gap:18px}
+.ph{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.ph h1{margin:0;font:600 26px/32px var(--sans);letter-spacing:-.025em}
+.ph-sub{font:500 11.5px var(--mono);color:var(--t3)}
+
+/* Statusleiste (Token/Latenz-Rail aus der DESIGN.md) */
+.page{flex:1 0 auto}
+.rail{display:flex;align-items:center;flex-wrap:wrap;gap:6px 20px;min-height:34px;padding:7px 24px;border-top:1px solid var(--line);background:rgba(9,9,11,.9);font:500 11px var(--mono);color:var(--t3)}
+.rail .r{margin-left:auto}
+.rail b{color:var(--t1);font-weight:600}
+.rail .hot{color:var(--crim-hi)}
+
+/* ── Hintergrund-Shader (shader.js) ─────────────────── */
+.main,.ch{position:relative;isolation:isolate}
+.bgfx{position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
+
+/* Ergänzungen der App: Seitenleiste als Schublade auf schmalen Schirmen, Chat-Ansicht mit fester Höhe */
+.menu-btn{display:none}
+.scrim{display:none}
+.shell{flex-wrap:nowrap}
+.shell.fixed{height:100vh;min-height:0}
+.shell.fixed .main{height:100vh;overflow:hidden}
+.side-sessions{display:flex;flex-direction:column;gap:2px;margin:2px 8px 8px 28px;padding-left:8px;border-left:1px solid var(--line)}
+.side-sessions a{display:flex;align-items:center;gap:8px;min-height:28px;padding:0 8px;border-radius:4px;color:var(--t2);font-size:12.5px}
+.side-sessions a:hover{background:var(--s2);color:var(--t1)}
+.side-sessions a.on{background:var(--s2);color:var(--t1);box-shadow:inset 2px 0 0 var(--crim)}
+.side-scroll{flex:1;min-height:0;overflow-y:auto}
+.side-foot .who{min-width:0;display:flex;flex-direction:column}
+.side-foot .who b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side-foot .btn{margin-left:auto}
+@media (max-width:800px){
+  .shell{flex-wrap:wrap}
+  .side{position:fixed;inset:0 auto 0 0;width:min(300px,85vw);z-index:20;transform:translateX(-100%);transition:transform .2s}
+  .side.open{transform:none}
+  .scrim{display:block;position:fixed;inset:0;z-index:10;background:rgba(0,0,0,.6)}
+  .menu-btn{display:inline-flex}
+  .top{padding:0 12px}
+  .page{padding:16px 16px 32px}
+}
+@media (prefers-reduced-motion:reduce){.side{transition:none}}
+.nav .soon{display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;color:var(--t3);font-weight:500}
+.host-card{padding:0}
+.host-body{display:flex;flex-direction:column;gap:10px;padding:12px 14px 14px}
+.runtime-block{display:flex;flex-direction:column;gap:8px;padding-top:10px;border-top:1px solid var(--line)}
+.chip-list{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.chip-list .chip{padding-left:4px}
+.page > .banner{margin:0}
+.empty h2{font:600 18px/24px var(--sans);letter-spacing:-.015em}
+.empty{max-width:480px;margin:0 auto}

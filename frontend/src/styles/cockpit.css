@@ -1,0 +1,13 @@
+/* Quelle: Design-Entwurf v2 (hermes.css) */
+/* Cockpit: Profilkarten */
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(236px,1fr));gap:12px}
+.pcard{display:flex;flex-direction:column;gap:11px;padding:14px;min-height:196px;transition:border-color .12s,transform .12s,background .12s}
+.pcard:hover{border-color:var(--line2);background:#131317}
+.pcard.need:hover{border-color:var(--crim)}
+.pcard .nm{font:600 15px/18px var(--sans);letter-spacing:-.01em}
+.pcard .quote{font:400 12.5px/18px var(--sans);color:var(--t2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:36px}
+.pfoot .bars{width:84px;height:18px;margin-left:auto}
+.cnt{display:inline-flex;align-items:center;gap:4px}
+.cnt b{font-weight:600;color:var(--t2)}
+.pcard:hover .sg{box-shadow:inset 0 0 0 1px color-mix(in oklch,var(--id) 55%,transparent),0 0 22px -4px color-mix(in oklch,var(--id) 60%,transparent)}
+.pcard.simple{min-height:0}

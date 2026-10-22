@@ -7,7 +7,7 @@ import { ModulePage, NotFoundPage } from "./Placeholders";
 export function AgentPage({ page }: { page: Extract<Page, { name: "agent" }> }) {
   const resolved = useResolvedAgent(page.ref);
   const agent = useAgentRef(page.ref);
-  if (resolved === undefined || !agent) return <main className="page"><p className="muted page-body">Lade…</p></main>;
+  if (resolved === undefined || !agent) return <main className="page"><p className="muted">Lade…</p></main>;
   if (resolved === null) {
     // Profile kommen und gehen: ein gelöschtes Profil zeigt einen klaren Hinweis statt Fehlern.
     return <NotFoundPage what={`Der Agent „${page.ref.agent}“ auf ${page.ref.host}`} />;

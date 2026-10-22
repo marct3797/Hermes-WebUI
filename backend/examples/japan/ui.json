@@ -1,0 +1,77 @@
+{
+  "ui": {
+    "backgroundShader": {
+      "enabled": true,
+      "strength": 1.6,
+      "speed": 1.0
+    }
+  },
+  "packs": [
+    "japan"
+  ],
+  "profiles": {
+    "default": {
+      "sigil": {
+        "type": "glyph",
+        "glyph": "japan/default",
+        "hue": null
+      }
+    },
+    "benzai": {
+      "sigil": {
+        "type": "glyph",
+        "glyph": "japan/benzai",
+        "hue": 178
+      }
+    },
+    "inari": {
+      "sigil": {
+        "type": "glyph",
+        "glyph": "japan/inari",
+        "hue": 58
+      }
+    },
+    "kaze": {
+      "sigil": {
+        "type": "glyph",
+        "glyph": "japan/kaze",
+        "hue": 140
+      }
+    },
+    "omoikane": {
+      "sigil": {
+        "type": "glyph",
+        "glyph": "japan/omoikane",
+        "hue": 292
+      }
+    },
+    "raiden": {
+      "sigil": {
+        "type": "glyph",
+        "glyph": "japan/raiden",
+        "hue": 98
+      }
+    },
+    "ryujin": {
+      "sigil": {
+        "type": "glyph",
+        "glyph": "japan/ryujin",
+        "hue": 255
+      }
+    },
+    "sora": {
+      "sigil": {
+        "type": "glyph",
+        "glyph": "japan/sora",
+        "hue": 215
+      }
+    },
+    "yume": {
+      "sigil": {
+        "type": "glyph",
+        "glyph": "japan/yume",
+        "hue": 330
+      }
+    }
+  }
+}

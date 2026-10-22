@@ -61,3 +61,19 @@ export type HostsResponse = { hosts: HostInfo[]; config_error: string | null };
 
 export type AgentStatus = { state: AgentState; online: boolean; version: string | null; features: string[]; error: string | null };
 export type Me = { user: { id: string; name: string }; auth_mode: "none" | "oidc"; fresh: boolean };
+
+/** Sigil-Eintrag aus ui.json (WebUI-Config, nicht Hermes). `src` ist eine bereinigte SVG-URL des BFF. */
+export type SigilConfig = {
+  type: "glyph" | "initials" | "svg";
+  glyph?: string;
+  text?: string;
+  src?: string;
+  hue?: number | "auto" | null;
+};
+export type ShaderConfig = { enabled: boolean; strength: number; speed: number };
+export type UiConfig = {
+  ui: { backgroundShader: ShaderConfig };
+  sigils: Record<string, SigilConfig>;
+  warnings: string[];
+  error: string | null;
+};
