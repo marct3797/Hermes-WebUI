@@ -5,7 +5,7 @@ from pathlib import Path
 
 import httpx
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
@@ -18,6 +18,21 @@ from .registry import AGENT_RE, Registry
 from .routes import agents, auth, hosts, ui as ui_routes
 from .security import RateLimiter, SecurityMiddleware
 from .ui import UiConfig
+
+
+# Unter dieser Adresse lief früher eine andere Anwendung mit Service Worker. Er bleibt im Browser registriert, fängt
+# Anfragen ab und scheitert an der Weiterleitung zu Forgejo. Diese Datei ersetzt ihn beim nächsten Update-Check:
+# sie hat keinen fetch-Handler, leert die Caches, meldet sich ab und lädt offene Fenster neu.
+RETIRE_SERVICE_WORKER = """\
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (event) => {
+  event.waitUntil((async () => {
+    try { for (const key of await caches.keys()) await caches.delete(key); } catch (e) { /* ohne Cache-API */ }
+    await self.registration.unregister();
+    for (const client of await self.clients.matchAll({ type: "window" })) client.navigate(client.url);
+  })());
+});
+"""
 
 
 def create_app(
@@ -64,6 +79,10 @@ def create_app(
     app.include_router(hosts.router)
     app.include_router(agents.router)
     app.include_router(ui_routes.router)
+
+    @app.get("/sw.js", include_in_schema=False)
+    async def retire_service_worker():
+        return Response(RETIRE_SERVICE_WORKER, media_type="text/javascript", headers={"Cache-Control": "no-cache"})
 
     @app.get("/healthz", include_in_schema=False)
     async def healthz():

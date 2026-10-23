@@ -118,3 +118,11 @@ def test_spa_does_not_shadow_api_or_leak_files(static_client):
     assert static_client.get("/auth/gibt-es-nicht").status_code == 404
     r = static_client.get("/..%2fgeheim.txt")
     assert "nicht ausliefern" not in r.text
+
+
+def test_old_service_worker_gets_replaced_by_a_self_removing_one(static_client):
+    r = static_client.get("/sw.js")
+    assert r.status_code == 200 and r.headers["content-type"].startswith("text/javascript")
+    assert r.headers["cache-control"] == "no-cache"
+    # kein fetch-Handler (Anfragen gehen am Worker vorbei), räumt auf und meldet sich ab
+    assert "unregister()" in r.text and "caches.delete" in r.text and '"fetch"' not in r.text
