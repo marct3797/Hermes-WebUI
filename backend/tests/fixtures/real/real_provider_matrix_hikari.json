@@ -1,0 +1,197 @@
+{
+ "available": true,
+ "reason": null,
+ "profiles": [
+  {
+   "name": "default",
+   "model": "muse-spark-1.3-contributor",
+   "provider": "opencode-go",
+   "default": true,
+   "gateway_running": true,
+   "error": null
+  },
+  {
+   "name": "benzai",
+   "model": "muse-spark-1.3-contributor",
+   "provider": "opencode-go",
+   "default": false,
+   "gateway_running": true,
+   "error": null
+  },
+  {
+   "name": "inari",
+   "model": "muse-spark-1.3-contributor",
+   "provider": "opencode-go",
+   "default": false,
+   "gateway_running": true,
+   "error": null
+  }
+ ],
+ "accounts": [
+  {
+   "id": "codex",
+   "label": "OpenAI Codex",
+   "cli": "codex",
+   "login": "device",
+   "provider": "openai-codex",
+   "hint": "Anmeldung mit dem ChatGPT-Konto per Gerätecode.",
+   "profiles": {
+    "default": {
+     "configured": false,
+     "via": null,
+     "detail": null
+    },
+    "benzai": {
+     "configured": false,
+     "via": null,
+     "detail": null
+    },
+    "inari": {
+     "configured": false,
+     "via": null,
+     "detail": null
+    },
+    "kaze": {
+     "configured": false,
+     "via": null,
+     "detail": null
+    },
+    "omoikane": {
+     "configured": false,
+     "via": null,
+     "detail": null
+    },
+    "raiden": {
+     "configured": false,
+     "via": null,
+     "detail": null
+    },
+    "ryujin": {
+     "configured": false,
+     "via": null,
+     "detail": null
+    },
+    "sora": {
+     "configured": false,
+     "via": null,
+     "detail": null
+    },
+    "yume": {
+     "configured": false,
+     "via": null,
+     "detail": null
+    }
+   }
+  },
+  {
+   "id": "claude",
+   "label": "Claude",
+   "cli": "claude",
+   "login": "pkce",
+   "provider": "anthropic",
+   "hint": "API-Key oder Anmeldung über die Anthropic-Seite. Ein Abo über Claude Code gilt n",
+   "profiles": {
+    "default": {
+     "configured": false,
+     "via": null,
+     "detail": null
+    },
+    "benzai": {
+     "configured": false,
+     "via": null,
+     "detail": null
+    },
+    "inari": {
+     "configured": false,
+     "via": null,
+     "detail": null
+    },
+    "kaze": {
+     "configured": false,
+     "via": null,
+     "detail": null
+    },
+    "omoikane": {
+     "configured": false,
+     "via": null,
+     "detail": null
+    },
+    "raiden": {
+     "configured": false,
+     "via": null,
+     "detail": null
+    },
+    "ryujin": {
+     "configured": false,
+     "via": null,
+     "detail": null
+    },
+    "sora": {
+     "configured": false,
+     "via": null,
+     "detail": null
+    },
+    "yume": {
+     "configured": false,
+     "via": null,
+     "detail": null
+    }
+   }
+  },
+  {
+   "id": "opencode-go",
+   "label": "OpenCode Go",
+   "cli": "opencode",
+   "login": "key",
+   "provider": "opencode-go",
+   "hint": "Zugang per API-Key.",
+   "profiles": {
+    "default": {
+     "configured": true,
+     "via": "key",
+     "detail": "«redacted:sk-m...kEzh»"
+    },
+    "benzai": {
+     "configured": true,
+     "via": "key",
+     "detail": "«redacted:oc_s...Xgf7»"
+    },
+    "inari": {
+     "configured": true,
+     "via": "key",
+     "detail": "«redacted:oc_s...Xgf7»"
+    },
+    "kaze": {
+     "configured": true,
+     "via": "key",
+     "detail": "«redacted:oc_s...Xgf7»"
+    },
+    "omoikane": {
+     "configured": true,
+     "via": "key",
+     "detail": "«redacted:oc_s...Xgf7»"
+    },
+    "raiden": {
+     "configured": true,
+     "via": "key",
+     "detail": "«redacted:oc_s...Xgf7»"
+    },
+    "ryujin": {
+     "configured": true,
+     "via": "key",
+     "detail": "«redacted:oc_s...Xgf7»"
+    },
+    "sora": {
+     "configured": true,
+     "via": "key",
+     "detail": "«redacted:oc_s...Xgf7»"
+    },
+    "yume": {
+     "configured": true,
+     "via": "key",
+     "detail": "«redacted:oc_s...Xgf7»"
+    }
+   }
+  }
+ ]
+}

@@ -50,10 +50,10 @@ def record(request, user: User, action: str, host: str):
 def safe_path(path: str) -> str:
     forbidden = {".git", ".ssh", ".aws", ".gnupg", ".hermes", "auth.json", "config.yaml", "config.yml",
                  "credentials", "credentials.json", "id_rsa", "id_ed25519"}
-    parts = path.split("/")
+    parts = path.split("/") if path else []
     if (len(path) > 1024 or path.startswith("/") or "\\" in path or "%" in path
             or any(ord(c) < 32 or ord(c) == 127 for c in path)
-            or any(p in ("..", ".") or p.lower() in forbidden or p.lower().startswith(".env")
+            or any(p == "" or p == "." or p.startswith("..") or p.lower() in forbidden or p.lower().startswith(".env")
                    or p.lower().endswith((".pem", ".key")) for p in parts)):
         raise HTTPException(422, "Unsicherer Workspace-Pfad")
     return path

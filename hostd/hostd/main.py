@@ -81,6 +81,7 @@ def create_app(settings):
 
     @app.get('/v1/terminals')
     async def terminals():
+        manager.prune()
         return {'terminals': [terminal.describe() for terminal in manager.terminals.values()]}
 
     @app.post('/v1/terminals')

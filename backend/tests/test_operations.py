@@ -314,3 +314,19 @@ def test_missing_short_or_header_injection_token_rejected():
             parse_config({"hosts": [{"id": "box", "hostd": {
                 "base_url": "http://localhost", "token_env": "KEY",
             }}]}, {"KEY": token})
+
+
+@pytest.mark.parametrize("path", ["....//....//etc/passwd", "...", "a//b", ".%2e", "..;/", "a/./b", "a/", "a/..b"])
+def test_dotty_paths_are_422_everywhere(operations_client, path):
+    c, daemon, *_ = operations_client
+    base = "/bff/h/box"
+    assert c.get(base + "/_files", params={"workspace": "repo", "path": path}).status_code == 422
+    assert c.get(base + "/_files/download", params={"workspace": "repo", "path": path}).status_code == 422
+    assert c.post(base + "/_files/upload", json={"workspace": "repo", "path": path, "content_base64": "eA=="}).status_code == 422
+    assert not daemon.state.calls
+
+
+def test_root_and_normal_paths_still_allowed(operations_client):
+    c, *_ = operations_client
+    assert c.get("/bff/h/box/_files", params={"workspace": "repo", "path": ""}).status_code == 200
+    assert c.get("/bff/h/box/_files", params={"workspace": "repo", "path": "README.md"}).status_code == 200

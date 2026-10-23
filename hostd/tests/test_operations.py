@@ -233,6 +233,13 @@ def test_git_unborn_repository(setup):
     assert response.json()['diff'] == ''
 
 
+def test_git_without_repository_is_200_with_reason(setup):
+    client = setup[0]
+    response = client.get('/v1/git?workspace=w')
+    assert response.status_code == 200
+    assert response.json() == {'repository': False, 'reason': 'Kein Git-Repository in diesem Arbeitsordner'}
+
+
 def test_real_native_plugin_listing_on_temporary_profile(setup):
     from pathlib import Path
     client, _, _, app = setup

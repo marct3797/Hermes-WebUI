@@ -12,6 +12,7 @@ import signal
 import struct
 import subprocess
 import termios
+import time
 import uuid
 
 REPLAY_BYTES = 256 * 1024
@@ -38,6 +39,7 @@ class Terminal:
         self.offset = 0
         self.buffer_size = 0
         self.changed = asyncio.Event()
+        self.exited_at = None
         self.fd, slave = pty.openpty()
         self.process: subprocess.Popen
         try:
@@ -100,6 +102,7 @@ class Terminal:
     async def _wait(self):
         while self.process.poll() is None:
             await asyncio.sleep(.03)
+        self.exited_at = time.monotonic()
         self._notify()
 
     def describe(self):
@@ -161,7 +164,16 @@ class TerminalManager:
         self.settings = settings
         self.terminals = {}
 
+    def prune(self):
+        """Entfernt Terminals, die länger als exited_ttl_s beendet sind."""
+        now = time.monotonic()
+        for identifier, terminal in list(self.terminals.items()):
+            if terminal.exited_at is not None and now - terminal.exited_at > self.settings.exited_ttl_s:
+                terminal._close_fd()
+                del self.terminals[identifier]
+
     def create(self, cli, workspace, cols=80, rows=24):
+        self.prune()
         if len(self.terminals) >= self.settings.max_terminals:
             raise ValueError('maximum terminal count reached; delete a terminal first')
         configured = next((item for item in self.settings.clis if item['id'] == cli), None)

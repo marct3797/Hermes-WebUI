@@ -1,0 +1,13 @@
+{
+ "terminals": [
+  {
+   "id": "d3e3fc0c294942afa14bef7a6d160dc2",
+   "cli": "claude",
+   "workspace": "hermes-webui",
+   "pid": 650921,
+   "running": false,
+   "created_at": "2026-10-23T22:48:40.777159+00:00",
+   "exit_code": 0
+  }
+ ]
+}

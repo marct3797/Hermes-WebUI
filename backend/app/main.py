@@ -21,6 +21,7 @@ from .registry import AGENT_RE, Registry
 from .memory import MemoryRegistry
 from .rooms import RoomService
 from .routes import agents, auth, dashboard as dashboard_routes, hosts, memory as memory_routes, operations as operations_routes, rooms as rooms_routes, ui as ui_routes
+from .redaction import RedactionMiddleware
 from .security import RateLimiter, SecurityMiddleware
 from .ui import UiConfig
 from .static import FingerprintedFiles
@@ -94,6 +95,7 @@ def create_app(
     app.state.audit = AuditLog(settings.audit_file)
     app.state.souls = SoulHistory(settings.soul_dir)
 
+    app.add_middleware(RedactionMiddleware)  # innerhalb von SecurityMiddleware: deren Header bleiben erhalten
     app.add_middleware(SecurityMiddleware, settings=settings)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.host_list())
     # Operations-Routen vor den dynamischen Agent-Routen: sonst schluckt /bff/h/{host}/{runtime}/{agent} die _hostd/_manage-Pfade.

@@ -1,0 +1,34 @@
+{
+ "version": "0.1.0",
+ "clis": [
+  {
+   "id": "codex",
+   "label": "OpenAI Codex",
+   "available": true,
+   "authenticated": null,
+   "auth_note": "Authentication is not probed; the CLI uses this OS user account."
+  },
+  {
+   "id": "claude",
+   "label": "Claude Code",
+   "available": true,
+   "authenticated": null,
+   "auth_note": "Authentication is not probed; the CLI uses this OS user account."
+  },
+  {
+   "id": "opencode",
+   "label": "OpenCode",
+   "available": true,
+   "authenticated": null,
+   "auth_note": "Authentication is not probed; the CLI uses this OS user account."
+  }
+ ],
+ "workspaces": [
+  {
+   "id": "hermes-webui",
+   "label": "Hermes WebUI"
+  }
+ ],
+ "available": true,
+ "reason": null
+}
