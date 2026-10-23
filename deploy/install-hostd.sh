@@ -60,15 +60,23 @@ if env_file.is_symlink() or env_file.stat().st_uid != os.getuid():
     raise SystemExit('Environment file must be a regular file owned by this user')
 env_file.chmod(0o600)
 unit_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
-def quoted(value):
-    return '"' + str(value).replace('\\', '\\\\').replace('"', '\\"').replace('%', '%%') + '"'
+def unit_arg(value):
+    if any(c in value for c in "\r\n\0"):
+        raise ValueError('invalid unit argument')
+    return '"' + value.replace('%', '%%').replace('\\', '\\\\').replace('"', '\\"') + '"'
+def unit_path(path):
+    # Simple absolute paths need no quotes; systemd treats leading quotes as part of the path.
+    text = str(path).replace('%', '%%')
+    if any(c in text for c in " \t\"'\\"):
+        return text.replace(' ', '\\x20').replace('\t', '\\x09')
+    return text
 unit = '\n'.join([
     '[Unit]', 'Description=Hermes per-user native CLI daemon', 'After=network.target', '',
     '[Service]', 'Type=simple',
-    'WorkingDirectory=' + quoted(Path.home()),
-    'EnvironmentFile=' + quoted(env_file),
-    'Environment=' + quoted('PATH=' + str(venv / 'bin') + ':' + os.environ.get('PATH', '/usr/local/bin:/usr/bin:/bin')),
-    'ExecStart=' + quoted(venv / 'bin/hermes-hostd') + ' --config ' + quoted(config),
+    'WorkingDirectory=' + unit_path(Path.home()),
+    'EnvironmentFile=' + unit_path(env_file),
+    'Environment=' + unit_arg('PATH=' + str(venv / 'bin') + ':' + os.environ.get('PATH', '/usr/local/bin:/usr/bin:/bin')),
+    'ExecStart=' + unit_path(venv / 'bin/hermes-hostd') + ' --config ' + unit_path(config),
     'Restart=on-failure', 'RestartSec=3', 'KillMode=control-group', 'TimeoutStopSec=10',
     'UMask=0077', '', '[Install]', 'WantedBy=default.target', '',
 ])
