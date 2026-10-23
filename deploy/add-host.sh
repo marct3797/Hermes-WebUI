@@ -9,7 +9,9 @@
 # Ergänzt config/hosts.json um einen Eintrag (kind "remote"), fragt den API_SERVER_KEY des Hosts still ab (oder liest ihn von
 # stdin, Dashboard-Token als zweite Zeile) und legt ihn als HERMES_KEY_<KENNUNG> in webui.env ab. Danach: bash deploy/deploy.sh.
 # Bestehende Einträge bleiben unberührt, eine vorhandene Kennung wird nie überschrieben, nichts wird gelöscht. Einzige Ausnahme:
-# steht der Host schon da und hat noch kein Dashboard, ergänzt `--dashboard-port` genau dieses (Key und Rest bleiben).
+# steht der Host schon da, ergänzt `--dashboard-port` ein fehlendes Dashboard; ohne diese Option wird nur der Key neu gesetzt.
+# Der Key lässt sich ohne Abtippen übergeben (Zeile von stdin), etwa vom Laptop aus:
+#     sed -n 's/^API_SERVER_KEY=//p' ~/.hermes/.env | tail -n 1 | ssh tenjin@100.100.1.1 "bash -c 'cd ~/Hermes-WebUI && bash deploy/add-host.sh laptop Laptop 100.100.3.4'"
 # Sicherungen: hosts.json.bak, webui.env.bak. Werte werden weder ausgegeben noch als Argument weitergereicht.
 usage() { awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"; exit "${1:-2}"; }
 
@@ -59,8 +61,8 @@ if known is not None:
         os.replace(path + ".new", path)
         print(f"hosts.json: Dashboard für {os.environ['ADD_ID']} ergänzt (Port {os.environ['ADD_DASH']}).")
         sys.exit(3)
-    print(f"Der Host {os.environ['ADD_ID']} steht schon in {path} (ohne etwas zu ergänzen). Nichts geändert.")
-    sys.exit(1)
+    print(f"hosts.json: Host {os.environ['ADD_ID']} steht schon da, der Eintrag bleibt; nur der Key wird neu gesetzt.")
+    sys.exit(4)
 profiles = os.environ["ADD_PROFILES"].split()
 runtime = {
     "id": "hermes",
@@ -81,12 +83,16 @@ os.replace(tmp, path)
 print(f"hosts.json: Host {os.environ['ADD_ID']} ergänzt (Hermes auf {os.environ['ADD_ADDR']}:{os.environ['ADD_PORT']}, Profile: {', '.join(profiles)}).")
 PY
 status=$?
-[ "$status" -eq 0 ] || [ "$status" -eq 3 ] || exit 1
+[ "$status" -eq 0 ] || [ "$status" -eq 3 ] || [ "$status" -eq 4 ] || exit 1
 
 ask() {  # ask PROMPT  -> Wert auf stdout; am Terminal still, sonst eine Zeile von stdin
   local v
   if [ -t 0 ]; then read -rsp "$1: " v; echo >&2; else IFS= read -r v; fi
-  printf '%s' "$v" | tr -d '\r'
+  # Leerzeichen, Zeilenende, umschließende Anführungszeichen und ein mitkopiertes "NAME=" gehören nicht zum Wert.
+  v="$(printf '%s' "$v" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+  v="${v#API_SERVER_KEY=}"
+  case "$v" in \"*\") v="${v#\"}"; v="${v%\"}" ;; \'*\') v="${v#\'}"; v="${v%\'}" ;; esac
+  printf '%s' "$v"
 }
 set_var() {  # set_var NAME  (Wert von stdin)
   local val; val="$(cat)"
@@ -95,7 +101,7 @@ set_var() {  # set_var NAME  (Wert von stdin)
 }
 
 key=""
-if [ "$status" -eq 0 ]; then
+if [ "$status" -eq 0 ] || [ "$status" -eq 4 ]; then
   key="$(ask "API_SERVER_KEY von $label")"
   [ -n "$key" ] || { echo "Kein Key eingegeben. Der Eintrag steht in hosts.json, der Key fehlt noch ($key_var in $envf)."; exit 1; }
   printf '%s' "$key" | set_var "$key_var"
