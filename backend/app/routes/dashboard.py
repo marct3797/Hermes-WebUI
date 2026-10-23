@@ -17,11 +17,13 @@ from ..dashboard import (
     DESCRIPTION_MAX_CHARS, SOUL_MAX_CHARS, VERSION_RE, DashboardClient, SoulConflict, SoulHistory, digest, save_soul,
 )
 from ..hosts import Target
+from ..quota import PLUGIN_MISSING, failure, normalize, summary_items
 from ..providers import ACCOUNTS, build_matrix, build_overview, normalize_models, provider_keys
 from ..security import client_ip
 from .agents import HostId, RuntimeId, Tgt, audit as audit_target, upstream
 
 router = APIRouter(prefix="/bff/h/{host}/{runtime}/{agent}", dependencies=[Depends(current_user)])
+quota_router = APIRouter(prefix="/bff/quota", dependencies=[Depends(current_user)])
 host_router = APIRouter(prefix="/bff/h/{host}/{runtime}", dependencies=[Depends(current_user)])  # eine Ebene höher: alle Profile einer Runtime
 
 VersionId = Annotated[str, Path(pattern=VERSION_RE.pattern)]
@@ -284,3 +286,67 @@ async def provider_matrix(request: Request, host: HostId, runtime: RuntimeId):
     overviews = {name: ov for name, ov, _ in rows}
     errors = {name: err for name, _, err in rows if err}
     return {"available": True, "reason": None, **build_matrix(profiles, overviews, errors)}
+
+
+# --- Restkontingente (Dashboard-Plugin ai-usage-tracker) ---------------------------------------------------
+QUOTA_TIMEOUT_S = 12
+QUOTA_PARALLEL = 4
+
+
+async def _quota_of(request: Request, host: str, runtime: str, rt, name: str, refresh: bool) -> dict[str, Any]:
+    """Normalisierte Kontingente eines Profils. Fehler sind Daten (`state`), damit ein Profil die anderen nicht kippt."""
+    if rt.dashboard is None:
+        return failure("dashboard_unavailable", NOT_CONFIGURED)
+    if refresh and not request.app.state.quota_gate.allow(f"{host}/{runtime}/{name}"):
+        refresh = False  # höchstens ein erzwungenes Neuladen je Profil alle 15 s; sonst der 60-s-Cache des Plugins
+    try:
+        body = await asyncio.wait_for(DashboardClient(rt.dashboard, request.app.state.http).quota(name, refresh), QUOTA_TIMEOUT_S)
+    except asyncio.TimeoutError:
+        return failure("error", "Das Dashboard antwortet nicht rechtzeitig")
+    except UpstreamError as e:
+        if e.status == 404 and e.detail == PLUGIN_MISSING:
+            return failure("plugin_missing", PLUGIN_MISSING)
+        return failure("dashboard_unavailable" if e.status in (503, 504) else "error", e.detail)
+    return normalize(body)
+
+
+@router.get("/quota")
+async def agent_quota(request: Request, host: HostId, runtime: RuntimeId, target: Tgt, refresh: int = Query(0, ge=0, le=1)):
+    _, rt = runtime_of(request, host, runtime)
+    return await _quota_of(request, host, runtime, rt, target.agent.id, bool(refresh))
+
+
+@host_router.get("/_quota")
+async def runtime_quota(request: Request, host: HostId, runtime: RuntimeId, refresh: int = Query(0, ge=0, le=1)):
+    """Alle in der Config geführten Profile der Runtime, parallel (höchstens 4 gleichzeitig)."""
+    _, rt = runtime_of(request, host, runtime)
+    sem = asyncio.Semaphore(QUOTA_PARALLEL)
+
+    async def one(name: str):
+        async with sem:
+            return name, await _quota_of(request, host, runtime, rt, name, bool(refresh))
+
+    return {"profiles": dict(await asyncio.gather(*(one(a.id) for a in rt.agents)))}
+
+
+@quota_router.get("/summary")
+async def quota_summary(request: Request):
+    """Cockpit: je Host/Profil/Anbieter das schlechteste Fenster, dazu der Zustand je Runtime. `worst` ist der knappste Eintrag insgesamt."""
+    reg = request.app.state.hosts.registry
+    sem = asyncio.Semaphore(QUOTA_PARALLEL)
+    rts = [(h, rt) for h in reg.hosts() for rt in h.runtimes if rt.dashboard is not None]
+
+    async def one(h, rt, name):
+        async with sem:
+            return name, await _quota_of(request, h.id, rt.id, rt, name, False)
+
+    results = await asyncio.gather(*(asyncio.gather(*(one(h, rt, a.id) for a in rt.agents)) for h, rt in rts))
+    runtimes, items = [], []
+    for (h, rt), profiles in zip(rts, results):
+        states = {q["state"] for _, q in profiles}
+        bad = next(((q["state"], q["reason"]) for _, q in profiles if q["state"] != "ok"), None)
+        runtimes.append({"host": h.id, "runtime": rt.id, "state": "ok" if "ok" in states else (bad[0] if bad else "ok"), "reason": None if "ok" in states or not bad else bad[1]})
+        for name, q in profiles:
+            items += summary_items(h.id, rt.id, name, q)
+    rank = lambda i: (i["remaining_percent"] if i["remaining_percent"] is not None else -1.0)  # abgelaufener Zugang zählt wie erschöpft
+    return {"runtimes": runtimes, "items": items, "worst": min(items, key=rank, default=None)}

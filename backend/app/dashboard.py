@@ -20,6 +20,7 @@ from typing import Any
 import httpx
 
 from .adapters import UpstreamError
+from .quota import PLUGIN_MISSING
 from .registry import DashboardCfg
 
 SOUL_MAX_CHARS = 100_000  # SOUL.md geht in den Systemprompt; mehr ist nie sinnvoll
@@ -98,6 +99,10 @@ class DashboardClient:
 
     async def model_analytics(self, name: str, days: int) -> Any:
         return await self._call("GET", "/api/analytics/models", params={"profile": name, "days": str(days)})
+
+    async def quota(self, name: str, refresh: bool) -> Any:
+        """Restkontingente über das Dashboard-Plugin `ai-usage-tracker`. 404 heißt: Plugin auf diesem Dashboard nicht installiert."""
+        return await self._call("GET", "/api/plugins/ai-usage-tracker/usage", params={"profile": name, "refresh": "1" if refresh else "0"}, missing=PLUGIN_MISSING)
 
     # Skills und Werkzeuge eines Profils: Ersatzquelle, wenn die Agent-API sie nicht auflisten kann.
     async def skills(self, name: str) -> list[dict[str, Any]]:

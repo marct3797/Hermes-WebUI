@@ -71,7 +71,7 @@ class ModelBody(BaseModel):
     model: str
 
 
-def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default", "omoikane", "sora"), drop_writes: bool = False) -> FastAPI:
+def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default", "omoikane", "sora"), drop_writes: bool = False, quota: dict[str, Any] | None = None) -> FastAPI:
     app = FastAPI()
     state: dict[str, dict[str, Any]] = {
         name: {"soul": SOULS.get(name), "description": "", "description_auto": False, "provider": "anthropic", "model": "claude-test",
@@ -93,6 +93,15 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
         if name not in state:
             raise HTTPException(404, "Profile not found")
         return state[name]
+
+    app.state.quota_calls = []  # (profile, refresh) je Abruf; Tests prüfen damit das Rate-Limit
+
+    @app.get("/api/plugins/ai-usage-tracker/usage")
+    async def quota_usage(profile: str = "default", refresh: int = 0):
+        if quota is None:  # wie ein Dashboard ohne das Plugin
+            raise HTTPException(404, "Plugin not found")
+        app.state.quota_calls.append((profile, refresh))
+        return {**quota, "profile": profile}
 
     @app.get("/api/profiles")
     async def list_profiles():
