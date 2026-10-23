@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { AgentCard } from "../components/cockpit/AgentCard";
+import { UsagePanel } from "../components/cockpit/UsagePanel";
 import { NeedsPanel, RunningPanel, SystemPanel } from "../components/cockpit/Panels";
 import { Icon } from "../components/Icon";
 import { StatusDot } from "../components/Status";
@@ -9,6 +10,7 @@ import { agentKey } from "../router";
 import { useActivity, useRunSnapshot } from "../runs";
 import { sigilFor, useUi } from "../ui";
 import { useAgentSessions } from "../useAgentSessions";
+import { useUsage } from "../useUsage";
 import { useNow } from "../useNow";
 
 type Filter = "all" | "run" | "need" | `host:${string}`;
@@ -25,6 +27,7 @@ export function CockpitPage() {
   const all = useMemo(() => (hosts ?? []).flatMap((h) => h.runtimes.flatMap((r) => r.agents.map((a) => ({ h, r, a, ref: { host: h.id, runtime: r.id, agent: a.id } })))), [hosts]);
   const onlineRefs = useMemo(() => all.filter((x) => x.r.status === "online").map((x) => x.ref), [all]);
   const chats = useAgentSessions(onlineRefs);
+  const usage = useUsage(onlineRefs);
 
   if (!hosts) {
     return <main className="page">{error ? <p className="banner" role="alert"><Icon name="alert" />Hosts nicht ladbar: {error}</p> : <p className="muted">Lade…</p>}</main>;
@@ -103,6 +106,8 @@ export function CockpitPage() {
           <span className="kpi-note">{onlineAgents} erreichbar</span>
         </div>
       </div>
+
+      {onlineRefs.length > 0 && <UsagePanel stats={usage.stats} byAgent={usage.byAgent} loading={usage.loading} now={now} />}
 
       <div className="two">
         <div className="l">
