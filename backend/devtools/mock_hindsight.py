@@ -61,18 +61,34 @@ def create_mock(require_key: str | None = None, bank: str = "hermes") -> FastAPI
                              "entities": [e.strip() for e in u["entities"].split(",")], "occurred_start": u["date"],
                              "document_id": u["document_id"], "tags": u["tags"]} for u in hits], "trace": None}
 
+    app.state.graph_calls = []
+
     @app.get(f"{base}/graph")
-    async def graph(bank_id: str, limit: int = 1000, q: str | None = None):
+    async def graph(bank_id: str, request: Request, limit: int = 1000, q: str | None = None, type: str | None = None):
         check(bank_id)
+        app.state.graph_calls.append(dict(request.query_params))
         if os.environ.get("MOCK_GRAPH_NODES"):
             return big_graph(int(os.environ["MOCK_GRAPH_NODES"]), os.environ.get("MOCK_GRAPH_KINDS", "1") != "0")
+        us = [u for u in UNITS if (not type or u["fact_type"] == type) and (not q or q.lower() in u["text"].lower())][:limit]
+        ids = {u["id"] for u in us}
+        links = [("u1", "u3", "entity"), ("u1", "u2", "temporal"), ("u1", "ghost", "entity"), ("u2", "u3", "caused_by")]
         return {
-            "nodes": [{"data": {"id": u["id"], "label": u["text"][:30], "color": "#ccc", "fact_type": u["fact_type"]}} for u in UNITS],
-            "edges": [{"data": {"id": "e1", "source": "u1", "target": "u3", "linkType": "entity"}},
-                      {"data": {"id": "e2", "source": "u1", "target": "u2", "linkType": "temporal"}},
-                      {"data": {"id": "e3", "source": "u1", "target": "ghost", "linkType": "entity"}}],  # Kante ins Leere: wird verworfen
-            "table_rows": [], "total_units": len(UNITS),
+            "nodes": [{"data": {"id": u["id"], "label": u["text"][:30], "text": u["text"], "date": u["date"], "context": u["context"],
+                                "entities": u["entities"], "color": "#ccc"}} for u in us],
+            "edges": [{"data": {"id": f"{a}-{b}-{k}", "source": a, "target": b, "linkType": k, "weight": 1.0, "entityName": "", "color": "#999"}}
+                      for a, b, k in links if a in ids and (b in ids or b == "ghost")],  # Kante ins Leere: wird verworfen
+            "table_rows": [{"id": u["id"], "text": u["text"], "context": u["context"], "mentioned_at": u["date"], "entities": u["entities"],
+                            "fact_type": u["fact_type"]} for u in us],
+            "total_units": len([u for u in UNITS if not type or u["fact_type"] == type]), "limit": limit,
         }
+
+    @app.get(f"{base}/stats/memories-timeseries")
+    async def timeseries(bank_id: str, period: str = "7d", time_field: str = "created_at"):
+        check(bank_id)
+        return {"bank_id": bank_id, "period": period, "trunc": "day", "time_field": time_field,
+                "buckets": [{"time": "2026-10-20T00:00:00+00:00", "world": 1, "experience": 0, "observation": 2},
+                            {"time": "2026-10-21T00:00:00+00:00", "world": 1, "experience": 0, "observation": 0},
+                            {"time": "2026-10-22T00:00:00+00:00", "world": 0, "experience": 1, "observation": 1}]}
 
     ENTITIES = [{"id": "en1", "canonical_name": "Marc", "mention_count": 7, "first_seen": "2026-10-01T00:00:00Z", "last_seen": "2026-10-22T00:00:00Z"},
                 {"id": "en2", "canonical_name": "Hikari", "mention_count": 3, "first_seen": None, "last_seen": None}]
@@ -118,7 +134,9 @@ def big_graph(n: int, kinds: bool = True) -> dict:
     nodes = []
     for i in range(n):
         t = topics[ents[i][0]]
-        data = {"id": f"n{i}", "label": f"{t} {sentence[i % len(sentence)]} {topics[(ents[i][-1] + 1) % len(topics)]} (Fakt {i})", "color": "#f87171"}
+        label = f"{t} {sentence[i % len(sentence)]} {topics[(ents[i][-1] + 1) % len(topics)]} (Fakt {i})"
+        data = {"id": f"n{i}", "label": label, "text": label * 3, "date": f"2026-{1 + i % 10:02d}-{1 + i % 27:02d}T10:00:00+00:00", "context": f"Kontext {i % 5}",
+                "entities": ", ".join(topics[k] for k in ents[i]), "color": "#f87171"}
         if kinds:
             data["fact_type"] = types[i % 3]
         nodes.append({"data": data})
@@ -127,7 +145,7 @@ def big_graph(n: int, kinds: bool = True) -> dict:
     def link(a: int, b: int, kind: str) -> None:
         if a != b and (min(a, b), max(a, b), kind) not in seen:
             seen.add((min(a, b), max(a, b), kind))
-            edges.append({"data": {"id": f"{kind}{len(edges)}", "source": f"n{a}", "target": f"n{b}", "linkType": kind}})
+            edges.append({"data": {"id": f"{kind}{len(edges)}", "source": f"n{a}", "target": f"n{b}", "linkType": kind, "weight": 1.0 - (len(edges) % 17) / 20}})
 
     for ent in range(len(topics)):
         members = [i for i in range(n) if ent in ents[i]]

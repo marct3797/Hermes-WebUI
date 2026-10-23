@@ -22,7 +22,7 @@ import re
 import time
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -177,8 +177,33 @@ def norm_entities(payload: Any) -> list[dict[str, Any]]:
     return out
 
 
-def norm_graph(payload: Any, cap: int) -> dict[str, Any]:
-    """Cytoscape-artige Elemente (`{"data": {...}}`) und flache Listen gleichermaßen."""
+LINK_TYPES = {"caused_by": "causal", "causes": "causal"}  # Hindsight sagt caused_by, die Anzeige causal
+EDGES_PER_NODE = 12
+GRAPH_TYPES = ("world", "experience", "observation")
+_PREFIX_RE = re.compile(r"^[A-Z_]{2,}:")
+
+
+def _iso(v: Any) -> str | None:
+    ms = _ms(v)
+    return datetime.fromtimestamp(ms / 1000, timezone.utc).isoformat() if ms else None
+
+
+def _clip(v: Any, n: int = 600) -> str | None:
+    t = _s(v)
+    return None if t is None else t if len(t) <= n else t[: n - 1] + "…"
+
+
+def _entity_list(v: Any) -> list[str]:
+    """Hindsight liefert "SERVICE:Codex, Codex, WebUI": Typ-Präfix weg, Doppelte weg, höchstens 12."""
+    seen: dict[str, None] = {}
+    for n in _names(v):
+        seen.setdefault(_PREFIX_RE.sub("", n).strip() or n)
+    return list(seen)[:12]
+
+
+def norm_graph(payload: Any, cap: int, kind: str | None = None) -> dict[str, Any]:
+    """Cytoscape-artige Elemente (`{"data": {...}}`) und flache Listen gleichermaßen. Behält Text, Datum, Kontext, Entitäten;
+    Farben berechnet das Frontend. Je Knoten bleiben seine stärksten 12 Kanten (`edges_dropped` zählt den Rest)."""
     p = payload if isinstance(payload, dict) else {}
 
     def data(e: Any) -> dict[str, Any]:
@@ -191,23 +216,61 @@ def norm_graph(payload: Any, cap: int) -> dict[str, Any]:
         if nid is None or str(nid) in ids:
             continue
         ids.add(str(nid))
-        nodes.append({"id": str(nid), "label": _s(_first(d, "label", "name", "text")) or str(nid)[:12], "kind": _s(_first(d, "fact_type", "type", "kind"))})
-    edges = []
+        nodes.append({"id": str(nid), "label": _s(_first(d, "label", "name", "text")) or str(nid)[:12], "text": _clip(d.get("text")),
+                      "date": _iso(_first(d, "mentioned_at", "date")), "context": _s(d.get("context")), "entities": _entity_list(d.get("entities")),
+                      "kind": kind or _s(_first(d, "fact_type", "type", "kind"))})
+    kept = nodes[:cap]
+    keep_ids = {n["id"] for n in kept}
+    cands = []
     for e in p.get("edges", []) if isinstance(p.get("edges"), list) else []:
         d = data(e)
         a, b = _first(d, "source", "from"), _first(d, "target", "to")
-        if a is not None and b is not None and str(a) in ids and str(b) in ids:
-            edge = {"source": str(a), "target": str(b), "label": _s(_first(d, "label", "link_type", "linkType", "type"))}
-            w = _first(d, "weight", "strength")
-            if isinstance(w, (int, float)) and not isinstance(w, bool) and w > 0:
-                edge["weight"] = float(w)  # die Anzeige gewichtet damit die stärksten Verbindungen
-            edges.append(edge)
+        if a is None or b is None or str(a) not in keep_ids or str(b) not in keep_ids:
+            continue
+        t = _s(_first(d, "linkType", "link_type", "type", "label"))
+        edge: dict[str, Any] = {"source": str(a), "target": str(b), "type": LINK_TYPES.get(t, t) if t else None}
+        w = _first(d, "weight", "strength")
+        if isinstance(w, (int, float)) and not isinstance(w, bool) and w > 0:
+            edge["weight"] = float(w)  # die Anzeige gewichtet damit die stärksten Verbindungen
+        if _s(d.get("entityName")):
+            edge["entity"] = _s(d["entityName"])
+        cands.append(edge)
+    # Stärkste zuerst; eine Kante bleibt, solange einer ihrer Knoten noch Platz hat. Das begrenzt die Summe auf 12 je Knoten.
+    load: dict[str, int] = {}
+    keep = set()
+    for i in sorted(range(len(cands)), key=lambda i: -cands[i].get("weight", 0)):
+        a, b = cands[i]["source"], cands[i]["target"]
+        if load.get(a, 0) < EDGES_PER_NODE or load.get(b, 0) < EDGES_PER_NODE:
+            keep.add(i)
+            load[a] = load.get(a, 0) + 1
+            load[b] = load.get(b, 0) + 1
+    edges = [e for i, e in enumerate(cands) if i in keep]
+    rows = []
+    for r in (p.get("table_rows") if isinstance(p.get("table_rows"), list) else [])[:cap]:
+        if isinstance(r, dict) and r.get("id") is not None:
+            rows.append({"id": str(r["id"]), "text": _clip(r.get("text")), "context": _s(r.get("context")), "entities": _entity_list(r.get("entities")),
+                         "date": _iso(_first(r, "mentioned_at", "occurred_start", "date")), "kind": kind or _s(_first(r, "fact_type", "type"))})
     total = _first(p, "total_units", "total", "total_nodes")
-    kept = nodes[:cap]
-    keep_ids = {n["id"] for n in kept}
-    return {"nodes": kept, "edges": [e for e in edges if e["source"] in keep_ids and e["target"] in keep_ids],
-            "total": int(total) if isinstance(total, (int, float)) else len(nodes),
-            "truncated": len(nodes) > cap or (isinstance(total, (int, float)) and total > len(kept))}
+    total = int(total) if isinstance(total, (int, float)) and not isinstance(total, bool) else len(nodes)
+    return {"nodes": kept, "edges": edges, "table_rows": rows, "total": total, "limit": cap, "returned": len(kept),
+            "truncated": len(nodes) > cap or total > len(kept), "edges_dropped": len(cands) - len(edges)}
+
+
+class TTLCache:
+    """Kleines Zwischenspeicher-Dict mit Ablaufzeit und Obergrenze; der älteste Eintrag fliegt zuerst."""
+
+    def __init__(self, size: int = 32, clock=time.monotonic):
+        self.size, self.clock, self._d = size, clock, {}
+
+    def get(self, key: Any, ttl: float):
+        hit = self._d.get(key)
+        return hit[1] if hit and self.clock() - hit[0] < ttl else None
+
+    def put(self, key: Any, value: Any) -> None:
+        self._d.pop(key, None)
+        self._d[key] = (self.clock(), value)
+        while len(self._d) > self.size:
+            del self._d[next(iter(self._d))]
 
 
 def norm_stats(payload: Any) -> list[dict[str, Any]]:
@@ -256,7 +319,10 @@ class MemoryProvider:
     async def search(self, q: str, kind: str | None, limit: int) -> list[dict[str, Any]]:
         raise NotImplementedError
 
-    async def graph(self, q: str | None, limit: int) -> dict[str, Any]:
+    async def graph(self, q: str | None, limit: int, kind: str = "world", tags: list[str] | None = None, tags_match: str = "any") -> dict[str, Any]:
+        raise NotImplementedError
+
+    async def timeseries(self, kind: str, period: str) -> dict[str, Any]:
         raise NotImplementedError
 
     async def entities(self, limit: int, offset: int) -> dict[str, Any]:
@@ -318,11 +384,19 @@ class HindsightProvider(MemoryProvider):
             body["types"] = [kind]
         return norm_items(await self._call("POST", "/memories/recall", json=body))[:limit]
 
-    async def graph(self, q: str | None, limit: int) -> dict[str, Any]:
-        params: dict[str, Any] = {"limit": limit}
+    async def graph(self, q: str | None, limit: int, kind: str = "world", tags: list[str] | None = None, tags_match: str = "any") -> dict[str, Any]:
+        params: dict[str, Any] = {"limit": limit, "type": kind}
         if q:
             params["q"] = q
-        return norm_graph(await self._call("GET", "/graph", params=params), limit)
+        if tags:
+            params.update(tags=tags, tags_match=tags_match)
+        return norm_graph(await self._call("GET", "/graph", params=params), limit, kind)
+
+    async def timeseries(self, kind: str, period: str) -> dict[str, Any]:
+        payload = await self._call("GET", "/stats/memories-timeseries", params={"period": period, "time_field": "mentioned_at"})
+        rows = payload.get("buckets") if isinstance(payload, dict) and isinstance(payload.get("buckets"), list) else []
+        pts = [{"t": _iso(r.get("time")), "count": int(r[kind])} for r in rows if isinstance(r, dict) and _iso(r.get("time")) and isinstance(r.get(kind), (int, float))]
+        return {"points": pts, "trunc": payload.get("trunc") if isinstance(payload, dict) else None}
 
     async def entities(self, limit: int, offset: int) -> dict[str, Any]:
         payload = await self._call("GET", "/entities", params={"limit": limit, "offset": offset})
