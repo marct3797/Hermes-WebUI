@@ -1,0 +1,204 @@
+{
+ "state": "ok",
+ "reason": null,
+ "generated_at": "2026-10-23T23:12:35.170262+00:00",
+ "cached": false,
+ "providers": [
+  {
+   "id": "anthropic",
+   "label": "Anthropic",
+   "configured": false,
+   "active": true,
+   "quota_capable": true,
+   "plan": null,
+   "state": "ok",
+   "worst_remaining_percent": 73.0,
+   "windows": [
+    {
+     "label": "Current session",
+     "used_percent": 26.0,
+     "remaining_percent": 74.0,
+     "reset_at": "2026-10-24T02:49:59.732015+00:00",
+     "reset_in_s": 13044,
+     "detail": null
+    },
+    {
+     "label": "Current week",
+     "used_percent": 27.0,
+     "remaining_percent": 73.0,
+     "reset_at": "2026-10-28T19:59:59.732030+00:00",
+     "reset_in_s": 420444,
+     "detail": null
+    }
+   ],
+   "reason": null
+  },
+  {
+   "id": "openai-codex",
+   "label": "ChatGPT or Codex Subscription",
+   "configured": true,
+   "active": true,
+   "quota_capable": true,
+   "plan": "Plus",
+   "state": "exhausted",
+   "worst_remaining_percent": 0.0,
+   "windows": [
+    {
+     "label": "Session",
+     "used_percent": 100.0,
+     "remaining_percent": 0.0,
+     "reset_at": "2026-10-24T00:12:07+00:00",
+     "reset_in_s": 3572,
+     "detail": null
+    },
+    {
+     "label": "Weekly",
+     "used_percent": 16.0,
+     "remaining_percent": 84.0,
+     "reset_at": "2026-10-30T19:12:07+00:00",
+     "reset_in_s": 590372,
+     "detail": null
+    }
+   ],
+   "reason": null
+  },
+  {
+   "id": "custom",
+   "label": "custom",
+   "configured": false,
+   "active": true,
+   "quota_capable": false,
+   "plan": null,
+   "state": "unavailable",
+   "worst_remaining_percent": null,
+   "windows": [],
+   "reason": "No public subscription-quota API for this provider."
+  },
+  {
+   "id": "copilot",
+   "label": "GitHub Copilot",
+   "configured": true,
+   "active": false,
+   "quota_capable": true,
+   "plan": "individual",
+   "state": "ok",
+   "worst_remaining_percent": 100.0,
+   "windows": [
+    {
+     "label": "Chat",
+     "used_percent": 0.0,
+     "remaining_percent": 100.0,
+     "reset_at": "2026-11-01",
+     "reset_in_s": 694045,
+     "detail": "200 of 200 left"
+    },
+    {
+     "label": "Completions",
+     "used_percent": 0.0,
+     "remaining_percent": 100.0,
+     "reset_at": "2026-11-01",
+     "reset_in_s": 694045,
+     "detail": "2000 of 2000 left"
+    }
+   ],
+   "reason": null
+  },
+  {
+   "id": "gemini",
+   "label": "Google AI Studio",
+   "configured": true,
+   "active": false,
+   "quota_capable": false,
+   "plan": null,
+   "state": "unavailable",
+   "worst_remaining_percent": null,
+   "windows": [],
+   "reason": "No public subscription-quota API for this provider."
+  },
+  {
+   "id": "huggingface",
+   "label": "Hugging Face",
+   "configured": true,
+   "active": false,
+   "quota_capable": false,
+   "plan": null,
+   "state": "unavailable",
+   "worst_remaining_percent": null,
+   "windows": [],
+   "reason": "No public subscription-quota API for this provider."
+  },
+  {
+   "id": "nous",
+   "label": "Nous Portal",
+   "configured": true,
+   "active": false,
+   "quota_capable": true,
+   "plan": null,
+   "state": "auth_failed",
+   "worst_remaining_percent": null,
+   "windows": [],
+   "reason": "Not signed in to Nous Portal, or the portal returned no subscription data."
+  },
+  {
+   "id": "omniroute",
+   "label": "Omniroute",
+   "configured": false,
+   "active": true,
+   "quota_capable": false,
+   "plan": null,
+   "state": "unavailable",
+   "worst_remaining_percent": null,
+   "windows": [],
+   "reason": "Provider not in the Hermes catalog."
+  },
+  {
+   "id": "opencode-go",
+   "label": "OpenCode Go",
+   "configured": true,
+   "active": true,
+   "quota_capable": true,
+   "plan": "Go",
+   "state": "exhausted",
+   "worst_remaining_percent": 0.0,
+   "windows": [
+    {
+     "label": "Rolling (5h)",
+     "used_percent": 1.0,
+     "remaining_percent": 99.0,
+     "reset_at": "2026-10-24T02:54:14.000Z",
+     "reset_in_s": 13299,
+     "detail": null
+    },
+    {
+     "label": "Weekly",
+     "used_percent": 32.0,
+     "remaining_percent": 68.0,
+     "reset_at": "2026-10-26T00:00:00.000Z",
+     "reset_in_s": 175645,
+     "detail": null
+    },
+    {
+     "label": "Monthly",
+     "used_percent": 100.0,
+     "remaining_percent": 0.0,
+     "reset_at": "2026-10-24T02:11:11.000Z",
+     "reset_in_s": 10716,
+     "detail": "status: rate-limited"
+    }
+   ],
+   "reason": null
+  },
+  {
+   "id": "opencode-zen",
+   "label": "OpenCode Zen",
+   "configured": true,
+   "active": false,
+   "quota_capable": true,
+   "plan": null,
+   "state": "unavailable",
+   "worst_remaining_percent": null,
+   "windows": [],
+   "reason": "OpenCode Zen exposes no reachable credits/usage endpoint for this key — it is pay-as-you-go."
+  }
+ ]
+}

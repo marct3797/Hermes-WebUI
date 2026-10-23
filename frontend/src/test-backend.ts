@@ -1,5 +1,6 @@
 import { act } from "@testing-library/react";
 import { vi } from "vitest";
+import quotaFixture from "./fixtures/quota_laptop.json";
 import type { HostInfo, ProfileInput, Room, RoomEvent, SigilConfig, StreamEvent, UiConfig } from "./types";
 
 /** Gemeinsame Test-Attrappen: BFF-Antworten und EventSource für die Seiten-Tests. */
@@ -131,6 +132,29 @@ function accountState(dash: DashState, id: string, provider: string) {
   return { configured: false, via: null, detail: null };
 }
 
+/** Kontingente: die echte, bereinigte Antwort des Plugins (vom BFF normalisiert). `expired` lässt den OpenCode-Key des Profils „default“ ablaufen. */
+export type QuotaMode = "ok" | "missing" | "expired" | "offline";
+function quotaOf(profile: string, mode: QuotaMode) {
+  const base = quotaFixture as unknown as { state: string; reason: string | null; generated_at: string; cached: boolean; providers: Array<Record<string, unknown>> };
+  if (mode === "missing") return { ...base, state: "plugin_missing", reason: "Plugin ai-usage-tracker auf diesem Host nicht installiert", providers: [] };
+  if (mode === "offline") return { ...base, state: "dashboard_unavailable", reason: "Das Dashboard ist nicht erreichbar", providers: [] };
+  if (mode === "expired" && profile === "default") {
+    return { ...base, providers: base.providers.map((p) => (p.id === "opencode-go" ? { ...p, state: "auth_failed", windows: [], worst_remaining_percent: null, reason: "HTTP 401 unauthorized: Key abgelaufen" } : p)) };
+  }
+  return base;
+}
+function quotaSummary(agents: string[], mode: QuotaMode) {
+  const items = agents.flatMap((profile) => (quotaOf(profile, mode).providers as Array<{ id: string; label: string; state: string; windows: Array<{ label: string; remaining_percent: number; reset_in_s: number }> }>)
+    .filter((p) => p.state === "auth_failed" || p.windows.length > 0)
+    .map((p) => {
+      const w = [...p.windows].sort((a, b) => a.remaining_percent - b.remaining_percent)[0];
+      return { host: "hikari", runtime: "hermes", profile, provider: p.id, label: p.label, state: p.state, remaining_percent: w?.remaining_percent ?? null, window: w?.label ?? null, reset_in_s: w?.reset_in_s ?? null, reason: null };
+    }));
+  const rank = (i: { remaining_percent: number | null }) => i.remaining_percent ?? -1;
+  return { runtimes: [{ host: "hikari", runtime: "hermes", state: mode === "missing" ? "plugin_missing" : mode === "offline" ? "dashboard_unavailable" : "ok", reason: mode === "ok" || mode === "expired" ? null : quotaOf("x", mode).reason }],
+    items, worst: [...items].sort((a, b) => rank(a) - rank(b))[0] ?? null };
+}
+
 function providerMatrix(agents: string[], dash: DashState) {
   const profiles = agents.map((name) => ({ name, model: dash.available ? dash.model.model : null, provider: dash.available ? dash.model.provider : null, default: name === "default", gateway_running: true, error: null }));
   return {
@@ -239,6 +263,7 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
   const uiState: UiConfig = { ...baseUi(), ...uiOverride };
   const calls: Call[] = [];
   const rooms: Room[] = [];
+  const quota: { mode: QuotaMode } = { mode: "ok" };
   const dash: DashState = {
     available: true, reason: null, soul: "Du bist Raiden.\nDu antwortest knapp.\n", description: "", model: { provider: "mock", model: "mock-large" },
     history: [], versions: {}, stepUp: false, keys: { ANTHROPIC_API_KEY: "sk-ant-geheim-1234" },
@@ -297,6 +322,9 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
       }
       return json(uiState);
     }
+    const qm = quota.mode;
+    if (url === "/bff/quota/summary") return json(quotaSummary(agents, qm));
+    if (/^\/bff\/h\/hikari\/hermes\/_quota(\?refresh=1)?$/.test(url)) return json({ profiles: Object.fromEntries(agents.map((a) => [a, quotaOf(a, qm)])) });
     if (url === "/bff/h/hikari/hermes/_provider-matrix") return json(providerMatrix(agents, dash));
     if (url === "/bff/h/laptop/hermes/_provider-matrix") return json({ detail: "Hermes nicht erreichbar: keine Verbindung zu 100.100.3.4:8642. Läuft der API-Server dort und lauscht auf dieser Adresse?" }, 502);
     const m = /^\/bff\/h\/hikari\/hermes\/([^/]+)(\/.*)$/.exec(url);
@@ -304,6 +332,7 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
       const rest = m[2];
       const d = dashboardRoute(rest, method, m[1], dash, json, init?.body ? JSON.parse(String(init.body)) : undefined);
       if (d) return d;
+      if (/^\/quota(\?refresh=1)?$/.test(rest)) return json(quotaOf(m[1], qm));
       if (rest === "/status") return json({ state: "online", online: true, version: "0.21.6", features, error: null });
       if (rest === "/models") return json({ providers: [{ slug: "mock", name: "Mock", authenticated: true, is_current: true, models: ["mock-large", "mock-small"] }], model: "mock-large", provider: "mock" });
       if (rest === "/skills") return json({ object: "list", data: [{ name: "plan", description: "Zerlegt Aufgaben in Schritte.", category: "software-development" }, { name: "himalaya", description: "E-Mail über IMAP.", category: "email" }] });
@@ -319,5 +348,5 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
     return json({ detail: "nicht da" }, 404);
   }));
   const posted = (suffix: string) => calls.filter((c) => c.method === "POST" && c.url.endsWith(suffix));
-  return { calls, posted, rooms, dash };
+  return { calls, posted, rooms, dash, quota };
 }

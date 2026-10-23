@@ -163,3 +163,11 @@ export type ProviderMatrix = { available: boolean; reason: string | null; profil
 export type ModelProvider = { slug: string; name: string; current: boolean; authenticated: boolean; models: string[]; warning: string | null };
 export type OAuthStart = { session_id: string; flow?: string; user_code?: string; verification_url?: string; auth_url?: string; expires_in?: number; poll_interval?: number };
 export type OAuthPoll = { session_id: string; status: "pending" | "approved" | "error" | "expired" | string; error_message: string | null; expires_at: number | null };
+
+/** Restkontingente (BFF, aus dem Dashboard-Plugin ai-usage-tracker). */
+export type QuotaWindow = { label: string; used_percent: number | null; remaining_percent: number | null; reset_at: string | null; reset_in_s: number | null; detail: string | null };
+export type QuotaState = "ok" | "exhausted" | "low" | "unavailable" | "auth_failed";
+export type QuotaProvider = { id: string; label: string; configured: boolean; active: boolean; quota_capable: boolean; plan: string | null; state: QuotaState; worst_remaining_percent: number | null; windows: QuotaWindow[]; reason: string | null };
+export type Quota = { state: "ok" | "plugin_missing" | "dashboard_unavailable" | "error"; reason: string | null; generated_at: string; cached: boolean; providers: QuotaProvider[] };
+export type QuotaItem = { host: string; runtime: string; profile: string; provider: string; label: string; state: QuotaState; remaining_percent: number | null; window: string | null; reset_in_s: number | null; reason: string | null };
+export type QuotaSummary = { runtimes: Array<{ host: string; runtime: string; state: Quota["state"]; reason: string | null }>; items: QuotaItem[]; worst: QuotaItem | null };
