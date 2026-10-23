@@ -155,6 +155,21 @@ erreichen (Host-Netzwerk).
 
 Secrets nie in Repo, Chat oder Frontend: Umgebung oder Datei mit Modus 0600.
 
+## Betrieb auf Hikari
+
+Ein Container mit `network_mode: host` (das Container-Gateway lauscht nur auf `127.0.0.1:9121`), BFF und Frontend in einem Image, davor Caddy.
+
+```bash
+git clone https://github.com/marct3797/Hermes-WebUI && cd Hermes-WebUI && git checkout <Branch>
+bash deploy/deploy.sh          # legt ~/hermes-webui/{config,data,webui.env} an, startet den Container, wartet auf /healthz
+```
+
+- `deploy/deploy.sh` ist idempotent, löscht nichts und überschreibt keine vorhandene Config. Den Key des Container-Gateways liest es aus der Umgebung von `hermes-agents` in `webui.env` (`chmod 600`), ohne ihn auszugeben. Fehlen die Forgejo-Werte (`FORGEJO_OIDC_CLIENT_ID`, `FORGEJO_OIDC_CLIENT_SECRET`, `OIDC_ALLOWED_SUB`), nennt es die Namen und stoppt.
+- Forgejo-OAuth-App: Redirect-URI `https://agents.thiel.digital/auth/callback`; `OIDC_ALLOWED_SUB` ist die numerische Forgejo-Benutzer-ID.
+- Caddy: Block aus `deploy/Caddyfile.snippet` (SSE ohne Pufferung).
+- Rauchtest durch das BFF ohne Login: ein Wegwerf-Container mit `HERMES_WEBUI_ENV=dev`, `AUTH_MODE=none` auf `127.0.0.1:8421`, dann `python backend/devtools/smoke_bff.py --agent inari`.
+- Aktualisieren: Branch holen, `bash deploy/deploy.sh` erneut.
+
 ## Offene Prüfpunkte für Phase 1 (gegen die echte Instanz)
 
 Das Eventformat und die Routen stammen aus der Quelltext-Lesung (Hermes 0.20.4), noch nicht aus einem Lauf mit Key.

@@ -1,0 +1,18 @@
+{
+  "hosts": [
+    {
+      "id": "hikari",
+      "label": "Hikari",
+      "kind": "local",
+      "runtimes": [
+        {
+          "id": "hermes",
+          "base_url": "http://127.0.0.1:9121",
+          "api_key_env": "HERMES_KEY_HIKARI",
+          "multiplex": true,
+          "agents": ["benzai", "default", "inari", "kaze", "omoikane", "raiden", "ryujin", "sora", "yume"]
+        }
+      ]
+    }
+  ]
+}

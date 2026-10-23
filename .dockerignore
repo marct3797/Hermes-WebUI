@@ -1,0 +1,12 @@
+**/node_modules
+**/__pycache__
+**/*.pyc
+**/.venv
+**/*.egg-info
+**/.pytest_cache
+frontend/dist
+backend/hosts.json
+**/.env
+**/audit.log
+.git
+stitch_project_reference_hub.zip
