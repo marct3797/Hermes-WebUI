@@ -36,7 +36,7 @@ def hosts_config(key: str = API_KEY) -> dict:
         {"id": "down", "label": "Aus", "kind": "local", "runtimes": [
             {"id": "hermes", "base_url": "http://down.test", "api_key": key, "multiplex": True, "agents": ["default"]}]},
         {"id": "laptop", "label": "Laptop", "kind": "remote", "address": "100.100.3.4", "runtimes": [
-            {"id": "hermes", "base_url": "http://127.0.0.1:8642", "api_key": key, "multiplex": False, "agents": ["default"]}]},
+            {"id": "hermes", "base_url": "http://laptop.test:8642", "api_key": key, "multiplex": False, "agents": ["default"]}]},
     ]}
 
 

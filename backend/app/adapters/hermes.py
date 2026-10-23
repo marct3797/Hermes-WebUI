@@ -52,13 +52,25 @@ class HermesAdapter(RuntimeAdapter):
             h["Authorization"] = f"Bearer {key}"
         return h
 
+    def _where(self) -> str:
+        """`host:port` der Runtime für Fehlermeldungen (steht ohnehin in der Config, enthält keinen Key)."""
+        u = httpx.URL(self.cfg.base_url)
+        return f"{u.host}:{u.port or (443 if u.scheme == 'https' else 80)}"
+
+    def _down(self, e: httpx.HTTPError) -> UpstreamError:
+        """Verbindungsfehler mit Adresse und Grund, damit ein Host im Tailnet sich ohne Log-Suche prüfen lässt."""
+        where = self._where()
+        if isinstance(e, httpx.TimeoutException):
+            return UpstreamError(504, f"Hermes antwortet nicht rechtzeitig ({where})")
+        if isinstance(e, httpx.ConnectError):
+            return UpstreamError(502, f"Hermes nicht erreichbar: keine Verbindung zu {where}. Läuft der API-Server dort und lauscht auf dieser Adresse?")
+        return UpstreamError(502, f"Hermes nicht erreichbar ({where})")
+
     async def _request(self, method: str, agent: str, path: str, *, extra_headers: dict[str, str] | None = None, **kw: Any) -> Any:
         try:
             r = await self._http.request(method, self._url(agent, path), headers={**self._headers(agent), **(extra_headers or {})}, **kw)
-        except httpx.TimeoutException as e:
-            raise UpstreamError(504, "Hermes antwortet nicht rechtzeitig") from e
         except httpx.HTTPError as e:
-            raise UpstreamError(502, "Hermes nicht erreichbar") from e
+            raise self._down(e) from e
         if r.status_code >= 400:
             raise UpstreamError(r.status_code, _short_detail(r))
         return r.json() if r.content else {}
@@ -72,8 +84,10 @@ class HermesAdapter(RuntimeAdapter):
                 timeout=self._health_timeout,
             )
             body = r.json() if r.status_code == 200 else {}
-        except (httpx.HTTPError, ValueError):
-            return Health("unreachable", detail="Hermes nicht erreichbar")
+        except httpx.HTTPError as e:
+            return Health("unreachable", detail=self._down(e).detail)
+        except ValueError:
+            return Health("unreachable", detail=f"Unerwartete Antwort von {self._where()}")
         if r.status_code != 200 or not isinstance(body, dict):
             return Health("unreachable", detail=f"Unerwartete Antwort ({r.status_code})")
         version = body.get("version")

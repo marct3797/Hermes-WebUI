@@ -48,7 +48,7 @@ def test_hosts_overview(client):
     assert rt["agents"][-1]["label"] == "Sora"
     assert hosts["down"]["status"] == "unreachable" and hosts["down"]["detail"]
     laptop = hosts["laptop"]
-    assert laptop["status"] == "unreachable" and "Phase 2" in laptop["detail"]
+    assert laptop["status"] == "unreachable" and laptop["kind"] == "remote" and "laptop.test:8642" in laptop["detail"]
     assert [a["id"] for a in laptop["runtimes"][0]["agents"]] == ["default"]
     assert data["config_error"] is None
 
@@ -103,10 +103,10 @@ def test_agent_status_states(client, path, state):
     assert st["state"] == state and st["online"] is False and st["error"]
 
 
-def test_remote_host_calls_report_503(client):
-    assert client.get("/bff/h/laptop/hermes/default/sessions").status_code == 503
+def test_calls_to_a_host_that_is_off_report_502_with_its_address(client):
+    assert client.get("/bff/h/laptop/hermes/default/sessions").status_code == 502
     r = client.post("/bff/h/laptop/hermes/default/runs", json={"text": "x"})
-    assert r.status_code == 503 and "Phase 2" in r.json()["detail"]
+    assert r.status_code == 502 and "laptop.test:8642" in r.json()["detail"]
 
 
 def test_unknown_targets_404(client):
@@ -356,8 +356,8 @@ def test_skills_and_toolsets_are_passed_through(client):
     assert sets["terminal"]["enabled"] is True and sets["web"]["configured"] is False and sets["browser"]["tools"] == ["browser_navigate"]
 
 
-def test_skills_of_an_offline_host_is_503_and_unknown_agent_404(client):
-    assert client.get("/bff/h/laptop/hermes/default/skills").status_code == 503
+def test_skills_of_an_offline_host_is_502_and_unknown_agent_404(client):
+    assert client.get("/bff/h/laptop/hermes/default/skills").status_code == 502
     assert client.get("/bff/h/hikari/hermes/ghost/toolsets").status_code == 404
 
 

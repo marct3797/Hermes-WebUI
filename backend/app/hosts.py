@@ -1,8 +1,8 @@
 """Host-Dienst des BFF: verbindet Registry, Adapter und Host-Status.
 
-Lokale Hosts (hikari) spricht das BFF direkt an. Entfernte Hosts (laptop) bekommen in Phase 2 einen
-Host-Dienst mit ausgehender Verbindung; ihr Transport kommt dann als eigener httpx-Client aus
-`HostService.adapter`. Bis dahin sind sie in der Registry sichtbar, aber "nicht erreichbar".
+Jeder Host, ob `local` oder `remote`, spricht über den Adapter seiner Runtime mit der `base_url` aus der
+Config; bei Hosts im Tailnet (laptop) ist das die Tailnet-Adresse. `kind` ist nur ein Hinweis für die
+Anzeige. Ist ein Host aus, meldet ihn der Adapter als "nicht erreichbar" und nennt Adresse und Grund.
 """
 from __future__ import annotations
 
@@ -16,14 +16,9 @@ import httpx
 from .adapters import AgentInfo, AgentStatus, Health, RuntimeAdapter, UpstreamError, adapter_classes
 from .registry import AgentCfg, HostCfg, Registry, RuntimeCfg
 
-REMOTE_PENDING = "Host-Dienst nicht verbunden (folgt in Phase 2)"
-
 
 class OfflineAdapter(RuntimeAdapter):
-    """Platzhalter für Hosts ohne Verbindung: Status "nicht erreichbar", alle Aufrufe melden 503.
-
-    Phase 2 ersetzt ihn für entfernte Hosts durch den echten Adapter mit dem Transport des Host-Dienstes.
-    """
+    """Platzhalter für Runtimes ohne Adapter: Status "nicht erreichbar", alle Aufrufe melden 503."""
 
     def __init__(self, runtime: RuntimeCfg, reason: str):
         self.id, self.label, self.cfg, self._reason = runtime.id, runtime.id, runtime, reason
@@ -74,10 +69,8 @@ class HostService:
         cls = adapter_classes().get(runtime.id)
         if cls is None:
             adapter: RuntimeAdapter = OfflineAdapter(runtime, f"Für {runtime.id} gibt es noch keinen Adapter")
-        elif host.kind == "local":
-            adapter = cls(runtime, self._http, health_timeout=self._timeout)
         else:
-            adapter = OfflineAdapter(runtime, REMOTE_PENDING)
+            adapter = cls(runtime, self._http, health_timeout=self._timeout)
         self._adapters[(host.id, runtime.id)] = adapter
         return adapter
 
