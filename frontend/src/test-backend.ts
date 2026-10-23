@@ -79,7 +79,7 @@ function memoryRoute(url: string, method: string, capabilities: string[], json: 
   if (!m) return undefined;
   const [, what, rest] = m;
   const q = u.searchParams.get("q") ?? "";
-  if (what === "stats") return json({ counts: [{ key: "total_nodes", value: 120 }, { key: "nodes_by_fact_type.world", value: 80 }] });
+  if (what === "stats") return json({ counts: [{ key: "total_nodes", value: 120 }, { key: "pending_operations", value: 0 }, { key: "nodes_by_fact_type.world", value: 80 }, { key: "nodes_by_fact_type.experience", value: 40 }] });
   if (what === "items") {
     const kind = u.searchParams.get("kind");
     const offset = Number(u.searchParams.get("offset") ?? 0);

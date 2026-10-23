@@ -7,6 +7,7 @@ Start: uvicorn devtools.mock_hindsight:app --port 8888
 """
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
@@ -63,6 +64,8 @@ def create_mock(require_key: str | None = None, bank: str = "hermes") -> FastAPI
     @app.get(f"{base}/graph")
     async def graph(bank_id: str, limit: int = 1000, q: str | None = None):
         check(bank_id)
+        if os.environ.get("MOCK_GRAPH_NODES"):
+            return big_graph(int(os.environ["MOCK_GRAPH_NODES"]))
         return {
             "nodes": [{"data": {"id": u["id"], "label": u["text"][:30], "color": "#ccc", "fact_type": u["fact_type"]}} for u in UNITS],
             "edges": [{"data": {"id": "e1", "source": "u1", "target": "u3", "linkType": "entity"}},
@@ -102,3 +105,17 @@ def create_mock(require_key: str | None = None, bank: str = "hermes") -> FastAPI
 
 
 app = create_mock()
+
+
+def big_graph(n: int) -> dict:
+    """Ein Graph in der Größe eines echten Gedächtnisses: Gruppen um Entitäten, zeitliche Ketten, ein paar Einzelgänger."""
+    kinds = ("world", "experience", "observation")
+    nodes = [{"data": {"id": f"n{i}", "label": f"Fakt {i}: " + ("Marc betreibt Server und Dienste" if i % 3 == 0 else "Chat über Räume und Agents"), "fact_type": kinds[i % 3]}} for i in range(n)]
+    edges = []
+    for i in range(1, n - 6):
+        edges.append({"data": {"id": f"t{i}", "source": f"n{i - 1}", "target": f"n{i}", "linkType": "temporal"}})
+        if i % 4 == 0:
+            edges.append({"data": {"id": f"e{i}", "source": f"n{i}", "target": f"n{(i * 7) % (n - 6)}", "linkType": "entity"}})
+        if i % 9 == 0:
+            edges.append({"data": {"id": f"s{i}", "source": f"n{i}", "target": f"n{(i * 13) % (n - 6)}", "linkType": "semantic"}})
+    return {"nodes": nodes, "edges": edges, "table_rows": [], "total_units": n}

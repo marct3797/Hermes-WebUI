@@ -3,7 +3,7 @@ import { api } from "../api";
 import { DiagChecks } from "../components/DiagChecks";
 import { Icon } from "../components/Icon";
 import { GraphView } from "../components/memory/GraphView";
-import { EntitiesView, ItemsView, ModelsView, ReflectView, SearchView, StatsView } from "../components/memory/Views";
+import { EntitiesView, ItemsView, ModelsView, ReflectView, SearchView, StatsView, type Nav } from "../components/memory/Views";
 import { PageHead } from "../components/PageHead";
 import type { DiagReport, MemProvider } from "../types";
 import { useAsync } from "../useAsync";
@@ -19,13 +19,16 @@ const TABS: Array<{ id: string; label: string; needs: string }> = [
   { id: "reflect", label: "Fragen", needs: "reflect" },
 ];
 
-function View({ tab, provider }: { tab: string; provider: string }) {
+/** Womit eine Ansicht geöffnet wird, wenn man aus einer anderen hierher springt. */
+type Focus = { entity?: string; q?: string };
+
+function View({ tab, provider, nav, focus }: { tab: string; provider: string; nav: Nav; focus: Focus }) {
   switch (tab) {
-    case "stats": return <StatsView provider={provider} />;
-    case "items": return <ItemsView provider={provider} />;
-    case "search": return <SearchView provider={provider} />;
+    case "stats": return <StatsView provider={provider} nav={nav} />;
+    case "items": return <ItemsView provider={provider} nav={nav} initialQuery={focus.q} />;
+    case "search": return <SearchView provider={provider} nav={nav} />;
     case "graph": return <GraphView provider={provider} />;
-    case "entities": return <EntitiesView provider={provider} />;
+    case "entities": return <EntitiesView provider={provider} nav={nav} initial={focus.entity} />;
     case "models": return <ModelsView provider={provider} />;
     case "reflect": return <ReflectView provider={provider} />;
     default: return null;
@@ -34,20 +37,31 @@ function View({ tab, provider }: { tab: string; provider: string }) {
 
 /**
  * Gedächtnis: liest, was ein Gedächtnis-Anbieter (Hindsight, später weitere) über die Agents weiß. Die Anbieter stehen in der
- * Konfiguration des BFF; jede Ansicht erscheint nur, wenn der Anbieter sie kann. Die Seite schreibt nichts.
+ * Konfiguration des BFF; jede Ansicht erscheint nur, wenn der Anbieter sie kann. Fakten, Entitäten und Tags führen zueinander.
+ * Die Seite schreibt nichts.
  */
 export function MemoryPage() {
   const list = useAsync(() => api.memoryProviders(), []);
   const [chosen, setChosen] = useState<string>();
   const [tabId, setTabId] = useState<string>();
+  const [focus, setFocus] = useState<Focus>({});
   const [report, setReport] = useState<DiagReport>();
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState<string>();
 
   const providers: MemProvider[] = list.data?.providers ?? [];
   const provider = providers.find((p) => p.id === chosen) ?? providers[0];
-  const tabs = provider ? TABS.filter((t) => provider.capabilities.includes(t.needs)) : [];
+  // Mentale Modelle legt man in Hindsight selbst an; solange es keine gibt, bleibt der Reiter weg.
+  const models = useAsync(() => (provider?.capabilities.includes("models") ? api.memoryModels(provider.id) : Promise.resolve(undefined)), [provider?.id]);
+  const noModels = !models.data || models.data.items.length === 0;
+  const tabs = provider ? TABS.filter((t) => provider.capabilities.includes(t.needs) && !(t.id === "models" && noModels)) : [];
   const tab = tabs.find((t) => t.id === tabId) ?? tabs[0];
+
+  // Sprung aus einer Ansicht in eine andere: Reiter wechseln und der Ansicht sagen, was sie zeigen soll.
+  const nav: Nav = {
+    entity: (name) => { setFocus({ entity: name }); setTabId("entities"); },
+    facts: (q) => { setFocus({ q }); setTabId("items"); },
+  };
 
   const check = async () => {
     if (!provider) return;
@@ -62,7 +76,7 @@ export function MemoryPage() {
         {providers.length > 1 && (
           <label className="row" style={{ gap: 6 }}>
             <span className="lbl">Anbieter</span>
-            <select className="field field-line" value={provider?.id} onChange={(e) => { setChosen(e.target.value); setTabId(undefined); setReport(undefined); }} aria-label="Anbieter">
+            <select className="field field-line" value={provider?.id} onChange={(e) => { setChosen(e.target.value); setTabId(undefined); setFocus({}); setReport(undefined); }} aria-label="Anbieter">
               {providers.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
             </select>
           </label>
@@ -87,11 +101,11 @@ export function MemoryPage() {
         <>
           <div className="tabs" role="tablist" aria-label="Ansichten">
             {tabs.map((t) => (
-              <button key={t.id} type="button" role="tab" className={`tab${t.id === tab.id ? " on" : ""}`} aria-selected={t.id === tab.id} onClick={() => setTabId(t.id)}>{t.label}</button>
+              <button key={t.id} type="button" role="tab" className={`tab${t.id === tab.id ? " on" : ""}`} aria-selected={t.id === tab.id} onClick={() => { setFocus({}); setTabId(t.id); }}>{t.label}</button>
             ))}
           </div>
           <div className="mem-body" role="tabpanel" aria-label={tab.label}>
-            <View key={`${provider.id}/${tab.id}`} tab={tab.id} provider={provider.id} />
+            <View key={`${provider.id}/${tab.id}/${focus.entity ?? ""}/${focus.q ?? ""}`} tab={tab.id} provider={provider.id} nav={nav} focus={focus} />
           </div>
         </>
       )}
