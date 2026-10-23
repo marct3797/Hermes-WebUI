@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
+import { CLI_DOT } from "../components/providers/CliPanel";
+import type { CliAuth } from "../types";
 import "../styles/workspace.css";
 
 type Terminal = { id: string; cli: string; workspace: string; running: boolean; pid: number; created_at: number; exit_code?: number };
@@ -23,6 +25,7 @@ export function TerminalPage({ host }: { host: string }) {
   const [selected, setSelected] = useState("");
   const [cli, setCli] = useState("");
   const [workspace, setWorkspace] = useState("");
+  const [auth, setAuth] = useState<CliAuth>();
   const [error, setError] = useState<string>();
   const [gap, setGap] = useState<string>();
   const [connection, setConnection] = useState("Nicht verbunden");
@@ -37,12 +40,13 @@ export function TerminalPage({ host }: { host: string }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    setInfo(undefined); setTerminals([]); setSelected(""); setError(undefined);
+    setInfo(undefined); setTerminals([]); setSelected(""); setAuth(undefined); setError(undefined);
     try { noticeOptIn.current = sessionStorage.getItem("hermes-terminal-notifications") === "true"; setNotifications(noticeOptIn.current); } catch { /* private mode */ }
     request<Info>(`${base}/_hostd`, "GET", undefined, controller.signal).then(async (data) => {
       if (controller.signal.aborted) return;
-      setInfo(data); setCli(data.clis?.find((c) => c.available)?.id ?? ""); setWorkspace(data.workspaces?.[0]?.id ?? "");
+      setInfo(data); const wanted = new URLSearchParams(location.search).get("cli"); setCli(data.clis?.find((c) => c.available && c.id === wanted)?.id ?? data.clis?.find((c) => c.available)?.id ?? ""); setWorkspace(data.workspaces?.[0]?.id ?? "");
       if (data.available === false) return;
+      request<CliAuth>(`${base}/_cli-auth`, "GET", undefined, controller.signal).then((a) => { if (!controller.signal.aborted) setAuth(a); }).catch(() => {}); // Zustand ist nur Hinweis
       const list = await request<{ terminals: Terminal[] }>(`${base}/_terminals`, "GET", undefined, controller.signal);
       if (controller.signal.aborted) return;
       setTerminals(list.terminals);
@@ -154,6 +158,7 @@ export function TerminalPage({ host }: { host: string }) {
         <label>Arbeitsordner <select className="field" value={workspace} onChange={(e) => setWorkspace(e.target.value)}><option value="" disabled>Arbeitsordner wählen</option>{info.workspaces?.map((w) => <option key={w.id} value={w.id}>{w.label}</option>)}</select></label>
         <button className="btn btn-s" disabled={busy || !cli || !workspace} onClick={() => void create()}>Terminal starten</button>
       </div>
+      {(() => { const st = auth?.clis?.find((c) => c.id === cli); return st && <p className="muted" role="status">Anmeldung: {CLI_DOT[st.state].text}{st.method ? ` (${st.method})` : ""}{st.reason ? ` · ${st.reason}` : ""}{st.state === "signed_out" ? ". Der Start bleibt möglich, die Anmeldung erfolgt im Terminal." : ""}</p>; })()}
       <p className="muted">Installation ist kein Anmeldenachweis. {info.clis?.find((c) => c.id === cli)?.auth_note ?? "Anmeldestatus unbekannt; Anmeldung bleibt in der CLI."}</p>
       {terminals.length ? <label>Terminal auswählen <select className="field" value={selected} onChange={(e) => { setGap(undefined); setSelected(e.target.value); }}>{terminals.map((t) => <option value={t.id} key={t.id}>{t.cli} · {t.workspace} · {t.running ? "läuft" : "beendet"} · {t.id}</option>)}</select></label> : <p role="status">Keine Terminals. Ein Start führt die konfigurierte CLI aus.</p>}
     </>}

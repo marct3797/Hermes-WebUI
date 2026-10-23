@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { api } from "../../api";
 import { agentPath } from "../../router";
-import type { AccountState, AgentRef, HostAccount, HostInfo, ProviderMatrix, RuntimeInfo } from "../../types";
+import type { AccountState, CliAuthEntry, AgentRef, HostAccount, HostInfo, ProviderMatrix, RuntimeInfo } from "../../types";
 import { sigilFor, useUi } from "../../ui";
 import { useAsync } from "../../useAsync";
 import { Icon } from "../Icon";
@@ -9,6 +9,7 @@ import { Link } from "../Link";
 import { Sigil } from "../Sigil";
 import { StatusDot, STATUS_LABEL } from "../Status";
 import { AccountPanel } from "./AccountPanel";
+import { CliDot } from "./CliPanel";
 import { ModelEditor } from "./ModelEditor";
 
 type Props = { host: HostInfo; runtime: RuntimeInfo };
@@ -25,6 +26,7 @@ export function HostProviders({ host, runtime }: Props) {
   const [pick, setPick] = useState<Pick>();
   const [done, setDone] = useState<string>();
   const state = useAsync(() => api.providerMatrix(host.id, runtime.id), [host.id, runtime.id, reload]);
+  const cliAuth = useAsync(() => api.cliAuth(host.id), [host.id]); // nur lesend, Fehler zeigt das CLI-Panel
   // Beim Neuladen bleibt die Tabelle stehen, damit nichts springt.
   const last = useRef<ProviderMatrix>();
   if (state.data) last.current = state.data;
@@ -89,7 +91,7 @@ export function HostProviders({ host, runtime }: Props) {
                     </td>
                     {matrix.accounts.map((a) => (
                       <td key={a.id} data-label={a.label}>
-                        <AccountCell account={a} state={a.profiles[p.name]} profile={labelOf(p.name)} disabled={!usable || !!p.error}
+                        <AccountCell cli={cliAuth.data?.clis?.find((c) => c.id === a.cli || (a.cli === "claude" && c.id === "claude-code"))} account={a} state={a.profiles[p.name]} profile={labelOf(p.name)} disabled={!usable || !!p.error}
                           on={pick?.profile === p.name && pick.what === a.id} onClick={() => toggle(p.name, a.id)} />
                       </td>
                     ))}
@@ -120,12 +122,13 @@ export function HostProviders({ host, runtime }: Props) {
   );
 }
 
-function AccountCell({ account, state, profile, on, disabled, onClick }: { account: HostAccount; state: AccountState | undefined; profile: string; on: boolean; disabled: boolean; onClick: () => void }) {
+function AccountCell({ cli, account, state, profile, on, disabled, onClick }: { account: HostAccount; state: AccountState | undefined; cli?: CliAuthEntry; profile: string; on: boolean; disabled: boolean; onClick: () => void }) {
   const set = !!state?.configured;
   return (
     <button type="button" className={`hub-cell${on ? " on" : ""}${set ? "" : " off"}`} disabled={disabled} aria-pressed={on}
       aria-label={`${account.label} für ${profile}: ${set ? (state?.via === "login" ? "angemeldet" : "Key hinterlegt") : "nicht eingerichtet"}`} onClick={onClick}>
       {set ? <span className="tag tag-m">{state?.via === "login" ? "ANGEMELDET" : "KEY"}</span> : <span className="muted small">einrichten</span>}
+      {!set && cli && <CliDot entry={cli} />}
       {set && state?.detail && <span className="mono t3 small trunc hub-detail">{state.detail}</span>}
     </button>
   );

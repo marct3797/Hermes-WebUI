@@ -45,6 +45,18 @@ describe("terminal", () => {
     expect(fetcher.mock.calls.some(([, opts]) => opts?.method === "DELETE" || opts?.method === "POST")).toBe(false);
     expect(xterm.dispose).toHaveBeenCalled();
   });
+  it("preselects the CLI from the query and shows its sign-in state without blocking start", async () => {
+    setup();
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => ({ ok: true, json: async (): Promise<unknown> =>
+      url.endsWith("_hostd") ? { available: true, clis: [{ id: "codex", label: "Codex", available: true }, { id: "claude", label: "Claude", available: true }], workspaces: [{ id: "repo", label: "Repository" }] }
+      : url.endsWith("_cli-auth") ? { available: true, reason: null, clis: [{ id: "claude", state: "signed_out", method: null, checked_at: "x", reason: null }] } : { terminals: [] } })));
+    history.pushState(null, "", "/hosts/laptop/terminal?cli=claude");
+    render(<TerminalPage host="laptop" />);
+    expect(await screen.findByText(/Anmeldung: abgemeldet/)).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /^CLI/ })).toHaveValue("claude");
+    expect(screen.getByRole("button", { name: "Terminal starten" })).toBeEnabled();
+    history.pushState(null, "", "/");
+  });
   it("shows an explicit unconfigured state", async () => {
     setup(false); render(<TerminalPage host="hikari" />);
     expect(await screen.findByText("Nicht eingerichtet")).toBeInTheDocument();

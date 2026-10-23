@@ -1,4 +1,4 @@
-import type { AgentRef, AgentStatus, Decision, DiagReport, HostsResponse, MemEntity, MemGraph, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import type { AgentRef, AgentStatus, CliAuth, Decision, DiagReport, HostsResponse, MemEntity, MemGraph, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string, public data?: Record<string, unknown>) {
@@ -94,6 +94,8 @@ export const api = {
   restoreSoul: (a: AgentRef, vid: string) => call<SoulSaved & { content: string }>("POST", `${base(a)}/soul/restore`, { id: vid }),
   saveDescription: (a: AgentRef, description: string) => call<{ ok: boolean; description: string }>("PUT", `${base(a)}/profile/description`, { description }),
   providerMatrix: (host: string, runtime: string) => call<ProviderMatrix>("GET", `/bff/h/${encodeURIComponent(host)}/${encodeURIComponent(runtime)}/_provider-matrix`),
+  cliAuth: (host: string) => call<CliAuth>("GET", `/bff/h/${encodeURIComponent(host)}/_cli-auth`),
+  cliAuthRefresh: (host: string) => call<CliAuth>("POST", `/bff/h/${encodeURIComponent(host)}/_cli-auth/refresh`),
   profileModels: (a: AgentRef) => call<{ providers: ModelProvider[] }>("GET", `${base(a)}/providers/models`),
   oauthStart: (a: AgentRef, provider: string) => call<OAuthStart>("POST", `${base(a)}/providers/oauth/${encodeURIComponent(provider)}/start`),
   oauthPoll: (a: AgentRef, provider: string, session: string) => call<OAuthPoll>("GET", `${base(a)}/providers/oauth/${encodeURIComponent(provider)}/poll/${encodeURIComponent(session)}`),
