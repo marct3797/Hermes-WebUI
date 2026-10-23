@@ -18,6 +18,22 @@ def test_step_up_requires_recent_numeric_auth_time(web, idp, value):
     assert web.get("/bff/me").status_code == 401
 
 
+def test_step_up_allows_fresh_roundtrip_when_idp_omits_auth_time(web, idp, clock):
+    # Forgejo wirbt claims_supported ohne auth_time an (live verifiziert); dann belegt der frische
+    # Step-up-Roundtrip die erneute Anmeldung, statt privilegierte Aktionen dauerhaft zu sperren.
+    idp.discovery_overrides = {"claims_supported": ["aud", "exp", "iat", "iss", "sub", "name", "preferred_username"]}
+    idp.claims = {"auth_time": None}
+    assert do_login(web, idp, step_up="true").status_code == 303
+    assert web.get("/bff/me").json()["fresh"] is True
+
+
+def test_step_up_stays_strict_when_idp_capability_unknown(web, idp):
+    # Ohne claims_supported bleibt fehlendes auth_time ein Fail-closed 401, kein stiller Fallback.
+    idp.discovery_overrides = {}
+    idp.claims = {"auth_time": None}
+    assert do_login(web, idp, step_up="true").status_code == 401
+
+
 @pytest.mark.parametrize("value", [None, 913600, True, "1000000", 1000100])
 def test_normal_sso_never_manufactures_freshness(web, idp, value):
     idp.claims = {"auth_time": value}

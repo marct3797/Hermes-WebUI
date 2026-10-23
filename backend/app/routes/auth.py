@@ -117,7 +117,22 @@ async def callback(
     auth_time = authentication_time(claims, sessions.now())
     # NumericDate has whole-second precision; do not turn callback arrival into authentication.
     if pending.step_up and (auth_time is None or auth_time < int(pending.requested_at) or sessions.now() - auth_time > settings.step_up_s):
-        return fail("authentication_not_fresh", 401, "Erneute Anmeldung nicht belegt")
+        # Forgejo wirbt claims_supported ohne auth_time an (live verifiziert). Dann belegt der frische
+        # Step-up-Roundtrip mit prompt=login die erneute Anmeldung, statt das System unbedienbar zu machen.
+        # Unbekannte IdP-Fähigkeit bleibt fail-closed; normales SSO wird nie frisch gemacht.
+        fallback_ok = False
+        if auth_time is None:
+            try:
+                meta = await oidc.metadata()
+                supported = meta.get("claims_supported")
+                now = sessions.now()
+                if isinstance(supported, list) and "auth_time" not in supported and 0 <= now - pending.requested_at <= settings.step_up_s:
+                    auth_time = now
+                    fallback_ok = True
+            except OidcError:
+                fallback_ok = False
+        if not fallback_ok:
+            return fail("authentication_not_fresh", 401, "Erneute Anmeldung nicht belegt")
     sessions.delete(request.cookies.get(SESSION_COOKIE))  # Rotation: nie eine alte Sitzungs-ID weiterverwenden
     name = str(claims.get("preferred_username") or claims.get("name") or sub)
     sess = sessions.create(User(id=sub, name=name), auth_time=auth_time)
