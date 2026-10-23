@@ -25,6 +25,7 @@ SOULS = {
 # Katalog der Env-Variablen in der Form von GET /api/env (Auszug): Anbieter-Keys, ein Werkzeug-Key und ein Kanal-Token.
 ENV_CATALOG = {
     "ANTHROPIC_API_KEY": {"provider": "anthropic", "provider_label": "Anthropic", "category": "provider", "description": "Anthropic API key", "url": "https://console.anthropic.com/"},
+    "OPENCODE_GO_API_KEY": {"provider": "opencode-go", "provider_label": "OpenCode Go", "category": "provider", "description": "OpenCode Go API key", "url": "https://opencode.ai/"},
     "OPENROUTER_API_KEY": {"provider": "openrouter", "provider_label": "OpenRouter", "category": "provider", "description": "OpenRouter API key", "url": "https://openrouter.ai/keys"},
     "GEMINI_API_KEY": {"provider": "gemini", "provider_label": "Google Gemini", "category": "provider", "description": "Gemini API key", "url": None},
     "FIRECRAWL_API_KEY": {"provider": "", "provider_label": "", "category": "tool", "description": "Web scraping", "url": None},
@@ -35,6 +36,14 @@ OAUTH = [
      "status": {"logged_in": False, "source": None, "source_label": None, "expires_at": None}},
     {"id": "openai-codex", "name": "OpenAI Codex", "flow": "device_code", "cli_command": "hermes auth add openai-codex", "docs_url": "https://example.invalid/codex",
      "status": {"logged_in": True, "source": "hermes_device", "source_label": "~/.codex/auth.json", "expires_at": "2026-11-01T00:00:00Z"}},
+    {"id": "claude-code", "name": "Anthropic OAuth (Claude Code)", "flow": "external", "cli_command": "claude setup-token", "docs_url": None,
+     "status": {"logged_in": False, "source": None, "source_label": None, "expires_at": None}},
+]
+# `GET /api/model/options` (Auszug): angemeldete Anbieter mit Modellen, der aktuelle zuerst.
+MODEL_PROVIDERS = [
+    {"slug": "anthropic", "name": "Anthropic", "models": ["claude-test", "claude-small"], "authenticated": True},
+    {"slug": "openai-codex", "name": "OpenAI Codex", "models": ["gpt-test", "gpt-5.3-codex"], "authenticated": True},
+    {"slug": "opencode-go", "name": "OpenCode Go", "models": ["glm-5.1", "kimi-k2.6"], "authenticated": False},
 ]
 USAGE = [
     {"model": "claude-test", "provider": "anthropic", "input_tokens": 1_200_000, "output_tokens": 300_000, "estimated_cost": 4.5, "actual_cost": 0, "sessions": 12, "last_used_at": 1_792_000_000},
@@ -143,6 +152,42 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
     async def oauth(profile: str | None = None):
         profile_or_default(profile)
         return {"providers": OAUTH}
+
+    @app.get("/api/model/options")
+    async def model_options(profile: str | None = None):
+        cur = profile_or_default(profile)
+        return {"providers": [{**p, "is_current": p["slug"] == cur["provider"], "is_user_defined": False, "total_models": len(p["models"]), "source": "hermes"} for p in MODEL_PROVIDERS]}
+
+    sessions: dict[str, dict[str, Any]] = {}
+    app.state.oauth_sessions = sessions
+
+    @app.post("/api/providers/oauth/{provider_id}/start")
+    async def oauth_start(provider_id: str, profile: str | None = None):
+        profile_or_default(profile)
+        row = next((o for o in OAUTH if o["id"] == provider_id), None)
+        if row is None or row["flow"] == "external":
+            raise HTTPException(400, f"{provider_id} uses an external CLI")
+        sid = f"sess-{len(sessions) + 1:04d}-abcdef"
+        sessions[sid] = {"provider": provider_id, "status": "pending", "profile": profile}
+        if row["flow"] == "pkce":
+            return {"session_id": sid, "flow": "pkce", "auth_url": "https://claude.ai/oauth/authorize?code=true&state=mock", "expires_in": 600}
+        return {"session_id": sid, "flow": "device_code", "user_code": "ABCD-EFGH", "verification_url": "https://auth.openai.com/codex/device?user_code=ABCD-EFGH", "expires_in": 900, "poll_interval": 5}
+
+    @app.get("/api/providers/oauth/{provider_id}/poll/{session_id}")
+    async def oauth_poll(provider_id: str, session_id: str, profile: str | None = None):
+        sess = sessions.get(session_id)
+        if sess is None:
+            raise HTTPException(404, "Session not found or expired")
+        return {"session_id": session_id, "status": sess["status"], "error_message": sess.get("error"), "expires_at": None}
+
+    @app.post("/api/providers/oauth/{provider_id}/submit")
+    async def oauth_submit(provider_id: str, body: dict[str, Any], profile: str | None = None):
+        sess = sessions.get(body.get("session_id", ""))
+        if sess is None:
+            raise HTTPException(404, "Session not found or expired")
+        sess["status"] = "approved" if body.get("code") == "gueltig" else "error"
+        sess["error"] = None if sess["status"] == "approved" else "Der Code wurde abgelehnt"
+        return {"ok": sess["status"] == "approved", "status": sess["status"]}
 
     @app.get("/api/analytics/models")
     async def analytics_models(days: int = 30, profile: str | None = None):

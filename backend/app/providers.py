@@ -77,3 +77,56 @@ def build_overview(env: Any, oauth: Any, analytics: Any, days: int) -> dict[str,
     # Eingerichtete zuerst, dann solche, die nur genutzt wurden, dann der Rest; innerhalb davon nach Verbrauch und Name.
     out.sort(key=lambda g: (not g["configured"], not g["used"], -((g["usage"] or {}).get("input_tokens", 0) + (g["usage"] or {}).get("output_tokens", 0)), g["label"].lower()))
     return {"providers": out, "period_days": days}
+
+
+# --- Zugänge auf dem Host: die Coding-Anbieter, die Marc je Maschine führt ------------------------------------
+# Jeder Eintrag nennt, unter welchen Anbieter-Kennungen das Dashboard ihn führt. `login`: wie man sich anmeldet.
+ACCOUNTS: tuple[dict[str, Any], ...] = (
+    {"id": "codex", "label": "OpenAI Codex", "cli": "codex", "slugs": ("openai-codex",), "login": "device", "provider": "openai-codex",
+     "hint": "Anmeldung mit dem ChatGPT-Konto per Gerätecode."},
+    {"id": "claude", "label": "Claude", "cli": "claude", "slugs": ("anthropic", "claude-code"), "login": "pkce", "provider": "anthropic",
+     "hint": "API-Key oder Anmeldung über die Anthropic-Seite. Ein Abo über Claude Code gilt nur dort, nicht in fremden Oberflächen."},
+    {"id": "opencode-go", "label": "OpenCode Go", "cli": "opencode", "slugs": ("opencode-go",), "login": "key", "provider": "opencode-go",
+     "hint": "Zugang per API-Key."},
+)
+
+
+def account_state(account: dict[str, Any], overview: dict[str, Any]) -> dict[str, Any]:
+    """Ist dieser Zugang in dem Profil eingerichtet, und wie (Anmeldung oder Key)?"""
+    groups = [g for g in overview.get("providers", []) if g["id"] in account["slugs"]]
+    login = next((g["oauth"] for g in groups if g["oauth"] and g["oauth"]["logged_in"]), None)
+    key = next((k for g in groups for k in g["keys"] if k["set"] and not k["var"].endswith("BASE_URL")), None)
+    if login:
+        return {"configured": True, "via": "login", "detail": login.get("source") or None}
+    if key:
+        return {"configured": True, "via": "key", "detail": key.get("redacted")}
+    return {"configured": False, "via": None, "detail": None}
+
+
+def build_matrix(profiles: list[dict[str, Any]], overviews: dict[str, dict[str, Any] | None], errors: dict[str, str]) -> dict[str, Any]:
+    """Je Profil Anbieter und Modell, je Zugang der Stand in jedem Profil. Ein Profil, dessen Abfrage scheiterte, erscheint mit `error`."""
+    rows = [{
+        "name": str(p.get("name")), "model": p.get("model") or None, "provider": p.get("provider") or None,
+        "default": bool(p.get("is_default")), "gateway_running": bool(p.get("gateway_running")), "error": errors.get(str(p.get("name"))),
+    } for p in profiles if p.get("name")]
+    accounts = [{
+        "id": a["id"], "label": a["label"], "cli": a["cli"], "login": a["login"], "provider": a["provider"], "hint": a["hint"],
+        "profiles": {r["name"]: account_state(a, overviews[r["name"]]) for r in rows if overviews.get(r["name"])},
+    } for a in ACCOUNTS]
+    return {"profiles": rows, "accounts": accounts}
+
+
+def normalize_models(options: Any) -> list[dict[str, Any]]:
+    """`/api/model/options` des Dashboards: je Anbieter Name, ob angemeldet, ob aktuell und die Modelle."""
+    out = []
+    for p in _rows(options.get("providers") if isinstance(options, dict) else None):
+        slug = str(p.get("slug") or "")
+        if not slug:
+            continue
+        out.append({
+            "slug": slug, "name": str(p.get("name") or slug), "current": bool(p.get("is_current")), "authenticated": bool(p.get("authenticated")),
+            "models": [m for m in p.get("models", []) if isinstance(m, str)] if isinstance(p.get("models"), list) else [],
+            "warning": str(p.get("warning")) if p.get("warning") else None,
+        })
+    out.sort(key=lambda x: (not x["current"], not x["authenticated"], x["name"].lower()))
+    return out

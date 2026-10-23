@@ -94,6 +94,7 @@ def create_app(
     app.include_router(hosts.router)
     app.include_router(agents.router)
     app.include_router(dashboard_routes.router)
+    app.include_router(dashboard_routes.host_router)
     app.include_router(memory_routes.router)
     app.include_router(rooms_routes.router)
     app.include_router(ui_routes.router)

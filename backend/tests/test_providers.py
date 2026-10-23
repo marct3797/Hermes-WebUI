@@ -172,3 +172,86 @@ def test_validate_passes_the_providers_verdict_through(client, dash, tmp_path):
 def test_key_routes_require_csrf_header_and_known_agent(client):
     assert client.put(f"{P}/key", json={"var": "OPENROUTER_API_KEY", "value": "k"}, headers={"X-Requested-With": ""}).status_code == 403
     assert client.put("/bff/h/hikari/hermes/ghost-agent/providers/key", json={"var": "OPENROUTER_API_KEY", "value": "k"}).status_code == 404
+
+
+# --- Anbieter-Hauptseite: alle Profile einer Runtime, Modelle, Anmeldung ------------------------------------
+MATRIX = "/bff/h/hikari/hermes/_provider-matrix"
+
+
+def test_matrix_lists_profiles_with_provider_and_model_and_the_three_accounts(client, dash):
+    dash.state.profiles["default"]["env"]["OPENCODE_GO_API_KEY"] = "ocg-geheim-9999"
+    body = client.get(MATRIX).json()
+    assert body["available"] is True and body["reason"] is None
+    rows = {p["name"]: p for p in body["profiles"]}
+    # die Config führt default, omoikane, ghost und sora; das Dashboard kennt ghost nicht
+    assert set(rows) == {"default", "omoikane", "sora"}
+    assert rows["omoikane"]["provider"] == "anthropic" and rows["omoikane"]["model"] == "claude-test"
+    acc = {a["id"]: a for a in body["accounts"]}
+    assert [a["id"] for a in body["accounts"]] == ["codex", "claude", "opencode-go"]
+    assert acc["codex"]["profiles"]["default"] == {"configured": True, "via": "login", "detail": "~/.codex/auth.json"}
+    assert acc["claude"]["profiles"]["default"]["via"] == "key" and acc["claude"]["profiles"]["omoikane"]["configured"] is False
+    assert acc["opencode-go"]["profiles"]["default"]["configured"] is True
+    assert acc["opencode-go"]["profiles"]["sora"]["configured"] is False
+    text = json.dumps(body)
+    assert "ocg-geheim-9999" not in text and SECRET not in text  # nur geschwärzt
+
+
+def test_matrix_without_a_dashboard_still_lists_the_configured_profiles(client):
+    body = client.get("/bff/h/laptop/hermes/_provider-matrix").json()
+    assert body["available"] is False and "kein Dashboard" in body["reason"]
+    assert [p["name"] for p in body["profiles"]] == ["default"] and body["profiles"][0]["provider"] is None
+    assert [a["id"] for a in body["accounts"]] == ["codex", "claude", "opencode-go"] and body["accounts"][0]["profiles"] == {}
+
+
+def test_matrix_when_the_dashboard_is_down_explains_instead_of_failing(make):
+    body = make(running=False).get(MATRIX).json()
+    assert body["available"] is False and "nicht erreichbar" in body["reason"] and body["profiles"]
+
+
+def test_matrix_keeps_a_profile_whose_query_failed(make):
+    body = make(broken={"/api/env"}).get(MATRIX).json()
+    assert body["available"] is True and all(p["error"] for p in body["profiles"])
+    assert all(a["profiles"] == {} for a in body["accounts"])
+
+
+def test_unknown_host_or_runtime_is_404(client):
+    assert client.get("/bff/h/nope/hermes/_provider-matrix").status_code == 404
+    assert client.get("/bff/h/hikari/opencode/_provider-matrix").status_code == 404
+
+
+def test_model_options_are_normalized_current_first(client):
+    body = client.get(f"{P}/models").json()
+    slugs = [p["slug"] for p in body["providers"]]
+    assert slugs[0] == "anthropic" and body["providers"][0]["current"] is True  # das Profil nutzt anthropic
+    assert slugs.index("openai-codex") < slugs.index("opencode-go")  # angemeldete vor nicht angemeldeten
+    assert body["providers"][0]["models"] == ["claude-test", "claude-small"]
+
+
+def test_device_login_start_and_poll(client):
+    start = client.post(f"{P}/oauth/openai-codex/start").json()
+    assert start["user_code"] == "ABCD-EFGH" and start["verification_url"].startswith("https://") and start["session_id"]
+    poll = client.get(f"{P}/oauth/openai-codex/poll/{start['session_id']}").json()
+    assert poll["status"] == "pending"
+    assert client.get(f"{P}/oauth/openai-codex/poll/unbekannt-12345").status_code == 404
+
+
+def test_pkce_login_needs_the_code_and_reports_a_wrong_one(client, tmp_path):
+    start = client.post(f"{P}/oauth/anthropic/start").json()
+    assert start["auth_url"].startswith("https://")
+    bad = client.post(f"{P}/oauth/anthropic/submit", json={"session_id": start["session_id"], "code": "falsch"}).json()
+    assert bad["ok"] is False
+    ok = client.post(f"{P}/oauth/anthropic/submit", json={"session_id": start["session_id"], "code": "gueltig"}).json()
+    assert ok["ok"] is True
+    audit = [json.loads(l) for l in (tmp_path / "audit.log").read_text().splitlines()]
+    assert [a["action"] for a in audit if a["action"].startswith("provider.login")] == ["provider.login.start", "provider.login.submit", "provider.login.submit"]
+    assert "gueltig" not in (tmp_path / "audit.log").read_text()
+
+
+def test_login_for_an_external_cli_provider_is_refused_with_a_reason(client):
+    r = client.post(f"{P}/oauth/claude-code/start")
+    assert r.status_code == 502 and "Dashboard" in r.json()["detail"]
+
+
+def test_login_provider_ids_are_checked(client):
+    assert client.post(f"{P}/oauth/..%2Fetc/start").status_code in (404, 422)
+    assert client.post(f"{P}/oauth/UPPER/start").status_code == 422

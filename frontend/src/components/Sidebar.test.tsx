@@ -14,8 +14,8 @@ describe("Sidebar", () => {
     const areas = await screen.findByRole("group", { name: "Bereiche von raiden" });
     const link = (name: string) => within(areas).getByRole("link", { name });
     expect(link("SOUL & Profil")).toHaveAttribute("href", "/h/hikari/hermes/raiden/soul");
-    expect(link("Anbieter")).toHaveAttribute("href", "/h/hikari/hermes/raiden/providers");
-    expect(link("Anbieter")).toHaveAttribute("aria-current", "page");
+    expect(link("Keys & Nutzung")).toHaveAttribute("href", "/h/hikari/hermes/raiden/providers");
+    expect(link("Keys & Nutzung")).toHaveAttribute("aria-current", "page");
     expect(link("Skills")).toHaveAttribute("href", "/h/hikari/hermes/raiden/skills");
     expect(link("Werkzeuge")).toHaveAttribute("href", "/h/hikari/hermes/raiden/tools");
     expect(screen.queryByRole("group", { name: "Bereiche von sora" })).not.toBeInTheDocument();

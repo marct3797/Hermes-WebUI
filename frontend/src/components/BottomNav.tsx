@@ -35,6 +35,7 @@ export function BottomNav({ me, path, onChats, onLogout }: Props) {
           <Link to="/hosts"><Icon name="server" size={18} />Hosts</Link>
           <Link to="/rooms"><Icon name="orbit" size={18} />Räume{roomNeeds.length > 0 && <span className="ct" aria-label={`${roomNeeds.length} offen`}>{roomNeeds.length}</span>}</Link>
           <Link to="/memory"><Icon name="memory" size={18} />Gedächtnis</Link>
+          <Link to="/providers"><Icon name="coin" size={18} />Anbieter</Link>
           <Link to="/system"><Icon name="shield" size={18} />System</Link>
           <Link to="/settings"><Icon name="sliders" size={18} />Darstellung</Link>
           <span className="soon" aria-disabled="true"><Icon name="kanban" size={18} />Kanban<span className="tag">PHASE 3</span></span>

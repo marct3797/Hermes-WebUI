@@ -37,7 +37,8 @@ class DashboardClient:
     def __init__(self, cfg: DashboardCfg, http: httpx.AsyncClient):
         self._cfg, self._http = cfg, http
 
-    async def _call(self, method: str, path: str, *, json_body: Any = None, params: dict[str, str] | None = None) -> Any:
+    async def _call(self, method: str, path: str, *, json_body: Any = None, params: dict[str, str] | None = None, missing: str | None = None,
+                    explain: bool = False) -> Any:
         headers = {"X-Hermes-Session-Token": self._cfg.token} if self._cfg.token else {}
         try:
             res = await self._http.request(method, f"{self._cfg.base_url}{path}", json=json_body, params=params, headers=headers)
@@ -48,9 +49,16 @@ class DashboardClient:
         if res.status_code in (401, 403):
             raise UpstreamError(502, "Das Dashboard lehnt den Zugang ab (Token prüfen)")
         if res.status_code == 404:
-            raise UpstreamError(404, "Das Dashboard kennt dieses Profil nicht")
+            raise UpstreamError(404, missing or "Das Dashboard kennt dieses Profil nicht")
         if res.status_code >= 400:
-            raise UpstreamError(502, f"Das Dashboard meldet Fehler {res.status_code}")
+            why = ""
+            if explain:  # Anmeldungen scheitern aus Gründen, die der Person helfen (Netz, abgelaufen, abgelehnt)
+                try:
+                    d = res.json().get("detail")
+                    why = f": {d[:200]}" if isinstance(d, str) else ""
+                except (ValueError, AttributeError):
+                    pass
+            raise UpstreamError(502, f"Das Dashboard meldet Fehler {res.status_code}{why}")
         try:
             return res.json()
         except ValueError as e:
@@ -104,6 +112,25 @@ class DashboardClient:
         if not isinstance(rows, list):
             raise UpstreamError(502, f"Das Dashboard liefert {what} in unbekannter Form")
         return [r for r in rows if isinstance(r, dict)]
+
+    # Modelle und Anmeldungen: welche Anbieter ein Profil nutzen kann und wie man sich bei ihnen anmeldet.
+    async def model_options(self, name: str) -> Any:
+        return await self._call("GET", "/api/model/options", params={"profile": name})
+
+    async def oauth_start(self, name: str, provider: str) -> Any:
+        return await self._call("POST", f"/api/providers/oauth/{provider}/start", params={"profile": name}, missing="Dieser Anbieter kennt keine Anmeldung über das Dashboard", explain=True)
+
+    async def oauth_poll(self, name: str, provider: str, session: str) -> Any:
+        return await self._call("GET", f"/api/providers/oauth/{provider}/poll/{session}", params={"profile": name}, missing="Die Anmeldung ist abgelaufen", explain=True)
+
+    async def oauth_submit(self, name: str, provider: str, session: str, code: str) -> Any:
+        return await self._call("POST", f"/api/providers/oauth/{provider}/submit", params={"profile": name}, json_body={"session_id": session, "code": code}, missing="Die Anmeldung ist abgelaufen", explain=True)
+
+    async def oauth_cancel(self, session: str) -> None:
+        await self._call("DELETE", f"/api/providers/oauth/sessions/{session}", missing="Die Anmeldung ist abgelaufen")
+
+    async def oauth_disconnect(self, name: str, provider: str) -> Any:
+        return await self._call("DELETE", f"/api/providers/oauth/{provider}", params={"profile": name}, missing="Dieser Anbieter ist nicht angemeldet")
 
     async def validate_key(self, var: str, value: str) -> Any:
         return await self._call("POST", "/api/providers/validate", json_body={"key": var, "value": value})

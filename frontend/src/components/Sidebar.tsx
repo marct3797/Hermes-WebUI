@@ -27,12 +27,13 @@ const NAV = [
   { to: "/hosts", label: "Hosts", icon: "server" },
   { to: "/rooms", label: "Räume", icon: "orbit" },
   { to: "/memory", label: "Gedächtnis", icon: "memory" },
+  { to: "/providers", label: "Anbieter", icon: "coin" },
   { to: "/system", label: "System", icon: "shield" },
 ];
 // Bereiche eines Hermes-Agents: stehen unter dem gewählten Agent, damit man sie nicht erst in einer Icon-Leiste suchen muss.
 const MODULES = [
   { module: "soul", label: "SOUL & Profil", icon: "spark" },
-  { module: "providers", label: "Anbieter", icon: "coin" },
+  { module: "providers", label: "Keys & Nutzung", icon: "coin" },
   { module: "skills", label: "Skills", icon: "layers" },
   { module: "tools", label: "Werkzeuge", icon: "wrench" },
 ] as const;

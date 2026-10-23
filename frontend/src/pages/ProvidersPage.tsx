@@ -3,38 +3,27 @@ import { api } from "../api";
 import { Icon } from "../components/Icon";
 import { PageHead } from "../components/PageHead";
 import { ProviderCard } from "../components/providers/ProviderCard";
-import { useHosts } from "../hosts";
 import type { AgentRef } from "../types";
 import { useAsync } from "../useAsync";
 
 const DAYS = [7, 30, 90] as const;
 
-/** Coding-Werkzeuge, die die WebUI später je Host anbindet. Hier steht, was feststeht; Abo-Zugänge laufen nicht über Hermes-Anbieter. */
-const CODING_CLIS = [
-  ["claude-code", "Claude Code", "Abo über die CLI auf dem Host. Die Abo-Anmeldung darf nicht in fremden Oberflächen genutzt werden, geplant ist eine Terminal-Ansicht der echten CLI."],
-  ["opencode", "OpenCode", "Eigener Server auf dem Host (HTTP und Ereignisstrom), Anbieter-Keys liegen in seiner eigenen Config."],
-  ["antigravity", "Antigravity", "CLI auf dem Host, Anmeldung im Terminal. Eine Programmschnittstelle ist nicht bekannt."],
-  ["codex", "OpenAI Codex", "Anmeldung über ChatGPT oder Key. Hermes kann sie als Anbieter nutzen (siehe „OpenAI Codex“ oben)."],
-] as const;
-
-/** Anbieter eines Hermes-Profils: welche eingerichtet sind, was darüber lief, Key eintragen. Alles über das Dashboard der Maschine. */
+/** Keys und Nutzung eines Hermes-Profils: welche Anbieter eingerichtet sind, was darüber lief, Key eintragen. Alles über das Dashboard der Maschine. Anbieter und Modell je Host und Profil stehen auf der Seite „Anbieter“. */
 export function ProvidersPage({ agent, label }: { agent: AgentRef; label: string }) {
   const [days, setDays] = useState<number>(30);
   const [reload, setReload] = useState(0);
   const [done, setDone] = useState<string>();
   const [showOff, setShowOff] = useState(false);
   const state = useAsync(() => api.providers(agent, days), [agent.host, agent.runtime, agent.agent, days, reload]);
-  const { hosts } = useHosts();
 
   const all = state.data?.providers ?? [];
   const active = all.filter((p) => p.configured || p.used);
   const off = all.filter((p) => !p.configured && !p.used);
   const saved = (message: string) => { setDone(message); setReload((n) => n + 1); };
-  const installed = new Set((hosts ?? []).flatMap((h) => h.runtimes.map((r) => r.id)));
 
   return (
     <main className="page">
-      <PageHead title="Anbieter" sub={state.data ? `${label} · ${active.length} eingerichtet` : label}>
+      <PageHead title="Keys & Nutzung" sub={state.data ? `${label} · ${active.length} eingerichtet` : label}>
         <div className="row" role="group" aria-label="Zeitraum" style={{ gap: 6 }}>
           {DAYS.map((d) => <button key={d} type="button" className={`chip chip-s${days === d ? " on" : ""}`} aria-pressed={days === d} onClick={() => setDays(d)}>{d} Tage</button>)}
         </div>
@@ -66,17 +55,6 @@ export function ProvidersPage({ agent, label }: { agent: AgentRef; label: string
         </>
       )}
 
-      <section aria-label="Coding-CLIs" className="col" style={{ gap: 10 }}>
-        <span className="lbl">Coding-CLIs</span>
-        <ul className="prov-grid">
-          {CODING_CLIS.map(([id, name, text]) => (
-            <li key={id} className="card prov-card off">
-              <div className="row prov-head"><b className="grow">{name}</b>{installed.has(id) ? <span className="tag tag-m">ANGEBUNDEN</span> : <span className="tag">NOCH NICHT ANGEBUNDEN</span>}</div>
-              <p className="hint">{text}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
     </main>
   );
 }

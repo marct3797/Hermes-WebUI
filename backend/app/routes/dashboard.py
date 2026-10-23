@@ -17,11 +17,12 @@ from ..dashboard import (
     DESCRIPTION_MAX_CHARS, SOUL_MAX_CHARS, VERSION_RE, DashboardClient, SoulConflict, SoulHistory, digest, save_soul,
 )
 from ..hosts import Target
-from ..providers import build_overview, provider_keys
+from ..providers import ACCOUNTS, build_matrix, build_overview, normalize_models, provider_keys
 from ..security import client_ip
-from .agents import Tgt, audit as audit_target, upstream
+from .agents import HostId, RuntimeId, Tgt, audit as audit_target, upstream
 
 router = APIRouter(prefix="/bff/h/{host}/{runtime}/{agent}", dependencies=[Depends(current_user)])
+host_router = APIRouter(prefix="/bff/h/{host}/{runtime}", dependencies=[Depends(current_user)])  # eine Ebene höher: alle Profile einer Runtime
 
 VersionId = Annotated[str, Path(pattern=VERSION_RE.pattern)]
 NOT_CONFIGURED = "Für diese Runtime ist kein Dashboard eingerichtet"
@@ -204,3 +205,82 @@ async def write_key(request: Request, target: Tgt, dash: Dash, req: KeyIn, user:
     await upstream(dash.set_key(target.agent.id, req.var, req.value.get_secret_value()))
     audit(request, user, "provider.key", target, var=req.var, chars=len(req.value.get_secret_value()))
     return {"ok": True, "var": req.var}
+
+
+# --- Modelle und Anmeldung eines Profils ---------------------------------------------------------------------
+OAuthId = Annotated[str, Path(pattern=r"^[a-z0-9][a-z0-9-]{0,63}$")]
+SessionId = Annotated[str, Path(pattern=r"^[A-Za-z0-9_-]{8,128}$")]
+
+
+@router.get("/providers/models")
+async def provider_models(target: Tgt, dash: Dash):
+    """Anbieter und Modelle, aus denen dieses Profil wählen kann (angemeldete zuerst, der aktuelle ganz oben)."""
+    return {"providers": normalize_models(await upstream(dash.model_options(target.agent.id)))}
+
+
+@router.post("/providers/oauth/{provider}/start")
+async def oauth_start(request: Request, target: Tgt, dash: Dash, provider: OAuthId, user: User = Depends(current_user)):
+    """Startet eine Anmeldung (Gerätecode oder Anthropic-Seite). Der Browser zeigt Code oder Link, das Dashboard wartet auf die Bestätigung."""
+    user = await fresh_user(request, user)
+    request.app.state.limiter.check(f"{user.id}:dashboard")
+    body = await upstream(dash.oauth_start(target.agent.id, provider))
+    audit(request, user, "provider.login.start", target, provider=provider)
+    return body if isinstance(body, dict) else {}
+
+
+@router.get("/providers/oauth/{provider}/poll/{session}")
+async def oauth_poll(target: Tgt, dash: Dash, provider: OAuthId, session: SessionId):
+    body = await upstream(dash.oauth_poll(target.agent.id, provider, session))
+    return {k: body.get(k) for k in ("session_id", "status", "error_message", "expires_at")} if isinstance(body, dict) else {}
+
+
+class CodeIn(BaseModel):
+    session_id: str = Field(pattern=r"^[A-Za-z0-9_-]{8,128}$")
+    code: SecretStr = Field(min_length=1, max_length=2000)
+
+
+@router.post("/providers/oauth/{provider}/submit")
+async def oauth_submit(request: Request, target: Tgt, dash: Dash, provider: OAuthId, req: CodeIn, user: User = Depends(current_user)):
+    """Gibt den Code der Anthropic-Seite weiter und schließt die Anmeldung ab."""
+    user = await fresh_user(request, user)
+    request.app.state.limiter.check(f"{user.id}:dashboard")
+    body = await upstream(dash.oauth_submit(target.agent.id, provider, req.session_id, req.code.get_secret_value()))
+    audit(request, user, "provider.login.submit", target, provider=provider)
+    return body if isinstance(body, dict) else {"ok": True}
+
+
+# --- Alle Profile einer Runtime: Anbieter und Zugänge auf dem Host -----------------------------------------------
+def runtime_of(request: Request, host: HostId, runtime: RuntimeId):
+    reg = request.app.state.hosts.registry
+    h = reg.host(host)
+    rt = h.runtime(runtime) if h else None
+    if rt is None:
+        raise HTTPException(404, "Unbekannter Host oder unbekannte Runtime")
+    return h, rt
+
+
+@host_router.get("/_provider-matrix")
+async def provider_matrix(request: Request, host: HostId, runtime: RuntimeId):
+    """Je Profil Anbieter und Modell und je Zugang (Codex, Claude, OpenCode Go) der Stand in jedem Profil. Fehler sind Daten:
+    ohne Dashboard oder bei einem Ausfall steht der Grund in `reason`, die Profile aus der Config bleiben sichtbar."""
+    _, rt = runtime_of(request, host, runtime)
+    fallback = [{"name": a.id, "model": None, "provider": None, "default": False, "gateway_running": False, "error": None} for a in rt.agents]
+    empty = {"profiles": fallback, "accounts": [{"id": a["id"], "label": a["label"], "cli": a["cli"], "login": a["login"], "provider": a["provider"], "hint": a["hint"], "profiles": {}} for a in ACCOUNTS]}
+    if rt.dashboard is None:
+        return {"available": False, "reason": NOT_CONFIGURED, **empty}
+    dash = DashboardClient(rt.dashboard, request.app.state.http)
+    try:
+        profiles = await dash.profiles()
+    except UpstreamError as e:
+        return {"available": False, "reason": e.detail, **empty}
+    configured = {a.id for a in rt.agents}
+    profiles = [p for p in profiles if p.get("name") in configured] or profiles  # die in der Config geführten Profile; sonst alle
+
+    async def one(name: str):
+        (env, env_err), (oauth, _) = await asyncio.gather(_tolerated(dash.env(name)), _tolerated(dash.oauth_providers(name)))
+        return name, (build_overview(env, oauth, None, 0) if env is not None else None), env_err
+
+    rows = await asyncio.gather(*(one(str(p["name"])) for p in profiles if p.get("name")))
+    overviews = {name: ov for name, ov, _ in rows}
+    errors = {name: err for name, _, err in rows if err}
+    return {"available": True, "reason": None, **build_matrix(profiles, overviews, errors)}

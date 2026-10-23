@@ -105,24 +105,52 @@ export type DashState = {
   available: boolean; reason: string | null; soul: string; description: string; model: { provider: string; model: string };
   history: Array<{ id: string; at: string; reason: string; chars: number }>; versions: Record<string, string>; stepUp: boolean;
   keys: Record<string, string>; // gesetzte Anbieter-Keys (Variable → Wert); der Wert verlässt die Attrappe nie
+  loggedIn: Set<string>; // Anbieter mit Anmeldung (Codex ist von Anfang an angemeldet)
+  polls: number; // wie oft die laufende Geräte-Anmeldung abgefragt wurde; ab der zweiten Abfrage ist sie bestätigt
+  loginError: string | null; // lässt die Anmeldung scheitern
 };
 const hashOf = (text: string) => `h${text.length}:${text.slice(0, 12)}`;
 
 const KEY_VARS: Array<[provider: string, label: string, varName: string]> = [
   ["anthropic", "Anthropic", "ANTHROPIC_API_KEY"], ["openrouter", "OpenRouter", "OPENROUTER_API_KEY"], ["gemini", "Google Gemini", "GEMINI_API_KEY"],
+  ["opencode-go", "OpenCode Go", "OPENCODE_GO_API_KEY"],
 ];
+
+/** Die drei Zugänge auf dem Host, wie das BFF sie für die Anbieter-Hauptseite liefert. */
+const ACCOUNTS = [
+  { id: "codex", label: "OpenAI Codex", cli: "codex", login: "device", provider: "openai-codex", hint: "Anmeldung mit dem ChatGPT-Konto per Gerätecode." },
+  { id: "claude", label: "Claude", cli: "claude", login: "pkce", provider: "anthropic", hint: "API-Key oder Anmeldung über die Anthropic-Seite." },
+  { id: "opencode-go", label: "OpenCode Go", cli: "opencode", login: "key", provider: "opencode-go", hint: "Zugang per API-Key." },
+] as const;
+const KEY_OF: Record<string, string> = { claude: "ANTHROPIC_API_KEY", "opencode-go": "OPENCODE_GO_API_KEY" };
+
+function accountState(dash: DashState, id: string, provider: string) {
+  if (dash.loggedIn.has(provider)) return { configured: true, via: "login", detail: provider === "openai-codex" ? "~/.codex/auth.json" : "Anmeldung" };
+  const key = KEY_OF[id];
+  if (key && key in dash.keys) return { configured: true, via: "key", detail: "sk-a…1234" };
+  return { configured: false, via: null, detail: null };
+}
+
+function providerMatrix(agents: string[], dash: DashState) {
+  const profiles = agents.map((name) => ({ name, model: dash.available ? dash.model.model : null, provider: dash.available ? dash.model.provider : null, default: name === "default", gateway_running: true, error: null }));
+  return {
+    available: dash.available, reason: dash.reason, profiles,
+    accounts: ACCOUNTS.map((a) => ({ ...a, profiles: dash.available ? Object.fromEntries(agents.map((n) => [n, accountState(dash, a.id, a.provider)])) : {} })),
+  };
+}
 
 function providersOverview(dash: DashState, days: number) {
   const providers = KEY_VARS.map(([id, label, varName]) => {
     const set = varName in dash.keys;
     const usage = id === "anthropic" ? { sessions: 12, input_tokens: 1_200_000, output_tokens: 300_000, cost_usd: 4.5, last_used_at: 1_792_000_000, models: ["claude-test", "claude-test"] } : null;
     // Anthropic und Gemini bieten auch eine Anmeldung an, beide sind hier nicht angemeldet.
-    const oauth = id === "openrouter" ? null : { logged_in: false, flow: "pkce", source: null, expires_at: null, cli_command: `hermes auth add ${id}`, docs_url: null };
+    const oauth = id === "openrouter" || id === "opencode-go" ? null : { logged_in: dash.loggedIn.has(id), flow: "pkce", source: null, expires_at: null, cli_command: `hermes auth add ${id}`, docs_url: null };
     return { id, label, configured: set, used: !!usage, oauth, usage,
       keys: [{ var: varName, set, redacted: set ? "sk-a…1234" : null, description: "", url: "https://example.invalid/keys", secret: true, advanced: false }] };
   });
-  providers.push({ id: "openai-codex", label: "OpenAI Codex", configured: true, used: false, keys: [], usage: null,
-    oauth: { logged_in: true, flow: "device_code", source: "~/.codex/auth.json", expires_at: null, cli_command: "hermes auth add openai-codex", docs_url: null } } as never);
+  const codex = dash.loggedIn.has("openai-codex");
+  providers.push({ id: "openai-codex", label: "OpenAI Codex", configured: codex, used: false, keys: [], usage: null,
+    oauth: { logged_in: codex, flow: "device_code", source: "~/.codex/auth.json", expires_at: null, cli_command: "hermes auth add openai-codex", docs_url: null } } as never);
   providers.sort((a, b) => Number(b.configured) - Number(a.configured));
   return { providers, period_days: days, warnings: [] as string[] };
 }
@@ -135,6 +163,34 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
   }
   const path = rest.split("?")[0];
   if (path === "/providers" && method === "GET") return json(providersOverview(dash, Number(new URL(rest, "http://bff").searchParams.get("days") ?? 30)));
+  if (path === "/providers/models" && method === "GET") {
+    return json({ providers: [
+      { slug: dash.model.provider, name: dash.model.provider === "mock" ? "Mock" : dash.model.provider, current: true, authenticated: true, models: ["mock-large", "mock-small"], warning: null },
+      { slug: "anthropic", name: "Anthropic", current: false, authenticated: dash.loggedIn.has("anthropic") || "ANTHROPIC_API_KEY" in dash.keys, models: ["claude-test", "claude-test-2"], warning: null },
+      { slug: "openai-codex", name: "OpenAI Codex", current: false, authenticated: dash.loggedIn.has("openai-codex"), models: ["codex-test"], warning: null },
+    ] });
+  }
+  const oauth = /^\/providers\/oauth\/([a-z0-9-]+)\/(start|submit|poll\/[A-Za-z0-9_-]+)$/.exec(path);
+  if (oauth) {
+    if (dash.stepUp && oauth[2] !== "poll") return json({ detail: { code: "step_up_required", message: "Bitte erneut anmelden" } }, 401);
+    const [, provider, action] = oauth;
+    if (action === "start") {
+      dash.polls = 0;
+      return json(provider === "anthropic"
+        ? { session_id: "sess-pkce-0001", flow: "pkce", auth_url: "https://example.invalid/authorize?state=x", expires_in: 600 }
+        : { session_id: "sess-device-0001", flow: "device_code", user_code: "ABCD-1234", verification_url: "https://example.invalid/device", expires_in: 900, poll_interval: 0.2 });
+    }
+    if (action === "submit") {
+      const ok = body?.code === "gueltig";
+      if (ok) dash.loggedIn.add(provider); else dash.loginError = "Der Code wurde abgelehnt.";
+      return json({ ok, status: ok ? "approved" : "error" });
+    }
+    if (dash.loginError) return json({ session_id: "s", status: "error", error_message: dash.loginError, expires_at: null });
+    dash.polls += 1;
+    const approved = provider === "anthropic" ? dash.loggedIn.has(provider) : dash.polls >= 2;
+    if (approved) dash.loggedIn.add(provider);
+    return json({ session_id: "s", status: approved ? "approved" : "pending", error_message: dash.loginError, expires_at: null });
+  }
   if (path === "/providers/validate" && method === "POST") {
     return json(body?.value === "bad" ? { ok: false, reachable: true, message: "Der Anbieter hat den Key abgelehnt." }
       : body?.value === "offline" ? { ok: false, reachable: false, message: "" } : { ok: true, reachable: true, message: "" });
@@ -184,6 +240,7 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
   const dash: DashState = {
     available: true, reason: null, soul: "Du bist Raiden.\nDu antwortest knapp.\n", description: "", model: { provider: "mock", model: "mock-large" },
     history: [], versions: {}, stepUp: false, keys: { ANTHROPIC_API_KEY: "sk-ant-geheim-1234" },
+    loggedIn: new Set(["openai-codex"]), polls: 0, loginError: null,
   };
   let runs = 0;
   const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -238,6 +295,8 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
       }
       return json(uiState);
     }
+    if (url === "/bff/h/hikari/hermes/_provider-matrix") return json(providerMatrix(agents, dash));
+    if (url === "/bff/h/laptop/hermes/_provider-matrix") return json({ detail: "Hermes nicht erreichbar: keine Verbindung zu 100.100.3.4:8642. Läuft der API-Server dort und lauscht auf dieser Adresse?" }, 502);
     const m = /^\/bff\/h\/hikari\/hermes\/([^/]+)(\/.*)$/.exec(url);
     if (m && agents.includes(m[1])) {
       const rest = m[2];

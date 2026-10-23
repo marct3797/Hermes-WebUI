@@ -1,4 +1,4 @@
-import type { AgentRef, AgentStatus, Decision, DiagReport, HostsResponse, MemEntity, MemGraph, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ProvidersOverview, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import type { AgentRef, AgentStatus, Decision, DiagReport, HostsResponse, MemEntity, MemGraph, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string, public data?: Record<string, unknown>) {
@@ -93,6 +93,11 @@ export const api = {
   soulVersion: (a: AgentRef, vid: string) => call<SoulVersion>("GET", `${base(a)}/soul/history/${id(vid)}`),
   restoreSoul: (a: AgentRef, vid: string) => call<SoulSaved & { content: string }>("POST", `${base(a)}/soul/restore`, { id: vid }),
   saveDescription: (a: AgentRef, description: string) => call<{ ok: boolean; description: string }>("PUT", `${base(a)}/profile/description`, { description }),
+  providerMatrix: (host: string, runtime: string) => call<ProviderMatrix>("GET", `/bff/h/${encodeURIComponent(host)}/${encodeURIComponent(runtime)}/_provider-matrix`),
+  profileModels: (a: AgentRef) => call<{ providers: ModelProvider[] }>("GET", `${base(a)}/providers/models`),
+  oauthStart: (a: AgentRef, provider: string) => call<OAuthStart>("POST", `${base(a)}/providers/oauth/${encodeURIComponent(provider)}/start`),
+  oauthPoll: (a: AgentRef, provider: string, session: string) => call<OAuthPoll>("GET", `${base(a)}/providers/oauth/${encodeURIComponent(provider)}/poll/${encodeURIComponent(session)}`),
+  oauthSubmit: (a: AgentRef, provider: string, session: string, code: string) => call<{ ok?: boolean; status?: string }>("POST", `${base(a)}/providers/oauth/${encodeURIComponent(provider)}/submit`, { session_id: session, code }),
   saveModel: (a: AgentRef, provider: string, model: string) => call<{ ok: boolean }>("PUT", `${base(a)}/profile/model`, { provider, model }),
   providers: (a: AgentRef, days: number) => call<ProvidersOverview>("GET", `${base(a)}/providers?days=${days}`),
   validateKey: (a: AgentRef, varName: string, value: string) => call<KeyCheck>("POST", `${base(a)}/providers/validate`, { var: varName, value }),

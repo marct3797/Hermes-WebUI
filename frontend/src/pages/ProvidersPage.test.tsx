@@ -10,7 +10,7 @@ async function open() {
   backend = installBackend(["raiden"]);
   history.pushState(null, "", "/h/hikari/hermes/raiden/providers");
   render(<App />);
-  await screen.findByRole("heading", { name: "Anbieter", level: 1 });
+  await screen.findByRole("heading", { name: "Keys & Nutzung", level: 1 });
   await screen.findByRole("region", { name: "Eingerichtete Anbieter" });
 }
 const active = () => within(screen.getByRole("region", { name: "Eingerichtete Anbieter" }));
@@ -52,7 +52,7 @@ describe("Anbieter", () => {
 
   it("adds a provider: checks the key, saves it and moves the provider up", async () => {
     await open();
-    fireEvent.click(screen.getByRole("button", { name: /Anbieter hinzufügen \(2 verfügbar\)/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Anbieter hinzufügen \(3 verfügbar\)/ }));
     const card = within(screen.getByText("OpenRouter").closest("li")!);
     fireEvent.click(card.getByRole("button", { name: "Key eintragen" }));
     paste("OPENROUTER_API_KEY", "  sk-or-neu  ");
@@ -96,14 +96,11 @@ describe("Anbieter", () => {
     expect(backend.dash.keys.ANTHROPIC_API_KEY).toBe("sk-ant-geheim-1234"); // nichts überschrieben
   });
 
-  it("lists the coding CLIs separately and is reachable from the session column", async () => {
+  it("is reachable from the session column and leads to the hub for providers per host", async () => {
     backend = installBackend(["raiden"]);
     history.pushState(null, "", "/h/hikari/hermes/raiden");
     render(<App />);
-    fireEvent.click(await screen.findByRole("link", { name: "Anbieter von raiden" }));
-    await screen.findByRole("heading", { name: "Anbieter", level: 1 });
-    const clis = within(screen.getByRole("region", { name: "Coding-CLIs" }));
-    for (const name of ["Claude Code", "OpenCode", "Antigravity", "OpenAI Codex"]) expect(clis.getByText(name)).toBeInTheDocument();
-    expect(clis.getAllByText("NOCH NICHT ANGEBUNDEN")).toHaveLength(4);
+    fireEvent.click(await screen.findByRole("link", { name: "Keys von raiden" }));
+    await screen.findByRole("heading", { name: "Keys & Nutzung", level: 1 });
   });
 });

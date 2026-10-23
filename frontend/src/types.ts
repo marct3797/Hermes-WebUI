@@ -154,3 +154,12 @@ export type RoomEvent =
   | { type: "member.passed"; member: string }
   | { type: "member.event"; member: string; run_id: string; event: StreamEvent }
   | { type: "turn.finished"; turn: string; reason: "idle" | "max_rounds" | "max_messages" | "needs_user" | "stopped" | "error" };
+
+// --- Anbieter-Hauptseite: alle Profile einer Runtime, Zugänge auf dem Host, Anmeldung ---
+export type MatrixProfile = { name: string; model: string | null; provider: string | null; default: boolean; gateway_running: boolean; error: string | null };
+export type AccountState = { configured: boolean; via: "login" | "key" | null; detail: string | null };
+export type HostAccount = { id: string; label: string; cli: string; login: "device" | "pkce" | "key"; provider: string; hint: string; profiles: Record<string, AccountState> };
+export type ProviderMatrix = { available: boolean; reason: string | null; profiles: MatrixProfile[]; accounts: HostAccount[] };
+export type ModelProvider = { slug: string; name: string; current: boolean; authenticated: boolean; models: string[]; warning: string | null };
+export type OAuthStart = { session_id: string; flow?: string; user_code?: string; verification_url?: string; auth_url?: string; expires_in?: number; poll_interval?: number };
+export type OAuthPoll = { session_id: string; status: "pending" | "approved" | "error" | "expired" | string; error_message: string | null; expires_at: number | null };
