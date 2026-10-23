@@ -1,10 +1,37 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { api } from "./api";
+import { useRoom } from "./useRoom";
 import type { RoomAsk, RoomEvent, RoomMessage } from "./types";
 import { mergeMessages, reduceRoom, type RoomState } from "./useRoom";
 
 const base: RoomState = { messages: [], running: false, speaker: null, typing: {}, asks: [] };
 const msg = (seq: number, author = "h/hermes/anna", text = `m${seq}`): RoomMessage => ({ seq, author, kind: "message", text, mentions: [], at: 1 });
 const run = (events: RoomEvent[], from = base) => events.reduce(reduceRoom, from);
+
+describe("room paging recovery", () => {
+  it("opens latest, loads older, then catches up all pages without jumping to a live message", async () => {
+    let stream: { onmessage?: (m: { data: string }) => void } = {};
+    vi.stubGlobal("EventSource", class { constructor() { stream = this; } onmessage?: (m: { data: string }) => void; close() {} });
+    const page = (start: number, end: number, extra = {}) => ({ id: "r", messages: Array.from({ length: end - start + 1 }, (_, i) => msg(start + i)), running: false, speaker: null, has_older: start > 1, next_before: start, next_after: end, has_more: false, ...extra });
+    vi.spyOn(api, "room").mockResolvedValue(page(406, 605) as never);
+    const fetcher = vi.fn(async (url: string) => {
+      const query = new URL(url, "http://localhost").searchParams;
+      const after = Number(query.get("after"));
+      const data = query.has("before") ? page(206, 405) : after === 605 ? page(606, 805, { has_more: true }) : page(806, 1010);
+      return { ok: true, json: async () => data };
+    });
+    vi.stubGlobal("fetch", fetcher);
+    const { result, unmount } = renderHook(() => useRoom("r"));
+    await waitFor(() => expect(result.current.state.messages).toHaveLength(200));
+    await act(async () => { await result.current.loadOlder(); });
+    expect(result.current.state.messages[0].seq).toBe(206);
+    act(() => { stream.onmessage?.({ data: JSON.stringify({ type: "message", message: msg(1010) }) }); stream.onmessage?.({ data: JSON.stringify({ type: "state", running: false, speaker: null }) }); });
+    await waitFor(() => expect(result.current.state.messages).toHaveLength(805));
+    expect(fetcher.mock.calls.map(([url]) => url)).toContain("/bff/rooms/r?after=805");
+    unmount(); vi.restoreAllMocks(); vi.unstubAllGlobals();
+  });
+});
 
 describe("mergeMessages", () => {
   it("sorts by seq and drops duplicates, the newer copy wins", () => {

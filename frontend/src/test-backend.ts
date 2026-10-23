@@ -233,6 +233,8 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
 
 export function installBackend(agents: string[] = ["raiden"], features = ["runs", "steer"], uiOverride: Partial<UiConfig> = {}, memoryCapabilities = ["stats", "items", "search", "graph", "entities", "models", "reflect"]) {
   FakeEventSource.all = [];
+  try { sessionStorage.clear(); } catch { /* ohne Speicher */ }
+  try { localStorage.clear(); } catch { /* ohne Speicher */ }
   // Wie das BFF: Speichern ändert die Config, die Antwort ist die ganze Config.
   const uiState: UiConfig = { ...baseUi(), ...uiOverride };
   const calls: Call[] = [];

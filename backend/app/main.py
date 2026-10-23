@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -7,9 +8,9 @@ import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
-from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from .access_logging import CredentialQueryFilter
 from .audit import AuditLog
 from .auth import SessionStore, assert_auth_configured
 from .config import Settings, get_settings
@@ -19,9 +20,10 @@ from .oidc import OidcClient
 from .registry import AGENT_RE, Registry
 from .memory import MemoryRegistry
 from .rooms import RoomService
-from .routes import agents, auth, dashboard as dashboard_routes, hosts, memory as memory_routes, rooms as rooms_routes, ui as ui_routes
+from .routes import agents, auth, dashboard as dashboard_routes, hosts, memory as memory_routes, operations as operations_routes, rooms as rooms_routes, ui as ui_routes
 from .security import RateLimiter, SecurityMiddleware
 from .ui import UiConfig
+from .static import FingerprintedFiles
 
 
 # Unter dieser Adresse lief früher eine andere Anwendung mit Service Worker. Er bleibt im Browser registriert, fängt
@@ -47,6 +49,10 @@ def create_app(
     """`transport` ersetzt die Verbindung zu den Runtimes, `oidc_transport` die zu Forgejo (für Tests)."""
     settings = settings or get_settings()
     assert_auth_configured(settings)
+    # OAuth-Codes dürfen nie in Betriebslogs landen; idempotent für wiederholte App-Erzeugung in Tests.
+    access_logger = logging.getLogger("uvicorn.access")
+    if not any(isinstance(f, CredentialQueryFilter) for f in access_logger.filters):
+        access_logger.addFilter(CredentialQueryFilter())
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -90,6 +96,8 @@ def create_app(
 
     app.add_middleware(SecurityMiddleware, settings=settings)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.host_list())
+    # Operations-Routen vor den dynamischen Agent-Routen: sonst schluckt /bff/h/{host}/{runtime}/{agent} die _hostd/_manage-Pfade.
+    app.include_router(operations_routes.router)
     app.include_router(auth.router)
     app.include_router(hosts.router)
     app.include_router(agents.router)
@@ -119,7 +127,7 @@ def create_app(
     static = settings.static_dir
     if static and Path(static).is_dir():
         index = Path(static) / "index.html"
-        app.mount("/assets", StaticFiles(directory=Path(static) / "assets"), name="assets")
+        app.mount("/assets", FingerprintedFiles(directory=Path(static) / "assets"), name="assets")
 
         @app.get("/{path:path}", include_in_schema=False)
         async def spa(path: str):

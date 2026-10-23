@@ -26,8 +26,14 @@ const NAV = [
   { to: "/inbox", label: "Inbox", icon: "inbox" },
   { to: "/hosts", label: "Hosts", icon: "server" },
   { to: "/rooms", label: "Räume", icon: "orbit" },
+  { to: "/kanban", label: "Kanban", icon: "kanban" },
+  { to: "/jobs", label: "Zeitpläne", icon: "clock" },
+  { to: "/search", label: "Inhaltssuche", icon: "search" },
   { to: "/memory", label: "Gedächtnis", icon: "memory" },
   { to: "/providers", label: "Anbieter", icon: "coin" },
+  { to: "/manage", label: "Erweiterungen", icon: "wrench" },
+  { to: "/marketplaces", label: "Quellen", icon: "layers" },
+  { to: "/logs", label: "Logs", icon: "layers" },
   { to: "/system", label: "System", icon: "shield" },
 ];
 // Bereiche eines Hermes-Agents: stehen unter dem gewählten Agent, damit man sie nicht erst in einer Icon-Leiste suchen muss.
@@ -37,10 +43,7 @@ const MODULES = [
   { module: "skills", label: "Skills", icon: "layers" },
   { module: "tools", label: "Werkzeuge", icon: "wrench" },
 ] as const;
-// Module, die noch nicht gebaut sind: sichtbar, aber ohne Ziel.
-const SOON = [
-  { label: "Kanban", icon: "kanban" },
-];
+
 
 export function Sidebar(p: Props) {
   const { hosts, error } = useHosts();
@@ -66,11 +69,7 @@ export function Sidebar(p: Props) {
                 {open(n.to) > 0 && <span className="ct" aria-label={`${open(n.to)} offen`}>{open(n.to)}</span>}
               </Link>
             ))}
-            {SOON.map((n) => (
-              <span key={n.label} className="soon" style={{ display: "flex", alignItems: "center", gap: 10, height: 34, padding: "0 10px", fontWeight: 500 }} aria-disabled="true">
-                <Icon name={n.icon} size={18} />{n.label}<span className="tag">PHASE 3</span>
-              </span>
-            ))}
+
           </nav>
 
           {error && <p className="error small" role="alert" style={{ padding: "0 16px" }}>Hosts nicht ladbar: {error}</p>}
@@ -83,6 +82,10 @@ export function Sidebar(p: Props) {
                 {h.kind === "remote" && <span className="tag">remote</span>}
                 <span className="r">{h.runtimes.map((r) => `${r.id} · ${r.agents.length}`).join(" · ")}</span>
               </h2>
+              <div className="side-sessions" role="group" aria-label={`Host-Werkzeuge ${h.label}`}>
+                <Link to={`/hosts/${encodeURIComponent(h.id)}/terminal`} onClick={p.onClose}><Icon name="terminal" size={14} />Terminal</Link>
+                <Link to={`/hosts/${encodeURIComponent(h.id)}/workspace`} onClick={p.onClose}><Icon name="layers" size={14} />Workspace & Git</Link>
+              </div>
               {h.status !== "online" && h.detail && <p className="muted small" style={{ padding: "0 16px 4px" }}>{h.detail}</p>}
               {h.runtimes.map((r) => (
                 <div key={r.id}>

@@ -51,9 +51,9 @@ describe("System", () => {
 
   it("shows an error when the check itself cannot be fetched", async () => {
     await open();
-    const f = globalThis.fetch as ReturnType<typeof vi.fn>;
+    const f = vi.mocked(globalThis.fetch);
     const orig = f.getMockImplementation()!;
-    f.mockImplementation(async (url: string, init?: RequestInit) => (String(url).endsWith("/diagnose") ? new Response(JSON.stringify({ detail: "Hermes nicht erreichbar" }), { status: 502 }) : orig(url, init)));
+    f.mockImplementation(async (input: URL | RequestInfo, init?: RequestInit) => (String(input).endsWith("/diagnose") ? new Response(JSON.stringify({ detail: "Hermes nicht erreichbar" }), { status: 502 }) : orig(input, init)));
     fireEvent.click(within(screen.getByRole("region", { name: "Hikari raiden" })).getByRole("button", { name: "Prüfen" }));
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Hermes nicht erreichbar"));
   });

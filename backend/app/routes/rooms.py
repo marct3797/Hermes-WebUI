@@ -98,9 +98,11 @@ async def create_room(request: Request, engine: Engine, req: RoomIn, user: User 
 
 
 @router.get("/{room_id}")
-async def read_room(engine: Engine, room_id: RoomId, after: int = Query(0, ge=0), limit: int = Query(200, ge=1, le=500)):
+async def read_room(engine: Engine, room_id: RoomId, after: int | None = Query(None, ge=0), before: int | None = Query(None, ge=1), limit: int = Query(200, ge=1, le=500)):
     room = get_room(engine, room_id)
-    return public(engine, room, messages=engine.store.messages(room_id, after, limit))
+    if after is not None and before is not None:
+        raise HTTPException(422, "after und before schließen sich aus")
+    return {**public(engine, room), **engine.store.page(room_id, after, before, limit)}
 
 
 @router.patch("/{room_id}")

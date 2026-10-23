@@ -27,6 +27,13 @@ class OidcError(Exception):
     """Anmeldung nicht möglich. Die Meldung ist für Logs gedacht, nicht für den Browser."""
 
 
+def authentication_time(claims: dict[str, Any], now: float) -> float | None:
+    value = claims.get("auth_time")
+    if isinstance(value, (int, float)) and not isinstance(value, bool) and 0 < value <= now:
+        return value
+    return None
+
+
 def pkce_pair(verifier: str) -> str:
     return base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
 

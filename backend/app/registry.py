@@ -13,9 +13,11 @@ from __future__ import annotations
 import json
 import os
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
+from urllib.parse import urlsplit
 
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,31}$")  # Host- und Runtime-Kennung (landet in URLs)
 AGENT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")  # Profilordner heißen so
@@ -52,12 +54,41 @@ class RuntimeCfg:
 
 
 @dataclass(frozen=True)
+class HostdCfg:
+    base_url: str
+    token: str = field(repr=False)
+
+
+def _hostd(where: str, raw: Any, env: Mapping[str, str]) -> HostdCfg:
+    # Fixed server origin only: credentials and paths never belong in connection URLs.
+    message = f"{where}: hostd braucht base_url (HTTP-Origin) und token_env (mindestens 32 Zeichen)"
+    if not isinstance(raw, dict) or set(raw) != {"base_url", "token_env"}:
+        raise ConfigError(message)
+    url, key = raw["base_url"], raw["token_env"]
+    if not isinstance(url, str) or not isinstance(key, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+        raise ConfigError(message)
+    try:
+        u = urlsplit(url)
+        valid = (u.scheme in ("http", "https") and u.hostname and u.port != 0
+                 and not u.username and not u.password and not u.query and not u.fragment
+                 and u.path in ("", "/") and not any(c.isspace() or ord(c) < 32 for c in url)
+                 and "?" not in url and "#" not in url and "@" not in u.netloc)
+    except ValueError:
+        valid = False
+    token = env.get(key, "")
+    if not valid or len(token) < 32 or any(ord(c) < 33 or ord(c) > 126 for c in token):
+        raise ConfigError(message)
+    return HostdCfg(url.rstrip("/"), token)
+
+
+@dataclass(frozen=True)
 class HostCfg:
     id: str
     label: str
     kind: Literal["local", "remote"]
     address: str | None = None
     runtimes: tuple[RuntimeCfg, ...] = ()
+    hostd: HostdCfg | None = None
 
     def runtime(self, runtime_id: str) -> RuntimeCfg | None:
         return next((r for r in self.runtimes if r.id == runtime_id), None)
@@ -114,6 +145,7 @@ def parse_config(raw: Any, environ: dict[str, str] | None = None) -> dict[str, H
         hosts[host_id] = HostCfg(
             id=host_id, label=str(h.get("label") or host_id), kind=kind,
             address=h.get("address"), runtimes=tuple(runtimes),
+            hostd=_hostd(host_id, h["hostd"], env) if "hostd" in h else None,
         )
     return hosts
 

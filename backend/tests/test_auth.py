@@ -38,6 +38,8 @@ def oidc_app(make_settings, idp, clock):
         auth_mode="oidc", oidc_issuer=ISSUER, oidc_client_id=CLIENT_ID, oidc_client_secret=CLIENT_SECRET,
         oidc_allowed_sub="42", public_url="https://testserver", step_up_s=600,
     )
+    # Dieselbe Uhr für IdP-auth_time und SessionStore, sonst ist frische Anmeldung nie belegbar.
+    idp.now = clock
     mock = create_mock(wait_for_user=False, delay=0)
     app = create_app(
         settings, transport=RouterTransport({"hermes.test": httpx.ASGITransport(app=mock), "dashboard.test": httpx.ASGITransport(app=create_dashboard())}),

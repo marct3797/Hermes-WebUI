@@ -33,6 +33,72 @@ function setup(over: Record<string, unknown> = {}) {
   const store = createRunStore({ api: api as never, eventSource: (u) => new FakeES(u) as unknown as EventSource });
   return { store, api };
 }
+describe("recovery", () => {
+  it.each(["cancelled", "interrupted"])("normalizes %s after disconnect", async (status) => {
+    const { store } = setup({ runStatus: vi.fn(async () => ({ status })) });
+    await store.send(A, undefined, "x", []);
+    last().onerror?.();
+    await vi.waitFor(() => expect(conv(store, A, "s1")?.state.runStatus).toBe("stopped"));
+    store.dispose();
+  });
+
+  it("requires explicit opt-in for completion notifications", async () => {
+    const notice = vi.fn();
+    vi.stubGlobal("Notification", class { static permission = "granted"; static requestPermission = vi.fn(async () => "granted"); constructor(...args: unknown[]) { notice(...args); } });
+    const { store } = setup();
+    await store.send(A, undefined, "x", []);
+    last().emit({ type: "run.completed" });
+    expect(notice).not.toHaveBeenCalled();
+    expect(await store.setNotifications(true)).toBe(true);
+    await store.send(B, undefined, "y", []);
+    last().emit({ type: "run.completed" });
+    expect(notice).toHaveBeenCalledTimes(1);
+    store.dispose(); vi.unstubAllGlobals();
+  });
+
+  it("restores a running ID even if its view opens before status polling returns", async () => {
+    sessionStorage.clear();
+    sessionStorage.setItem("hermes-known-runs", JSON.stringify([{ agent: A, sessionId: "recover", runId: "known" }]));
+    const api = { eventsUrl: () => "/known", runStatus: vi.fn(async () => ({ status: "running" })), messages: vi.fn(async () => ({ messages: [] })) };
+    const store = createRunStore({ api: api as never, storage: sessionStorage, eventSource: (u) => new FakeES(u) as unknown as EventSource });
+    store.open(A, "recover");
+    await vi.waitFor(() => expect(conv(store, A, "recover")?.state.runStatus).toBe("running"));
+    await vi.waitFor(() => expect(last().url).toBe("/known"));
+    expect(api.messages).not.toHaveBeenCalled();
+    store.dispose(); sessionStorage.clear();
+  });
+
+  it("keeps a known finished run finished when status retention expires", async () => {
+    sessionStorage.clear();
+    sessionStorage.setItem("hermes-known-runs", JSON.stringify([{ agent: A, sessionId: "done", runId: "old", status: "done" }]));
+    const runStatus = vi.fn(async () => ({ status: "unknown" }));
+    const eventSource = vi.fn();
+    const api = { runStatus, messages: vi.fn(async () => ({ messages: [] })) };
+    const store = createRunStore({ api: api as never, storage: sessionStorage, eventSource });
+    await vi.waitFor(() => expect(api.messages).toHaveBeenCalled());
+    expect(conv(store, A, "done")?.state.runStatus).toBe("done");
+    expect(runStatus).not.toHaveBeenCalled(); expect(eventSource).not.toHaveBeenCalled();
+    store.dispose(); sessionStorage.clear();
+  });
+
+  it("stores only identifiers and reconciles a reload without starting work", async () => {
+    sessionStorage.clear();
+    const api = { startRun: vi.fn(async () => ({ run_id: "known", session_id: "session" })), eventsUrl: () => "/events", runStatus: vi.fn(async () => ({ status: "completed" })), messages: vi.fn(async () => ({ messages: [] })) };
+    const deps = { api: api as never, eventSource: (u: string) => new FakeES(u) as unknown as EventSource, storage: sessionStorage };
+    const first = createRunStore(deps);
+    await first.send(A, undefined, "PRIVATE PROMPT", []);
+    first.enqueue(convKey(A, "session"), "PRIVATE QUEUE", []);
+    expect(sessionStorage.getItem("hermes-known-runs")).toContain("known");
+    expect(sessionStorage.getItem("hermes-known-runs")).not.toContain("PRIVATE");
+    first.dispose();
+    const second = createRunStore(deps);
+    await vi.waitFor(() => expect(api.runStatus).toHaveBeenCalled());
+    await vi.waitFor(() => expect(conv(second, A, "session")?.state.runStatus).toBe("idle"));
+    expect(api.startRun).toHaveBeenCalledTimes(1);
+    second.dispose(); sessionStorage.clear();
+  });
+});
+
 const last = () => FakeES.all[FakeES.all.length - 1];
 const conv = (store: ReturnType<typeof setup>["store"], a: AgentRef, sid?: string) => store.getSnapshot().convs.get(convKey(a, sid));
 

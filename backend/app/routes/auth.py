@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi.responses import RedirectResponse
 
 from ..auth import LOGIN_COOKIE, SESSION_COOKIE, User, session_of
-from ..oidc import OidcClient, OidcError, pkce_pair
+from ..oidc import OidcClient, OidcError, authentication_time, pkce_pair
 from ..security import client_ip
 
 router = APIRouter(prefix="/auth")
@@ -25,6 +25,8 @@ class Pending:
     browser: str
     next_path: str
     created: float
+    step_up: bool
+    requested_at: float
 
 
 def safe_next(value: str) -> str:
@@ -64,7 +66,7 @@ async def login(request: Request, next: str = "/", step_up: bool = False):
     except OidcError as e:
         request.app.state.audit.record("login.start", ip=ip, outcome="error", reason=str(e))
         raise HTTPException(502, "Forgejo ist nicht erreichbar") from e
-    store[state] = Pending(nonce, verifier, browser, safe_next(next), time.monotonic())
+    store[state] = Pending(nonce, verifier, browser, safe_next(next), time.monotonic(), step_up, request.app.state.sessions.now())
     response = RedirectResponse(url, status_code=302)
     # Lax, weil der Browser vom Anbieter (anderer Site) zurückkehrt; Strict würde das Cookie nicht mitschicken.
     _cookie(response, LOGIN_COOKIE, browser, PENDING_TTL_S, "lax")
@@ -112,9 +114,13 @@ async def callback(
         return response
 
     sessions = app.state.sessions
+    auth_time = authentication_time(claims, sessions.now())
+    # NumericDate has whole-second precision; do not turn callback arrival into authentication.
+    if pending.step_up and (auth_time is None or auth_time < int(pending.requested_at) or sessions.now() - auth_time > settings.step_up_s):
+        return fail("authentication_not_fresh", 401, "Erneute Anmeldung nicht belegt")
     sessions.delete(request.cookies.get(SESSION_COOKIE))  # Rotation: nie eine alte Sitzungs-ID weiterverwenden
     name = str(claims.get("preferred_username") or claims.get("name") or sub)
-    sess = sessions.create(User(id=sub, name=name))
+    sess = sessions.create(User(id=sub, name=name), auth_time=auth_time)
     audit.record("login", user=sub, ip=ip)
     response = RedirectResponse(pending.next_path, status_code=303)
     _cookie(response, SESSION_COOKIE, sess.id, settings.session_max_s, "strict")

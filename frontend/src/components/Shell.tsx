@@ -19,6 +19,9 @@ function crumbs(page: Page): string[] {
     case "cockpit": return ["cockpit"];
     case "inbox": return ["inbox"];
     case "hosts": return ["hosts"];
+    case "terminal": return [page.host, "terminal"];
+    case "workspace": return [page.host, "workspace"];
+    case "operations": return [page.section, ...(page.host ? [page.host] : [])];
     case "settings": return ["darstellung"];
     case "system": return ["system"];
     case "memory": return ["gedächtnis"];

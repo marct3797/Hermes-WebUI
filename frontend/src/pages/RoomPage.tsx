@@ -9,7 +9,7 @@ import { useRoom } from "../useRoom";
 
 /** Ein Raum: Verlauf, wer gerade schreibt, Freigaben der Mitglieder und die Eingabe mit @-Hilfe. */
 export function RoomPage({ roomId }: { roomId: string }) {
-  const { state, reload } = useRoom(roomId);
+  const { state, reload, loadOlder } = useRoom(roomId);
   const { room, messages, running, typing, asks, finished } = state;
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -97,6 +97,11 @@ export function RoomPage({ roomId }: { roomId: string }) {
       )}
 
       <div className="room-log" role="log" aria-label="Verlauf" aria-live="polite">
+        {state.hasOlder && (
+          <button type="button" className="btn btn-s" disabled={state.loadingOlder} onClick={() => void loadOlder()}>
+            {state.loadingOlder ? "Lade ältere Nachrichten…" : "Ältere Nachrichten laden"}
+          </button>
+        )}
         {messages.length === 0 && <p className="panel-empty">Noch nichts gesagt. Schreib in den Raum; ohne @ antworten alle, mit @Name nur die Genannten.</p>}
         {messages.map((m) => <MessageRow key={m.seq} message={m} members={members} />)}
         {Object.entries(typing).map(([key, t]) => {

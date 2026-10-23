@@ -38,17 +38,29 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         self.s = settings
 
     async def dispatch(self, request: Request, call_next):
-        if request.method not in SAFE_METHODS:
-            length = request.headers.get("content-length")
-            if length and length.isdigit() and int(length) > self.s.max_body_bytes:
-                return JSONResponse({"detail": "Anfrage zu groß"}, status_code=413)
+        response = None
+        length = request.headers.get("content-length")
+        if length and length.isdigit() and int(length) > self.s.max_body_bytes:
+            response = JSONResponse({"detail": "Anfrage zu groß"}, status_code=413)
+        elif request.method not in SAFE_METHODS:
             origin = request.headers.get("origin")
             if origin and urlparse(origin).netloc != request.headers.get("host"):
-                return JSONResponse({"detail": "Origin nicht erlaubt"}, status_code=403)
-            if request.headers.get("x-requested-with") != "hermes-webui":
-                return JSONResponse({"detail": "CSRF-Header fehlt"}, status_code=403)
+                response = JSONResponse({"detail": "Origin nicht erlaubt"}, status_code=403)
+            elif request.headers.get("x-requested-with") != "hermes-webui":
+                response = JSONResponse({"detail": "CSRF-Header fehlt"}, status_code=403)
 
-        response = await call_next(request)
+        if response is None:
+            chunks, size = [], 0
+            async for chunk in request.stream():
+                size += len(chunk)
+                if size > self.s.max_body_bytes:
+                    response = JSONResponse({"detail": "Anfrage zu groß"}, status_code=413)
+                    break
+                chunks.append(chunk)
+            if response is None:
+                # BaseHTTPMiddleware replays the bounded cached body to downstream consumers.
+                request._body = b"".join(chunks)
+                response = await call_next(request)
         h = response.headers
         if "content-security-policy" not in h:  # Routen dürfen strenger sein (z. B. SVG-Bilder)
             h["Content-Security-Policy"] = CSP

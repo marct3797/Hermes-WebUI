@@ -175,10 +175,25 @@ class RoomStore:
                              (rid, seq, author, kind, text, json.dumps(mentions or []), at))
         return {"seq": seq, "author": author, "kind": kind, "text": text, "mentions": mentions or [], "at": at}
 
-    def messages(self, rid: str, after: int = 0, limit: int = 200) -> list[dict[str, Any]]:
+    def messages(self, rid: str, after: int = 0, limit: int | None = 200) -> list[dict[str, Any]]:
         with self._lock:
-            rows = self._db.execute("SELECT * FROM messages WHERE room_id=? AND seq>? ORDER BY seq LIMIT ?", (rid, after, limit)).fetchall()
+            rows = self._db.execute("SELECT * FROM messages WHERE room_id=? AND seq>? ORDER BY seq LIMIT ?", (rid, after, -1 if limit is None else limit)).fetchall()
         return [self._message(r) for r in rows]
+
+    def page(self, rid: str, after: int | None, before: int | None, limit: int) -> dict[str, Any]:
+        with self._lock:
+            if after is not None:
+                rows = self._db.execute("SELECT * FROM messages WHERE room_id=? AND seq>? ORDER BY seq LIMIT ?", (rid, after, limit + 1)).fetchall()
+                has_more = len(rows) > limit
+                rows = rows[:limit]
+            else:
+                rows = self._db.execute("SELECT * FROM messages WHERE room_id=? AND seq<? ORDER BY seq DESC LIMIT ?", (rid, before if before is not None else 9223372036854775807, limit)).fetchall()[::-1]
+                has_more = False
+            first = rows[0]["seq"] if rows else before
+            has_older = bool(first and self._db.execute("SELECT 1 FROM messages WHERE room_id=? AND seq<? LIMIT 1", (rid, first)).fetchone())
+        return {"messages": [self._message(r) for r in rows], "has_more": has_more,
+                "has_older": has_older, "next_before": first,
+                "next_after": rows[-1]["seq"] if rows else (after or 0)}
 
     def last_seq(self, rid: str) -> int:
         with self._lock:
@@ -386,7 +401,7 @@ class RoomEngine:
         fresh_room = self.store.get(rid) or room
         cursor = int(fresh_room["cursors"].get(key, 0))
         last = self.store.last_seq(rid)
-        fresh = [m for m in self.store.messages(rid, after=cursor) if m["kind"] == "message" and m["author"] != key]
+        fresh = [m for m in self.store.messages(rid, after=cursor, limit=None) if m["seq"] <= last and m["kind"] == "message" and m["author"] != key]
         if not fresh:
             return None
         others = [self.label_of(m) for m in room["members"] if member_key(m) != key]

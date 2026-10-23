@@ -36,7 +36,7 @@ class Session:
     user: User
     created: float
     last_seen: float
-    auth_time: float  # letzte echte Anmeldung; Grundlage des Step-up
+    auth_time: float | None  # nur belegte Anmeldung beim Anbieter
 
 
 class SessionStore:
@@ -49,9 +49,9 @@ class SessionStore:
     def now(self) -> float:
         return self._clock()
 
-    def create(self, user: User) -> Session:
+    def create(self, user: User, auth_time: float | None = None) -> Session:
         now = self._clock()
-        sess = Session(secrets.token_urlsafe(32), user, now, now, now)
+        sess = Session(secrets.token_urlsafe(32), user, now, now, auth_time)
         self._sessions[sess.id] = sess
         self.purge()
         return sess
@@ -119,8 +119,7 @@ async def fresh_user(request: Request, user: User = Depends(current_user)) -> Us
     settings: Settings = request.app.state.settings
     if settings.auth_mode == "none":
         return user
-    sess = session_of(request)
-    if sess is None or request.app.state.sessions.now() - sess.auth_time > settings.step_up_s:
+    if not is_fresh(request):
         raise HTTPException(401, {"code": "step_up_required", "message": "Bitte erneut anmelden"})
     return user
 
@@ -130,4 +129,4 @@ def is_fresh(request: Request) -> bool:
     if settings.auth_mode == "none":
         return True
     sess = session_of(request)
-    return sess is not None and request.app.state.sessions.now() - sess.auth_time <= settings.step_up_s
+    return sess is not None and sess.auth_time is not None and 0 <= request.app.state.sessions.now() - sess.auth_time <= settings.step_up_s

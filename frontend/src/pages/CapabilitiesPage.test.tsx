@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { resetRedirect } from "../api";
@@ -44,7 +44,9 @@ describe("Skills und Werkzeuge", () => {
     history.pushState(null, "", "/h/hikari/hermes/raiden/tools");
     render(<App />);
     await screen.findByRole("heading", { name: "Werkzeuge", level: 1 });
-    expect(await screen.findByText("Terminal")).toBeInTheDocument();
+    // Sidebar enthält ebenfalls Terminal-Links; deshalb im Hauptbereich suchen.
+    const main = screen.getByRole("main");
+    expect(await within(main).findByText("Terminal")).toBeInTheDocument();
     expect(screen.getByText("raiden · 2 von 3 aktiv")).toBeInTheDocument();
     expect(screen.getByText("nicht eingerichtet")).toBeInTheDocument();
     expect(screen.getByText("aus")).toBeInTheDocument();

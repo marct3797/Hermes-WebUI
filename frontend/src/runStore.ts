@@ -30,7 +30,7 @@ export type LogEntry = { id: string; at: number; agent: AgentRef; text: string }
 
 export type Snapshot = { convs: ReadonlyMap<string, Conv>; log: readonly LogEntry[]; dismissed: ReadonlySet<string> };
 
-type Deps = { api: typeof realApi; eventSource: (url: string) => EventSource };
+type Deps = { api: typeof realApi; eventSource: (url: string) => EventSource; storage?: Storage };
 type SendOpts = { model?: string; onSession?: (sessionId: string) => void };
 type Source = { es: EventSource; holder: { key: string }; finished: boolean };
 
@@ -43,7 +43,23 @@ const live = (s: ChatState) => s.runStatus === "starting" || s.runStatus === "ru
 
 export function createRunStore(deps: Deps = { api: realApi, eventSource: (u) => new EventSource(u) }) {
   const { api } = deps;
-  let snap: Snapshot = { convs: new Map(), log: [], dismissed: new Set() };
+  let storage: Storage | undefined = deps.storage;
+  try { if (!storage && api === realApi) storage = globalThis.sessionStorage; } catch { /* private mode */ }
+  let disposed = false;
+  let notifications = false;
+  const restored = new Map<string, Conv>();
+  try {
+    notifications = storage?.getItem("hermes-run-notifications") === "true";
+    const saved: unknown = JSON.parse(storage?.getItem("hermes-known-runs") ?? "[]");
+    if (Array.isArray(saved)) for (const row of saved.slice(-MAX_CONVS)) {
+      if (!row || typeof row !== "object" || !row.agent || ![row.agent.host, row.agent.runtime, row.agent.agent, row.runId, row.sessionId].every((v) => typeof v === "string" && v.length > 0 && v.length < 256)) continue;
+      const agent: AgentRef = { host: row.agent.host, runtime: row.agent.runtime, agent: row.agent.agent };
+      const key = convKey(agent, row.sessionId);
+      const status = ["idle", "done", "failed", "stopped", "lost"].includes(row.status) ? row.status as ChatState["runStatus"] : "running";
+      restored.set(key, { key, agent, sessionId: row.sessionId, state: { ...initialState, runId: row.runId, runStatus: status }, touched: Date.now(), stale: false });
+    }
+  } catch { /* corrupted or unavailable session storage must not break chat */ }
+  let snap: Snapshot = { convs: restored, log: [], dismissed: new Set() };
   const listeners = new Set<() => void>();
   const endListeners = new Set<(agent: AgentRef) => void>();
   const sources = new Map<string, Source>();
@@ -53,6 +69,9 @@ export function createRunStore(deps: Deps = { api: realApi, eventSource: (u) => 
 
   const commit = (next: Partial<Snapshot>) => {
     snap = { ...snap, ...next };
+    try {
+      storage?.setItem("hermes-known-runs", JSON.stringify([...snap.convs.values()].filter((c) => c.state.runId && c.sessionId).map((c) => ({ agent: c.agent, sessionId: c.sessionId, runId: c.state.runId, status: c.state.runStatus }))));
+    } catch { /* storage quota or private mode */ }
     listeners.forEach((l) => l());
   };
 
@@ -116,7 +135,46 @@ export function createRunStore(deps: Deps = { api: realApi, eventSource: (u) => 
 
   const log = (entry: LogEntry) => commit({ log: [entry, ...snap.log].slice(0, 50) });
 
-  const runEnded = (agent: AgentRef) => endListeners.forEach((l) => l(agent));
+  const runEnded = (agent: AgentRef, notify = true) => {
+    endListeners.forEach((l) => l(agent));
+    if (notify && notifications && typeof Notification !== "undefined" && Notification.permission === "granted") {
+      try { new Notification("Hermes: Lauf beendet", { body: `${agent.host} · ${agent.agent}` }); } catch { /* unsupported platform */ }
+    }
+  };
+
+  async function reconcile(key: string, runId: string, recovering = false) {
+    const conv = snap.convs.get(key);
+    if (!conv) return;
+    try {
+      const st = await api.runStatus(conv.agent, runId);
+      if (disposed || snap.convs.get(key)?.state.runId !== runId) return;
+      if (st.status && ["completed", "failed", "stopped", "cancelled", "canceled", "interrupted"].includes(st.status)) {
+        closeSource(key);
+        if (conv.sessionId) {
+          try {
+            const items = historyItems(await api.messages(conv.agent, conv.sessionId));
+            if (disposed || snap.convs.get(key)?.state.runId !== runId) return;
+            patch(key, { state: { ...initialState, items, runId } });
+          }
+          catch { /* retain the stream's existing content */ }
+        }
+        if (disposed || snap.convs.get(key)?.state.runId !== runId) return;
+        if (st.status === "completed" && live(snap.convs.get(key)!.state)) dispatch(key, { type: "event", event: { type: "run.completed" } });
+        if (["stopped", "cancelled", "canceled", "interrupted"].includes(st.status)) dispatch(key, { type: "event", event: { type: "run.stopped" } });
+        else if (st.status === "failed") dispatch(key, { type: "event", event: { type: "run.failed", error: "Lauf fehlgeschlagen" } });
+        patch(key, { stale: false });
+        runEnded(conv.agent, !recovering);
+        return;
+      }
+      if (recovering && st.status && ["running", "pending", "queued", "starting", "waiting"].includes(st.status)) {
+        patch(key, { stale: false });
+        dispatch(key, { type: "run-accepted", runId });
+        attach(key, runId);
+        return;
+      }
+    } catch { /* unknown is not a reason to replay work */ }
+    dispatch(key, { type: "connection-lost" });
+  }
 
   /**
    * Hermes' Ereignisstrom nennt weder Argumente noch Ausgabe eines Tools. Beides steht im Verlauf der Session:
@@ -164,19 +222,7 @@ export function createRunStore(deps: Deps = { api: realApi, eventSource: (u) => 
     es.onerror = async () => {
       if (src.finished) return;
       es.close();
-      const k = holder.key;
-      try {
-        const st = await api.runStatus(conv.agent, runId);
-        if (st.status && ["completed", "failed", "stopped"].includes(st.status)) {
-          src.finished = true;
-          sources.delete(k);
-          runEnded(conv.agent);
-          const sid = snap.convs.get(k)?.sessionId;
-          if (sid) dispatch(k, { type: "history", items: historyItems(await api.messages(conv.agent, sid)) });
-          return;
-        }
-      } catch { /* Status nicht lesbar: als verloren melden */ }
-      dispatch(holder.key, { type: "connection-lost" });
+      await reconcile(holder.key, runId);
     };
   }
 
@@ -210,7 +256,23 @@ export function createRunStore(deps: Deps = { api: realApi, eventSource: (u) => 
     void send(conv.agent, conv.sessionId, item.text, item.images, { model: conv.model });
   }
 
+  queueMicrotask(() => {
+    if (disposed) return;
+    for (const c of restored.values()) {
+      if (live(c.state) || c.state.runStatus === "lost") { if (c.state.runId) void reconcile(c.key, c.state.runId, true); }
+      else if (c.sessionId) void api.messages(c.agent, c.sessionId).then((messages) => {
+        if (!disposed && snap.convs.get(c.key)?.state.runId === c.state.runId) patch(c.key, { state: { ...c.state, items: historyItems(messages) } });
+      }).catch(() => { /* finished work stays finished even if upstream retention expired */ });
+    }
+  });
+
   return {
+    get notificationsEnabled() { return notifications; },
+    async setNotifications(enabled: boolean) {
+      notifications = enabled && typeof Notification !== "undefined" && (Notification.permission === "granted" || await Notification.requestPermission() === "granted");
+      try { storage?.setItem("hermes-run-notifications", String(notifications)); } catch { /* private mode */ }
+      return notifications;
+    },
     subscribe(cb: () => void) { listeners.add(cb); return () => { listeners.delete(cb); }; },
     getSnapshot: () => snap,
     /** Ein Run dieses Agents ist zu Ende (für das Auffrischen der Session-Liste). */
@@ -306,7 +368,7 @@ export function createRunStore(deps: Deps = { api: realApi, eventSource: (u) => 
 
     reconnect(key: string) {
       const runId = snap.convs.get(key)?.state.runId;
-      if (runId) attach(key, runId);
+      if (runId) void reconcile(key, runId, true);
     },
 
     /** Fehlermeldung in der Inbox als gelesen markieren. */
@@ -314,6 +376,7 @@ export function createRunStore(deps: Deps = { api: realApi, eventSource: (u) => 
 
     /** Alles schließen (Abmelden, Tests). */
     dispose() {
+      disposed = true;
       [...sources.keys()].forEach(closeSource);
       detailTimers.forEach((ts) => ts.forEach(clearTimeout));
       detailTimers.clear();

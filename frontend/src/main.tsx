@@ -15,6 +15,8 @@ import "./styles/profile.css";
 import "./styles/rooms.css";
 import "./styles/soul.css";
 import "./styles/providers.css";
+import "./styles/operations.css";
+import "./styles/workspace.css";
 import "./styles/mobile.css";
 
 createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);

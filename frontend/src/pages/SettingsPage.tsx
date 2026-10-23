@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api";
 import { Icon } from "../components/Icon";
 import { PageHead } from "../components/PageHead";
 import { dec } from "../format";
 import { useMedia } from "../useMedia";
 import { useUi } from "../ui";
+import { useRunStore } from "../runs";
 
 /** Darstellung: der Hintergrund-Shader. Die Regler wirken sofort und gelten zuerst nur für dieses Gerät. */
 export function SettingsPage() {
@@ -14,6 +15,9 @@ export function SettingsPage() {
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string>();
+  const store = useRunStore();
+  const [notify, setNotify] = useState(store.notificationsEnabled);
+  useEffect(() => { setNotify(store.notificationsEnabled); }, [store]);
 
   const overridden = Object.keys(localShader).length > 0;
   const same = shader.enabled === serverShader.enabled && shader.strength === serverShader.strength && shader.speed === serverShader.speed;
@@ -73,6 +77,15 @@ export function SettingsPage() {
         </div>
         {!writable && <p className="hint" style={{ margin: 0 }}>{writeError ?? "Die Vorgabe lässt sich hier nicht speichern."} Trage sie in der ui.json unter ui.backgroundShader ein.</p>}
         {error && <p className="banner" role="alert"><Icon name="alert" /><span>{error}</span></p>}
+      </section>
+
+      <section className="pf-s" aria-label="Mitteilungen">
+        <h2 className="lbl">Mitteilungen</h2>
+        <label className="row" style={{ gap: 8 }}>
+          <input type="checkbox" checked={notify} onChange={(e) => { const next = e.target.checked; void store.setNotifications(next).then((granted) => setNotify(granted)); if (!next) setNotify(false); }} />
+          <span>Bei Abschluss oder Fehler eines Runs melden (nur dieses Gerät, Opt-in)</span>
+        </label>
+        <p className="hint" style={{ margin: "8px 0 0" }}>Der Browser fragt einmal um Erlaubnis. Ohne Zustimmung bleibt die Meldung aus.</p>
       </section>
     </main>
   );

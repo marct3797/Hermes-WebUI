@@ -206,7 +206,8 @@ def norm_graph(payload: Any, cap: int) -> dict[str, Any]:
     kept = nodes[:cap]
     keep_ids = {n["id"] for n in kept}
     return {"nodes": kept, "edges": [e for e in edges if e["source"] in keep_ids and e["target"] in keep_ids],
-            "total": int(total) if isinstance(total, (int, float)) else len(nodes), "truncated": len(nodes) > cap}
+            "total": int(total) if isinstance(total, (int, float)) else len(nodes),
+            "truncated": len(nodes) > cap or (isinstance(total, (int, float)) and total > len(kept))}
 
 
 def norm_stats(payload: Any) -> list[dict[str, Any]]:

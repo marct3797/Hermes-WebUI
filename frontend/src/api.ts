@@ -22,7 +22,7 @@ export function toLogin(stepUp = false) {
 /** Nur für Tests: erlaubt einen weiteren Redirect. */
 export const resetRedirect = () => { redirecting = false; };
 
-async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
+export async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch(path, {
     method,
     headers: { "X-Requested-With": "hermes-webui", ...(body ? { "Content-Type": "application/json" } : {}) },

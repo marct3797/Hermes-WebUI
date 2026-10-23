@@ -8,6 +8,9 @@ export type Page =
   | { name: "cockpit" }
   | { name: "inbox" }
   | { name: "hosts" }
+  | { name: "terminal"; host: string }
+  | { name: "workspace"; host: string }
+  | { name: "operations"; section: "kanban" | "jobs" | "logs" | "manage" | "marketplaces" | "search"; host?: string }
   | { name: "settings" }
   | { name: "system" }
   | { name: "memory" }
@@ -29,6 +32,12 @@ export function parsePath(pathname: string): Page {
     const [head, ...rest] = parts;
     if (head === "inbox" && rest.length === 0) return { name: "inbox" };
     if (head === "hosts" && rest.length === 0) return { name: "hosts" };
+    if (head === "hosts" && rest.length === 2 && (rest[1] === "terminal" || rest[1] === "workspace")) {
+      return { name: rest[1], host: dec(rest[0]) };
+    }
+    if ((head === "kanban" || head === "jobs" || head === "logs" || head === "manage" || head === "marketplaces" || head === "search") && rest.length <= 1) {
+      return { name: "operations", section: head, ...(rest.length ? { host: dec(rest[0]) } : {}) };
+    }
     if (head === "settings" && rest.length === 0) return { name: "settings" };
     if (head === "system" && rest.length === 0) return { name: "system" };
     if (head === "memory" && rest.length === 0) return { name: "memory" };

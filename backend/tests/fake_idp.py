@@ -18,7 +18,7 @@ CLIENT_SECRET = "csecret"
 
 
 class FakeIdp:
-    def __init__(self):
+    def __init__(self, now=None):
         self.key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         self.other_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         self.kid = "k1"
@@ -29,6 +29,9 @@ class FakeIdp:
         self.alg = "RS256"
         self.discovery_overrides: dict = {}
         self.token_calls = 0
+        # Zeitquelle für auth_time (Tests injizieren dieselbe Uhr wie SessionStore).
+        # iat/exp bleiben Echtzeit, damit die Signaturprüfung nicht abläuft.
+        self.now = now or time.time
         self.app = self._build()
         self.transport = httpx.ASGITransport(app=self.app)
 
@@ -75,10 +78,14 @@ class FakeIdp:
             verifier_hash = base64.urlsafe_b64encode(hashlib.sha256(form["code_verifier"].encode()).digest()).rstrip(b"=").decode()
             if verifier_hash != entry["challenge"]:
                 return JSONResponse({"error": "invalid_grant", "error_description": "PKCE"}, status_code=400)
-            now = int(time.time())
+            real_now = int(time.time())
+            try:
+                auth_default = int(self.now())
+            except Exception:
+                auth_default = real_now
             claims = {
-                "iss": ISSUER + "/", "aud": CLIENT_ID, "sub": self.sub, "iat": now, "exp": now + 300,
-                "nonce": entry["nonce"], "preferred_username": "marc", **self.claims,
+                "iss": ISSUER + "/", "aud": CLIENT_ID, "sub": self.sub, "iat": real_now, "exp": real_now + 300,
+                "nonce": entry["nonce"], "preferred_username": "marc", "auth_time": auth_default, **self.claims,
             }
             claims = {k: v for k, v in claims.items() if v is not None}
             key = self.sign_with if self.alg.startswith(("RS", "PS")) else "geheim-geheim-geheim-geheim-geheim"
