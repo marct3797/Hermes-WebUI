@@ -9,3 +9,6 @@ backend/profiles.json
 *.egg-info/
 audit.log
 backend/hosts.json
+
+# Arbeitsordner der Prüfung gegen echtes Hermes (backend/devtools/real)
+.real/

@@ -64,3 +64,111 @@
 @media (max-width:800px){.two>.r{max-width:none;flex-basis:100%}}
 
 .filters{gap:8px;margin-left:auto;flex-wrap:wrap}
+
+/* System: Diagnose-Ring */
+.diag-list{display:flex;flex-direction:column;gap:10px;margin-top:12px;max-width:900px}
+.diag-checks{list-style:none;margin:0;padding:0 14px 10px;display:flex;flex-direction:column;gap:6px}
+.diag-checks li{display:grid;grid-template-columns:20px minmax(150px,230px) 1fr auto;align-items:baseline;gap:8px;font-size:13px}
+.diag-mark{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;border:1px solid var(--line)}
+.diag-ok .diag-mark{color:var(--t1)}
+.diag-warn .diag-mark{border-style:dashed;color:var(--t1)}
+.diag-fail .diag-mark{background:var(--crim);border-color:var(--crim);color:#fff}
+.diag-fail .diag-detail{color:var(--crim-hi)}
+@media (max-width:640px){.diag-checks li{grid-template-columns:20px 1fr}.diag-checks .diag-detail,.diag-checks .mono{grid-column:2}}
+
+/* Auswertung */
+.usage{margin-bottom:18px}
+.usage .kpis{border:0;border-radius:0;border-bottom:1px solid var(--line);background:none}
+.usage-chart{margin:0;padding:14px 14px 4px}
+.bars2{display:flex;align-items:flex-end;gap:3px;height:76px}
+.bar2{flex:1 1 0;min-width:3px;height:100%;display:flex;align-items:flex-end}
+.bar2 i{display:block;width:100%;background:var(--crim);border-radius:2px 2px 0 0;min-height:2px}
+.bar2 i.zero{background:var(--line2)}
+.usage-chart figcaption{display:flex;justify-content:space-between;gap:8px;font-size:10.5px;padding-top:6px}
+.usage-tables{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;padding:10px 14px 14px}
+.utbl{width:100%;border-collapse:collapse;font:500 11.5px var(--mono);font-variant-numeric:tabular-nums}
+.utbl th,.utbl td{padding:6px 8px 6px 0;text-align:right;border-top:1px solid var(--line);white-space:nowrap}
+.utbl thead th{border-top:0;color:var(--t3);font-weight:500;text-transform:uppercase;letter-spacing:.06em;font-size:10px}
+.utbl th:first-child,.utbl td:first-child{text-align:left}
+.utbl tbody th{position:relative;font-weight:500;color:var(--t1);max-width:150px;overflow:hidden;text-overflow:ellipsis}
+.utbl .ubar{position:absolute;left:0;bottom:2px;height:2px;background:var(--crim-line);border-radius:1px}
+.usage-sources{display:flex;flex-wrap:wrap;gap:6px;margin:0}
+
+/* Gedächtnis, Skills, Werkzeuge */
+.mem-body{margin-top:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.mem-bar{gap:8px;margin:0 0 10px;flex-wrap:wrap}
+.mem-chips{gap:6px;flex-wrap:wrap;margin:0 0 10px}
+.chip.on{border-color:var(--crim);color:var(--t1)}
+.mem-kpis{max-width:960px}
+.mem-list,.mem-plain,.mem-ents{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.mem-list{gap:8px}
+.mem-item{padding:10px 12px;border:1px solid var(--line);border-radius:4px;background:var(--s1);display:flex;flex-direction:column;gap:8px}
+.mem-text{margin:0;font:400 13px/20px var(--sans);white-space:pre-wrap;word-break:break-word}
+.mem-meta{gap:6px;flex-wrap:wrap;min-width:0}
+.mem-ask{display:flex;flex-direction:column;gap:8px;max-width:720px;align-items:flex-start}
+.mem-models{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.ent{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:7px 10px;border:0;border-bottom:1px solid var(--line);background:none;color:var(--t1);font:500 13px var(--sans);text-align:left}
+.ent:hover,.ent.on{background:var(--s1)}
+.ent.on{box-shadow:inset 2px 0 0 var(--crim)}
+.linkish{border:0;background:none;padding:0;color:var(--t1);font:inherit;text-decoration:underline;text-decoration-color:var(--line2);cursor:pointer}
+.linkish:hover{text-decoration-color:var(--crim)}
+.graph-wrap{overflow-x:auto}
+.graph{display:block;width:100%;min-width:640px;height:auto;max-height:68vh;background:var(--void);border:1px solid var(--line);border-radius:4px}
+.ge{stroke:var(--line2);stroke-width:1}
+.ge.hot{stroke:var(--crim-hi);stroke-width:1.6}
+.gn{cursor:pointer}
+.gn circle{stroke:var(--void);stroke-width:2;fill:var(--gc,oklch(70% .02 270))}
+.gn text{fill:var(--t2);font:500 11px var(--sans);paint-order:stroke;stroke:var(--void);stroke-width:3px}
+.gn:hover text,.gn.on text{fill:var(--t1)}
+.gn.on circle{stroke:var(--t1)}
+.gn:focus-visible circle{stroke:var(--crim-hi);stroke-width:3}
+.gk0 circle,.swatch.gk0{fill:oklch(72% .16 20);background:oklch(72% .16 20)}
+.gk1 circle,.swatch.gk1{fill:oklch(74% .12 235);background:oklch(74% .12 235)}
+.gk2 circle,.swatch.gk2{fill:oklch(78% .14 150);background:oklch(78% .14 150)}
+.gk3 circle,.swatch.gk3{fill:oklch(80% .14 85);background:oklch(80% .14 85)}
+.gk4 circle,.swatch.gk4{fill:oklch(72% .14 300);background:oklch(72% .14 300)}
+.gk5 circle,.swatch.gk5{fill:oklch(70% .02 270);background:oklch(70% .02 270)}
+.legend{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px 14px;font:500 11px var(--mono);color:var(--t2)}
+.legend li{display:flex;align-items:center;gap:6px}
+.swatch{display:inline-block;width:10px;height:10px;border-radius:50%}
+.cap-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.cap-card{padding:12px 14px;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.cap-card p{margin:0}
+.ge.dim{opacity:.12}
+.gn.dim{opacity:.22}
+.graph{touch-action:none;cursor:grab}
+.graph:active{cursor:grabbing}
+.graph-tools{align-items:center;gap:6px;margin:6px 0}
+.mem-chips .lbl{align-self:center;margin-right:2px}
+.mem-chips .chip .swatch{width:8px;height:8px;margin-right:2px}
+.mem-stats{display:flex;flex-direction:column;gap:16px}
+.mem-splits{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.splitbar{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--s2);gap:2px}
+.splitbar .seg{min-width:3px}
+.splitbar .seg.gk0{background:oklch(72% .16 20)}.splitbar .seg.gk1{background:oklch(74% .12 235)}.splitbar .seg.gk2{background:oklch(78% .14 150)}
+.splitbar .seg.gk3{background:oklch(80% .14 85)}.splitbar .seg.gk4{background:oklch(72% .14 300)}.splitbar .seg.gk5{background:oklch(70% .02 270)}
+.mem-split .legend{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:4px}
+.mem-split .legend li{display:flex;align-items:center;gap:8px;font-size:12.5px}
+.mem-open{display:block;width:100%;text-align:left;background:none;border:0;padding:0;color:inherit;cursor:pointer;font:inherit}
+.mem-open:hover .mem-text{color:var(--t1)}
+.mem-open:focus-visible{outline:2px solid var(--crim-hi);outline-offset:2px;border-radius:3px}
+.mem-item.on{box-shadow:inset 2px 0 0 var(--crim)}
+.tag-btn{cursor:pointer;border:0;font:inherit}
+.tag-btn:hover{color:var(--t1);background:var(--s3,var(--s2))}
+
+/* Graph als Landkarte: Gruppen in eigenen Farben, nur das Gerüst der Verbindungen */
+.gg0{--gc:oklch(72% .16 20)}.gg1{--gc:oklch(74% .12 235)}.gg2{--gc:oklch(78% .14 150)}.gg3{--gc:oklch(80% .14 85)}
+.gg4{--gc:oklch(72% .14 300)}.gg5{--gc:oklch(78% .11 195)}.gg6{--gc:oklch(76% .14 55)}.gg7{--gc:oklch(74% .14 345)}.gg-none{--gc:oklch(62% .02 270)}
+i.swatch.gg0,i.swatch.gg1,i.swatch.gg2,i.swatch.gg3,i.swatch.gg4,i.swatch.gg5,i.swatch.gg6,i.swatch.gg7,i.swatch.gg-none{background:var(--gc)}
+.gb .bubble{fill:var(--gc);fill-opacity:.07;stroke:var(--gc);stroke-opacity:.35;stroke-width:1;vector-effect:non-scaling-stroke;cursor:pointer}
+.gb .bubble:hover{fill-opacity:.12}
+.gb .gt{fill:var(--gc);font-family:var(--sans);font-weight:600;paint-order:stroke;stroke:var(--void);pointer-events:none}
+.gb.dim{opacity:.25}
+.gn text{font-family:var(--sans);font-weight:500;paint-order:stroke;stroke:var(--void);pointer-events:none}
+.ge.bb{stroke:var(--gc,var(--line2));stroke-opacity:.5}
+.ge.bridge{stroke:var(--t3);stroke-opacity:.5;stroke-dasharray:5 4}
+.ge.bb.hot,.ge.hot{stroke:var(--crim-hi);stroke-opacity:1;stroke-width:1.6}
+.graph-groups li{margin:2px 0}
+.graph-groups .linkish{display:flex;align-items:center;gap:6px;text-align:left;width:100%}
+.graph-groups .linkish .muted{margin-left:auto;white-space:nowrap}
+.graph-groups .linkish.on{color:var(--t1);font-weight:600}

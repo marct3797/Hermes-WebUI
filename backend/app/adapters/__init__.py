@@ -38,6 +38,7 @@ class RunInput:
     session_id: str | None = None
     model: str | None = None
     images: tuple[str, ...] = ()  # Data-URLs, vom BFF bereits geprüft
+    idempotency_key: str | None = None  # gleicher Schlüssel = derselbe Run, auch bei doppeltem Absenden
 
 
 @dataclass(frozen=True)
@@ -92,11 +93,26 @@ class RuntimeAdapter:
     async def models(self, agent: str) -> Any:
         raise Unsupported("Modellliste")
 
-    async def sessions(self, agent: str, *, limit: int, offset: int, source: str | None) -> Any:
+    async def sessions(self, agent: str, *, limit: int, offset: int, source: str | None, include_children: bool = False) -> Any:
         raise Unsupported("Sessions")
 
-    async def session_messages(self, agent: str, session_id: str) -> Any:
+    async def session_messages(self, agent: str, session_id: str, *, limit: int | None = None, offset: int | None = None) -> Any:
         raise Unsupported("Session-Verlauf")
+
+    async def fork_session(self, agent: str, session_id: str) -> Any:
+        raise Unsupported("Session abzweigen")
+
+    async def skills(self, agent: str) -> Any:
+        raise Unsupported("Skills")
+
+    async def toolsets(self, agent: str) -> Any:
+        raise Unsupported("Toolsets")
+
+    async def rename_session(self, agent: str, session_id: str, title: str) -> Any:
+        raise Unsupported("Session umbenennen")
+
+    async def delete_session(self, agent: str, session_id: str) -> None:
+        raise Unsupported("Session löschen")
 
     async def start_run(self, agent: str, req: RunInput) -> RunInfo:
         raise Unsupported("Runs")

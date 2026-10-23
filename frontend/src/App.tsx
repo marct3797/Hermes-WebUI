@@ -2,13 +2,19 @@ import { useEffect, useMemo, useState } from "react";
 import { ApiError, api, page as browser } from "./api";
 import { Shell } from "./components/Shell";
 import { HostsProvider } from "./hosts";
+import { RoomNeedsProvider } from "./roomNeeds";
 import { RunsProvider } from "./runs";
 import { UiProvider } from "./ui";
 import { AgentPage } from "./pages/AgentPage";
 import { HostsPage } from "./pages/HostsPage";
 import { CockpitPage } from "./pages/CockpitPage";
 import { InboxPage } from "./pages/InboxPage";
+import { MemoryPage } from "./pages/MemoryPage";
+import { ProvidersHubPage } from "./pages/ProvidersHubPage";
+import { RoomPage } from "./pages/RoomPage";
+import { RoomsPage } from "./pages/RoomsPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { SystemPage } from "./pages/SystemPage";
 import { NotFoundPage } from "./pages/Placeholders";
 import { navigate, parsePath, usePath } from "./router";
 import type { Me } from "./types";
@@ -46,6 +52,7 @@ export function App() {
     <UiProvider>
     <HostsProvider>
     <RunsProvider>
+    <RoomNeedsProvider>
       <Shell me={me} path={path} page={page} onLogout={logout}>
         {(() => {
           switch (page.name) {
@@ -53,12 +60,18 @@ export function App() {
             case "inbox": return <InboxPage />;
             case "hosts": return <HostsPage />;
             case "settings": return <SettingsPage />;
+            case "system": return <SystemPage />;
+            case "memory": return <MemoryPage />;
+            case "providers": return <ProvidersHubPage />;
+            case "rooms": return <RoomsPage />;
+            case "room": return <RoomPage key={page.id} roomId={page.id} />;
             case "agent": return <AgentPage page={page} />;
             case "redirect": return null;
             case "notfound": return <NotFoundPage />;
           }
         })()}
       </Shell>
+    </RoomNeedsProvider>
     </RunsProvider>
     </HostsProvider>
     </UiProvider>

@@ -4,18 +4,22 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import httpx
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, RedirectResponse, Response
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .audit import AuditLog
 from .auth import SessionStore, assert_auth_configured
 from .config import Settings, get_settings
+from .dashboard import SoulHistory
 from .hosts import HostService
 from .oidc import OidcClient
 from .registry import AGENT_RE, Registry
-from .routes import agents, auth, hosts, ui as ui_routes
+from .memory import MemoryRegistry
+from .rooms import RoomService
+from .routes import agents, auth, dashboard as dashboard_routes, hosts, memory as memory_routes, rooms as rooms_routes, ui as ui_routes
 from .security import RateLimiter, SecurityMiddleware
 from .ui import UiConfig
 
@@ -53,9 +57,11 @@ def create_app(
             app.state.registry, app.state.http,
             health_ttl=settings.health_ttl_s, health_timeout=settings.health_timeout_s,
         )
+        app.state.rooms = RoomService(settings.rooms_db, app.state.hosts.target)
         oidc_http = httpx.AsyncClient(timeout=10.0, transport=oidc_transport, follow_redirects=False)
         app.state.oidc = OidcClient(settings, oidc_http)
         yield
+        await app.state.rooms.shutdown()
         await app.state.http.aclose()
         await oidc_http.aclose()
 
@@ -65,19 +71,32 @@ def create_app(
         openapi_url=None if settings.env == "prod" else "/bff/openapi.json",
     )
     app.state.settings = settings
+
+    @app.exception_handler(RequestValidationError)
+    async def invalid_input(_request: Request, exc: RequestValidationError):
+        # FastAPIs Standardantwort wiederholt die abgelehnte Eingabe ("input"). Bei einem Key wäre das ein Klartext-Geheimnis in der Antwort.
+        errors = [{k: v for k, v in e.items() if k not in ("input", "ctx", "url")} for e in exc.errors()]
+        return JSONResponse({"detail": errors}, status_code=422)
+
     app.state.registry = Registry(settings.hosts_file)
     app.state.ui = UiConfig(settings.ui_file)
+    app.state.memory = MemoryRegistry(settings.memory_file)
     app.state.limiter = RateLimiter(settings.runs_per_minute)
     app.state.login_limiter = RateLimiter(settings.logins_per_minute)
     app.state.sessions = SessionStore(settings.session_idle_s, settings.session_max_s)
     app.state.pending_logins = {}
     app.state.audit = AuditLog(settings.audit_file)
+    app.state.souls = SoulHistory(settings.soul_dir)
 
     app.add_middleware(SecurityMiddleware, settings=settings)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.host_list())
     app.include_router(auth.router)
     app.include_router(hosts.router)
     app.include_router(agents.router)
+    app.include_router(dashboard_routes.router)
+    app.include_router(dashboard_routes.host_router)
+    app.include_router(memory_routes.router)
+    app.include_router(rooms_routes.router)
     app.include_router(ui_routes.router)
 
     @app.get("/sw.js", include_in_schema=False)

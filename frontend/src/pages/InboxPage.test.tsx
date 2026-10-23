@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { resetRedirect } from "../api";
-import { FakeEventSource, emit, installBackend } from "../test-backend";
+import { FakeEventSource, emit, installBackend, roomOf } from "../test-backend";
 
 let posted: ReturnType<typeof installBackend>["posted"];
 
@@ -31,6 +31,43 @@ async function twoApprovals() {
 }
 
 describe("Inbox", () => {
+  it("lists rooms that call for the person, and counts them in the badges and the tab title", async () => {
+    const { rooms } = installBackend(["raiden"]);
+    rooms.push(roomOf("abcabcabcabc", "Planungsrunde", ["raiden", "sora"], { needs_user: true }), roomOf("defdefdefdef", "Ruhiger Raum", ["raiden"]));
+    history.pushState(null, "", "/inbox");
+    render(<App />);
+    const group = await screen.findByRole("group", { name: "Räume" });
+    expect(within(group).getByRole("link", { name: /Planungsrunde/ })).toHaveAttribute("href", "/rooms/abcabcabcabc");
+    expect(within(group).queryByText("Ruhiger Raum")).not.toBeInTheDocument();
+    expect(screen.getByText("1 offen · 0 laufen ab")).toBeInTheDocument();
+    const nav = within(screen.getByRole("complementary", { name: "Navigation" }));
+    expect(nav.getByRole("link", { name: /^Räume/ })).toHaveTextContent("1");
+    expect(nav.getByRole("link", { name: /^Inbox/ })).toHaveTextContent("1");
+    await waitFor(() => expect(document.title).toBe("(1) Hermes")); // der Titel wird in einem Effekt gesetzt, kurz nach dem Zähler
+    expect(screen.queryByText("Nichts offen.")).not.toBeInTheDocument();
+  });
+
+  it("shows what agents wait for in a room, with a link to the room, and answers it in place", async () => {
+    const { rooms, calls } = installBackend(["raiden", "sora"]);
+    rooms.push(roomOf("abcabcabcabc", "Planungsrunde", ["raiden", "sora"], { asks: [
+      { kind: "approval", member: "hikari/hermes/sora", run_id: "run_9", command: "rm -r build", reason: "räumt auf", choices: ["once", "deny"], at: 1 },
+      { kind: "clarify", member: "hikari/hermes/raiden", run_id: "run_4", clarify_id: "c1", question: "Welche Datei?", choices: [], at: 2 },
+    ] }));
+    history.pushState(null, "", "/inbox");
+    render(<App />);
+    const group = await screen.findByRole("group", { name: "Räume" });
+    const approval = await within(group).findByRole("group", { name: "sora braucht dich" });
+    expect(within(approval).getByText("rm -r build")).toBeInTheDocument();
+    expect(within(approval).getByRole("link", { name: "Planungsrunde" })).toHaveAttribute("href", "/rooms/abcabcabcabc");
+    expect(within(group).getByText("Welche Datei?")).toBeInTheDocument();
+    expect(screen.getByText("2 offen · 0 laufen ab")).toBeInTheDocument();
+    fireEvent.click(within(approval).getByRole("button", { name: "Ablehnen" }));
+    await waitFor(() => expect(calls.find((c) => c.url === "/bff/h/hikari/hermes/sora/runs/run_9/approval")?.body).toEqual({ decision: "deny" }));
+    fireEvent.change(within(group).getByLabelText("Antwort"), { target: { value: "die erste" } });
+    fireEvent.click(within(group).getByRole("button", { name: "Senden" }));
+    await waitFor(() => expect(calls.find((c) => c.url === "/bff/h/hikari/hermes/raiden/runs/run_4/clarify")?.body).toEqual({ answer: "die erste", clarify_id: "c1" }));
+  });
+
   it("says so when nothing is open", async () => {
     history.pushState(null, "", "/inbox");
     render(<App />);

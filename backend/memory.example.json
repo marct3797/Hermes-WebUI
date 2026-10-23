@@ -1,0 +1,12 @@
+{
+  "providers": [
+    {
+      "id": "hindsight",
+      "type": "hindsight",
+      "label": "Hindsight",
+      "base_url": "http://100.100.1.2:8888",
+      "bank": "hermes",
+      "api_key_env": "HINDSIGHT_API_KEY"
+    }
+  ]
+}

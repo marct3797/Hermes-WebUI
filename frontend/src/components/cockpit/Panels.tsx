@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { itemIdOf, secondsLeft, type LiveRun, type Need } from "../../attention";
 import { fmtClock, fmtCount, fmtTime } from "../../format";
+import { api } from "../../api";
 import { agentPath } from "../../router";
+import { useRoomNeeds, type RoomNeed } from "../../roomNeeds";
 import { useRunStore } from "../../runs";
 import type { LogEntry } from "../../runStore";
 import type { HostInfo, SigilConfig } from "../../types";
@@ -13,15 +16,16 @@ import { StatusDot } from "../Status";
 type Sigils = Record<string, SigilConfig>;
 
 /** Rechte Spalte: was die Person jetzt entscheiden muss. Freigaben lassen sich direkt beantworten. */
-export function NeedsPanel({ needs, log, sigils, now }: { needs: Need[]; log: readonly LogEntry[]; sigils: Sigils; now: number }) {
+export function NeedsPanel({ needs, roomNeeds = [], log, sigils, now }: { needs: Need[]; roomNeeds?: RoomNeed[]; log: readonly LogEntry[]; sigils: Sigils; now: number }) {
   const store = useRunStore();
+  const total = needs.length + roomNeeds.length;
   const recent = log[0] && now - log[0].at < 8000 ? log[0] : undefined;
   return (
-    <section className={`card needs-panel${needs.length ? " need" : (recent ? "" : " none")}`} aria-label="Braucht dich">
+    <section className={`card needs-panel${total ? " need" : (recent ? "" : " none")}`} aria-label="Braucht dich">
       <header className="card-h">
-        <Icon name="bell" size={16} className={needs.length ? "crimt" : "t2"} />
+        <Icon name="bell" size={16} className={total ? "crimt" : "t2"} />
         <h2>Braucht dich</h2>
-        {needs.length > 0 && <span className="ct">{needs.length}</span>}
+        {total > 0 && <span className="ct">{total}</span>}
         <Link to="/inbox" className="mono t3" style={{ marginLeft: "auto", fontSize: 11 }}>alle öffnen →</Link>
       </header>
       {recent && (
@@ -33,7 +37,7 @@ export function NeedsPanel({ needs, log, sigils, now }: { needs: Need[]; log: re
           </div>
         </div>
       )}
-      {needs.length === 0 && !recent && <p className="panel-empty">Nichts offen. Freigaben und Rückfragen laufender Runs erscheinen hier.</p>}
+      {total === 0 && !recent && <p className="panel-empty">Nichts offen. Freigaben und Rückfragen laufender Runs und Räume erscheinen hier.</p>}
       {needs.slice(0, 5).map((n) => {
         const sig = <Sigil name={n.agent.agent} config={sigilFor(sigils, n.agent)} size="s" state={n.kind === "failed" || n.kind === "lost" ? "err" : "wait"} />;
         if (n.kind === "approval") {
@@ -76,8 +80,57 @@ export function NeedsPanel({ needs, log, sigils, now }: { needs: Need[]; log: re
           </div>
         );
       })}
+      {roomNeeds.slice(0, 3).map((n) => <RoomNeedRow key={n.id} need={n} sigils={sigils} />)}
       {needs.length > 5 && <Link to="/inbox" className="qrow mono t3" style={{ fontSize: 11 }}>{needs.length - 5} weitere in der Inbox →</Link>}
+      {roomNeeds.length > 3 && <Link to="/inbox" className="qrow mono t3" style={{ fontSize: 11 }}>{roomNeeds.length - 3} weitere aus Räumen in der Inbox →</Link>}
     </section>
+  );
+}
+
+/** Eine Freigabe, Rückfrage oder ein Ruf aus einem Raum. Freigaben lassen sich hier direkt beantworten, alles andere im Raum oder in der Inbox. */
+function RoomNeedRow({ need, sigils }: { need: RoomNeed; sigils: Sigils }) {
+  const { refresh } = useRoomNeeds();
+  const [busy, setBusy] = useState(false);
+  const { ask, member, room } = need;
+  const decide = async (choice: "once" | "deny") => {
+    if (!ask || ask.kind !== "approval" || !member) return;
+    setBusy(true);
+    try { await api.approve(member, ask.runId, choice); refresh(); setTimeout(refresh, 2000); } catch { /* der Raum zeigt den Fehler */ } finally { setBusy(false); }
+  };
+  const sig = member ? <Sigil name={member.label} config={sigilFor(sigils, member)} size="s" state="wait" /> : <Icon name="orbit" size={16} className="t2" />;
+  if (ask?.kind === "approval" && member) {
+    return (
+      <div className="qrow" style={{ alignItems: "flex-start" }}>
+        {sig}
+        <div className="col grow" style={{ gap: 8, minWidth: 0 }}>
+          <div className="col" style={{ gap: 2 }}>
+            <span className="tt">{member.label} fragt nach Freigabe</span>
+            <span className="ss trunc">{ask.command} · Raum {room.name}</span>
+          </div>
+          <div className="row" style={{ gap: 8 }}>
+            {ask.choices.includes("once") && <button type="button" className="btn btn-p btn-s" disabled={busy} onClick={() => void decide("once")}><Icon name="check" size={12} />Einmal erlauben</button>}
+            {ask.choices.includes("deny") && <button type="button" className="btn btn-s" disabled={busy} onClick={() => void decide("deny")}>Ablehnen</button>}
+            <Link to={`/rooms/${room.id}`} className="btn btn-s btn-g">Raum öffnen</Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (ask) {
+    return (
+      <div className="qrow">
+        {sig}
+        <div className="col grow"><span className="tt">Rückfrage von {member?.label ?? "einem Mitglied"}</span><span className="ss trunc">{ask.kind === "clarify" ? ask.question : ""} · Raum {room.name}</span></div>
+        <Link to="/inbox" className="btn btn-s">Antworten</Link>
+      </div>
+    );
+  }
+  return (
+    <div className="qrow">
+      {sig}
+      <div className="col grow"><span className="tt">Raum {room.name} ruft dich</span><span className="ss trunc">Ein Agent hat dich mit @user gerufen.</span></div>
+      <Link to={`/rooms/${room.id}`} className="btn btn-s">Öffnen</Link>
+    </div>
   );
 }
 

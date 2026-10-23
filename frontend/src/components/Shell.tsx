@@ -3,6 +3,7 @@ import { useAgentRef, useResolvedAgent } from "../hosts";
 import { ShellContext, useSessions } from "../shell";
 import type { Me } from "../types";
 import { sameAgent, type Page } from "../router";
+import { useRoomNeeds } from "../roomNeeds";
 import { useActivity, useRunStore } from "../runs";
 import { BgFx } from "./BgFx";
 import { BottomNav } from "./BottomNav";
@@ -19,6 +20,11 @@ function crumbs(page: Page): string[] {
     case "inbox": return ["inbox"];
     case "hosts": return ["hosts"];
     case "settings": return ["darstellung"];
+    case "system": return ["system"];
+    case "memory": return ["gedächtnis"];
+    case "providers": return ["anbieter"];
+    case "rooms": return ["räume"];
+    case "room": return ["räume", page.id];
     case "agent": return [page.ref.host, page.ref.runtime, page.ref.agent, page.sessionId ? `${page.module}/${page.sessionId}` : page.module];
     default: return [];
   }
@@ -29,13 +35,15 @@ export function Shell({ me, path, page, onLogout, children }: Props) {
   const active = useAgentRef(page.name === "agent" ? page.ref : undefined);
   // Sessions nur von erreichbaren Runtimes holen: Offline-Hosts würden sonst bei jedem Öffnen Fehler melden.
   const resolved = useResolvedAgent(active);
-  const { sessions, loading, refresh } = useSessions(resolved?.runtimeOnline ? active : undefined);
+  const { sessions, loading, loadingMore, hasMore, refresh, loadMore, rename, remove } = useSessions(resolved?.runtimeOnline ? active : undefined);
   // Ein Run des geöffneten Agents ist zu Ende: neue Session und neuer Titel erscheinen in der Liste.
   const store = useRunStore();
   useEffect(() => store.onRunEnd((a) => { if (sameAgent(a, active)) refresh(); }), [store, active, refresh]);
   // Der Tab zeigt, dass etwas auf die Person wartet.
   const { needs } = useActivity();
-  useEffect(() => { document.title = needs.length ? `(${needs.length}) Hermes` : "Hermes"; }, [needs.length]);
+  const { needs: roomNeeds } = useRoomNeeds();
+  const open = needs.length + roomNeeds.length;
+  useEffect(() => { document.title = open ? `(${open}) Hermes` : "Hermes"; }, [open]);
   const trail = crumbs(page);
   const sessionId = page.name === "agent" ? page.sessionId : undefined;
   const sidebar = (
@@ -44,7 +52,10 @@ export function Shell({ me, path, page, onLogout, children }: Props) {
       sessions={sessions} sessionsLoading={loading} open={menu} onClose={() => setMenu(false)} onLogout={onLogout}
     />
   );
-  const value = { openMenu: () => setMenu(true), sessions, sessionsLoading: loading, refreshSessions: refresh };
+  const value = {
+    openMenu: () => setMenu(true), sessions, sessionsLoading: loading, refreshSessions: refresh,
+    hasMoreSessions: hasMore, loadingMoreSessions: loadingMore, loadMoreSessions: loadMore, renameSession: rename, deleteSession: remove,
+  };
 
   // Chat: schmale Leiste, Session-Spalte, Verlauf und Inspector füllen die Höhe. Auf schmalen Schirmen ersetzt die Schublade Leiste und Spalte.
   if (page.name === "agent" && page.module === "chat" && active && resolved) {

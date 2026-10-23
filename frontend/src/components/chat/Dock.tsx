@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { fileToDataUrl } from "../../images";
+import type { ModelGroup } from "../../models";
 import type { Queued, SendMode } from "../../types";
 import { Icon } from "../Icon";
 
@@ -7,7 +8,7 @@ type Props = {
   busy: boolean;
   disabled: boolean;
   name: string;
-  models: string[];
+  models: ModelGroup[];
   model?: string;
   /** Modell, das der Agent ohne Auswahl nutzt (nur für die Beschriftung der Standardwahl). */
   defaultModel?: string;
@@ -101,11 +102,15 @@ export function Dock(p: Props) {
               <button type="button" className={mode === "queue" ? "on" : ""} aria-pressed={mode === "queue"} onClick={() => setChosen("queue")}>Queue</button>
             </span>
           )}
-          {p.models.length > 0 && (
+          {p.models.some((g) => g.models.length > 0) && (
             <span className="tag tag-m tag-act model-sel">
               <select value={p.model ?? ""} onChange={(e) => p.onModel(e.target.value || undefined)} aria-label="Modell">
                 <option value="">{p.defaultModel ? `Standard · ${p.defaultModel}` : "Standardmodell"}</option>
-                {p.models.map((m) => <option key={m} value={m}>{m}</option>)}
+                {p.models.length === 1
+                  ? p.models[0].models.map((m) => <option key={m} value={m}>{m}</option>)
+                  : p.models.map((g) => (
+                    <optgroup key={g.provider} label={g.label}>{g.models.map((m) => <option key={`${g.provider}/${m}`} value={m}>{m}</option>)}</optgroup>
+                  ))}
               </select>
               <Icon name="chevd" size={12} />
             </span>

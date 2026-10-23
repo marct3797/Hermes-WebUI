@@ -9,6 +9,8 @@ describe("router", () => {
     expect(parsePath("/settings")).toEqual({ name: "settings" });
     expect(parsePath("/hosts/extra")).toEqual({ name: "notfound" });
     expect(parsePath("/settings/x")).toEqual({ name: "notfound" });
+    expect(parsePath("/providers")).toEqual({ name: "providers" });
+    expect(parsePath("/providers/x")).toEqual({ name: "notfound" });
   });
 
   it("parses /h/<host>/<runtime>/<agent>/<modul>/<id>", () => {

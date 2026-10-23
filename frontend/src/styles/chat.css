@@ -224,3 +224,18 @@
   .umsg{max-width:92%}
 }
 @media (prefers-reduced-motion:reduce){.caret-only::after,.md.caret>:last-child::after,.caret::after{animation:none}}
+
+/* Session-Aktionen: umbenennen, abzweigen, löschen; ältere nachladen */
+.srow-wrap{position:relative}
+.srow-act{position:absolute;right:6px;top:8px;opacity:.55}
+.srow-wrap:hover .srow-act,.srow-act:focus-visible,.srow-act[aria-expanded=true]{opacity:1}
+.srow-wrap .srow{padding-right:40px}
+.srow-menu{position:absolute;z-index:5;right:6px;top:36px;min-width:210px;background:var(--s2);border:1px solid var(--line);border-radius:4px;padding:4px;display:flex;flex-direction:column;gap:2px;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+.srow-menu>button{display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;background:none;border:0;border-radius:3px;color:var(--t1);font:500 12.5px var(--sans);text-align:left;cursor:pointer}
+.srow-menu>button:hover:not(:disabled){background:var(--s3)}
+.srow-menu .danger{color:var(--crim-hi)}
+.srow-confirm{padding:8px;display:flex;flex-direction:column;gap:8px}
+.btn-danger{background:var(--crim);border-color:var(--crim);color:#fff}
+.srow-edit{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px}
+.srow-edit input{flex:1 1 100%;min-height:36px;padding:0 10px;background:var(--void);border:1px solid var(--line);border-radius:4px;color:var(--t1);font:500 13px var(--sans)}
+.sess-more{margin:8px 14px}

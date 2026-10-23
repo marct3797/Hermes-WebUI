@@ -52,13 +52,25 @@ class HermesAdapter(RuntimeAdapter):
             h["Authorization"] = f"Bearer {key}"
         return h
 
-    async def _request(self, method: str, agent: str, path: str, **kw: Any) -> Any:
+    def _where(self) -> str:
+        """`host:port` der Runtime für Fehlermeldungen (steht ohnehin in der Config, enthält keinen Key)."""
+        u = httpx.URL(self.cfg.base_url)
+        return f"{u.host}:{u.port or (443 if u.scheme == 'https' else 80)}"
+
+    def _down(self, e: httpx.HTTPError) -> UpstreamError:
+        """Verbindungsfehler mit Adresse und Grund, damit ein Host im Tailnet sich ohne Log-Suche prüfen lässt."""
+        where = self._where()
+        if isinstance(e, httpx.TimeoutException):
+            return UpstreamError(504, f"Hermes antwortet nicht rechtzeitig ({where})")
+        if isinstance(e, httpx.ConnectError):
+            return UpstreamError(502, f"Hermes nicht erreichbar: keine Verbindung zu {where}. Läuft der API-Server dort und lauscht auf dieser Adresse?")
+        return UpstreamError(502, f"Hermes nicht erreichbar ({where})")
+
+    async def _request(self, method: str, agent: str, path: str, *, extra_headers: dict[str, str] | None = None, **kw: Any) -> Any:
         try:
-            r = await self._http.request(method, self._url(agent, path), headers=self._headers(agent), **kw)
-        except httpx.TimeoutException as e:
-            raise UpstreamError(504, "Hermes antwortet nicht rechtzeitig") from e
+            r = await self._http.request(method, self._url(agent, path), headers={**self._headers(agent), **(extra_headers or {})}, **kw)
         except httpx.HTTPError as e:
-            raise UpstreamError(502, "Hermes nicht erreichbar") from e
+            raise self._down(e) from e
         if r.status_code >= 400:
             raise UpstreamError(r.status_code, _short_detail(r))
         return r.json() if r.content else {}
@@ -72,8 +84,10 @@ class HermesAdapter(RuntimeAdapter):
                 timeout=self._health_timeout,
             )
             body = r.json() if r.status_code == 200 else {}
-        except (httpx.HTTPError, ValueError):
-            return Health("unreachable", detail="Hermes nicht erreichbar")
+        except httpx.HTTPError as e:
+            return Health("unreachable", detail=self._down(e).detail)
+        except ValueError:
+            return Health("unreachable", detail=f"Unerwartete Antwort von {self._where()}")
         if r.status_code != 200 or not isinstance(body, dict):
             return Health("unreachable", detail=f"Unerwartete Antwort ({r.status_code})")
         version = body.get("version")
@@ -99,14 +113,37 @@ class HermesAdapter(RuntimeAdapter):
     async def models(self, agent: str) -> Any:
         return await self._request("GET", agent, "/api/model/options")
 
-    async def sessions(self, agent: str, *, limit: int, offset: int, source: str | None) -> Any:
+    async def skills(self, agent: str) -> Any:
+        return await self._request("GET", agent, "/v1/skills")
+
+    async def toolsets(self, agent: str) -> Any:
+        return await self._request("GET", agent, "/v1/toolsets")
+
+    async def sessions(self, agent: str, *, limit: int, offset: int, source: str | None, include_children: bool = False) -> Any:
         params: dict[str, Any] = {"limit": limit, "offset": offset}
         if source:
             params["source"] = source
+        if include_children:
+            params["include_children"] = "true"
         return await self._request("GET", agent, "/api/sessions", params=params)
 
-    async def session_messages(self, agent: str, session_id: str) -> Any:
-        return await self._request("GET", agent, f"/api/sessions/{session_id}/messages")
+    async def session_messages(self, agent: str, session_id: str, *, limit: int | None = None, offset: int | None = None) -> Any:
+        params = {k: v for k, v in (("limit", limit), ("offset", offset)) if v is not None}
+        return await self._request("GET", agent, f"/api/sessions/{session_id}/messages", params=params or None)
+
+    async def rename_session(self, agent: str, session_id: str, title: str) -> Any:
+        return await self._request("PATCH", agent, f"/api/sessions/{session_id}", json={"title": title})
+
+    async def delete_session(self, agent: str, session_id: str) -> None:
+        await self._request("DELETE", agent, f"/api/sessions/{session_id}")
+
+    async def fork_session(self, agent: str, session_id: str) -> Any:
+        """Zweig einer Session: Hermes legt eine Kopie an, in der man weiterschreiben kann (auch bei gesperrter Quelle)."""
+        data = await self._request("POST", agent, f"/api/sessions/{session_id}/fork", json={})
+        new_id = fork_session_id(data)
+        if not new_id:
+            raise UpstreamError(502, "Hermes lieferte keine Session-ID für den Zweig")
+        return {"session_id": new_id}
 
     async def run_status(self, agent: str, run_id: str) -> Any:
         return await self._request("GET", agent, f"/v1/runs/{run_id}")
@@ -124,7 +161,9 @@ class HermesAdapter(RuntimeAdapter):
             body["session_id"] = req.session_id
         if req.model:
             body["model"] = req.model
-        data = await self._request("POST", agent, "/v1/runs", json=body)
+        # Mit gleichem Schlüssel liefert Hermes denselben Run zurück (`replayed`), statt ihn zweimal zu starten.
+        headers = {"Idempotency-Key": req.idempotency_key} if req.idempotency_key else None
+        data = await self._request("POST", agent, "/v1/runs", json=body, extra_headers=headers)
         run_id = data.get("run_id") if isinstance(data, dict) else None
         if not run_id:
             raise UpstreamError(502, "Hermes lieferte keine run_id")
@@ -145,12 +184,26 @@ class HermesAdapter(RuntimeAdapter):
 
     async def approve(self, agent: str, run_id: str, decision: str) -> None:
         # Hermes erwartet `choice`; die erlaubten Werte stehen im Event unter `choices`.
-        await self._request("POST", agent, f"/v1/runs/{run_id}/approval", json={"choice": decision})
+        body = {"choice": decision, **await self._control_ids(agent, run_id, "approval")}
+        await self._request("POST", agent, f"/v1/runs/{run_id}/approval", json=body)
 
     async def clarify(self, agent: str, run_id: str, answer: str, clarify_id: str | None) -> None:
         # Laut Doku-Zusammenfassung vorhanden, im Quelltext nicht belegt: Phase 1 prüft Route und Body.
-        body = {"answer": answer, **({"clarify_id": clarify_id} if clarify_id else {})}
+        body = {"answer": answer, **await self._control_ids(agent, run_id, "clarify", clarify_id)}
         await self._request("POST", agent, f"/v1/runs/{run_id}/clarify", json=body)
+
+    async def _control_ids(self, agent: str, run_id: str, kind: str, known_id: str | None = None) -> dict[str, Any]:
+        """Kennung der offenen Anfrage für Freigabe und Rückfrage.
+
+        Im kanonischen Modus verlangt Hermes `request_id` und `execution_generation` (veraltete Werte gibt es als 409); beide
+        stehen unter `pending_controls` im Lauf-Status. Ohne diese Liste (ältere Version, Status nicht lesbar) geht die
+        Antwort ohne Kennung hinaus, wie bisher.
+        """
+        try:
+            status = await self._request("GET", agent, f"/v1/runs/{run_id}")
+        except UpstreamError:
+            return {"request_id": known_id} if known_id else {}
+        return control_ids(status, kind, known_id)
 
     async def steer(self, agent: str, run_id: str, text: str) -> None:
         await self._request("POST", agent, f"/v1/runs/{run_id}/steer", json={"input": text})
@@ -180,18 +233,73 @@ class HermesAdapter(RuntimeAdapter):
             raise UpstreamError(502, "Verbindung zu Hermes abgebrochen") from e
 
 
-def features_from_capabilities(caps: Any) -> frozenset[str]:
-    """Basis-Fähigkeiten minus ausdrücklich abgeschaltete plus ausdrücklich eingeschaltete Flags.
+# Hermes-Flag (`/v1/capabilities` -> `features`) -> Fähigkeit der WebUI. Fehlt ein Flag, gilt die Basis.
+FLAG_FEATURES = {
+    "run_submission": "runs", "run_events_sse": "stream", "run_stop": "stop", "run_approval_response": "approval",
+    "run_steer": "steer", "session_resources": "sessions", "model_options": "models", "session_fork": "fork",
+    "session_model_lock": "model_lock", "reasoning_streaming": "reasoning", "skills_api": "skills",
+    "tool_progress_events": "tool_events", "admin_config_rw": "config_write", "jobs_admin": "jobs",
+    "memory_write_api": "memory_write",
+}
 
-    Die genaue Form von `/v1/capabilities` ist noch nicht gegen eine laufende Instanz geprüft.
-    Erwartet wird ein Dict von Flags, optional unter `features`.
+
+def features_from_capabilities(caps: Any) -> frozenset[str]:
+    """Fähigkeiten eines Agents aus `/v1/capabilities` (Hermes 0.21.6: `features` mit Flags, `endpoints` mit Routen).
+
+    Bekannte Flags werden auf unsere Namen abgebildet (`run_steer` -> `steer`), ausdrücklich abgeschaltete fallen aus
+    der Basis. Unbekannte Flags, die an sind, bleiben unter ihrem Hermes-Namen erhalten. `runs_idempotency` ist ein
+    Objekt (`supported`), keine Zahl.
     """
     flags = caps.get("features", caps) if isinstance(caps, dict) else {}
     if not isinstance(flags, dict):
         flags = {}
-    on = {k for k, v in flags.items() if v is True}
-    off = {k for k, v in flags.items() if v is False}
-    return frozenset((BASE_FEATURES - off) | on)
+    features = set(BASE_FEATURES)
+    for key, value in flags.items():
+        name = FLAG_FEATURES.get(key)
+        if isinstance(value, dict) and key == "runs_idempotency":
+            if value.get("supported") is True:
+                features.add("idempotency")
+        elif value is True:
+            features.add(key)
+            if name:
+                features.add(name)
+        elif value is False:
+            features.discard(key)
+            if name:
+                features.discard(name)
+    # Alte Form: Flag trug direkt den Namen der Fähigkeit (`steer: false`).
+    return frozenset(features)
+
+
+def control_ids(status: Any, kind: str, known_id: str | None = None) -> dict[str, Any]:
+    """`request_id`/`execution_generation` der offenen Anfrage aus dem Lauf-Status; leer, wenn Hermes keine nennt."""
+    if not isinstance(status, dict):
+        return {"request_id": known_id} if known_id else {}
+    pending = status.get("pending_controls")
+    items = list(pending.values()) if isinstance(pending, dict) else pending if isinstance(pending, list) else []
+    items = [i for i in items if isinstance(i, dict)]
+    chosen = next((i for i in items if kind in str(i.get("kind") or i.get("type") or "").lower()), items[0] if items else None)
+    out: dict[str, Any] = {}
+    request_id = known_id or (chosen and (chosen.get("request_id") or chosen.get("prompt_id") or chosen.get("id")))
+    if request_id:
+        out["request_id"] = str(request_id)
+    generation = (chosen or {}).get("execution_generation", status.get("execution_generation"))
+    if generation is not None:
+        out["execution_generation"] = generation
+    return out
+
+
+def fork_session_id(data: Any) -> str | None:
+    """Neue Session-ID aus der Fork-Antwort, egal ob flach oder als Objekt verpackt."""
+    if not isinstance(data, dict):
+        return None
+    for node in (data, data.get("session"), data.get("data")):
+        if isinstance(node, dict):
+            for key in ("session_id", "id"):
+                v = node.get(key)
+                if isinstance(v, str) and v:
+                    return v
+    return None
 
 
 def _short_detail(r: httpx.Response) -> str:

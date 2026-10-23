@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+import time
 from collections.abc import AsyncIterator
 from typing import Annotated, Any, Literal
 
@@ -13,6 +14,8 @@ from pydantic import BaseModel, Field
 
 from ..adapters import RunInput, UpstreamError
 from ..auth import User, current_user, fresh_user
+from ..dashboard import DashboardClient
+from ..diagnose import inspect, run_test, summarize
 from ..events import TERMINAL_TYPES, Event
 from ..hosts import Target
 from ..registry import AGENT_RE, ID_RE
@@ -41,13 +44,17 @@ def resolve_target(request: Request, host: HostId, runtime: RuntimeId, agent: Ag
 Tgt = Annotated[Target, Depends(resolve_target)]
 
 
+def to_http(e: UpstreamError) -> HTTPException:
+    """Upstream-Details nur gekürzt weitergeben; 401/403 der Runtime ist für den Browser ein 502."""
+    status = 502 if e.status in (401, 403) else e.status
+    return HTTPException(status if 400 <= status < 600 else 502, e.detail)
+
+
 async def upstream(coro):
     try:
         return await coro
     except UpstreamError as e:
-        # Upstream-Details nur gekürzt weitergeben; 401/403 der Runtime ist für den Browser ein 502.
-        status = 502 if e.status in (401, 403) else e.status
-        raise HTTPException(status if 400 <= status < 600 else 502, e.detail) from e
+        raise to_http(e) from e
 
 
 def audit(request: Request, user: User, action: str, target: Target, **detail: Any) -> None:
@@ -65,9 +72,53 @@ async def agent_status(target: Tgt):
         return {"state": "unreachable", "online": False, "version": None, "features": [], "error": e.detail}
 
 
+@router.get("/diagnose")
+async def diagnose(target: Tgt):
+    """Diagnose-Ring: liest nur und prüft, ob die Antworten dieses Agents die Form haben, die die WebUI erwartet."""
+    checks = await inspect(target.adapter, target.agent.id)
+    return {"agent": target.label, "status": summarize(checks), "checks": checks, "at": time.time()}
+
+
+@router.post("/diagnose/run")
+async def diagnose_run(request: Request, target: Tgt, user: User = Depends(current_user)):
+    """Lauftest: ein kurzer echter Lauf (legt eine Session an). Nur auf Knopfdruck."""
+    request.app.state.limiter.check(f"{user.id}:{target.label}")
+    checks = await run_test(target.adapter, target.agent.id)
+    audit(request, user, "diagnose.run", target, status=summarize(checks))
+    return {"agent": target.label, "status": summarize(checks), "checks": checks, "at": time.time()}
+
+
 @router.get("/models")
 async def models(target: Tgt):
     return await upstream(target.adapter.models(target.agent.id))
+
+
+async def _listing(request: Request, target: Target, primary, fallback: str):
+    """Liste von der Agent-API; kann sie das nicht (Hermes meldet z. B. „Failed to enumerate skills“), springt das Dashboard
+    derselben Runtime ein, falls eines eingerichtet ist. Der Hinweis sagt, woher die Liste kommt und was die Agent-API meldete."""
+    try:
+        return await primary
+    except UpstreamError as first:
+        cfg = target.runtime.dashboard
+        if cfg is not None:
+            try:
+                rows = await getattr(DashboardClient(cfg, request.app.state.http), fallback)(target.agent.id)
+            except UpstreamError:
+                rows = None
+            if rows is not None:
+                return {"object": "list", "data": rows, "source": "dashboard",
+                        "note": f"Die Agent-API konnte die Liste nicht liefern ({first.detail}); sie kommt aus dem Dashboard."}
+        raise to_http(first) from first
+
+
+@router.get("/skills")
+async def skills(request: Request, target: Tgt):
+    return await _listing(request, target, target.adapter.skills(target.agent.id), "skills")
+
+
+@router.get("/toolsets")
+async def toolsets(request: Request, target: Tgt):
+    return await _listing(request, target, target.adapter.toolsets(target.agent.id), "toolsets")
 
 
 @router.get("/sessions")
@@ -76,13 +127,49 @@ async def sessions(
     limit: int = Query(30, ge=1, le=100),
     offset: int = Query(0, ge=0),
     source: Literal["chat", "automation", "messaging"] | None = None,
+    include_children: bool = False,
 ):
-    return await upstream(target.adapter.sessions(target.agent.id, limit=limit, offset=offset, source=source))
+    return await upstream(target.adapter.sessions(
+        target.agent.id, limit=limit, offset=offset, source=source, include_children=include_children,
+    ))
 
 
 @router.get("/sessions/{session_id}/messages")
-async def session_messages(target: Tgt, session_id: ObjId):
-    return await upstream(target.adapter.session_messages(target.agent.id, session_id))
+async def session_messages(
+    target: Tgt, session_id: ObjId,
+    limit: int | None = Query(None, ge=1, le=500), offset: int | None = Query(None, ge=0),
+):
+    return await upstream(target.adapter.session_messages(target.agent.id, session_id, limit=limit, offset=offset))
+
+
+class RenameRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=100)  # Hermes begrenzt Titel auf 100 Zeichen
+
+
+@router.patch("/sessions/{session_id}")
+async def rename_session(request: Request, target: Tgt, session_id: ObjId, req: RenameRequest, user: User = Depends(current_user)):
+    title = req.title.strip()
+    if not title:
+        raise HTTPException(422, "Titel darf nicht leer sein")
+    result = await upstream(target.adapter.rename_session(target.agent.id, session_id, title))
+    audit(request, user, "session.rename", target, session=session_id, chars=len(title))
+    return result
+
+
+@router.delete("/sessions/{session_id}")
+async def delete_session(request: Request, target: Tgt, session_id: ObjId, user: User = Depends(current_user)):
+    """Unwiderruflich. Hermes verweigert es mit 409, solange in der Session ein Run läuft."""
+    await upstream(target.adapter.delete_session(target.agent.id, session_id))
+    audit(request, user, "session.delete", target, session=session_id)
+    return {"ok": True}
+
+
+@router.post("/sessions/{session_id}/fork")
+async def fork_session(request: Request, target: Tgt, session_id: ObjId, user: User = Depends(current_user)):
+    """Zweig einer Session: weiterschreiben, wenn die Quelle gesperrt ist (z. B. eine Chat-Plattform-Session)."""
+    result = await upstream(target.adapter.fork_session(target.agent.id, session_id))
+    audit(request, user, "session.fork", target, session=session_id, fork=result.get("session_id"))
+    return result
 
 
 # --- Runs -------------------------------------------------------------------------------
@@ -91,6 +178,7 @@ class RunRequest(BaseModel):
     session_id: str | None = Field(default=None, pattern=OBJ_ID_RE.pattern)
     model: str | None = Field(default=None, max_length=200)
     images: list[str] = Field(default_factory=list, max_length=4)
+    idempotency_key: str | None = Field(default=None, pattern=OBJ_ID_RE.pattern)
 
 
 @router.post("/runs", status_code=202)
@@ -100,7 +188,7 @@ async def start_run(request: Request, target: Tgt, req: RunRequest, user: User =
             raise HTTPException(422, "Bild muss PNG, JPEG, WebP oder GIF (Data-URL, max. ca. 1 MB) sein")
     request.app.state.limiter.check(f"{user.id}:{target.label}")
     info = await upstream(target.adapter.start_run(target.agent.id, RunInput(
-        text=req.text, session_id=req.session_id, model=req.model, images=tuple(req.images),
+        text=req.text, session_id=req.session_id, model=req.model, images=tuple(req.images), idempotency_key=req.idempotency_key,
     )))
     # Nie den Inhalt loggen, nur Umfang und Ziel.
     audit(request, user, "run.start", target, session=info.session_id or req.session_id, run=info.run_id,

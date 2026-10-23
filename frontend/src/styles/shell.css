@@ -35,6 +35,8 @@
 .ph{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
 .ph h1{margin:0;font:600 26px/32px var(--sans);letter-spacing:-.025em}
 .ph-sub{font:500 11.5px var(--mono);color:var(--t3)}
+/* Aktionen rücken auf eine eigene Zeile, statt Titel und Kennzahlen zu überdecken */
+.ph>.grow{min-width:min-content}
 
 /* Statusleiste (Token/Latenz-Rail aus der DESIGN.md) */
 .page{flex:1 0 auto}

@@ -50,11 +50,11 @@ export function Inspector({ tools, subagents, selected, onSelect }: Props) {
                   {[tool.at ? fmtTimeSec(tool.at) : "", tool.durationMs != null ? fmtDuration(tool.durationMs) : ""].filter(Boolean).join(" · ")}
                 </span>
               </div>
-              {tool.preview && (
+              {(tool.args ?? tool.preview) && (
                 <div className="col" style={{ gap: 8 }}>
-                  <span className="lbl">Vorschau</span>
+                  <span className="lbl">{tool.args ? "Argumente" : "Vorschau"}</span>
                   <div className="codeb"><div className="pre insp-pre">
-                    {previewLines(tool.preview).map((l, i) => (
+                    {previewLines((tool.args ?? tool.preview)!).map((l, i) => (
                       <div className="cl" key={i}>{typeof l === "string" ? l : <><span className="t3">{l[0]}</span>: <span className="str">{l[1]}</span></>}</div>
                     ))}
                   </div></div>

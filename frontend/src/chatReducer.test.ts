@@ -124,9 +124,9 @@ describe("chatReducer", () => {
 });
 
 describe("parsers", () => {
-  it("maps history, skipping tool roles and empty text", () => {
+  it("maps history, skipping system roles and empty text", () => {
     const items = historyItems({ messages: [
-      { role: "user", content: "a" }, { role: "tool", content: "x" }, { role: "assistant", content: [{ type: "text", text: "b" }] }, { role: "assistant", content: "" },
+      { role: "system", content: "s" }, { role: "user", content: "a" }, { role: "assistant", content: [{ type: "text", text: "b" }] }, { role: "assistant", content: "" },
     ] });
     expect(items.map((i) => i.kind === "message" && i.text)).toEqual(["a", "b"]);
   });

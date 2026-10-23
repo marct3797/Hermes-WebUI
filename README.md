@@ -65,6 +65,43 @@ Runs aus CLI, Cron oder anderen Fenstern kennt die WebUI noch nicht, weil Hermes
 (die Runs laufen in Hermes weiter). Was Hermes nicht bestätigt hat, steht nicht in der Oberfläche: Kosten, Kontext-Füllstand, TTFT, Auswertung je Profil.
 Die Karten zeigen Zustand, Tätigkeit und den letzten Chat aus `/api/sessions`.
 
+### Tool-Aufrufe: woher Argumente und Ausgabe kommen
+
+Hermes' Ereignisstrom meldet einen Tool-Aufruf nur mit Name, Vorschau und Dauer (`tool.started`/`tool.completed`), **ohne Argumente und ohne Ausgabe**.
+Beides steht erst im Verlauf der Session (`/api/sessions/{id}/messages`: `tool_calls` in der Assistenten-Nachricht, das Ergebnis als Nachricht mit Rolle `tool`).
+Die WebUI lädt den Verlauf deshalb kurz nach jedem Tool und nach dem Ende des Runs nach und ergänzt die Karten (`history.ts`, `enrichTools`).
+Alte Chats zeigen dieselben Karten, ebenso den Denkprozess (`reasoning`).
+
+### Prüfen, ohne alles von Hand anzuklicken
+
+Drei Schichten, jede fängt etwas anderes:
+
+1. **Automatische Tests** (`pytest`, `npm test`, `tsc`, Build; laufen in der CI bei jedem Push). Der Hermes-Mock (`devtools/mock_hermes.py`) spricht
+   die Formen, die Hermes 0.21.6 tatsächlich liefert, nicht erfundene.
+2. **Diagnose-Ring** (Seite **System**, `GET …/diagnose`): liest je Agent Erreichbarkeit, Fähigkeiten, Modelle, Sessions und den Verlauf und meldet jede Abweichung
+   von dem, was die WebUI erwartet (`ok`, `warn`, `fail`). Er läuft gegen die echten Agents, schreibt nichts und zeigt, wenn Hermes nach einem Update anders antwortet.
+3. **Lauftest** (Knopf auf der Seite System, `POST …/diagnose/run`): ein kurzer echter Lauf je Agent (Start, Ereignisstrom, Abschluss, Antwort im Verlauf).
+   Er legt eine Session an, die bestehen bleibt (Löschen ist in diesem Projekt bewusst nicht vorgesehen).
+
+### Gedächtnis (`memory.json`)
+
+Die Seite **Gedächtnis** liest, was ein Gedächtnis-Anbieter über die Agents weiß. Anbieter stehen in der Datei, auf die `HERMES_WEBUI_MEMORY_FILE` zeigt
+(Vorlage `backend/memory.example.json`; Schlüssel nur per `api_key_env`). Jeder Anbieter meldet seine Fähigkeiten (`stats`, `items`, `search`, `graph`,
+`entities`, `models`, `reflect`), und die Seite zeigt nur die Ansichten, die er kann. Hindsight ist der erste Typ (`app/memory.py`); ein weiterer Typ ist
+eine Klasse mit denselben Methoden. Die Seite schreibt nichts. Die Antwortformen sind nach Hindsights OpenAPI normalisiert, noch nicht gegen die
+laufende Instanz geprüft: **Verbindung prüfen** auf der Seite zeigt Abweichungen. `reflect` ruft beim Anbieter ein Sprachmodell auf, ist darum begrenzt und im Audit.
+
+### Räume (Gruppenchats)
+
+Hermes' Räume gibt es nur in der Desktop-App (Gateway-Schnittstelle `groups.*`), nicht in der HTTP-API. Die WebUI baut sie mit normalen Runs nach
+(`app/rooms.py`): Jedes Mitglied hat eine eigene Session in seinem Agent (Titel „Gruppe: <Raum> · <Agent>“), das BFF führt das Gespräch.
+
+- 2 bis 6 Mitglieder, Namen eindeutig (`@Name` muss genau eins treffen). Raumliste, Nachrichten und Session je Mitglied liegen in SQLite (`HERMES_WEBUI_ROOMS_DB`, auf Hikari `/data/rooms.db`).
+- Ein Absenden löst höchstens 3 Runden und 10 Agent-Nachrichten aus. Erste Runde: die @-Erwähnten, ohne Erwähnung alle (`@all` ebenso). Danach antworten die, die jemand in der Runde davor erwähnt hat. `[PASS]` heißt: nichts beizutragen. Eine stille Runde beendet das Absenden.
+- `@user` in einer Agent-Nachricht hält den Raum an und markiert ihn als „braucht dich“. Freigaben und Rückfragen der Mitglieder erscheinen im Raum und gehen über den Run des jeweiligen Mitglieds.
+- Je Zug sieht ein Mitglied nur die Raumnachrichten seit seinem letzten Zug (seine Session kennt den Rest). Gelöscht wird nichts, ein Raum lässt sich nur archivieren.
+- Abweichung von Hermes' Desktop: eine neue Nachricht während eines laufenden Zugs wird abgelehnt (Stopp oder abwarten), sie wird nicht eingereiht.
+
 ## Entwicklung
 
 ```bash
@@ -84,6 +121,25 @@ npm test && npm run build
 Für den Mock in `hosts.json`: `"base_url": "http://127.0.0.1:8642", "api_key": "dev-key"` und die Agents
 `default`, `omoikane` (die der Mock kennt).
 
+### Dashboard (SOUL und Profil-Einstellungen)
+
+Die Agent-API kennt weder `SOUL.md` noch Profil-Einstellungen. Dafür gibt es `hermes dashboard`: ein eigener Prozess je Maschine, der alle Profile verwaltet
+(`GET /api/profiles`, `GET|PUT /api/profiles/<name>/soul`, `PUT …/description`, `PUT …/model`). Das BFF ist sein einziger Client (`app/dashboard.py`); der Browser sieht
+das Dashboard und seinen Token nie. Eingetragen wird es je Runtime in der `hosts.json`:
+
+```json
+{ "id": "hermes", "base_url": "http://127.0.0.1:9121", …,
+  "dashboard": { "base_url": "http://127.0.0.1:9122", "token_env": "HERMES_DASHBOARD_TOKEN" } }
+```
+
+- **Token:** Das Dashboard verlangt für jede `/api/`-Route den Header `X-Hermes-Session-Token`. Ohne festen Wert würfelt es bei jedem Start einen neuen; darum startet `deploy/dashboard.sh` es mit `HERMES_DASHBOARD_SESSION_TOKEN` und legt denselben Wert als `HERMES_DASHBOARD_TOKEN` in `webui.env` ab.
+- **Start auf Hikari:** `bash deploy/dashboard.sh`, danach `bash deploy/deploy.sh`. Das Skript startet das Dashboard im Container `hermes-agents` auf `127.0.0.1:9122` (9119 gehört dem Host-Dashboard), ergänzt den Eintrag in der `hosts.json` und gibt nie einen Wert aus. Das Dashboard endet mit dem Container, dann das Skript erneut starten.
+- **Ohne Dashboard** zeigt die Seite „SOUL & Profil“ einen Hinweis mit dem Eintrag; alles andere in der WebUI läuft unverändert.
+- **SOUL.md ändern** verlangt eine frische Anmeldung (Step-up, wie „immer erlauben“). Vor jedem Speichern legt das BFF den bisherigen Text unter `HERMES_WEBUI_SOUL_DIR` ab (je Agent ein Ordner, auf Hikari `/data/soul-history`), der Verlauf wird nie gekürzt. Das Speichern prüft den Fingerabdruck des geladenen Texts (409, falls sich die Datei inzwischen geändert hat), liest zur Kontrolle zurück und schreibt ins Audit-Log nur Längen, nie Text.
+- **Anbieter (Hauptseite `/providers`)**: Je Host mit einer Hermes-Runtime eine Tabelle Profil × Anbieter/Modell × Zugang. `GET /bff/h/<host>/<runtime>/_provider-matrix` fragt je Profil das Dashboard der Maschine (`/api/profiles`, `/api/env`, `/api/providers/oauth`). Die Zugänge, die auf dem Host selbst laufen, stehen in `app/providers.py` (`ACCOUNTS`: OpenAI Codex per Gerätecode, Claude per Anthropic-Seite und Code oder Key, OpenCode Go per Key); weitere sind ein Eintrag dort. Ein Klick auf Anbieter/Modell öffnet die Auswahl (Liste aus `/api/model/options`, gespeichert über `PUT /api/profiles/<profil>/model`), ein Klick auf einen Zugang die Anmeldung. Die Anmeldung läuft im Dashboard (`/api/providers/oauth/<anbieter>/start`, `poll`, `submit`): die WebUI zeigt Code oder Link und fragt nach; sie verlangt Step-up und schreibt nur Anbieter und Profil ins Audit-Log. Fehlt das Dashboard oder ist es nicht erreichbar, bleiben die Profile aus der Config sichtbar und der Grund steht daneben. Die CLIs der Zugänge (`codex`, `claude`, `opencode`) auf dem Host zu steuern braucht einen Terminal-Dienst dort; der ist noch nicht gebaut.
+- **Keys & Nutzung** (`/h/<host>/<runtime>/<agent>/providers`): Aus `/api/env`, `/api/providers/oauth` und `/api/analytics/models` baut `app/providers.py` je Profil eine Übersicht (eingerichtet per Key oder Anmeldung, Sessions, Tokens und Kosten der letzten 7/30/90 Tage). Nicht eingerichtete Anbieter sind eingeklappt und lassen sich per Knopf hinzufügen. Keys gehen nur Browser → BFF → Dashboard, werden vorher beim Anbieter geprüft (`/api/providers/validate`), verlangen Step-up und stehen weder in Antworten noch im Audit-Log (nur der Variablenname). Schreiben ist auf Variablen beschränkt, die das Dashboard einem Anbieter zuordnet. Fehlermeldungen wiederholen die abgelehnte Eingabe nie. Entfernen von Keys gibt es nicht. Nicht verfügbar: Restkontingente der Konten (Hermes liefert sie nicht über das Dashboard). Die Coding-CLIs stehen auf der Hauptseite als eigener Abschnitt mit Stand „noch nicht angebunden“.
+- Nicht geprüft gegen das echte Dashboard im Container (Hermes 0.21.6): die Formen folgen dem Quelltext von Hermes 0.19 und dem Mock (`backend/devtools/mock_dashboard.py`). Weicht die Antwort ab, meldet die Seite es als Fehler, ohne etwas zu verändern.
+
 ### hosts.json
 
 ```json
@@ -99,7 +155,8 @@ Für den Mock in `hosts.json`: `"base_url": "http://127.0.0.1:8642", "api_key": 
 - `api_key_env` (oder `api_key`, nur Entwicklung) gilt für die Runtime; ein Agent darf einen eigenen Eintrag `{ "id": "inari", "api_key_env": "HERMES_KEY_INARI" }` haben, der Vorrang hat. Das Container-Gateway auf Hikari gibt jedem Profil außer `default` ein eigenes `API_SERVER_KEY`; `deploy/profile-keys.sh` trägt sie aus den Profilordnern in `webui.env` ein.
 - `multiplex: true`: ein Gateway bedient mehrere Profile unter `/p/<profil>/…`. Ohne Multiplex ist genau ein Agent erlaubt (Hermes ignoriert dann das Präfix).
 - Die Agent-Liste ist vorerst fest in der Datei (Anzeigename = Ordnername). Auto-Erkennung folgt, sobald ein lesbarer Weg zu den Profilordnern im Container steht.
-- Remote-Hosts erscheinen in der Registry, sind aber bis Phase 2 (Host-Dienst) „nicht erreichbar“.
+- **Weiterer Host (Laptop, zweiter Server):** ein Eintrag mit `kind: "remote"` und der Tailnet-Adresse, sonst wie Hikari; es gibt keinen Sonderweg, Hermes dort antwortet über denselben Adapter. `deploy/add-host.sh <kennung> "<Name>" <adresse> [--dashboard-port N]` ergänzt den Eintrag in `~/hermes-webui/config/hosts.json` (nie überschreibend, mit Sicherung), fragt den Key still ab, legt ihn als `HERMES_KEY_<KENNUNG>` in `webui.env` und prüft die Verbindung. Danach `bash deploy/deploy.sh`.
+- **Auf dem Host selbst** muss Hermes' API-Server auf der Tailnet-Adresse lauschen: `API_SERVER_ENABLED=true`, `API_SERVER_HOST=<Tailnet-IP>`, `API_SERVER_KEY=<mindestens 16 Zeichen>`, dann das Gateway neu starten. Ohne gültigen Key (fehlt, Platzhalter oder unter 16 Zeichen) startet der API-Server gar nicht und es gibt keinen Listener; `curl` meldet dann `000`. Das prüft man dort mit `ss -ltnp | grep 8642`. Die WebUI nennt bei einem Ausfall Adresse und Grund (keine Verbindung, Zeitüberschreitung, Key abgelehnt).
 - Ungültige Datei: das BFF behält die letzte gültige Fassung und meldet den Fehler unter `/bff/hosts` (`config_error`).
 
 ### ui.json (Sigils, Symbol-Packs, Hintergrund-Shader)
@@ -178,7 +235,9 @@ Abweichungen zeigen sich als `unknown`-Events oder Probe-Fehler und werden im He
 
 - Antwortet `/p/<profil>/…` am Container-Gateway wie erwartet? Passen Payloads und Events (ein Test-Run mit Key, Marc gibt frei)?
   Dafür gibt es `backend/devtools/probe_hermes.py`: schickt einen harmlosen Prompt und gibt nur die **Form** der Antworten aus (Texte als Länge, nie den Key).
-- Liefert `POST /v1/runs` eine `session_id`, und wie setzt der Client eine neue Session fort (`session_id` im Body oder vorher `POST /api/sessions`)?
-- Form von `/v1/capabilities` (Flags für die Fähigkeiten) und Name/Route der Rückfrage (Clarify): im Quelltext nicht belegt.
+- `POST /v1/runs` liefert **keine** `session_id` (sie steht in `GET /v1/runs/{id}`); `session_id` im Body setzt eine Session fort. Geklärt am 2026-10-23.
+- `/v1/capabilities`: `features` mit Flags (`run_steer`, `run_approval_response`, `session_fork` …), `endpoints` mit den Routen. Eine Clarify-Route nennt Hermes dort nicht.
+  Geklärt am 2026-10-23; offen bleibt nur, wie die Rückfrage-Karte antwortet, sobald es den ersten echten Fall gibt.
+- Räume: ob echte Agents `@Name` und `[PASS]` so befolgen, wie der Prompt es verlangt (steht in `build_prompt`), zeigt erst ein Raum mit echten Profilen; der Mock antwortet immer gleich.
 - Forgejo: OIDC-Discovery, `sub`-Kennung, ob `prompt=login` und `max_age=0` eine neue Anmeldung erzwingen (Step-up).
-- Laptop (Phase 2): Hermes-API-Server dort läuft inzwischen auf `127.0.0.1:8642`; der Host-Dienst bringt den Transport.
+- Laptop: der API-Server dort muss auf der Tailnet-Adresse lauschen (siehe „hosts.json“); danach `deploy/add-host.sh`. Ein Terminal-Dienst für die Coding-CLIs (Host-Dienst, Phase 2) ist noch nicht gebaut.

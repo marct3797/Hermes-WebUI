@@ -14,18 +14,10 @@ import { useShell } from "../shell";
 import type { AgentRef, AgentStatus, Decision, Item, SendMode } from "../types";
 import { sigilFor, useUi } from "../ui";
 import { useChat } from "../useChat";
+import { parseModelOptions, type ModelGroup } from "../models";
 import { useNow } from "../useNow";
 
 type Props = { agent: AgentRef; label: string; runtimeLabel: string; sessionId?: string };
-
-function modelIds(payload: unknown): string[] {
-  const list = (payload as { models?: unknown[] } | null)?.models ?? (Array.isArray(payload) ? payload : []);
-  return list.map((m) => (typeof m === "string" ? m : String((m as { id?: unknown }).id ?? ""))).filter(Boolean);
-}
-const currentModel = (payload: unknown): string | undefined => {
-  const c = (payload as { current?: unknown } | null)?.current;
-  return typeof c === "string" && c ? c : undefined;
-};
 
 const OFFLINE_HINT: Record<string, string> = {
   auth_error: "Der Zugangsschlüssel für diesen Host wurde abgelehnt oder fehlt im BFF.",
@@ -41,7 +33,7 @@ export function ChatPage({ agent, label, runtimeLabel, sessionId }: Props) {
   const { refreshSessions, sessions, openMenu } = useShell();
   const { sigils } = useUi();
   const [status, setStatus] = useState<AgentStatus>();
-  const [models, setModels] = useState<string[]>([]);
+  const [models, setModels] = useState<ModelGroup[]>([]);
   const [defaultModel, setDefaultModel] = useState<string>();
   const [model, setModel] = useState<string>();
   const [selTool, setSelTool] = useState<string>();
@@ -58,7 +50,7 @@ export function ChatPage({ agent, label, runtimeLabel, sessionId }: Props) {
       .then((s) => {
         if (stale) return;
         setStatus(s);
-        if (s.online) api.models(agent).then((m) => { if (!stale) { setModels(modelIds(m)); setDefaultModel(currentModel(m)); } }).catch(() => undefined);
+        if (s.online) api.models(agent).then((m) => { if (!stale) { const o = parseModelOptions(m); setModels(o.groups); setDefaultModel(o.current); } }).catch(() => undefined);
       })
       .catch((e: Error) => { if (!stale) setStatus({ state: "unreachable", online: false, version: null, features: [], error: e.message }); });
     return () => { stale = true; };
@@ -188,6 +180,7 @@ export function ChatPage({ agent, label, runtimeLabel, sessionId }: Props) {
               <p className="banner" role="alert">
                 <Icon name="alert" />
                 <span className="grow">{state.error}</span>
+                {state.errorCode === "session_locked" && <button type="button" className="btn btn-s btn-p" onClick={chat.continueInFork}>Als neue Session fortsetzen</button>}
                 {state.errorCode === "step_up_required" && <button type="button" className="btn btn-s btn-p" onClick={() => toLogin(true)}>Erneut anmelden</button>}
                 {state.runStatus === "lost" && state.runId && <button type="button" className="btn btn-s" onClick={chat.reconnect}>Erneut verbinden</button>}
               </p>
