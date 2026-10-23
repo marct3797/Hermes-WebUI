@@ -7,7 +7,8 @@ das BFF führt das Gespräch. Die Regeln folgen der Doku von Hermes:
 - 2 bis 6 Mitglieder. Eine Nachricht der Person löst bis zu 3 Runden aus, höchstens 10 Agent-Nachrichten je Absenden.
 - Erste Runde: die @-Erwähnten antworten, ohne Erwähnung alle (`@all` ebenso). Danach antworten die, die ein Mitglied in
   der Runde davor erwähnt hat. Wer nichts beitragen will, antwortet mit `[PASS]`. Eine stille Runde beendet das Absenden.
-- `@user` in einer Agent-Nachricht heißt „braucht dich“: der Raum hält an und wartet.
+- `@user` in einer Agent-Nachricht heißt „braucht dich“: der Raum merkt es sich und hält an, sobald niemand sonst mehr dran ist.
+  Wer in derselben Nachricht auch ein Mitglied erwähnt („@bert prüf das, ich sage es @user“), lässt dieses Mitglied nicht warten.
 - Jedes Mitglied sieht je Zug die Raumnachrichten seit seinem letzten Zug.
 
 Gespeichert wird in SQLite (Raumliste, Nachrichten, Session je Mitglied). Gelöscht wird nichts; ein Raum lässt sich nur archivieren.
@@ -75,11 +76,14 @@ def is_pass(text: str) -> bool:
     return text.strip().upper().startswith(PASS_TOKEN)
 
 
-def build_prompt(room: str, me: str, others: list[str], fresh: list[dict[str, Any]], names: dict[str, str], addressed: bool = False) -> str:
+def build_prompt(room: str, me: str, others: list[str], fresh: list[dict[str, Any]], names: dict[str, str], addressed: bool = False,
+                 labels: dict[str, str] | None = None) -> str:
     """Was ein Mitglied in seinem Zug erhält: die Spielregeln kurz, dann die Raumnachrichten seit seinem letzten Zug.
 
     `addressed`: jemand hat das Mitglied mit @Name angesprochen. Dann soll es antworten, nicht passen."""
-    label = {key: lab for lab, key in names.items()}
+    label: dict[str, str] = dict(labels or {})
+    for lab, key in names.items():
+        label.setdefault(key, lab)  # ohne `labels`: der kleingeschriebene Anzeigename; `names` nennt ihn je Mitglied vor der Agent-Kennung
     lines = []
     for m in fresh:
         who = "Person" if m["author"] == "user" else label.get(m["author"], m["author"])
@@ -90,7 +94,7 @@ def build_prompt(room: str, me: str, others: list[str], fresh: list[dict[str, An
         f"Du bist „{me}“ in dem Gruppenchat „{room}“. Weitere Mitglieder: {others_text}. Die Person im Raum heißt „Person“.\n"
         "Regeln: Antworte knapp und im Gesprächston. Soll ein bestimmtes Mitglied antworten, erwähne es mit @Name. "
         f"Wirst du mit @Name angesprochen, antworte immer. Hast du sonst nichts beizutragen, antworte genau mit {PASS_TOKEN}. "
-        "Brauchst du eine Entscheidung der Person, erwähne @user.\n\n"
+        "Erwähne @user nur, wenn du ohne Entscheidung der Person nicht weiterkommst; sonst schreib „die Person“ ohne @.\n\n"
         "Neu im Raum seit deinem letzten Beitrag:\n" + "\n".join(lines) + direct
     )
 
@@ -339,9 +343,8 @@ class RoomEngine:
                 if any("user" in m["mentions"] for m in produced):
                     self.store.update(rid, needs_user=True)
                     turn.reason = "needs_user"
-                    return
                 speakers = self._next_speakers(order, produced)
-                if speakers and round_no == MAX_ROUNDS:
+                if speakers and round_no == MAX_ROUNDS and turn.reason != "needs_user":
                     turn.reason = "max_rounds"
         except asyncio.CancelledError:
             turn.reason = "stopped"
@@ -388,7 +391,7 @@ class RoomEngine:
             return None
         others = [self.label_of(m) for m in room["members"] if member_key(m) != key]
         addressed = any(key in m["mentions"] for m in fresh)
-        prompt = build_prompt(room["name"], label, others, fresh, names, addressed)
+        prompt = build_prompt(room["name"], label, others, fresh, names, addressed, {member_key(m): self.label_of(m) for m in room["members"]})
         turn.speaker = key
         self._publish(rid, {"type": "member.started", "member": key, "round": round_no})
         text, error = "", None

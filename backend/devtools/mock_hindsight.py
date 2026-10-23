@@ -65,7 +65,7 @@ def create_mock(require_key: str | None = None, bank: str = "hermes") -> FastAPI
     async def graph(bank_id: str, limit: int = 1000, q: str | None = None):
         check(bank_id)
         if os.environ.get("MOCK_GRAPH_NODES"):
-            return big_graph(int(os.environ["MOCK_GRAPH_NODES"]))
+            return big_graph(int(os.environ["MOCK_GRAPH_NODES"]), os.environ.get("MOCK_GRAPH_KINDS", "1") != "0")
         return {
             "nodes": [{"data": {"id": u["id"], "label": u["text"][:30], "color": "#ccc", "fact_type": u["fact_type"]}} for u in UNITS],
             "edges": [{"data": {"id": "e1", "source": "u1", "target": "u3", "linkType": "entity"}},
@@ -107,15 +107,38 @@ def create_mock(require_key: str | None = None, bank: str = "hermes") -> FastAPI
 app = create_mock()
 
 
-def big_graph(n: int) -> dict:
-    """Ein Graph in der Größe eines echten Gedächtnisses: Gruppen um Entitäten, zeitliche Ketten, ein paar Einzelgänger."""
-    kinds = ("world", "experience", "observation")
-    nodes = [{"data": {"id": f"n{i}", "label": f"Fakt {i}: " + ("Marc betreibt Server und Dienste" if i % 3 == 0 else "Chat über Räume und Agents"), "fact_type": kinds[i % 3]}} for i in range(n)]
-    edges = []
-    for i in range(1, n - 6):
-        edges.append({"data": {"id": f"t{i}", "source": f"n{i - 1}", "target": f"n{i}", "linkType": "temporal"}})
-        if i % 4 == 0:
-            edges.append({"data": {"id": f"e{i}", "source": f"n{i}", "target": f"n{(i * 7) % (n - 6)}", "linkType": "entity"}})
-        if i % 9 == 0:
-            edges.append({"data": {"id": f"s{i}", "source": f"n{i}", "target": f"n{(i * 13) % (n - 6)}", "linkType": "semantic"}})
+def big_graph(n: int, kinds: bool = True) -> dict:
+    """Ein Graph in der Größe eines echten Gedächtnisses (150 Knoten, rund 7.000 Kanten): Fakten teilen sich Entitäten und bilden
+    dadurch dichte Gruppen („entity“), dazu zeitliche Nachbarn, Ähnlichkeiten und ein paar Ursachen. Ohne `kinds` fehlt fact_type
+    wie in der echten Instanz."""
+    topics = ["Marc", "Hikari", "Hermes", "Forgejo", "Tailscale", "Docker", "Hindsight", "Kanban", "Sora", "Omoikane", "Räume", "Caddy", "Laptop", "Skills"]
+    sentence = ["betreibt", "nutzt", "konfiguriert", "prüft", "migriert", "dokumentiert"]
+    ents: list[list[int]] = [[(i * 5 + k * 3) % len(topics) for k in range(1 + (i % 3))] for i in range(n)]
+    types = ("world", "experience", "observation")
+    nodes = []
+    for i in range(n):
+        t = topics[ents[i][0]]
+        data = {"id": f"n{i}", "label": f"{t} {sentence[i % len(sentence)]} {topics[(ents[i][-1] + 1) % len(topics)]} (Fakt {i})", "color": "#f87171"}
+        if kinds:
+            data["fact_type"] = types[i % 3]
+        nodes.append({"data": data})
+    seen, edges = set(), []
+
+    def link(a: int, b: int, kind: str) -> None:
+        if a != b and (min(a, b), max(a, b), kind) not in seen:
+            seen.add((min(a, b), max(a, b), kind))
+            edges.append({"data": {"id": f"{kind}{len(edges)}", "source": f"n{a}", "target": f"n{b}", "linkType": kind}})
+
+    for ent in range(len(topics)):
+        members = [i for i in range(n) if ent in ents[i]]
+        for x in range(len(members)):
+            for y in range(x + 1, len(members)):
+                link(members[x], members[y], "entity")
+    for i in range(n):
+        for d in (1, 2, 3):
+            link(i, (i + d) % n, "temporal")
+        for d in (7, 19, 31):
+            link(i, (i * 3 + d) % n, "semantic")
+        if i % 11 == 0:
+            link(i, (i + 5) % n, "caused_by")
     return {"nodes": nodes, "edges": edges, "table_rows": [], "total_units": n}

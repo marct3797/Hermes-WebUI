@@ -186,7 +186,7 @@ async def test_answers_chain_through_mentions_and_each_member_sees_only_what_is_
     await settle(engine, rid)
     assert authors(engine, rid) == [("user", "@anna starte"), ("anna", "Ich frage @bert: wie siehst du das?"), ("bert", "Gut so.")]
     bert_prompt = next(p for a, p, *_ in adapter.calls if a == "bert")
-    assert "anna: Ich frage @bert" in bert_prompt and "Person: @anna starte" in bert_prompt
+    assert "Anna: Ich frage @bert" in bert_prompt and "Person: @anna starte" in bert_prompt
     anna_prompts = [p for a, p, *_ in adapter.calls if a == "anna"]
     assert len(anna_prompts) == 1  # Annas eigener Beitrag löst keinen weiteren Zug aus
 
@@ -199,7 +199,7 @@ async def test_a_second_message_only_brings_what_happened_since_the_members_last
     await settle(engine, rid)
     second = [p for a, p, *_ in adapter.calls if a == "anna"][1]
     assert "Person: zwei" in second and "Person: eins" not in second
-    assert "bert: bert-1" in second  # der Beitrag des anderen kam dazwischen
+    assert "Bert: bert-1" in second  # der Beitrag des anderen kam dazwischen
     sessions = {c[0]: c[2] for c in adapter.calls[2:]}
     assert sessions["anna"] == "sess-anna"  # dieselbe Session wie im ersten Zug
 
@@ -243,6 +243,41 @@ async def test_user_mention_holds_the_room_and_flags_it():
     await engine.send(rid, "Ja, bitte", "u")
     assert engine.store.get(rid)["needs_user"] is False  # die Antwort der Person erledigt das
     await settle(engine, rid)
+
+
+async def test_a_member_mentioned_together_with_the_user_still_gets_its_turn():
+    """Echter Fall aus Hikari: „@bert prüf das, ich fasse es für @user zusammen“ beendete den Raum, bevor Bert dran war."""
+    def script(agent, prompt, n):
+        if agent == "anna":
+            return "@bert prüf das bitte, ich fasse es dann für @user zusammen." if n == 1 else "Danke Bert, dann fasse ich zusammen."
+        return "@anna geprüft, passt."
+    engine, adapter, rid = make_engine(script)
+    await engine.send(rid, "@anna frag bert", "u")
+    turn = await settle(engine, rid)
+    assert authors(engine, rid) == [("user", "@anna frag bert"), ("anna", "@bert prüf das bitte, ich fasse es dann für @user zusammen."),
+                                    ("bert", "@anna geprüft, passt."), ("anna", "Danke Bert, dann fasse ich zusammen.")]
+    assert [c[0] for c in adapter.calls] == ["anna", "bert", "anna"]
+    # Die Person wurde gerufen: der Raum bleibt markiert und meldet es als Grund des Endes.
+    assert turn.reason == "needs_user" and engine.store.get(rid)["needs_user"] is True
+
+
+async def test_the_user_alone_still_stops_the_room_at_once():
+    engine, adapter, rid = make_engine(lambda agent, prompt, n: "@user und @bert, was meint ihr?" if agent == "anna" else "Ja.")
+    await engine.send(rid, "@anna los", "u")
+    await settle(engine, rid)
+    assert [c[0] for c in adapter.calls] == ["anna", "bert"]  # bert war mit genannt, danach ist niemand mehr dran
+
+
+def test_prompt_names_speakers_by_display_name_not_agent_id():
+    names = {"sora": "h/hermes/default", "default": "h/hermes/default", "bert": "h/hermes/bert"}
+    p = build_prompt("Raum", "Bert", ["Sora"], [{"author": "h/hermes/default", "text": "Hi"}], names, labels={"h/hermes/default": "Sora"})
+    assert "Sora: Hi" in p and "default: Hi" not in p
+    assert "sora: Hi" in build_prompt("Raum", "Bert", ["Sora"], [{"author": "h/hermes/default", "text": "Hi"}], names)  # ohne labels: Anzeigename, nie die Kennung
+
+
+def test_prompt_asks_for_user_mentions_only_when_stuck():
+    p = build_prompt("Raum", "anna", ["bert"], [{"author": "user", "text": "Hi"}], {"anna": "a", "bert": "b"})
+    assert "nur, wenn du ohne Entscheidung der Person nicht weiterkommst" in p
 
 
 async def test_a_failing_member_is_reported_and_the_others_still_answer():
