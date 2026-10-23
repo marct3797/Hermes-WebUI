@@ -197,7 +197,11 @@ def norm_graph(payload: Any, cap: int) -> dict[str, Any]:
         d = data(e)
         a, b = _first(d, "source", "from"), _first(d, "target", "to")
         if a is not None and b is not None and str(a) in ids and str(b) in ids:
-            edges.append({"source": str(a), "target": str(b), "label": _s(_first(d, "label", "link_type", "linkType", "type"))})
+            edge = {"source": str(a), "target": str(b), "label": _s(_first(d, "label", "link_type", "linkType", "type"))}
+            w = _first(d, "weight", "strength")
+            if isinstance(w, (int, float)) and not isinstance(w, bool) and w > 0:
+                edge["weight"] = float(w)  # die Anzeige gewichtet damit die stärksten Verbindungen
+            edges.append(edge)
     total = _first(p, "total_units", "total", "total_nodes")
     kept = nodes[:cap]
     keep_ids = {n["id"] for n in kept}

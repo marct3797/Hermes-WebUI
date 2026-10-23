@@ -1,59 +1,109 @@
 import { describe, expect, it } from "vitest";
-import { layout } from "./graphLayout";
+import { analyze, KEEP_PER_NODE, louvain, type GEdge, type GNode } from "./graphCluster";
+import { arrange } from "./graphLayout";
 
-const ring = (n: number) => ({ nodes: Array.from({ length: n }, (_, i) => ({ id: `n${i}` })), edges: Array.from({ length: n }, (_, i) => ({ source: `n${i}`, target: `n${(i + 1) % n}` })) });
+/** Ein Gedächtnis in Echtgröße: Fakten teilen sich Entitäten (dichte Gruppen), dazu zeitliche und inhaltliche Nachbarn. */
+function memory(n: number, topics: number) {
+  const nodes: GNode[] = Array.from({ length: n }, (_, i) => ({ id: `n${i}`, label: `Fakt ${i} zu Thema ${i % topics}`, kind: null }));
+  const edges: GEdge[] = [];
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) if (i % topics === j % topics) edges.push({ source: `n${i}`, target: `n${j}`, label: "entity" });
+  for (let i = 0; i < n; i++) for (const d of [1, 2, 3]) edges.push({ source: `n${i}`, target: `n${(i + d) % n}`, label: "temporal" });
+  for (let i = 0; i < n; i += 5) edges.push({ source: `n${i}`, target: `n${(i * 7 + 3) % n}`, label: "semantic" });
+  return { nodes, edges };
+}
 
-describe("layout", () => {
-  it("places every node inside the frame and counts connections", () => {
-    const { nodes, edges } = ring(12);
-    const p = layout(nodes, [...edges, { source: "n0", target: "n6" }]);
-    expect(p).toHaveLength(12);
-    for (const q of p) {
-      expect(q.x).toBeGreaterThanOrEqual(0); expect(q.x).toBeLessThanOrEqual(1000);
-      expect(q.y).toBeGreaterThanOrEqual(0); expect(q.y).toBeLessThanOrEqual(600);
+describe("louvain", () => {
+  it("finds the two cliques joined by a single bridge", () => {
+    const e: Array<[number, number, number]> = [];
+    for (const base of [0, 5]) for (let i = 0; i < 5; i++) for (let j = i + 1; j < 5; j++) e.push([base + i, base + j, 1]);
+    e.push([4, 5, 1]);
+    const c = louvain(10, e);
+    expect(new Set(c.slice(0, 5)).size).toBe(1);
+    expect(new Set(c.slice(5)).size).toBe(1);
+    expect(c[0]).not.toBe(c[9]);
+  });
+});
+
+describe("analyze", () => {
+  it("turns a dense hairball into readable groups and a sparse backbone", () => {
+    const { nodes, edges } = memory(150, 8);
+    expect(edges.length).toBeGreaterThan(1500);
+    const a = analyze(nodes, edges);
+    expect(a.groups.length).toBeGreaterThanOrEqual(6);
+    expect(a.groups.length).toBeLessThanOrEqual(12);
+    // Gruppen entsprechen den Themen: Fakten desselben Themas landen in derselben Gruppe.
+    const topicGroup = new Map<number, Set<number>>();
+    nodes.forEach((_, i) => { const t = i % 8; (topicGroup.get(t) ?? topicGroup.set(t, new Set()).get(t)!).add(a.group[i]); });
+    const pure = [...topicGroup.values()].filter((s) => s.size === 1).length;
+    expect(pure).toBeGreaterThanOrEqual(6);
+    // Gerüst: höchstens KEEP_PER_NODE je Knoten plus die Kanten, die der andere Endpunkt behalten wollte.
+    expect(a.backbone.length).toBeLessThan(nodes.length * KEEP_PER_NODE);
+    expect(a.backbone.length).toBeLessThan(edges.length / 4);
+  });
+
+  it("is deterministic and names a hub per group", () => {
+    const { nodes, edges } = memory(60, 4);
+    expect(analyze(nodes, edges)).toEqual(analyze(nodes, edges));
+    for (const g of analyze(nodes, edges).groups) expect(g.members).toContain(g.hub);
+  });
+
+  it("puts nodes without a connection outside every group", () => {
+    const a = analyze([{ id: "a", label: "a" }, { id: "b", label: "b" }, { id: "c", label: "c" }], []);
+    expect(a.groups).toEqual([]);
+    expect(a.group).toEqual([-1, -1, -1]);
+  });
+
+  it("ignores edges to unknown nodes, loops and duplicates", () => {
+    const a = analyze([{ id: "a", label: "a" }, { id: "b", label: "b" }], [
+      { source: "a", target: "b", label: "semantic" }, { source: "b", target: "a", label: "entity" },
+      { source: "a", target: "a" }, { source: "a", target: "ghost" },
+    ]);
+    expect(a.links).toHaveLength(1);
+    expect(a.degree).toEqual([1, 1]);
+  });
+});
+
+describe("arrange", () => {
+  const { nodes, edges } = memory(150, 8);
+  const a = analyze(nodes, edges);
+  const out = arrange(a, nodes.length);
+
+  it("places every node inside the frame", () => {
+    expect(out.nodes).toHaveLength(150);
+    for (const p of out.nodes) {
+      expect(p.x).toBeGreaterThanOrEqual(0); expect(p.x).toBeLessThanOrEqual(1000);
+      expect(p.y).toBeGreaterThanOrEqual(0); expect(p.y).toBeLessThanOrEqual(600);
     }
-    expect(p[0].degree).toBe(3);
-    expect(p[1].degree).toBe(2);
   });
 
-  it("gives the same picture for the same input", () => {
-    const { nodes, edges } = ring(20);
-    expect(layout(nodes, edges)).toEqual(layout(nodes, edges));
+  it("keeps the group bubbles apart", () => {
+    for (let i = 0; i < out.groups.length; i++) for (let j = i + 1; j < out.groups.length; j++) {
+      const d = Math.hypot(out.groups[i].x - out.groups[j].x, out.groups[i].y - out.groups[j].y);
+      expect(d).toBeGreaterThan((out.groups[i].r + out.groups[j].r) * 0.95);
+    }
   });
 
-  it("keeps nodes apart, even without any connection", () => {
-    const p = layout(Array.from({ length: 30 }, (_, i) => ({ id: `n${i}` })), []);
+  it("keeps nodes of a group inside its bubble and apart from each other", () => {
+    for (const p of out.nodes.filter((n) => n.group >= 0)) {
+      const g = out.groups[p.group];
+      expect(Math.hypot(p.x - g.x, p.y - g.y)).toBeLessThanOrEqual(g.r + 0.01);
+    }
+    const pts = out.nodes;
     let closest = Infinity;
-    for (let i = 0; i < p.length; i++) for (let j = i + 1; j < p.length; j++) closest = Math.min(closest, Math.hypot(p[i].x - p[j].x, p[i].y - p[j].y));
-    expect(closest).toBeGreaterThan(8);
+    for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) closest = Math.min(closest, Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y));
+    expect(closest).toBeGreaterThan(2);
   });
 
-  it("keeps nodes without connection out of the way: they sit in a strip below and do not squash the connected rest", () => {
-    const { nodes, edges } = ring(30);
-    const lone = Array.from({ length: 8 }, (_, i) => ({ id: `x${i}` }));
-    const p = layout([...nodes, ...lone], edges);
-    const linked = p.filter((q) => q.degree > 0), loose = p.filter((q) => q.degree === 0);
-    expect(loose).toHaveLength(8);
-    const bottom = Math.max(...linked.map((q) => q.y));
-    expect(Math.min(...loose.map((q) => q.y))).toBeGreaterThan(bottom);
-    expect(new Set(loose.map((q) => `${q.x},${q.y}`)).size).toBe(8); // keiner auf dem anderen
-    // Ohne die Einzelnen sähe die Gruppe genauso breit aus wie mit ihnen: sie nimmt den Rahmen ein statt in einer Ecke zu kleben.
-    const span = Math.max(...linked.map((q) => q.x)) - Math.min(...linked.map((q) => q.x));
-    expect(span).toBeGreaterThan(300);
+  it("is the same picture for the same input", () => {
+    expect(arrange(analyze(nodes, edges), nodes.length)).toEqual(out);
   });
 
-  it("scales uniformly, so a chain stays a chain", () => {
-    const nodes = Array.from({ length: 12 }, (_, i) => ({ id: `n${i}` }));
-    const p = layout(nodes, nodes.slice(1).map((_, i) => ({ source: `n${i}`, target: `n${i + 1}` })));
-    const w = Math.max(...p.map((q) => q.x)) - Math.min(...p.map((q) => q.x)), h = Math.max(...p.map((q) => q.y)) - Math.min(...p.map((q) => q.y));
-    expect(Math.max(w, h) / Math.max(Math.min(w, h), 1)).toBeGreaterThan(1.05);
-  });
-
-  it("handles empty input, one node, edges to unknown nodes and nodes on top of each other", () => {
-    expect(layout([], [])).toEqual([]);
-    expect(layout([{ id: "a" }], [])).toEqual([{ id: "a", x: 500, y: 300, degree: 0 }]);
-    const p = layout([{ id: "a" }, { id: "b" }], [{ source: "a", target: "zzz" }, { source: "a", target: "a" }]);
-    expect(p.map((q) => q.degree)).toEqual([0, 0]);
-    expect(p.every((q) => Number.isFinite(q.x) && Number.isFinite(q.y))).toBe(true);
+  it("lays out nodes without any connection as a grid", () => {
+    const loose = Array.from({ length: 30 }, (_, i) => ({ id: `n${i}`, label: `n${i}` }));
+    const r = arrange(analyze(loose, []), loose.length);
+    expect(r.nodes).toHaveLength(30);
+    let closest = Infinity;
+    for (let i = 0; i < 30; i++) for (let j = i + 1; j < 30; j++) closest = Math.min(closest, Math.hypot(r.nodes[i].x - r.nodes[j].x, r.nodes[i].y - r.nodes[j].y));
+    expect(closest).toBeGreaterThan(4);
   });
 });

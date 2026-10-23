@@ -1,92 +1,121 @@
-/** Kräftebasierte Anordnung eines kleinen Graphen (bis einige hundert Knoten) ohne Bibliothek: gleiche Eingabe, gleiches Bild. */
-export type LayoutNode = { id: string };
-export type LayoutEdge = { source: string; target: string };
-export type Placed = { id: string; x: number; y: number; degree: number };
+/**
+ * Legt einen analysierten Graphen (graphCluster.ts) in einen Rahmen: Gruppen als Blasen, darin die Knoten, Hub in der Mitte.
+ * Ohne Bibliothek und ohne Zufall: gleiche Eingabe, gleiches Bild.
+ */
+import type { Analysis } from "./graphCluster";
 
-const PAD = 36;
-const CELL = 22; // Raster für Knoten ohne Verbindung
+export type PlacedNode = { index: number; x: number; y: number; group: number };
+export type PlacedGroup = { id: number; x: number; y: number; r: number };
+export type Arranged = { nodes: PlacedNode[]; groups: PlacedGroup[]; frame: { width: number; height: number } };
+
+const PAD = 40;
+const SPACING = 15; // Abstand der Knoten innerhalb einer Gruppe
+const GAP = 26; // Abstand zwischen den Blasen
+const GOLDEN = 2.399963229728653;
 
 type Pt = { x: number; y: number };
 
-/** Kräfte auf den verbundenen Knoten. Das Bild behält sein Seitenverhältnis und wird in den Rahmen eingepasst und zentriert. */
-function simulate(n: number, links: Array<[number, number]>, width: number, height: number, iterations: number): Pt[] {
-  if (n === 1) return [{ x: width / 2, y: height / 2 }];
-  // Start auf einem Kreis, leicht versetzt nach Index: bestimmt und ohne Überdeckung.
-  const x = new Float64Array(n), y = new Float64Array(n), vx = new Float64Array(n), vy = new Float64Array(n);
-  const r0 = Math.min(width, height) * 0.35;
-  for (let i = 0; i < n; i++) {
-    const t = (2 * Math.PI * i) / n;
-    x[i] = width / 2 + r0 * Math.cos(t) * (0.6 + 0.4 * ((i * 7) % 5) / 4);
-    y[i] = height / 2 + r0 * Math.sin(t) * (0.6 + 0.4 * ((i * 3) % 5) / 4);
-  }
-  const k = Math.sqrt((width * height) / Math.max(n, 1)) * 0.7; // gewünschter Abstand
-  for (let it = 0; it < iterations; it++) {
-    const cool = 1 - it / iterations;
-    for (let i = 0; i < n; i++) { vx[i] = 0; vy[i] = 0; }
+/** Knoten einer Gruppe: Hub in der Mitte, der Rest als Sonnenblumenspirale; kurze Feder-Runde entlang der Gerüstkanten. */
+function fillGroup(members: number[], strength: number[], links: Array<[number, number]>): { pos: Map<number, Pt>; r: number } {
+  const order = members.slice().sort((a, b) => strength[b] - strength[a] || a - b);
+  const n = order.length;
+  const r = Math.max(SPACING * 1.6, SPACING * Math.sqrt(n / 0.55) * 0.62 + SPACING);
+  const px = new Float64Array(n), py = new Float64Array(n);
+  order.forEach((_, i) => {
+    const rad = r * 0.86 * Math.sqrt((i + 0.5) / n), ang = i * GOLDEN;
+    px[i] = rad * Math.cos(ang); py[i] = rad * Math.sin(ang);
+  });
+  const at = new Map(order.map((m, i) => [m, i]));
+  const pairs = links.flatMap(([a, b]) => (at.has(a) && at.has(b) ? [[at.get(a)!, at.get(b)!] as [number, number]] : []));
+  for (let it = 0; it < 80; it++) {
+    const fx = new Float64Array(n), fy = new Float64Array(n);
     for (let i = 0; i < n; i++) {
       for (let j = i + 1; j < n; j++) {
-        let dx = x[i] - x[j], dy = y[i] - y[j];
-        let d2 = dx * dx + dy * dy;
-        if (d2 < 0.01) { dx = (i - j) * 0.1; dy = 0.1; d2 = dx * dx + dy * dy; }
-        const d = Math.sqrt(d2);
-        const f = (k * k) / d2; // Abstoßung
-        vx[i] += (dx / d) * f * d; vy[i] += (dy / d) * f * d;
-        vx[j] -= (dx / d) * f * d; vy[j] -= (dy / d) * f * d;
+        const dx = px[i] - px[j], dy = py[i] - py[j], d = Math.hypot(dx, dy) || 0.01;
+        if (d < SPACING) { const f = (SPACING - d) / 2; fx[i] += (dx / d) * f; fy[i] += (dy / d) * f; fx[j] -= (dx / d) * f; fy[j] -= (dy / d) * f; }
       }
     }
-    for (const [a, b] of links) {
-      const dx = x[a] - x[b], dy = y[a] - y[b];
-      const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
-      const f = (d - k) * 0.08; // Feder
-      vx[a] -= (dx / d) * f * d * 0.1; vy[a] -= (dy / d) * f * d * 0.1;
-      vx[b] += (dx / d) * f * d * 0.1; vy[b] += (dy / d) * f * d * 0.1;
+    for (const [a, b] of pairs) {
+      const dx = px[a] - px[b], dy = py[a] - py[b], d = Math.hypot(dx, dy) || 0.01;
+      const f = (d - SPACING * 1.4) * 0.04;
+      fx[a] -= (dx / d) * f; fy[a] -= (dy / d) * f; fx[b] += (dx / d) * f; fy[b] += (dy / d) * f;
     }
     for (let i = 0; i < n; i++) {
-      vx[i] += (width / 2 - x[i]) * 0.02; vy[i] += (height / 2 - y[i]) * 0.02; // Schwerkraft zur Mitte: hält getrennte Gruppen beieinander
-      const m = Math.hypot(vx[i], vy[i]) || 1;
-      const step = Math.min(m, 40 * cool + 1);
-      x[i] += (vx[i] / m) * step; y[i] += (vy[i] / m) * step;
+      px[i] += fx[i]; py[i] += fy[i];
+      const d = Math.hypot(px[i], py[i]), lim = r * 0.9;
+      if (d > lim) { px[i] *= lim / d; py[i] *= lim / d; }
     }
   }
-  const minX = Math.min(...x), maxX = Math.max(...x), minY = Math.min(...y), maxY = Math.max(...y);
-  // Ein gemeinsamer Maßstab: eine Kette wird nicht quer durchs Bild gezogen, ein Haufen nicht plattgedrückt.
-  const s = Math.min((width - 2 * PAD) / Math.max(maxX - minX, 1), (height - 2 * PAD) / Math.max(maxY - minY, 1));
-  const offX = (width - 2 * PAD - (maxX - minX) * s) / 2, offY = (height - 2 * PAD - (maxY - minY) * s) / 2;
-  return Array.from({ length: n }, (_, i) => ({ x: PAD + offX + (x[i] - minX) * s, y: PAD + offY + (y[i] - minY) * s }));
+  return { pos: new Map(order.map((m, i) => [m, { x: px[i], y: py[i] }])), r };
 }
 
-/**
- * Verbundene Knoten werden kräftebasiert angeordnet. Knoten ohne Verbindung gehören nicht in die Simulation (die Abstoßung
- * würde sie weit hinausschieben und den Rest auf einen Fleck stauchen): sie liegen als Raster am unteren Rand.
- */
-export function layout(nodes: LayoutNode[], edges: LayoutEdge[], width = 1000, height = 600, iterations = 220): Placed[] {
-  const n = nodes.length;
-  if (n === 0) return [];
-  const index = new Map(nodes.map((nd, i) => [nd.id, i]));
-  const deg = new Array<number>(n).fill(0);
-  const links: Array<[number, number]> = [];
-  for (const e of edges) {
-    const a = index.get(e.source), b = index.get(e.target);
-    if (a === undefined || b === undefined || a === b) continue;
-    links.push([a, b]); deg[a]++; deg[b]++;
-  }
-  const linked = nodes.flatMap((_, i) => (deg[i] > 0 ? [i] : []));
-  const loose = nodes.flatMap((_, i) => (deg[i] === 0 ? [i] : []));
-  const out = new Array<Placed>(n);
-  const put = (i: number, p: Pt) => { out[i] = { id: nodes[i].id, x: p.x, y: p.y, degree: deg[i] }; };
+export function arrange(a: Analysis, count: number, width = 1000, height = 600): Arranged {
+  const strength = new Array<number>(count).fill(0);
+  for (const l of a.links) { strength[l.a] += l.score; strength[l.b] += l.score; }
+  const backbone = a.backbone.map((l) => [l.a, l.b] as [number, number]);
 
-  if (linked.length === 0 || loose.length === 0) {
-    // Alles oder nichts verbunden: eine einzige Simulation (bei lauter Einzelnen verteilt die Abstoßung sie gleichmäßig).
-    simulate(n, links, width, height, iterations).forEach((p, i) => put(i, p));
-    return out;
+  const filled = a.groups.map((g) => fillGroup(g.members, strength, backbone));
+  const loose = Array.from({ length: count }, (_, i) => i).filter((i) => a.group[i] < 0);
+
+  // Blasen anordnen: Start auf einem Kreis (große zuerst), dann anziehen entlang der Verbindungen und auseinanderschieben.
+  const G = a.groups.length;
+  const cx = new Float64Array(G), cy = new Float64Array(G);
+  const rr = filled.map((f) => f.r);
+  const total = rr.reduce((s, r) => s + r + GAP, 0);
+  const ring = Math.max(total / (2 * Math.PI), 1);
+  rr.forEach((_, g) => { const t = (2 * Math.PI * g) / Math.max(G, 1); cx[g] = ring * Math.cos(t); cy[g] = ring * Math.sin(t); });
+  const bridge = new Map<number, number>();
+  for (const l of a.links) {
+    const ga = a.group[l.a], gb = a.group[l.b];
+    if (ga >= 0 && gb >= 0 && ga !== gb) { const k = Math.min(ga, gb) * G + Math.max(ga, gb); bridge.set(k, (bridge.get(k) ?? 0) + l.score); }
   }
-  const cols = Math.max(1, Math.floor((width - 2 * PAD) / CELL));
-  const rows = Math.ceil(loose.length / cols);
-  const strip = rows * CELL + PAD / 2;
-  const local = new Map(linked.map((g, l) => [g, l]));
-  const sub = links.map(([a, b]) => [local.get(a)!, local.get(b)!] as [number, number]);
-  simulate(linked.length, sub, width, Math.max(height - strip, 120), iterations).forEach((p, l) => put(linked[l], p));
-  const top = height - strip + CELL / 2;
-  loose.forEach((g, i) => put(g, { x: PAD + (i % cols) * CELL, y: top + Math.floor(i / cols) * CELL }));
-  return out;
+  const maxBridge = Math.max(1e-9, ...bridge.values());
+  for (let it = 0; it < 300; it++) {
+    const fx = new Float64Array(G), fy = new Float64Array(G);
+    for (let g = 0; g < G; g++) {
+      for (let h = g + 1; h < G; h++) {
+        const dx = cx[g] - cx[h], dy = cy[g] - cy[h], d = Math.hypot(dx, dy) || 0.01, want = rr[g] + rr[h] + GAP;
+        const pull = (bridge.get(g * G + h) ?? 0) / maxBridge;
+        const f = d < want ? (want - d) * 0.5 : -pull * 0.02 * (d - want); // überlappen: auseinander; sonst Verbundene näher heran
+        fx[g] += (dx / d) * f; fy[g] += (dy / d) * f; fx[h] -= (dx / d) * f; fy[h] -= (dy / d) * f;
+      }
+      fx[g] -= cx[g] * 0.01; fy[g] -= cy[g] * 0.01;
+    }
+    for (let g = 0; g < G; g++) { cx[g] += fx[g]; cy[g] += fy[g]; }
+  }
+
+  // Der Rahmen ist breiter als hoch: die Mitten der Blasen entsprechend auseinanderziehen (das vergrößert nur Abstände).
+  if (G > 1) {
+    const ext = (c: Float64Array) => [Math.min(...Array.from(c, (v, g) => v - rr[g])), Math.max(...Array.from(c, (v, g) => v + rr[g]))];
+    const [x0, x1] = ext(cx), [y0, y1] = ext(cy);
+    const sx = Math.min(2, Math.max(1, width / height / Math.max((x1 - x0) / Math.max(y1 - y0, 1), 0.1)));
+    for (let g = 0; g < G; g++) cx[g] *= sx;
+  }
+
+  const nodes: PlacedNode[] = [];
+  const groups: PlacedGroup[] = [];
+  const place = (i: number, x: number, y: number, group: number) => nodes.push({ index: i, x, y, group });
+  a.groups.forEach((g, gi) => {
+    groups.push({ id: g.id, x: cx[gi], y: cy[gi], r: rr[gi] });
+    for (const m of g.members) { const p = filled[gi].pos.get(m)!; place(m, cx[gi] + p.x, cy[gi] + p.y, gi); }
+  });
+
+  // Ohne Gruppe: ein Raster unter den Blasen.
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const g of groups) { minX = Math.min(minX, g.x - g.r); maxX = Math.max(maxX, g.x + g.r); minY = Math.min(minY, g.y - g.r); maxY = Math.max(maxY, g.y + g.r); }
+  if (!groups.length) { minX = 0; maxX = width - 2 * PAD; minY = 0; maxY = 0; }
+  const cols = Math.max(1, Math.floor((Math.max(maxX - minX, width / 2)) / SPACING));
+  loose.forEach((i, k) => place(i, minX + (k % cols) * SPACING, maxY + GAP + Math.floor(k / cols) * SPACING, -1));
+  if (loose.length) maxY += GAP + Math.ceil(loose.length / cols) * SPACING;
+  if (loose.length && !groups.length) maxX = minX + cols * SPACING;
+
+  // Einheitlicher Maßstab in den Rahmen.
+  const s = Math.min((width - 2 * PAD) / Math.max(maxX - minX, 1), (height - 2 * PAD) / Math.max(maxY - minY, 1));
+  const offX = PAD + (width - 2 * PAD - (maxX - minX) * s) / 2, offY = PAD + (height - 2 * PAD - (maxY - minY) * s) / 2;
+  const fit = (x: number, y: number): Pt => ({ x: offX + (x - minX) * s, y: offY + (y - minY) * s });
+  return {
+    nodes: nodes.map((n) => ({ ...n, ...fit(n.x, n.y) })),
+    groups: groups.map((g) => ({ ...g, ...fit(g.x, g.y), r: g.r * s })),
+    frame: { width, height },
+  };
 }

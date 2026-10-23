@@ -188,3 +188,12 @@ def test_diagnose_warns_when_the_bank_answers_in_an_unknown_form(mem_client):
 
     report = mem_client(hindsight=odd).get(f"{M}/hindsight/diagnose").json()
     assert report["status"] == "warn" and all(c["status"] == "warn" for c in report["checks"])
+
+
+def test_graph_edges_keep_a_numeric_weight_and_drop_nonsense():
+    from app.memory import norm_graph
+    g = norm_graph({"nodes": [{"data": {"id": "a"}}, {"data": {"id": "b"}}, {"data": {"id": "c"}}],
+                    "edges": [{"data": {"source": "a", "target": "b", "linkType": "semantic", "weight": 0.8}},
+                              {"data": {"source": "b", "target": "c", "linkType": "entity", "weight": "hoch"}},
+                              {"data": {"source": "a", "target": "c", "linkType": "temporal", "weight": True}}]}, 50)
+    assert [e.get("weight") for e in g["edges"]] == [0.8, None, None]

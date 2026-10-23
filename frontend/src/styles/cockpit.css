@@ -117,7 +117,7 @@
 .ge{stroke:var(--line2);stroke-width:1}
 .ge.hot{stroke:var(--crim-hi);stroke-width:1.6}
 .gn{cursor:pointer}
-.gn circle{stroke:var(--void);stroke-width:2}
+.gn circle{stroke:var(--void);stroke-width:2;fill:var(--gc,oklch(70% .02 270))}
 .gn text{fill:var(--t2);font:500 11px var(--sans);paint-order:stroke;stroke:var(--void);stroke-width:3px}
 .gn:hover text,.gn.on text{fill:var(--t1)}
 .gn.on circle{stroke:var(--t1)}
@@ -155,3 +155,20 @@
 .mem-item.on{box-shadow:inset 2px 0 0 var(--crim)}
 .tag-btn{cursor:pointer;border:0;font:inherit}
 .tag-btn:hover{color:var(--t1);background:var(--s3,var(--s2))}
+
+/* Graph als Landkarte: Gruppen in eigenen Farben, nur das Gerüst der Verbindungen */
+.gg0{--gc:oklch(72% .16 20)}.gg1{--gc:oklch(74% .12 235)}.gg2{--gc:oklch(78% .14 150)}.gg3{--gc:oklch(80% .14 85)}
+.gg4{--gc:oklch(72% .14 300)}.gg5{--gc:oklch(78% .11 195)}.gg6{--gc:oklch(76% .14 55)}.gg7{--gc:oklch(74% .14 345)}.gg-none{--gc:oklch(62% .02 270)}
+i.swatch.gg0,i.swatch.gg1,i.swatch.gg2,i.swatch.gg3,i.swatch.gg4,i.swatch.gg5,i.swatch.gg6,i.swatch.gg7,i.swatch.gg-none{background:var(--gc)}
+.gb .bubble{fill:var(--gc);fill-opacity:.07;stroke:var(--gc);stroke-opacity:.35;stroke-width:1;vector-effect:non-scaling-stroke;cursor:pointer}
+.gb .bubble:hover{fill-opacity:.12}
+.gb .gt{fill:var(--gc);font-family:var(--sans);font-weight:600;paint-order:stroke;stroke:var(--void);pointer-events:none}
+.gb.dim{opacity:.25}
+.gn text{font-family:var(--sans);font-weight:500;paint-order:stroke;stroke:var(--void);pointer-events:none}
+.ge.bb{stroke:var(--gc,var(--line2));stroke-opacity:.5}
+.ge.bridge{stroke:var(--t3);stroke-opacity:.5;stroke-dasharray:5 4}
+.ge.bb.hot,.ge.hot{stroke:var(--crim-hi);stroke-opacity:1;stroke-width:1.6}
+.graph-groups li{margin:2px 0}
+.graph-groups .linkish{display:flex;align-items:center;gap:6px;text-align:left;width:100%}
+.graph-groups .linkish .muted{margin-left:auto;white-space:nowrap}
+.graph-groups .linkish.on{color:var(--t1);font-weight:600}
