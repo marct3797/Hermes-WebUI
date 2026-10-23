@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api } from "./api";
+import { cached, invalidate } from "./dataCache";
+import { poll } from "./poll";
 import type { AgentRef, HostInfo, HostsResponse } from "./types";
 import { labelFor, useUi } from "./ui";
 
@@ -13,26 +15,25 @@ type HostsState = {
 const Ctx = createContext<HostsState>({ refresh: () => undefined });
 const POLL_MS = 30_000;
 
-/** Hosts, Runtimes und Agents samt Status. Wird alle 30 s und beim Zurückkehren ins Fenster aufgefrischt. */
+/** Hosts, Runtimes und Agents samt Status. Wird alle 30 s (nur bei sichtbarem Tab) und beim Zurückkehren ins Fenster aufgefrischt. */
 export function HostsProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<HostsResponse>();
   const [error, setError] = useState<string>();
   const alive = useRef(true);
 
-  const refresh = useCallback(() => {
-    api.hosts()
-      .then((r) => { if (alive.current) { setData(r); setError(undefined); } })
-      .catch((e: Error) => { if (alive.current) setError(e.message); });
-  }, []);
+  // 5 s Dedupe: Start, Takt und Rückkehr in den Tab fragen sonst kurz hintereinander dasselbe ab.
+  const load = useCallback(() => cached("hosts", 5_000, (s) => api.hosts(s))
+    .then((r) => { if (alive.current) { setData(r); setError(undefined); } })
+    .catch((e: Error) => { if (alive.current) setError(e.message); throw e; }), []);
+  // Ausdrückliches Auffrischen (Knopf) soll nie einen alten Stand liefern.
+  const refresh = useCallback(() => { invalidate("hosts"); load().catch(() => undefined); }, [load]);
 
   useEffect(() => {
     alive.current = true;
-    refresh();
-    const timer = setInterval(refresh, POLL_MS);
-    const onFocus = () => { if (document.visibilityState === "visible") refresh(); };
-    document.addEventListener("visibilitychange", onFocus);
-    return () => { alive.current = false; clearInterval(timer); document.removeEventListener("visibilitychange", onFocus); };
-  }, [refresh]);
+    load().catch(() => undefined);
+    const stop = poll(load, POLL_MS);
+    return () => { alive.current = false; stop(); };
+  }, [load]);
 
   // Anzeigenamen aus der WebUI-Config gehen dem Ordnernamen aus Hermes vor.
   const { labels } = useUi();

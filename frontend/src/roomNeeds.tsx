@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api } from "./api";
+import { poll } from "./poll";
 import type { Room, RoomMember } from "./types";
 import { toMemberAsk, type MemberAsk } from "./useRoom";
 
@@ -20,24 +21,21 @@ export function roomNeedsOf(rooms: Room[]): RoomNeed[] {
 
 /**
  * Räume, in denen etwas auf die Person wartet. Das kommt vom Server (offene Freigaben und Rückfragen laufender Mitglieder
- * liegen dort), nicht aus einer geöffneten Raumseite. Aufgefrischt wird alle 15 s und beim Zurückkehren ins Fenster; Fehler bleiben still.
+ * liegen dort), nicht aus einer geöffneten Raumseite. Aufgefrischt wird alle 15 s (nur bei sichtbarem Tab) und beim Zurückkehren ins Fenster; Fehler bleiben still.
  */
 export function RoomNeedsProvider({ children }: { children: ReactNode }) {
   const [rooms, setRooms] = useState<Room[]>([]);
   const alive = useRef(true);
 
-  const refresh = useCallback(() => {
-    api.rooms(false).then((r) => { if (alive.current) setRooms(r.rooms.filter((x) => x.needs_user || (x.asks?.length ?? 0) > 0)); }, () => undefined);
-  }, []);
+  const load = useCallback(() => api.rooms(false).then((r) => { if (alive.current) setRooms(r.rooms.filter((x) => x.needs_user || (x.asks?.length ?? 0) > 0)); }), []);
+  const refresh = useCallback(() => { load().catch(() => undefined); }, [load]);
 
   useEffect(() => {
     alive.current = true;
     refresh();
-    const timer = setInterval(refresh, POLL_MS);
-    const onFocus = () => { if (document.visibilityState === "visible") refresh(); };
-    document.addEventListener("visibilitychange", onFocus);
-    return () => { alive.current = false; clearInterval(timer); document.removeEventListener("visibilitychange", onFocus); };
-  }, [refresh]);
+    const stop = poll(load, POLL_MS); // Fehler bleiben still, der Takt wird bei Fehlern aber länger
+    return () => { alive.current = false; stop(); };
+  }, [load, refresh]);
 
   const needs = useMemo(() => roomNeedsOf(rooms), [rooms]);
   const value = useMemo(() => ({ needs, refresh }), [needs, refresh]);

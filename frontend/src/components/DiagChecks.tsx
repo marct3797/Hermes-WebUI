@@ -1,10 +1,11 @@
-import type { DiagCheck, DiagStatus } from "../types";
+import type { DiagCheck } from "../types";
 import { Icon } from "./Icon";
 
-const MARK: Record<DiagStatus, { icon: string; label: string; cls: string }> = {
+const MARK: Record<DiagCheck["status"], { icon: string; label: string; cls: string }> = {
   ok: { icon: "check", label: "in Ordnung", cls: "diag-ok" },
   warn: { icon: "alert", label: "Abweichung", cls: "diag-warn" },
   fail: { icon: "x", label: "Fehler", cls: "diag-fail" },
+  slow: { icon: "alert", label: "langsam", cls: "diag-warn" },
 };
 
 /** Ergebnisliste einer Diagnose: Agents (System) und Gedächtnis-Anbieter teilen sich die Darstellung. */

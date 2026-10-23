@@ -14,6 +14,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from .adapters import RunInput, RuntimeAdapter, UpstreamError
+from .cache import TtlCache
 from .events import TERMINAL_TYPES
 
 Check = dict[str, Any]
@@ -50,11 +51,15 @@ def rows(payload: Any) -> list[Any] | None:
 
 def summarize(checks: list[Check]) -> str:
     states = {c["status"] for c in checks}
-    return "fail" if "fail" in states else "warn" if "warn" in states else "ok"
+    return "fail" if "fail" in states else "warn" if states & {"warn", "slow"} else "ok"  # "slow" (Zeitlimit) zählt als Abweichung, nicht als Fehler
 
 
-async def inspect(adapter: RuntimeAdapter, agent: str) -> list[Check]:
-    """Alle lesenden Prüfungen eines Agents."""
+async def inspect(adapter: RuntimeAdapter, agent: str, *, cache: TtlCache | None = None,
+                  models_ttl: float = 60.0, models_timeout: float = 8.0) -> list[Check]:
+    """Alle lesenden Prüfungen eines Agents. Nach dem Erreichbarkeitstest laufen Modelle und Sessions/Verlauf parallel.
+
+    `Modelle und Anbieter` ist die langsamste Prüfung: mit `cache` wird ihr Ergebnis `models_ttl` s wiederverwendet, und nach
+    `models_timeout` s meldet sie "slow" statt zu warten (die Abfrage läuft weiter und füllt den Cache für die nächste Prüfung)."""
     out: list[Check] = []
     status = None
 
@@ -79,7 +84,7 @@ async def inspect(adapter: RuntimeAdapter, agent: str) -> list[Check]:
 
     out.append(await timed("features", "Fähigkeiten", features))
 
-    async def models() -> tuple[str, str]:
+    async def models_result() -> tuple[str, str]:
         payload = await adapter.models(agent)
         providers = payload.get("providers") if isinstance(payload, dict) else None
         if isinstance(providers, list):
@@ -93,7 +98,15 @@ async def inspect(adapter: RuntimeAdapter, agent: str) -> list[Check]:
             return "warn", "Alte Antwortform (flache Liste), Gruppierung nach Anbieter fehlt"
         return "fail", "Antwort enthält weder `providers` noch `models`"
 
-    out.append(await timed("models", "Modelle und Anbieter", models))
+    async def models() -> tuple[str, str]:
+        if cache is None:
+            return await models_result()
+        key = ("models", adapter.id, getattr(getattr(adapter, "cfg", None), "base_url", ""), agent)
+        try:
+            result, _ = await asyncio.wait_for(cache.get(key, models_ttl, models_result), models_timeout)
+        except asyncio.TimeoutError:
+            return "slow", f"Langsam: keine Antwort nach {models_timeout:g} s, die Abfrage läuft weiter"
+        return result
 
     newest: str | None = None
 
@@ -109,10 +122,11 @@ async def inspect(adapter: RuntimeAdapter, agent: str) -> list[Check]:
         more = payload.get("has_more") if isinstance(payload, dict) else None
         return "ok", f"{len(items)} Sessions gelesen{', weitere vorhanden' if more else ''}"
 
-    out.append(await timed("sessions", "Sessions lesen", sessions))
-    if newest is None:
-        out.append(check("history", "Verlauf lesen", "warn", "Noch keine Session zum Prüfen (Lauftest anlegen)"))
-        return out
+    async def sessions_and_history() -> list[Check]:
+        got = [await timed("sessions", "Sessions lesen", sessions)]
+        if newest is None:
+            return got + [check("history", "Verlauf lesen", "warn", "Noch keine Session zum Prüfen (Lauftest anlegen)")]
+        return got + [await timed("history", "Verlauf lesen (Tool-Aufrufe und Ausgaben)", history)]
 
     async def history() -> tuple[str, str]:
         payload = await adapter.session_messages(agent, newest, limit=200, offset=None)
@@ -129,8 +143,8 @@ async def inspect(adapter: RuntimeAdapter, agent: str) -> list[Check]:
             return "warn", "Verlauf ohne Nutzer- oder Assistentennachrichten"
         return "ok", f"{len(msgs)} Nachrichten, {calls} Tool-Aufrufe, {len(results)} Ergebnisse"
 
-    out.append(await timed("history", "Verlauf lesen (Tool-Aufrufe und Ausgaben)", history))
-    return out
+    model_check, tail = await asyncio.gather(timed("models", "Modelle und Anbieter", models), sessions_and_history())
+    return out + [model_check, *tail]
 
 
 async def run_test(adapter: RuntimeAdapter, agent: str) -> list[Check]:

@@ -14,7 +14,8 @@ from .access_logging import CredentialQueryFilter
 from .audit import AuditLog
 from .auth import SessionStore, assert_auth_configured
 from .config import Settings, get_settings
-from .dashboard import SoulHistory
+from .cache import TtlCache
+from .dashboard import CacheCfg, SoulHistory
 from .hosts import HostService
 from .oidc import OidcClient
 from .registry import AGENT_RE, Registry
@@ -57,7 +58,8 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         app.state.http = httpx.AsyncClient(
-            timeout=settings.upstream_timeout_s, transport=transport, follow_redirects=False
+            timeout=settings.upstream_timeout_s, transport=transport, follow_redirects=False,
+            limits=httpx.Limits(max_connections=100, max_keepalive_connections=20, keepalive_expiry=settings.upstream_keepalive_s),
         )
         app.state.hosts = HostService(
             app.state.registry, app.state.http,
@@ -77,6 +79,8 @@ def create_app(
         openapi_url=None if settings.env == "prod" else "/bff/openapi.json",
     )
     app.state.settings = settings
+    app.state.diag_cache = TtlCache()
+    app.state.dash_cache = CacheCfg(TtlCache(), settings.dash_models_ttl_s, settings.dash_state_ttl_s, settings.dash_stale_max_s)
 
     @app.exception_handler(RequestValidationError)
     async def invalid_input(_request: Request, exc: RequestValidationError):
