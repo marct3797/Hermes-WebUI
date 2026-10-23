@@ -297,6 +297,14 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
       }
       return json(uiState);
     }
+    if (url.endsWith("/_cli-auth") || url.endsWith("/_cli-auth/refresh")) {
+      const refreshed = url.endsWith("/refresh");
+      if (url.startsWith("/bff/h/laptop/")) return json({ available: false, reason: "Host-Dienst nicht eingerichtet" });
+      return json({ available: true, reason: null, clis: [
+        { id: "codex", state: "signed_in", method: "ChatGPT", checked_at: "2026-01-01T00:00:00+00:00", reason: null },
+        { id: "claude", state: refreshed ? "signed_in" : "signed_out", method: refreshed ? "claude.ai" : null, checked_at: "2026-01-01T00:00:00+00:00", reason: null },
+        { id: "opencode", state: "unknown", method: null, checked_at: "2026-01-01T00:00:00+00:00", reason: "Zeitueberschreitung (15 s)" }] });
+    }
     if (url === "/bff/h/hikari/hermes/_provider-matrix") return json(providerMatrix(agents, dash));
     if (url === "/bff/h/laptop/hermes/_provider-matrix") return json({ detail: "Hermes nicht erreichbar: keine Verbindung zu 100.100.3.4:8642. Läuft der API-Server dort und lauscht auf dieser Adresse?" }, 502);
     const m = /^\/bff\/h\/hikari\/hermes\/([^/]+)(\/.*)$/.exec(url);

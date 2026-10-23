@@ -160,11 +160,11 @@ describe("Anbieter-Hauptseite", () => {
     expect(assign).toHaveBeenCalledWith(expect.stringContaining("step_up=true"));
   });
 
-  it("lists the coding CLIs below the hosts", async () => {
+  it("lists the coding CLIs per host with their sign-in state", async () => {
     await open();
     const clis = within(screen.getByRole("region", { name: "Coding-CLIs" }));
-    for (const name of ["Claude Code", "OpenCode", "Antigravity", "OpenAI Codex"]) expect(clis.getByText(name)).toBeInTheDocument();
-    expect(clis.getAllByText("NOCH NICHT ANGEBUNDEN")).toHaveLength(4);
+    const hikari = await clis.findByRole("group", { name: "Coding-CLIs auf Hikari" });
+    for (const name of ["Claude Code", "OpenCode", "OpenAI Codex"]) expect(await within(hikari).findByText(name)).toBeInTheDocument();
   });
 
   it("is reachable from the 'Mehr' sheet on the phone", async () => {

@@ -23,6 +23,7 @@ class Settings:
     allow_shell: bool = False
     max_terminals: int = 8
     exited_ttl_s: int = EXITED_TTL_S
+    probe_overrides: dict = field(default_factory=dict)  # nur Tests: ID -> argv; load() ignoriert es
 
     @classmethod
     def from_dict(cls, value):
@@ -71,7 +72,9 @@ class Settings:
 
     @classmethod
     def load(cls, path):
-        return cls.from_dict(json.loads(Path(path).read_text()))
+        value = json.loads(Path(path).read_text())
+        value.pop('probe_overrides', None)  # Config darf keine Statusbefehle setzen
+        return cls.from_dict(value)
 
     def token(self):
         token = os.environ.get(self.token_env, '')

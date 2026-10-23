@@ -163,3 +163,6 @@ export type ProviderMatrix = { available: boolean; reason: string | null; profil
 export type ModelProvider = { slug: string; name: string; current: boolean; authenticated: boolean; models: string[]; warning: string | null };
 export type OAuthStart = { session_id: string; flow?: string; user_code?: string; verification_url?: string; auth_url?: string; expires_in?: number; poll_interval?: number };
 export type OAuthPoll = { session_id: string; status: "pending" | "approved" | "error" | "expired" | string; error_message: string | null; expires_at: number | null };
+
+export type CliAuthEntry = { id: string; state: "signed_in" | "signed_out" | "unknown"; method: string | null; checked_at: string; reason: string | null };
+export type CliAuth = { available: boolean; reason: string | null; clis?: CliAuthEntry[] };
