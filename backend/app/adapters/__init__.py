@@ -102,6 +102,12 @@ class RuntimeAdapter:
     async def fork_session(self, agent: str, session_id: str) -> Any:
         raise Unsupported("Session abzweigen")
 
+    async def skills(self, agent: str) -> Any:
+        raise Unsupported("Skills")
+
+    async def toolsets(self, agent: str) -> Any:
+        raise Unsupported("Toolsets")
+
     async def rename_session(self, agent: str, session_id: str, title: str) -> Any:
         raise Unsupported("Session umbenennen")
 

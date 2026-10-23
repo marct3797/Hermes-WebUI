@@ -108,3 +108,12 @@ export type ProfileInput = { label: string | null; sigil: SigilInput | null };
 export type DiagStatus = "ok" | "warn" | "fail";
 export type DiagCheck = { id: string; label: string; status: DiagStatus; detail: string; ms: number | null };
 export type DiagReport = { agent: string; status: DiagStatus; checks: DiagCheck[]; at: number };
+
+export type MemProvider = { id: string; type: string; label: string; bank: string; capabilities: string[] };
+export type MemItem = { id: string; text: string; kind: string | null; context: string | null; entities: string[]; at: number | null; tags: string[]; document: string | null };
+export type MemPage = { items: MemItem[]; total: number | null; limit: number; offset: number };
+export type MemGraph = { nodes: Array<{ id: string; label: string; kind: string | null }>; edges: Array<{ source: string; target: string; label: string | null }>; total: number; truncated: boolean };
+export type MemEntity = { id: string; name: string; mentions: number; first_seen: number | null; last_seen: number | null };
+export type MemModel = { id: string; name: string; content: string | null; query: string | null; updated: number | null; tags: string[] };
+export type SkillInfo = { name: string; description?: string; category?: string };
+export type ToolsetInfo = { name: string; label?: string; description?: string; enabled?: boolean; configured?: boolean; tools?: string[] };

@@ -24,12 +24,12 @@ const NAV = [
   { to: "/", label: "Cockpit", icon: "grid" },
   { to: "/inbox", label: "Inbox", icon: "inbox" },
   { to: "/hosts", label: "Hosts", icon: "server" },
+  { to: "/memory", label: "Gedächtnis", icon: "memory" },
   { to: "/system", label: "System", icon: "shield" },
 ];
 // Module, die noch nicht gebaut sind: sichtbar, aber ohne Ziel.
 const SOON = [
   { label: "Kanban", icon: "kanban" },
-  { label: "Memory", icon: "memory" },
 ];
 
 export function Sidebar(p: Props) {

@@ -12,6 +12,7 @@ mkdir -p "$home/config" "$home/data"
 
 # Config nur anlegen, nie überschreiben (cp -n). Die Beispiel-Sigils sind Marcs japanisches Set, optional.
 [ -f "$home/config/hosts.json" ] || cp "$here/hosts.json" "$home/config/hosts.json"
+[ -f "$home/config/memory.json" ] || cp "$here/memory.json" "$home/config/memory.json"   # Gedächtnis-Anbieter (Hindsight auf kage)
 cp -rn "$here/../backend/examples/japan/." "$home/config/" 2>/dev/null
 
 if [ ! -f "$envf" ]; then

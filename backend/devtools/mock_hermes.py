@@ -79,6 +79,24 @@ def create_mock(
             "model": "mock-large", "provider": "mock",
         }
 
+    @router.get("/v1/skills")
+    async def skills(request: Request):
+        store(request)
+        return {"object": "list", "data": [
+            {"name": "github-pr-review", "description": "Prüft Pull Requests und kommentiert.", "category": "github"},
+            {"name": "plan", "description": "Zerlegt Aufgaben in Schritte.", "category": "software-development"},
+            {"name": "himalaya", "description": "E-Mail über IMAP/SMTP.", "category": "email"},
+        ]}
+
+    @router.get("/v1/toolsets")
+    async def toolsets(request: Request):
+        store(request)
+        return {"object": "list", "data": [
+            {"name": "terminal", "label": "Terminal", "description": "Befehle ausführen.", "enabled": True, "configured": True, "tools": ["terminal", "process"]},
+            {"name": "web", "label": "Web", "description": "Suchen und Seiten lesen.", "enabled": True, "configured": False, "tools": ["web_search", "web_extract"]},
+            {"name": "browser", "label": "Browser", "description": "Seiten bedienen.", "enabled": False, "configured": True, "tools": ["browser_navigate"]},
+        ]}
+
     @router.get("/api/sessions")
     async def list_sessions(request: Request, limit: int = 30, offset: int = 0, source: str | None = None):
         sessions = store(request)["sessions"]

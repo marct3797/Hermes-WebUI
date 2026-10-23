@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     hosts_file: Path = Path("hosts.json")
     # UI-Einstellungen (Sigils, Packs, Shader), siehe ui.example.json. Fehlt die Datei, gelten Standardwerte.
     ui_file: Path | None = None
+    # Gedächtnis-Anbieter (Hindsight …), siehe memory.example.json. Fehlt die Datei, ist die Seite Gedächtnis leer.
+    memory_file: Path | None = None
     # Host, auf den alte /p/<profil>-Links zeigen.
     legacy_host: str = "hikari"
 

@@ -99,6 +99,12 @@ class HermesAdapter(RuntimeAdapter):
     async def models(self, agent: str) -> Any:
         return await self._request("GET", agent, "/api/model/options")
 
+    async def skills(self, agent: str) -> Any:
+        return await self._request("GET", agent, "/v1/skills")
+
+    async def toolsets(self, agent: str) -> Any:
+        return await self._request("GET", agent, "/v1/toolsets")
+
     async def sessions(self, agent: str, *, limit: int, offset: int, source: str | None, include_children: bool = False) -> Any:
         params: dict[str, Any] = {"limit": limit, "offset": offset}
         if source:

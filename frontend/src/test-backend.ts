@@ -52,7 +52,44 @@ const diag = (agent: string, withRun = false) => ({
     : [{ id: "health", label: "Erreichbar und angemeldet", status: "ok", detail: "Version 0.21.6", ms: 5 }, { id: "models", label: "Modelle und Anbieter", status: "ok", detail: "1 Anbieter, 2 Modelle", ms: 9 }],
 });
 
-export function installBackend(agents: string[] = ["raiden"], features = ["runs", "steer"], uiOverride: Partial<UiConfig> = {}) {
+const memItem = (id: string, text: string, kind: string, entities: string[] = []) => ({ id, text, kind, context: null, entities, at: 1_792_000_000_000, tags: [], document: null });
+const MEM_ITEMS = [
+  memItem("f1", "Marc betreibt einen Server namens Hikari.", "world", ["Marc", "Hikari"]),
+  memItem("f2", "Marc hat die WebUI gebaut.", "experience", ["Marc"]),
+  memItem("f3", "Hikari läuft im Tailnet.", "world", ["Hikari"]),
+];
+
+/** Gedächtnis-Routen des BFF in Hindsights Form (nach der Normalisierung durch das BFF). */
+function memoryRoute(url: string, method: string, capabilities: string[], json: (b: unknown, s?: number) => Response, body?: Record<string, unknown>): Response | undefined {
+  const u = new URL(url, "http://bff");
+  const path = u.pathname;
+  if (path === "/bff/memory") return json({ providers: [{ id: "hindsight", type: "hindsight", label: "Hindsight", bank: "hermes", capabilities }], config_error: null });
+  const m = /^\/bff\/memory\/hindsight\/([a-z]+)(?:\/(.+))?$/.exec(path);
+  if (!m) return undefined;
+  const [, what, rest] = m;
+  const q = u.searchParams.get("q") ?? "";
+  if (what === "stats") return json({ counts: [{ key: "total_nodes", value: 120 }, { key: "nodes_by_fact_type.world", value: 80 }] });
+  if (what === "items") {
+    const kind = u.searchParams.get("kind");
+    const offset = Number(u.searchParams.get("offset") ?? 0);
+    const rows = MEM_ITEMS.filter((i) => (!kind || i.kind === kind) && (!q || i.text.includes(q)));
+    return json({ items: rows.slice(offset, offset + 2), total: rows.length, limit: 2, offset });
+  }
+  if (what === "search") return json({ items: MEM_ITEMS.filter((i) => i.text.toLowerCase().includes(q.toLowerCase())) });
+  if (what === "graph") {
+    if (q === "leer") return json({ nodes: [], edges: [], total: 0, truncated: false });
+    return json({ nodes: [{ id: "n1", label: "Marc", kind: "person" }, { id: "n2", label: "Hikari", kind: "server" }, { id: "n3", label: "Tailnet", kind: "server" }],
+      edges: [{ source: "n1", target: "n2", label: "betreibt" }, { source: "n2", target: "n3", label: null }], total: 3, truncated: false });
+  }
+  if (what === "entities" && rest) return json({ id: rest, name: "Marc", mentions: 7, first_seen: null, last_seen: 1_792_000_000_000, observations: [MEM_ITEMS[1]] });
+  if (what === "entities") return json({ items: [{ id: "e1", name: "Marc", mentions: 7, first_seen: null, last_seen: null }, { id: "e2", name: "Hikari", mentions: 4, first_seen: null, last_seen: null }], total: 2 });
+  if (what === "models") return json({ items: [{ id: "m1", name: "Zuhause", content: "**Netz:** Tailscale", query: "Wie sieht das Netz aus?", updated: 1_792_000_000_000, tags: ["netz"] }] });
+  if (what === "diagnose") return json({ agent: "Gedächtnis/hindsight", status: "warn", checks: [{ id: "reach", label: "Erreichbar", status: "ok", detail: "Bank hermes", ms: 7 }, { id: "shape", label: "Antwortform", status: "warn", detail: "Graph ohne Kantenbeschriftung", ms: 9 }] });
+  if (what === "reflect" && method === "POST") return json({ text: `Antwort auf: ${String(body?.query)}`, based_on: [MEM_ITEMS[0]] });
+  return json({ detail: "nicht da" }, 404);
+}
+
+export function installBackend(agents: string[] = ["raiden"], features = ["runs", "steer"], uiOverride: Partial<UiConfig> = {}, memoryCapabilities = ["stats", "items", "search", "graph", "entities", "models", "reflect"]) {
   FakeEventSource.all = [];
   // Wie das BFF: Speichern ändert die Config, die Antwort ist die ganze Config.
   const uiState: UiConfig = { ...baseUi(), ...uiOverride };
@@ -66,6 +103,10 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
     if (url === "/bff/me") return json({ user: { id: "42", name: "marc" }, auth_mode: "none", fresh: true });
     if (url === "/bff/hosts") return json({ hosts: hostsFor(agents), config_error: null });
     if (url === "/bff/ui") return json(uiState);
+    if (url.startsWith("/bff/memory")) {
+      const r = memoryRoute(url, method, memoryCapabilities, json, init?.body ? JSON.parse(String(init.body)) : undefined);
+      if (r) return r;
+    }
     const put = method === "PUT" ? init?.body && JSON.parse(String(init.body)) : undefined;
     if (method === "PUT" && url.startsWith("/bff/ui/")) {
       if (!uiState.writable) return json({ detail: uiState.write_error }, 409);
@@ -89,6 +130,8 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
       const rest = m[2];
       if (rest === "/status") return json({ state: "online", online: true, version: "0.21.6", features, error: null });
       if (rest === "/models") return json({ providers: [{ slug: "mock", name: "Mock", authenticated: true, is_current: true, models: ["mock-large", "mock-small"] }], model: "mock-large", provider: "mock" });
+      if (rest === "/skills") return json({ object: "list", data: [{ name: "plan", description: "Zerlegt Aufgaben in Schritte.", category: "software-development" }, { name: "himalaya", description: "E-Mail über IMAP.", category: "email" }] });
+      if (rest === "/toolsets") return json({ object: "list", data: [{ name: "terminal", label: "Terminal", enabled: true, configured: true, tools: ["terminal"] }, { name: "web", label: "Web", enabled: true, configured: false }, { name: "browser", enabled: false }] });
       if (rest === "/diagnose") return json(diag(m[1]));
       if (method === "POST" && rest === "/diagnose/run") return json(diag(m[1], true));
       if (method === "POST" && /^\/sessions\/[^/]+\/fork$/.test(rest)) return json({ session_id: `fork-${m[1]}` });

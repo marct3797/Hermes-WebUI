@@ -88,6 +88,16 @@ async def models(target: Tgt):
     return await upstream(target.adapter.models(target.agent.id))
 
 
+@router.get("/skills")
+async def skills(target: Tgt):
+    return await upstream(target.adapter.skills(target.agent.id))
+
+
+@router.get("/toolsets")
+async def toolsets(target: Tgt):
+    return await upstream(target.adapter.toolsets(target.agent.id))
+
+
 @router.get("/sessions")
 async def sessions(
     target: Tgt,

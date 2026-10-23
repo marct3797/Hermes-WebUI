@@ -343,3 +343,16 @@ def test_delete_session_and_its_audit_entry(client):
 def test_delete_is_refused_while_a_run_is_active(client):
     info = run(client, "hallo")  # Strom nicht abonniert: der Run gilt als laufend
     assert client.delete(f"{BASE}/sessions/{info['session_id']}").status_code == 409
+
+
+# --- Skills und Toolsets ---------------------------------------------------------------------------------------
+def test_skills_and_toolsets_are_passed_through(client):
+    skills = client.get(f"{BASE}/skills").json()["data"]
+    assert {s["name"] for s in skills} >= {"github-pr-review", "plan"}
+    sets = {t["name"]: t for t in client.get(f"{BASE}/toolsets").json()["data"]}
+    assert sets["terminal"]["enabled"] is True and sets["web"]["configured"] is False and sets["browser"]["tools"] == ["browser_navigate"]
+
+
+def test_skills_of_an_offline_host_is_503_and_unknown_agent_404(client):
+    assert client.get("/bff/h/laptop/hermes/default/skills").status_code == 503
+    assert client.get("/bff/h/hikari/hermes/ghost/toolsets").status_code == 404

@@ -31,10 +31,10 @@ export function BottomNav({ me, path, onChats, onLogout }: Props) {
       {more && (
         <div className="sheet" role="dialog" aria-label="Mehr">
           <Link to="/hosts"><Icon name="server" size={18} />Hosts</Link>
+          <Link to="/memory"><Icon name="memory" size={18} />Gedächtnis</Link>
           <Link to="/system"><Icon name="shield" size={18} />System</Link>
           <Link to="/settings"><Icon name="sliders" size={18} />Darstellung</Link>
           <span className="soon" aria-disabled="true"><Icon name="kanban" size={18} />Kanban<span className="tag">PHASE 3</span></span>
-          <span className="soon" aria-disabled="true"><Icon name="memory" size={18} />Memory<span className="tag">PHASE 3</span></span>
           {me.auth_mode === "oidc" && <button type="button" onClick={onLogout}><Icon name="power" size={18} />Abmelden</button>}
         </div>
       )}

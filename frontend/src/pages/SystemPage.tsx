@@ -1,19 +1,14 @@
 import { useCallback, useState } from "react";
 import { api } from "../api";
+import { DiagChecks } from "../components/DiagChecks";
 import { Icon } from "../components/Icon";
 import { PageHead } from "../components/PageHead";
 import { StatusDot } from "../components/Status";
 import { useHosts } from "../hosts";
 import { agentKey } from "../router";
-import type { AgentRef, DiagReport, DiagStatus } from "../types";
+import type { AgentRef, DiagReport } from "../types";
 
 type Entry = { busy: boolean; report?: DiagReport; error?: string };
-
-const MARK: Record<DiagStatus, { icon: string; label: string; cls: string }> = {
-  ok: { icon: "check", label: "in Ordnung", cls: "diag-ok" },
-  warn: { icon: "alert", label: "Abweichung", cls: "diag-warn" },
-  fail: { icon: "x", label: "Fehler", cls: "diag-fail" },
-};
 
 /**
  * System: der Diagnose-Ring. Prüft jeden Agent gegen das, was die WebUI von ihm erwartet (lesend), und kann einen
@@ -73,18 +68,7 @@ export function SystemPage() {
               </header>
               {entry?.error && <p className="error small" role="alert" style={{ padding: "0 14px" }}>{entry.error}</p>}
               {!a.online && !entry && <p className="muted small" style={{ padding: "0 14px 10px" }}>Runtime nicht erreichbar.</p>}
-              {entry?.report && (
-                <ul className="diag-checks">
-                  {entry.report.checks.map((c) => (
-                    <li key={c.id} className={MARK[c.status].cls}>
-                      <span className="diag-mark" role="img" aria-label={MARK[c.status].label}><Icon name={MARK[c.status].icon} size={14} /></span>
-                      <span className="diag-label">{c.label}</span>
-                      <span className="muted small diag-detail">{c.detail}</span>
-                      {c.ms !== null && <span className="mono t3 small">{c.ms} ms</span>}
-                    </li>
-                  ))}
-                </ul>
-              )}
+              {entry?.report && <DiagChecks checks={entry.report.checks} />}
             </section>
           );
         })}
