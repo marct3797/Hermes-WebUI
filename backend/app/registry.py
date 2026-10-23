@@ -6,7 +6,7 @@ erscheinen neue Agents ohne Neustart und gelöschte verschwinden. Ist die Datei 
 letzte gültige Fassung aktiv und der Fehler wird gemeldet.
 
 Keys stehen in einer Umgebungsvariablen (`api_key_env`) oder, nur für Entwicklung, in der Datei
-(`api_key`). Sie verlassen den BFF nie.
+(`api_key`), je Runtime und optional je Agent (der Agent-Key hat Vorrang). Sie verlassen den BFF nie.
 """
 from __future__ import annotations
 
@@ -29,6 +29,9 @@ class ConfigError(Exception):
 class AgentCfg:
     id: str
     label: str
+    # Eigener Key dieses Agents (Hermes-Profile im Multiplex-Gateway haben je ein eigenes API_SERVER_KEY).
+    # Leer = der Key der Runtime gilt.
+    api_key: str = field(repr=False, default="")
 
 
 @dataclass(frozen=True)
@@ -79,7 +82,8 @@ def parse_config(raw: Any, environ: dict[str, str] | None = None) -> dict[str, H
                 agent_id = str(entry.get("id", ""))
                 if not AGENT_RE.match(agent_id):
                     continue  # ungültige Namen nie in Upstream-URLs übernehmen
-                agents.append(AgentCfg(agent_id, str(entry.get("label") or agent_id)))
+                agent_key = entry.get("api_key") or env.get(str(entry.get("api_key_env", "")), "")
+                agents.append(AgentCfg(agent_id, str(entry.get("label") or agent_id), api_key=agent_key))
             multiplex = bool(r.get("multiplex", False))
             if not multiplex and len(agents) > 1:
                 # Ohne Multiplex ignoriert Hermes das Profil-Präfix: alle Agents landeten im Default.

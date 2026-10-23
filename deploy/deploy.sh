@@ -43,7 +43,7 @@ fi
 
 port="$(get WEBUI_PORT)"; port="${port:-8420}"
 export WEBUI_HOME="$home" WEBUI_UID="$(id -u)" WEBUI_GID="$(id -g)"
-( cd "$here" && "${docker[@]}" compose up -d --build ) || { echo "docker compose fehlgeschlagen"; exit 1; }
+( cd "$here" && "${docker[@]}" compose up -d --build --force-recreate ) || { echo "docker compose fehlgeschlagen"; exit 1; }
 
 for _ in $(seq 1 30); do
   if curl -fsS "http://127.0.0.1:$port/healthz" >/dev/null 2>&1; then

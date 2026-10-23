@@ -7,7 +7,7 @@ import pytest
 from app.adapters import RunInput, UpstreamError
 from app.adapters.hermes import HermesAdapter, HermesEventTranslator, features_from_capabilities, parse_sse
 from app.events import REQUIRED_FIELDS, TERMINAL_TYPES, validate_event
-from app.registry import AgentCfg, RuntimeCfg
+from app.registry import AgentCfg, RuntimeCfg, parse_config
 
 
 def cfg(multiplex=True, key="k"):
@@ -161,6 +161,34 @@ async def test_requests_use_profile_prefix_and_key():
     body = json.loads(req.content)
     assert body["session_id"] == "s0" and body["model"] == "m"
     assert body["input"][0]["content"][1] == {"type": "image_url", "image_url": {"url": "data:image/png;base64,AA=="}}
+
+
+async def test_agent_key_overrides_runtime_key():
+    seen = []
+
+    def handler(req):
+        seen.append(req)
+        return httpx.Response(202, json={"run_id": "r"})
+
+    c = RuntimeCfg("hermes", "http://h.test:9121", "runtime-key", True,
+                   (AgentCfg("raiden", "raiden", api_key="raiden-key"), AgentCfg("sora", "sora")))
+    a = HermesAdapter(c, httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    await a.start_run("raiden", RunInput("hi"))
+    await a.start_run("sora", RunInput("hi"))
+    assert seen[0].headers["authorization"] == "Bearer raiden-key"
+    assert seen[1].headers["authorization"] == "Bearer runtime-key"
+
+
+def test_parse_config_reads_agent_key_from_env_and_hides_it():
+    raw = {"hosts": [{"id": "hikari", "runtimes": [{
+        "id": "hermes", "base_url": "http://127.0.0.1:9121", "api_key_env": "K_RT", "multiplex": True,
+        "agents": ["default", {"id": "inari", "api_key_env": "K_INARI"}, {"id": "sora", "api_key_env": "FEHLT"}],
+    }]}]}
+    rt = parse_config(raw, {"K_RT": "rt-secret", "K_INARI": "inari-secret"})["hikari"].runtimes[0]
+    keys = {a.id: a.api_key for a in rt.agents}
+    assert rt.api_key == "rt-secret"
+    assert keys == {"default": "", "inari": "inari-secret", "sora": ""}  # fehlende Variable: Key der Runtime gilt
+    assert "inari-secret" not in repr(rt) and "inari-secret" not in repr(rt.agents)
 
 
 async def test_no_prefix_without_multiplex_and_plain_text_input():

@@ -96,6 +96,7 @@ Für den Mock in `hosts.json`: `"base_url": "http://127.0.0.1:8642", "api_key": 
 ```
 
 - **Hikari:** angebunden wird nur das Container-Gateway (`127.0.0.1:9121`, Profile unter `/p/<profil>/`). Das Host-Gateway auf `:8642` bedient keine Profile und bleibt außen vor. Basis-URL, Key-Variable und Profilliste stehen ausschließlich im Instanz-Eintrag der `hosts.json`; die Profilnamen im Beispiel sind nicht fest verdrahtet.
+- `api_key_env` (oder `api_key`, nur Entwicklung) gilt für die Runtime; ein Agent darf einen eigenen Eintrag `{ "id": "inari", "api_key_env": "HERMES_KEY_INARI" }` haben, der Vorrang hat. Das Container-Gateway auf Hikari gibt jedem Profil außer `default` ein eigenes `API_SERVER_KEY`; `deploy/profile-keys.sh` trägt sie aus den Profilordnern in `webui.env` ein.
 - `multiplex: true`: ein Gateway bedient mehrere Profile unter `/p/<profil>/…`. Ohne Multiplex ist genau ein Agent erlaubt (Hermes ignoriert dann das Präfix).
 - Die Agent-Liste ist vorerst fest in der Datei (Anzeigename = Ordnername). Auto-Erkennung folgt, sobald ein lesbarer Weg zu den Profilordnern im Container steht.
 - Remote-Hosts erscheinen in der Registry, sind aber bis Phase 2 (Host-Dienst) „nicht erreichbar“.

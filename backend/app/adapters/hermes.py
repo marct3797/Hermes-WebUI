@@ -44,15 +44,17 @@ class HermesAdapter(RuntimeAdapter):
         prefix = f"/p/{agent}" if self.cfg.multiplex else ""
         return f"{self.cfg.base_url}{prefix}{path}"
 
-    def _headers(self, accept: str = "application/json") -> dict[str, str]:
+    def _headers(self, agent: str, accept: str = "application/json") -> dict[str, str]:
+        # Im Multiplex-Gateway hat jedes Profil sein eigenes API_SERVER_KEY: der Key des Agents geht vor.
+        key = next((a.api_key for a in self.cfg.agents if a.id == agent and a.api_key), "") or self.cfg.api_key
         h = {"Accept": accept}
-        if self.cfg.api_key:
-            h["Authorization"] = f"Bearer {self.cfg.api_key}"
+        if key:
+            h["Authorization"] = f"Bearer {key}"
         return h
 
     async def _request(self, method: str, agent: str, path: str, **kw: Any) -> Any:
         try:
-            r = await self._http.request(method, self._url(agent, path), headers=self._headers(), **kw)
+            r = await self._http.request(method, self._url(agent, path), headers=self._headers(agent), **kw)
         except httpx.TimeoutException as e:
             raise UpstreamError(504, "Hermes antwortet nicht rechtzeitig") from e
         except httpx.HTTPError as e:
@@ -150,7 +152,7 @@ class HermesAdapter(RuntimeAdapter):
         Der Strom ist nur einmal abonnierbar. Danach hilft `run_status`.
         """
         translator = HermesEventTranslator(run_id)
-        headers = self._headers("text/event-stream")
+        headers = self._headers(agent, "text/event-stream")
         try:
             async with self._http.stream(
                 "GET", self._url(agent, f"/v1/runs/{run_id}/events"), headers=headers,

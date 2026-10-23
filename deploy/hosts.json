@@ -10,7 +10,17 @@
           "base_url": "http://127.0.0.1:9121",
           "api_key_env": "HERMES_KEY_HIKARI",
           "multiplex": true,
-          "agents": ["benzai", "default", "inari", "kaze", "omoikane", "raiden", "ryujin", "sora", "yume"]
+          "agents": [
+            { "id": "benzai", "api_key_env": "HERMES_KEY_BENZAI" },
+            "default",
+            { "id": "inari", "api_key_env": "HERMES_KEY_INARI" },
+            { "id": "kaze", "api_key_env": "HERMES_KEY_KAZE" },
+            { "id": "omoikane", "api_key_env": "HERMES_KEY_OMOIKANE" },
+            { "id": "raiden", "api_key_env": "HERMES_KEY_RAIDEN" },
+            { "id": "ryujin", "api_key_env": "HERMES_KEY_RYUJIN" },
+            { "id": "sora", "api_key_env": "HERMES_KEY_SORA" },
+            { "id": "yume", "api_key_env": "HERMES_KEY_YUME" }
+          ]
         }
       ]
     }
