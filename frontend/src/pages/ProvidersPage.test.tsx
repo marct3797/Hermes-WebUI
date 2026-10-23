@@ -26,7 +26,7 @@ describe("Anbieter", () => {
     expect(screen.getByText("raiden · 2 eingerichtet")).toBeInTheDocument();
     const anthropic = within(active().getByText("Anthropic").closest("li")!);
     expect(anthropic.getByText((_, el) => el?.tagName === "P" && (el.textContent ?? "").startsWith("12 Sessions · 1,5 M Token · 4,50 $ in 30 T"))).toBeInTheDocument();
-    expect(anthropic.getByText("sk-a…1234")).toBeInTheDocument();
+    expect(anthropic.getByText("gesetzt")).toBeInTheDocument(); expect(anthropic.queryByText(/sk-a/)).toBeNull(); // nie Key-Fragmente
     expect(anthropic.getByText("claude-test")).toBeInTheDocument(); // Modelle ohne Wiederholung
     const codex = within(active().getByText("OpenAI Codex").closest("li")!);
     expect(codex.getByText(/Angemeldet über ~\/\.codex\/auth\.json/)).toBeInTheDocument();

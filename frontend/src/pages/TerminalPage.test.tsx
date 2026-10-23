@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { TerminalPage } from "./TerminalPage";
+import exited from "../fixtures/real/real_terminals_after_exit.json";
+import info from "../fixtures/real/real_hostd_info.json";
 
 const xterm = vi.hoisted(() => ({ write: vi.fn(), dispose: vi.fn(), reset: vi.fn(), fit: vi.fn(), input: undefined as undefined | ((data: string) => void) }));
 vi.mock("@xterm/xterm", () => ({ Terminal: class {
@@ -49,5 +51,19 @@ describe("terminal", () => {
     setup(false); render(<TerminalPage host="hikari" />);
     expect(await screen.findByText("Nicht eingerichtet")).toBeInTheDocument();
     expect(Socket.all).toHaveLength(0);
+  });
+  it("shows an exited terminal (real shape) as Beendet with Exit code and removes it via DELETE", async () => {
+    Socket.all = []; vi.stubGlobal("WebSocket", Socket);
+    let list: unknown[] = exited.terminals;
+    const fetcher = vi.fn(async (url: string, opts?: RequestInit) => {
+      if (opts?.method === "DELETE") { list = []; return { ok: true, json: async () => ({ ok: true }) }; }
+      return { ok: true, json: async () => url.endsWith("_hostd") ? info : { terminals: list } };
+    });
+    vi.stubGlobal("fetch", fetcher);
+    render(<TerminalPage host="laptop" />);
+    expect(await screen.findByRole("option", { name: /Beendet · Exit 0/ })).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "Entfernen" }));
+    await waitFor(() => expect(fetcher.mock.calls.some(([url, o]) => o?.method === "DELETE" && String(url).endsWith(`/_terminals/${exited.terminals[0].id}`))).toBe(true));
+    expect(await screen.findByText(/Keine Terminals/)).toBeInTheDocument();
   });
 });

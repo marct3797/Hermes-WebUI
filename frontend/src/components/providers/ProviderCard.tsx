@@ -32,7 +32,7 @@ export function ProviderCard({ agent, group, days, onSaved }: Props) {
 
       {setKeys.length > 0 && (
         <ul className="prov-keys">
-          {setKeys.map((k) => <li key={k.var}><span className="mono small">{k.var}</span><span className="mono small t3">{k.redacted ?? "gesetzt"}</span></li>)}
+          {setKeys.map((k) => <li key={k.var}><span className="mono small">{k.var}</span><span className="mono small t3">gesetzt</span></li>)}
         </ul>
       )}
       {group.oauth && (group.oauth.logged_in || setKeys.length === 0) && (

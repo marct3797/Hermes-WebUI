@@ -146,7 +146,7 @@ function providersOverview(dash: DashState, days: number) {
     // Anthropic und Gemini bieten auch eine Anmeldung an, beide sind hier nicht angemeldet.
     const oauth = id === "openrouter" || id === "opencode-go" ? null : { logged_in: dash.loggedIn.has(id), flow: "pkce", source: null, expires_at: null, cli_command: `hermes auth add ${id}`, docs_url: null };
     return { id, label, configured: set, used: !!usage, oauth, usage,
-      keys: [{ var: varName, set, redacted: set ? "sk-a…1234" : null, description: "", url: "https://example.invalid/keys", secret: true, advanced: false }] };
+      keys: [{ var: varName, set, redacted: set ? "«redacted»" : null, description: "", url: "https://example.invalid/keys", secret: true, advanced: false }] };
   });
   const codex = dash.loggedIn.has("openai-codex");
   providers.push({ id: "openai-codex", label: "OpenAI Codex", configured: codex, used: false, keys: [], usage: null,

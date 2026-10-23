@@ -112,7 +112,7 @@ export function HostProviders({ host, runtime }: Props) {
 
         {matrix && (
           <p className="hint">
-            Die Zugänge gelten je Profil, jedes Profil hat seine eigene Anmeldung. Die CLIs ({matrix.accounts.map((a) => a.cli).join(", ")}) auf dem Host zu steuern braucht einen Terminal-Dienst dort; der ist noch nicht angebunden.
+            Die Zugänge gelten je Profil, jedes Profil hat seine eigene Anmeldung.
           </p>
         )}
       </div>
