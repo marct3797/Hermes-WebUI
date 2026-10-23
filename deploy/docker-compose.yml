@@ -5,6 +5,8 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
+      args:
+        BUILD_ID: ${BUILD_ID:-}
     image: hermes-webui:local
     container_name: hermes-webui
     network_mode: host

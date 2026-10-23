@@ -7,6 +7,7 @@ import { StatusDot } from "../components/Status";
 import { fmtDate, fmtTime } from "../format";
 import { useHosts } from "../hosts";
 import { agentKey } from "../router";
+import { useRoomNeeds } from "../roomNeeds";
 import { useActivity, useRunSnapshot } from "../runs";
 import { sigilFor, useUi } from "../ui";
 import { useAgentSessions } from "../useAgentSessions";
@@ -20,6 +21,7 @@ export function CockpitPage() {
   const { hosts, configError, error } = useHosts();
   const { sigils } = useUi();
   const { needs, live, byAgent } = useActivity();
+  const { needs: roomNeeds } = useRoomNeeds();
   const { log } = useRunSnapshot();
   const now = useNow(true);
   const [filter, setFilter] = useState<Filter>("all");
@@ -44,9 +46,12 @@ export function CockpitPage() {
     return filter === "all" || (filter === "run" ? !!a?.running : filter === "need" ? !!a?.waiting : filter === `host:${x.h.id}`);
   });
   const onlineAgents = onlineRefs.length;
-  const approvals = needs.filter((n) => n.kind === "approval").length;
-  const questions = needs.filter((n) => n.kind === "clarify").length;
-  const problems = needs.length - approvals - questions;
+  const roomAsks = roomNeeds.filter((n) => n.ask);
+  const approvals = needs.filter((n) => n.kind === "approval").length + roomAsks.filter((n) => n.ask?.kind === "approval").length;
+  const questions = needs.filter((n) => n.kind === "clarify").length + roomAsks.filter((n) => n.ask?.kind === "clarify").length;
+  const calls = roomNeeds.length - roomAsks.length;  // Räume, die mit @user gerufen haben
+  const open = needs.length + roomNeeds.length;
+  const problems = needs.length - needs.filter((n) => n.kind === "approval" || n.kind === "clarify").length;
   const hostsOnline = hosts.filter((h) => h.status === "online").length;
   const offline = hosts.filter((h) => h.status !== "online").map((h) => h.label);
   const errorOf = (key: string) => {
@@ -86,13 +91,13 @@ export function CockpitPage() {
         <div className="kpi">
           <span className="lbl">Aktiv</span>
           <span className="v">{counts.run}<small>/ {onlineAgents}</small></span>
-          <span className="kpi-note">{live.length} {live.length === 1 ? "Run läuft" : "Runs laufen"} · {needs.filter((n) => n.kind === "approval" || n.kind === "clarify").length} warten</span>
+          <span className="kpi-note">{live.length} {live.length === 1 ? "Run läuft" : "Runs laufen"} · {approvals + questions} warten</span>
         </div>
-        <div className={`kpi${needs.length ? " hot" : ""}`}>
-          <span className={`lbl${needs.length ? " crimt" : ""}`}>Braucht dich</span>
-          <span className="v">{needs.length}</span>
+        <div className={`kpi${open ? " hot" : ""}`}>
+          <span className={`lbl${open ? " crimt" : ""}`}>Braucht dich</span>
+          <span className="v">{open}</span>
           <span className="kpi-note">
-            {needs.length === 0 ? "nichts offen" : [approvals && `${approvals} ${approvals === 1 ? "Freigabe" : "Freigaben"}`, questions && `${questions} ${questions === 1 ? "Rückfrage" : "Rückfragen"}`, problems && `${problems} Fehler`].filter(Boolean).join(" · ")}
+            {open === 0 ? "nichts offen" : [approvals && `${approvals} ${approvals === 1 ? "Freigabe" : "Freigaben"}`, questions && `${questions} ${questions === 1 ? "Rückfrage" : "Rückfragen"}`, calls && `${calls} ${calls === 1 ? "Raum ruft" : "Räume rufen"}`, problems && `${problems} Fehler`].filter(Boolean).join(" · ")}
           </span>
         </div>
         <div className="kpi">
@@ -136,7 +141,7 @@ export function CockpitPage() {
           })}
         </div>
         <div className="r aside">
-          <NeedsPanel needs={needs} log={log} sigils={sigils} now={now} />
+          <NeedsPanel needs={needs} roomNeeds={roomNeeds} log={log} sigils={sigils} now={now} />
           <RunningPanel live={live} sigils={sigils} now={now} />
           <SystemPanel hosts={hosts} configError={configError} />
         </div>

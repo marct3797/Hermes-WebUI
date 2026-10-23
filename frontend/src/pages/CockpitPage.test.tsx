@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { resetRedirect } from "../api";
-import { FakeEventSource, emit, installBackend } from "../test-backend";
+import { FakeEventSource, emit, installBackend, roomOf } from "../test-backend";
 
 let posted: ReturnType<typeof installBackend>["posted"];
 
@@ -23,6 +23,33 @@ async function runIn(agent: string, text: string) {
 const toCockpit = () => fireEvent.click(screen.getAllByRole("link", { name: "Cockpit" })[0]);
 
 describe("Cockpit", () => {
+  it("lists what agents wait for in a room, and approves it from the cockpit", async () => {
+    const { rooms, calls } = installBackend(["raiden", "sora"]);
+    rooms.push(roomOf("abcabcabcabc", "Planungsrunde", ["raiden", "sora"], { asks: [{ kind: "approval", member: "hikari/hermes/sora", run_id: "run_9", command: "rm -r build", reason: "", choices: ["once", "deny"], at: 1 }] }));
+    history.pushState(null, "", "/");
+    render(<App />);
+    const panel = await screen.findByRole("region", { name: "Braucht dich" });
+    expect(await within(panel).findByText("sora fragt nach Freigabe")).toBeInTheDocument();
+    expect(within(panel).getByText(/rm -r build · Raum Planungsrunde/)).toBeInTheDocument();
+    const kpis = screen.getByRole("group", { name: "Kennzahlen" });
+    expect(within(kpis).getByText("1 Freigabe")).toBeInTheDocument();
+    expect(document.title).toBe("(1) Hermes");
+    expect(within(panel).getByRole("link", { name: "Raum öffnen" })).toHaveAttribute("href", "/rooms/abcabcabcabc");
+    fireEvent.click(within(panel).getByRole("button", { name: "Einmal erlauben" }));
+    await waitFor(() => expect(calls.find((c) => c.url === "/bff/h/hikari/hermes/sora/runs/run_9/approval")?.body).toEqual({ decision: "once" }));
+  });
+
+  it("shows a room that called for the person in the panel and counts it", async () => {
+    const { rooms } = installBackend(["raiden", "sora"]);
+    rooms.push(roomOf("abcabcabcabc", "Planungsrunde", ["raiden", "sora"], { needs_user: true }));
+    history.pushState(null, "", "/");
+    render(<App />);
+    const panel = await screen.findByRole("region", { name: "Braucht dich" });
+    expect(await within(panel).findByText("Raum Planungsrunde ruft dich")).toBeInTheDocument();
+    expect(within(screen.getByRole("group", { name: "Kennzahlen" })).getByText("1 Raum ruft")).toBeInTheDocument();
+    expect(within(panel).getByRole("link", { name: "Öffnen" })).toHaveAttribute("href", "/rooms/abcabcabcabc");
+  });
+
   it("shows every agent with its state and last chat, and marks the unreachable host", async () => {
     history.pushState(null, "", "/");
     render(<App />);

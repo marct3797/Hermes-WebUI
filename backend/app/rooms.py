@@ -39,7 +39,7 @@ MAX_ROUNDS = 3
 MAX_AGENT_MESSAGES = 10
 RUN_TIMEOUT_S = 900.0  # eine Freigabe, auf die die Person wartet, zählt mit
 PASS_TOKEN = "[PASS]"
-MENTION_RE = re.compile(r"(?<![\w@])@([A-Za-z0-9][A-Za-z0-9_-]*)")
+MENTION_RE = re.compile(r"(?<![\w@])@(\w[\w-]*)")  # \w: auch Umlaute und Kanji in Anzeigenamen
 
 Member = dict[str, str]  # {"host", "runtime", "agent"}
 
@@ -63,6 +63,9 @@ def parse_mentions(text: str, names: dict[str, str]) -> list[str]:
     for raw in MENTION_RE.findall(text):
         name = raw.lower().rstrip("-_")
         hit = "all" if name in ("all", "alle") else "user" if name == "user" else names.get(name)
+        if hit is None and name not in ("all", "alle", "user"):
+            # „@sora-san“ oder „@sora_bot“: ein Anhängsel nach - oder _ ändert nicht, wer gemeint ist
+            hit = names.get(re.split(r"[-_]", name, maxsplit=1)[0])
         if hit and hit not in out:
             out.append(hit)
     return out
@@ -72,19 +75,23 @@ def is_pass(text: str) -> bool:
     return text.strip().upper().startswith(PASS_TOKEN)
 
 
-def build_prompt(room: str, me: str, others: list[str], fresh: list[dict[str, Any]], names: dict[str, str]) -> str:
-    """Was ein Mitglied in seinem Zug erhält: die Spielregeln kurz, dann die Raumnachrichten seit seinem letzten Zug."""
+def build_prompt(room: str, me: str, others: list[str], fresh: list[dict[str, Any]], names: dict[str, str], addressed: bool = False) -> str:
+    """Was ein Mitglied in seinem Zug erhält: die Spielregeln kurz, dann die Raumnachrichten seit seinem letzten Zug.
+
+    `addressed`: jemand hat das Mitglied mit @Name angesprochen. Dann soll es antworten, nicht passen."""
     label = {key: lab for lab, key in names.items()}
     lines = []
     for m in fresh:
         who = "Person" if m["author"] == "user" else label.get(m["author"], m["author"])
         lines.append(f"{who}: {m['text']}")
     others_text = ", ".join(others) if others else "niemand sonst"
+    direct = f"\n\nDu wurdest mit @{me} direkt angesprochen: Antworte darauf, schicke nicht {PASS_TOKEN}." if addressed else ""
     return (
         f"Du bist „{me}“ in dem Gruppenchat „{room}“. Weitere Mitglieder: {others_text}. Die Person im Raum heißt „Person“.\n"
         "Regeln: Antworte knapp und im Gesprächston. Soll ein bestimmtes Mitglied antworten, erwähne es mit @Name. "
-        f"Hast du nichts beizutragen, antworte genau mit {PASS_TOKEN}. Brauchst du eine Entscheidung der Person, erwähne @user.\n\n"
-        "Neu im Raum seit deinem letzten Beitrag:\n" + "\n".join(lines)
+        f"Wirst du mit @Name angesprochen, antworte immer. Hast du sonst nichts beizutragen, antworte genau mit {PASS_TOKEN}. "
+        "Brauchst du eine Entscheidung der Person, erwähne @user.\n\n"
+        "Neu im Raum seit deinem letzten Beitrag:\n" + "\n".join(lines) + direct
     )
 
 
@@ -183,6 +190,7 @@ class Turn:
     stop: bool = False
     speaker: str | None = None
     current: tuple[Any, str] | None = None  # (Target, run_id) des laufenden Zugs
+    last_run: str | None = None  # Run des letzten Mitglieds-Zugs, für die Fehlersuche bei leeren Antworten
     reason: str = "idle"
 
 
@@ -192,6 +200,7 @@ class RoomEngine:
     def __init__(self, store: RoomStore, targets: Callable[[str, str, str], Any]):
         self.store, self._targets = store, targets
         self.turns: dict[str, Turn] = {}
+        self.asks: dict[str, dict[str, dict[str, Any]]] = {}  # Raum -> Run -> offene Freigabe oder Rückfrage
         self._subs: dict[str, set[asyncio.Queue]] = {}
 
     # -- Abos für den Ereignisstrom --
@@ -212,7 +221,40 @@ class RoomEngine:
 
     def status(self, rid: str) -> dict[str, Any]:
         t = self.turns.get(rid)
-        return {"running": t is not None, "speaker": t.speaker if t else None}
+        return {"running": t is not None, "speaker": t.speaker if t else None, "asks": self.open_asks(rid)}
+
+    # -- Offene Fragen der Mitglieder --
+    def open_asks(self, rid: str) -> list[dict[str, Any]]:
+        """Freigaben und Rückfragen, auf die ein Lauf im Raum gerade wartet. Der Server hält sie, damit sie nicht an einer
+        offenen Seite hängen: Wer den Raum erst später öffnet oder nur das Cockpit ansieht, sieht sie trotzdem."""
+        return sorted((dict(a) for a in self.asks.get(rid, {}).values()), key=lambda a: a["at"])
+
+    def _track_ask(self, rid: str, key: str, run_id: str, ev: dict[str, Any]) -> None:
+        kind, asks = ev["type"], self.asks.setdefault(rid, {})
+        if kind == "approval.requested":
+            asks[run_id] = {"kind": "approval", "member": key, "run_id": run_id, "command": ev.get("command", ""), "reason": ev.get("reason", ""),
+                            "choices": ev.get("choices") or [], "timeout_s": ev.get("timeout_s"), "at": time.time()}
+        elif kind == "clarify.requested":
+            asks[run_id] = {"kind": "clarify", "member": key, "run_id": run_id, "clarify_id": ev.get("clarify_id"), "question": ev.get("question", ""),
+                            "choices": ev.get("choices") or [], "at": time.time()}
+        else:
+            ask = asks.get(run_id)
+            # Hermes meldet nur Freigaben als beantwortet; eine Rückfrage ist erledigt, sobald der Lauf weiterarbeitet.
+            if not ask or not (kind == "approval.responded" and ask["kind"] == "approval"
+                               or kind in ("message.delta", "tool.started", "tool.completed") and ask["kind"] == "clarify"
+                               or kind in TERMINAL_TYPES):
+                return
+            del asks[run_id]
+        self._publish(rid, {"type": "asks", "asks": self.open_asks(rid)})
+
+    def _drop_asks(self, rid: str, run_id: str | None = None) -> None:
+        """Räumt Fragen weg, wenn ihr Lauf endet (oder der Raum fertig ist), und sagt es den Abos."""
+        asks = self.asks.get(rid, {})
+        gone = [run_id] if run_id else list(asks)
+        if any(asks.pop(g, None) for g in gone):
+            self._publish(rid, {"type": "asks", "asks": self.open_asks(rid)})
+        if not asks:
+            self.asks.pop(rid, None)
 
     # -- Zugriffe --
     def names(self, room: dict[str, Any]) -> dict[str, str]:
@@ -311,6 +353,7 @@ class RoomEngine:
             self._publish(rid, {"type": "message", "message": sysmsg})
         finally:
             self.turns.pop(rid, None)
+            self._drop_asks(rid)
             self._publish(rid, {"type": "turn.finished", "turn": turn.id, "reason": turn.reason})
 
     @staticmethod
@@ -344,7 +387,8 @@ class RoomEngine:
         if not fresh:
             return None
         others = [self.label_of(m) for m in room["members"] if member_key(m) != key]
-        prompt = build_prompt(room["name"], label, others, fresh, names)
+        addressed = any(key in m["mentions"] for m in fresh)
+        prompt = build_prompt(room["name"], label, others, fresh, names, addressed)
         turn.speaker = key
         self._publish(rid, {"type": "member.started", "member": key, "round": round_no})
         text, error = "", None
@@ -353,6 +397,7 @@ class RoomEngine:
                 text=prompt, session_id=fresh_room["sessions"].get(key),
                 idempotency_key=f"room-{rid}-{last}-{round_no}-{hashlib.sha1(key.encode()).hexdigest()[:8]}"))
             turn.current = (target, info.run_id)
+            turn.last_run = info.run_id
             if info.session_id and fresh_room["sessions"].get(key) != info.session_id:
                 sessions = {**fresh_room["sessions"], key: info.session_id}
                 self.store.update(rid, sessions=sessions)
@@ -374,29 +419,63 @@ class RoomEngine:
         if error and not text.strip():
             if turn.stop:
                 return None
-            msg = self.store.add_message(rid, "system", "system", f"{label} konnte nicht antworten: {error}")
-            self._publish(rid, {"type": "message", "message": msg})
+            self._publish(rid, {"type": "member.passed", "member": key})  # nimmt die „schreibt…“-Zeile weg
+            self._note(rid, f"{label} konnte nicht antworten: {error}")
             return None
-        if is_pass(text) or not text.strip():
+        if not text.strip():
+            # Ohne diese Zeile verschwände der Beitrag spurlos („er schreibt kurz und dann kommt nichts“).
             self._publish(rid, {"type": "member.passed", "member": key})
+            why = await self._why_empty(target, turn.last_run) if turn.last_run else ""
+            self._note(rid, f"{label} hat nichts geantwortet: Hermes lieferte einen leeren Lauf{f' ({why})' if why else ''}.")
+            return None
+        if is_pass(text):
+            self._publish(rid, {"type": "member.passed", "member": key})
+            if addressed:
+                self._note(rid, f"{label} wurde angesprochen und hat mit {PASS_TOKEN} übergangen.")
             return None
         msg = self.store.add_message(rid, key, "message", text.strip(), parse_mentions(text, names))
         self._publish(rid, {"type": "message", "message": msg})
+        if error and not turn.stop:
+            self._note(rid, f"{label}: Der Lauf endete vorzeitig ({error}); der Beitrag ist unvollständig.")
         return msg
+
+    def _note(self, rid: str, text: str) -> None:
+        msg = self.store.add_message(rid, "system", "system", text)
+        self._publish(rid, {"type": "message", "message": msg})
+
+    @staticmethod
+    async def _why_empty(target: Any, run_id: str) -> str:
+        """Fehlertext aus dem Lauf-Status, falls Hermes einen nennt."""
+        try:
+            status = await target.adapter.run_status(target.agent.id, run_id)
+        except Exception:  # noqa: BLE001 - nur Zusatzinfo für die Meldung
+            return ""
+        err = status.get("error") if isinstance(status, dict) else None
+        if isinstance(err, dict):
+            err = err.get("message")
+        return str(err)[:200] if err else ""
 
     async def _collect(self, rid: str, key: str, target: Any, run_id: str) -> tuple[str, str | None]:
         """Liest den Ereignisstrom des Laufs, reicht ihn an die Abos weiter und liefert (Text, Fehler)."""
-        text, end = "", {}
-        async for ev in target.adapter.events(target.agent.id, run_id):
-            if ev["type"] == "message.delta":
-                text += ev.get("text", "")
-            self._publish(rid, {"type": "member.event", "member": key, "run_id": run_id, "event": ev})
-            if ev["type"] in TERMINAL_TYPES:
-                end = ev
-                break
+        text, interim, end = "", [], {}
+        try:
+            async for ev in target.adapter.events(target.agent.id, run_id):
+                if ev["type"] == "message.delta":
+                    text += ev.get("text", "")
+                elif ev["type"] == "message.interim" and ev.get("text"):
+                    interim.append(ev["text"])
+                self._track_ask(rid, key, run_id, ev)
+                self._publish(rid, {"type": "member.event", "member": key, "run_id": run_id, "event": ev})
+                if ev["type"] in TERMINAL_TYPES:
+                    end = ev
+                    break
+        finally:
+            self._drop_asks(rid, run_id)  # auch bei Abbruch oder Zeitüberschreitung bleibt keine tote Frage stehen
+        # Der Beitrag steht im Zeichenstrom, ersatzweise in der Endmeldung, zuletzt in den Zwischenmeldungen.
+        final = text or str(end.get("text") or end.get("output") or "") or "\n\n".join(interim)
         if end.get("type") == "run.completed":
-            return text or str(end.get("text") or end.get("output") or ""), None
-        return text, str(end.get("error") or end.get("type") or "Lauf ohne Abschluss")
+            return final, None
+        return final, str(end.get("error") or end.get("type") or "Lauf ohne Abschluss")
 
     @staticmethod
     async def _name_session(target: Any, session_id: str, title: str) -> None:

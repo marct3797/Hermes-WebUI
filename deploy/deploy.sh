@@ -44,11 +44,13 @@ fi
 
 port="$(get WEBUI_PORT)"; port="${port:-8420}"
 export WEBUI_HOME="$home" WEBUI_UID="$(id -u)" WEBUI_GID="$(id -g)"
+export BUILD_ID; BUILD_ID="$(git -C "$here" rev-parse --short HEAD 2>/dev/null)"   # steht danach in der Seitenleiste
+echo "Baue Stand ${BUILD_ID:-unbekannt} (Branch $(git -C "$here" rev-parse --abbrev-ref HEAD 2>/dev/null))"
 ( cd "$here" && "${docker[@]}" compose up -d --build --force-recreate ) || { echo "docker compose fehlgeschlagen"; exit 1; }
 
 for _ in $(seq 1 30); do
   if curl -fsS "http://127.0.0.1:$port/healthz" >/dev/null 2>&1; then
-    echo "WebUI läuft auf 127.0.0.1:$port (Container hermes-webui)"; exit 0
+    echo "WebUI läuft auf 127.0.0.1:$port (Container hermes-webui), Stand ${BUILD_ID:-unbekannt}"; exit 0
   fi
   sleep 2
 done

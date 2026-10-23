@@ -1,5 +1,6 @@
 import { useHosts } from "../hosts";
 import { agentKey, agentPath, sameAgent } from "../router";
+import { useRoomNeeds } from "../roomNeeds";
 import { useActivity } from "../runs";
 import type { AgentRef, Me, SessionSummary } from "../types";
 import { sigilFor, useUi } from "../ui";
@@ -28,6 +29,13 @@ const NAV = [
   { to: "/memory", label: "Gedächtnis", icon: "memory" },
   { to: "/system", label: "System", icon: "shield" },
 ];
+// Bereiche eines Hermes-Agents: stehen unter dem gewählten Agent, damit man sie nicht erst in einer Icon-Leiste suchen muss.
+const MODULES = [
+  { module: "soul", label: "SOUL & Profil", icon: "spark" },
+  { module: "providers", label: "Anbieter", icon: "coin" },
+  { module: "skills", label: "Skills", icon: "layers" },
+  { module: "tools", label: "Werkzeuge", icon: "wrench" },
+] as const;
 // Module, die noch nicht gebaut sind: sichtbar, aber ohne Ziel.
 const SOON = [
   { label: "Kanban", icon: "kanban" },
@@ -37,6 +45,8 @@ export function Sidebar(p: Props) {
   const { hosts, error } = useHosts();
   const { sigils } = useUi();
   const { needs, byAgent } = useActivity();
+  const { needs: roomNeeds } = useRoomNeeds();
+  const open = (to: string) => (to === "/inbox" ? needs.length + roomNeeds.length : to === "/rooms" ? roomNeeds.length : 0);
   return (
     <>
       {p.open && <div className="scrim" onClick={p.onClose} aria-hidden />}
@@ -52,7 +62,7 @@ export function Sidebar(p: Props) {
             {NAV.map((n) => (
               <Link key={n.to} to={n.to} className={p.path === n.to ? "on" : undefined} aria-current={p.path === n.to ? "page" : undefined} onClick={p.onClose}>
                 <Icon name={n.icon} size={18} />{n.label}
-                {n.to === "/inbox" && needs.length > 0 && <span className="ct" aria-label={`${needs.length} offen`}>{needs.length}</span>}
+                {open(n.to) > 0 && <span className="ct" aria-label={`${open(n.to)} offen`}>{open(n.to)}</span>}
               </Link>
             ))}
             {SOON.map((n) => (
@@ -90,6 +100,18 @@ export function Sidebar(p: Props) {
                           {act && act.waiting > 0 && <span className="ct" aria-label={`${act.waiting} wartet auf dich`}>{act.waiting}</span>}
                           <AgentDot act={act} status={r.status} />
                         </Link>
+                        {isActive && r.id === "hermes" && (
+                          <div className="side-sessions side-modules" role="group" aria-label={`Bereiche von ${a.label}`}>
+                            {MODULES.map((m) => {
+                              const to = agentPath(ref, m.module);
+                              return (
+                                <Link key={m.module} to={to} className={p.path === to ? "on" : undefined} aria-current={p.path === to ? "page" : undefined} onClick={p.onClose}>
+                                  <Icon name={m.icon} size={14} />{m.label}
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        )}
                         {isActive && (
                           <div className="side-sessions" role="group" aria-label={`Sessions von ${a.label}`}>
                             <Link to={agentPath(ref)} onClick={p.onClose}><Icon name="plus" size={14} />Neuer Chat</Link>
@@ -114,7 +136,7 @@ export function Sidebar(p: Props) {
 
         <footer className="side-foot">
           <span className="avatar" aria-hidden>{p.me.user.name.slice(0, 1).toUpperCase()}</span>
-          <span className="who"><b title={p.me.user.id}>{p.me.user.name}</b></span>
+          <span className="who"><b title={p.me.user.id}>{p.me.user.name}</b>{p.me.build && <span className="mono t3" style={{ fontSize: 10 }} title="Stand des Codes (Git)">Stand {p.me.build}</span>}</span>
           <Link to="/settings" className={`btn btn-s btn-i btn-g${p.path === "/settings" ? " on" : ""}`} aria-label="Darstellung" title="Darstellung" onClick={p.onClose}>
             <Icon name="sliders" size={16} />
           </Link>

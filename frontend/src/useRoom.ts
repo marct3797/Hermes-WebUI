@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "./api";
-import type { Decision, Room, RoomEvent, RoomMessage, StreamEvent } from "./types";
+import type { Decision, Room, RoomAsk, RoomEvent, RoomMessage } from "./types";
 
 /** Eine offene Frage eines Mitglieds an die Person: Freigabe oder Rückfrage. Sie gehört zum Run des Mitglieds. */
 export type MemberAsk =
   | { kind: "approval"; member: string; runId: string; command: string; reason: string; choices: Decision[] }
   | { kind: "clarify"; member: string; runId: string; clarifyId?: string; question: string; choices: string[] };
+
+export function toMemberAsk(a: RoomAsk): MemberAsk {
+  return a.kind === "approval"
+    ? { kind: "approval", member: a.member, runId: a.run_id, command: a.command, reason: a.reason, choices: a.choices }
+    : { kind: "clarify", member: a.member, runId: a.run_id, clarifyId: a.clarify_id ?? undefined, question: a.question, choices: a.choices ?? [] };
+}
 
 /** Was ein Mitglied gerade tut, solange sein Beitrag noch nicht im Raum steht. */
 export type Typing = { text: string; tool?: string };
@@ -30,12 +36,11 @@ export function mergeMessages(have: RoomMessage[], more: RoomMessage[]): RoomMes
   return [...bySeq.values()].sort((a, b) => a.seq - b.seq);
 }
 
-const isDone = (e: StreamEvent) => e.type === "run.completed" || e.type === "run.failed" || e.type === "run.stopped" || e.type === "stream.error";
-
 /** Wendet ein Raum-Ereignis auf den Zustand an. Rein, damit sich der Ablauf ohne Browser testen lässt. */
 export function reduceRoom(s: RoomState, ev: RoomEvent): RoomState {
   switch (ev.type) {
-    case "state": return { ...s, running: ev.running, speaker: ev.speaker };
+    case "state": return { ...s, running: ev.running, speaker: ev.speaker, asks: (ev.asks ?? []).map(toMemberAsk) };
+    case "asks": return { ...s, asks: ev.asks.map(toMemberAsk) };
     case "turn.started": return { ...s, running: true, finished: undefined };
     case "member.started": return { ...s, speaker: ev.member, typing: { ...s.typing, [ev.member]: { text: "" } } };
     case "member.passed": { const { [ev.member]: _gone, ...rest } = s.typing; return { ...s, typing: rest }; }
@@ -47,13 +52,6 @@ export function reduceRoom(s: RoomState, ev: RoomEvent): RoomState {
       const e = ev.event;
       if (e.type === "message.delta") return { ...s, typing: { ...s.typing, [ev.member]: { ...s.typing[ev.member], text: (s.typing[ev.member]?.text ?? "") + e.text } } };
       if (e.type === "tool.started") return { ...s, typing: { ...s.typing, [ev.member]: { text: s.typing[ev.member]?.text ?? "", tool: e.name } } };
-      if (e.type === "approval.requested") {
-        return { ...s, asks: [...s.asks.filter((a) => a.runId !== ev.run_id), { kind: "approval", member: ev.member, runId: ev.run_id, command: e.command, reason: e.reason, choices: e.choices }] };
-      }
-      if (e.type === "clarify.requested") {
-        return { ...s, asks: [...s.asks.filter((a) => a.runId !== ev.run_id), { kind: "clarify", member: ev.member, runId: ev.run_id, clarifyId: e.clarify_id ?? undefined, question: e.question, choices: e.choices ?? [] }] };
-      }
-      if (e.type === "approval.responded" || isDone(e)) return { ...s, asks: s.asks.filter((a) => a.runId !== ev.run_id) };
       return s;
     }
     case "turn.finished": return { ...s, running: false, speaker: null, typing: {}, asks: [], finished: ev.reason };

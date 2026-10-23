@@ -72,16 +72,26 @@ describe("Raum", () => {
     await waitFor(() => expect(env.calls.some((c) => c.method === "POST" && c.url === `/bff/rooms/${RID}/stop`)).toBe(true));
   });
 
+  const askOf = (run_id = "run_9") => ({ kind: "approval" as const, member: B, run_id, command: "rm -r build", reason: "räumt auf", choices: ["once", "deny"] as Array<"once" | "deny">, timeout_s: 300, at: 1 });
+
   it("answers a member's approval through that member's own run", async () => {
     await open();
     emitRoom({ type: "turn.started", turn: "t1" });
-    emitRoom({ type: "member.event", member: B, run_id: "run_9", event: { type: "approval.requested", command: "rm -r build", reason: "räumt auf", choices: ["once", "deny"], timeout_s: 300 } });
+    emitRoom({ type: "asks", asks: [askOf()] });
     const card = await screen.findByRole("group", { name: "sora braucht dich" });
     expect(within(card).getByText("rm -r build")).toBeInTheDocument();
     fireEvent.click(within(card).getByRole("button", { name: "Einmal erlauben" }));
     await waitFor(() => expect(env.calls.find((c) => c.url === "/bff/h/hikari/hermes/sora/runs/run_9/approval")?.body).toEqual({ decision: "once" }));
-    emitRoom({ type: "member.event", member: B, run_id: "run_9", event: { type: "approval.responded", choice: "once" } });
+    emitRoom({ type: "asks", asks: [] });
     await waitFor(() => expect(screen.queryByRole("group", { name: "sora braucht dich" })).not.toBeInTheDocument());
+  });
+
+  it("shows a waiting approval again after the page was opened later or reconnected", async () => {
+    await open({ running: true, speaker: B });
+    emitRoom({ type: "state", running: true, speaker: B, asks: [askOf("run_7")] });
+    const card = await screen.findByRole("group", { name: "sora braucht dich" });
+    fireEvent.click(within(card).getByRole("button", { name: "Ablehnen" }));
+    await waitFor(() => expect(env.calls.find((c) => c.url === "/bff/h/hikari/hermes/sora/runs/run_7/approval")?.body).toEqual({ decision: "deny" }));
   });
 
   it("says who needs the person and why", async () => {

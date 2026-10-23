@@ -3,6 +3,7 @@ import { useAgentRef, useResolvedAgent } from "../hosts";
 import { ShellContext, useSessions } from "../shell";
 import type { Me } from "../types";
 import { sameAgent, type Page } from "../router";
+import { useRoomNeeds } from "../roomNeeds";
 import { useActivity, useRunStore } from "../runs";
 import { BgFx } from "./BgFx";
 import { BottomNav } from "./BottomNav";
@@ -39,7 +40,9 @@ export function Shell({ me, path, page, onLogout, children }: Props) {
   useEffect(() => store.onRunEnd((a) => { if (sameAgent(a, active)) refresh(); }), [store, active, refresh]);
   // Der Tab zeigt, dass etwas auf die Person wartet.
   const { needs } = useActivity();
-  useEffect(() => { document.title = needs.length ? `(${needs.length}) Hermes` : "Hermes"; }, [needs.length]);
+  const { needs: roomNeeds } = useRoomNeeds();
+  const open = needs.length + roomNeeds.length;
+  useEffect(() => { document.title = open ? `(${open}) Hermes` : "Hermes"; }, [open]);
   const trail = crumbs(page);
   const sessionId = page.name === "agent" ? page.sessionId : undefined;
   const sidebar = (

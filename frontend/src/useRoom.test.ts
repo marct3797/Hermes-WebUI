@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { RoomEvent, RoomMessage } from "./types";
+import type { RoomAsk, RoomEvent, RoomMessage } from "./types";
 import { mergeMessages, reduceRoom, type RoomState } from "./useRoom";
 
 const base: RoomState = { messages: [], running: false, speaker: null, typing: {}, asks: [] };
@@ -41,20 +41,26 @@ describe("reduceRoom", () => {
     expect(s.typing).toEqual({});
   });
 
-  it("collects asks per run and drops them once answered or the run ends", () => {
+  it("takes the open asks the server reports, as a whole list each time", () => {
     const k = "h/hermes/anna";
-    const ask = (run_id: string): RoomEvent => ({ type: "member.event", member: k, run_id, event: { type: "approval.requested", command: "rm x", reason: "", choices: ["once", "deny"], timeout_s: 300 } });
-    let s = run([ask("r1"), ask("r1"), ask("r2")]);
+    const approval = (run_id: string): RoomAsk => ({ kind: "approval", member: k, run_id, command: "rm x", reason: "", choices: ["once", "deny"], timeout_s: 300, at: 1 });
+    let s = run([{ type: "asks", asks: [approval("r1"), approval("r2")] }]);
     expect(s.asks.map((a) => a.runId)).toEqual(["r1", "r2"]);
-    s = run([{ type: "member.event", member: k, run_id: "r1", event: { type: "approval.responded", choice: "once" } }], s);
+    expect(s.asks[0]).toMatchObject({ kind: "approval", member: k, command: "rm x", choices: ["once", "deny"] });
+    s = run([{ type: "asks", asks: [approval("r2")] }], s);
     expect(s.asks.map((a) => a.runId)).toEqual(["r2"]);
-    s = run([{ type: "member.event", member: k, run_id: "r2", event: { type: "run.failed", error: "x" } }], s);
+    s = run([{ type: "asks", asks: [] }], s);
+    expect(s.asks).toEqual([]);
+  });
+
+  it("does not guess asks from the run's own events any more, the server decides", () => {
+    const s = run([{ type: "member.event", member: "k", run_id: "r1", event: { type: "approval.requested", command: "rm x", reason: "", choices: ["once"], timeout_s: 300 } }]);
     expect(s.asks).toEqual([]);
   });
 
   it("keeps clarify questions with their choices", () => {
-    const s = run([{ type: "member.event", member: "k", run_id: "r1", event: { type: "clarify.requested", question: "Welche?", choices: ["a", "b"] } }]);
-    expect(s.asks[0]).toMatchObject({ kind: "clarify", question: "Welche?", choices: ["a", "b"] });
+    const s = run([{ type: "asks", asks: [{ kind: "clarify", member: "k", run_id: "r1", clarify_id: "c1", question: "Welche?", choices: ["a", "b"], at: 1 }] }]);
+    expect(s.asks[0]).toMatchObject({ kind: "clarify", runId: "r1", clarifyId: "c1", question: "Welche?", choices: ["a", "b"] });
   });
 
   it("finishing a turn resets the live state and remembers why", () => {
@@ -63,6 +69,11 @@ describe("reduceRoom", () => {
   });
 
   it("takes the room state a reconnect reports", () => {
-    expect(run([{ type: "state", running: true, speaker: "k" }])).toMatchObject({ running: true, speaker: "k" });
+    expect(run([{ type: "state", running: true, speaker: "k", asks: [] }])).toMatchObject({ running: true, speaker: "k" });
+  });
+
+  it("brings a waiting approval back when the page reconnects", () => {
+    const ask: RoomAsk = { kind: "approval", member: "k", run_id: "r1", command: "ls", reason: "", choices: ["once"], at: 1 };
+    expect(run([{ type: "state", running: true, speaker: "k", asks: [ask] }]).asks).toHaveLength(1);
   });
 });

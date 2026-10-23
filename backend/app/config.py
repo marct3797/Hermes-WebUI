@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     hosts_file: Path = Path("hosts.json")
     # UI-Einstellungen (Sigils, Packs, Shader), siehe ui.example.json. Fehlt die Datei, gelten Standardwerte.
     ui_file: Path | None = None
+    # Stand des Codes (Git-Kurz-Hash), vom Image gesetzt. Die Seitenleiste zeigt ihn: so sieht man nach einem Deploy, was wirklich läuft.
+    build: str = ""
     # Gedächtnis-Anbieter (Hindsight …), siehe memory.example.json. Fehlt die Datei, ist die Seite Gedächtnis leer.
     memory_file: Path | None = None
     # Gruppenchats (Räume): SQLite-Datei mit Raumliste, Nachrichten und der Session je Mitglied.

@@ -4,7 +4,10 @@ import { Detail } from "../components/inbox/Detail";
 import { Icon } from "../components/Icon";
 import { Sigil } from "../components/Sigil";
 import { fmtAgo, fmtClock, fmtTime } from "../format";
+import { Link } from "../components/Link";
+import { AskCard } from "../components/rooms/Parts";
 import { isEditable } from "../keys";
+import { useRoomNeeds } from "../roomNeeds";
 import { useActivity, useRunSnapshot, useRunStore } from "../runs";
 import type { Decision } from "../types";
 import { sigilFor, useUi } from "../ui";
@@ -33,6 +36,7 @@ export function InboxPage() {
   const store = useRunStore();
   const { needs } = useActivity();
   const { log } = useRunSnapshot();
+  const { needs: roomNeeds } = useRoomNeeds();
   const { sigils } = useUi();
   const now = useNow(true);
   const [tab, setTab] = useState<Tab>("all");
@@ -75,7 +79,7 @@ export function InboxPage() {
       <div className="page" style={{ flex: "none", paddingBottom: 18 }}>
         <header className="ph">
           <div className="col" style={{ gap: 6 }}><span className="lbl">Inbox</span><h1>Braucht dich</h1></div>
-          <span className="ph-sub" style={{ marginBottom: 5 }}>{needs.length} offen · {expiring} {expiring === 1 ? "läuft" : "laufen"} ab</span>
+          <span className="ph-sub" style={{ marginBottom: 5 }}>{needs.length + roomNeeds.length} offen · {expiring} {expiring === 1 ? "läuft" : "laufen"} ab</span>
           <span className="hint keys" style={{ marginLeft: "auto" }}>
             <span className="kbd">J</span><span className="kbd">K</span> wechseln · <span className="kbd">⏎</span> einmal erlauben · <span className="kbd">Esc</span> ablehnen
           </span>
@@ -87,10 +91,30 @@ export function InboxPage() {
           <div className="tabs" role="tablist">
             {TABS.map((t) => (
               <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={`tab${tab === t.id ? " on" : ""}`} onClick={() => setTab(t.id)}>
-                {t.label}<span className="n">{t.id === "all" ? needs.length : needs.filter((n) => tabOf(n) === t.id).length}</span>
+                {t.label}<span className="n">{t.id === "all" ? needs.length + roomNeeds.length : needs.filter((n) => tabOf(n) === t.id).length}</span>
               </button>
             ))}
           </div>
+          {tab === "all" && roomNeeds.length > 0 && (
+            <div role="group" aria-label="Räume">
+              <div className="grp"><span className="lbl">Räume</span><i className="sp grow" /></div>
+              {roomNeeds.map((n) => n.ask && n.member ? (
+                <AskCard key={n.id} ask={n.ask} member={n.member} room={{ id: n.room.id, name: n.room.name }} />
+              ) : n.ask ? null : (
+                <Link key={n.id} to={`/rooms/${n.room.id}`} className="irow">
+                  <Icon name="orbit" size={18} />
+                  <div className="col grow" style={{ gap: 3, minWidth: 0 }}>
+                    <span className="tt trunc">{n.room.name}</span>
+                    <span className="ss trunc">Ein Agent hat dich im Raum gerufen.</span>
+                    <div className="row" style={{ gap: 8, marginTop: 3 }}>
+                      <span className="tag tag-s">RAUM</span>
+                      <span className="mono t3 trunc" style={{ fontSize: 10.5 }}>{n.room.members.map((m) => m.label).join(", ")}</span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
           {GROUPS.map((g) => {
             const items = visible.filter((n) => tabOf(n) === g.tab);
             if (!items.length) return null;
@@ -123,7 +147,7 @@ export function InboxPage() {
               </div>
             );
           })}
-          {visible.length === 0 && <p className="panel-empty">{needs.length === 0 ? "Nichts offen." : "Nichts in dieser Ansicht."}</p>}
+          {visible.length === 0 && !(tab === "all" && roomNeeds.length > 0) && <p className="panel-empty">{needs.length + roomNeeds.length === 0 ? "Nichts offen." : "Nichts in dieser Ansicht."}</p>}
 
           <div className="grp" style={{ marginTop: "auto", paddingTop: 22 }}>
             <span className="lbl">Erledigt heute</span><span className="mono t3" style={{ fontSize: 10.5 }}>{done.length}</span><i className="sp grow" />

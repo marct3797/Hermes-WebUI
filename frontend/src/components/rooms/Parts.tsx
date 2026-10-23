@@ -2,9 +2,11 @@ import { useState } from "react";
 import { api } from "../../api";
 import { fmtTime } from "../../format";
 import type { RoomMember, RoomMessage, Decision } from "../../types";
+import { useRoomNeeds } from "../../roomNeeds";
 import { sigilFor, useUi } from "../../ui";
 import type { MemberAsk } from "../../useRoom";
 import { Icon } from "../Icon";
+import { Link } from "../Link";
 import { Markdown } from "../Markdown";
 import { Sigil } from "../Sigil";
 
@@ -38,19 +40,25 @@ export function MessageRow({ message, members }: RowProps) {
 const CHOICE: Record<Decision, string> = { once: "Einmal erlauben", session: "Für Session", always: "Immer erlauben", deny: "Ablehnen" };
 
 /** Freigabe oder Rückfrage eines Mitglieds: wird über den Run dieses Mitglieds beantwortet, nicht über den Raum. */
-export function AskCard({ ask, member }: { ask: MemberAsk; member: RoomMember }) {
+export function AskCard({ ask, member, room }: { ask: MemberAsk; member: RoomMember; room?: { id: string; name: string } }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [text, setText] = useState("");
+  const { refresh } = useRoomNeeds();
   const run = async (fn: () => Promise<unknown>) => {
     setBusy(true);
     setError(undefined);
-    try { await fn(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+    try {
+      await fn();
+      refresh();
+      setTimeout(refresh, 2000); // Hermes meldet die Antwort erst einen Moment später als erledigt
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
   return (
     <section className="card need ask" role="group" aria-label={`${member.label} braucht dich`}>
       <header className="card-h"><MemberSigil member={member} size="xs" /><h2>{member.label} {ask.kind === "approval" ? "braucht eine Freigabe" : "hat eine Rückfrage"}</h2></header>
       <div className="wrow">
+        {room && <p className="small muted">im Raum <Link to={`/rooms/${room.id}`} className="inline-link">{room.name}</Link></p>}
         {ask.kind === "approval" ? (
           <>
             <code className="askcmd">{ask.command}</code>

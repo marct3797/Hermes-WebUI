@@ -76,7 +76,7 @@ export type HostInfo = {
 export type HostsResponse = { hosts: HostInfo[]; config_error: string | null };
 
 export type AgentStatus = { state: AgentState; online: boolean; version: string | null; features: string[]; error: string | null };
-export type Me = { user: { id: string; name: string }; auth_mode: "none" | "oidc"; fresh: boolean };
+export type Me = { user: { id: string; name: string }; auth_mode: "none" | "oidc"; fresh: boolean; build?: string | null };
 
 /** Sigil-Eintrag aus ui.json (WebUI-Config, nicht Hermes). `src` ist eine bereinigte SVG-URL des BFF. */
 export type SigilConfig = {
@@ -137,12 +137,17 @@ export type KeyCheck = { ok: boolean; reachable: boolean; message: string };
 
 export type RoomMember = AgentRef & { label: string; key: string };
 export type RoomMessage = { seq: number; author: string; kind: "message" | "system"; text: string; mentions: string[]; at: number };
+/** Freigabe oder Rückfrage, auf die der Lauf eines Mitglieds wartet. Der Server hält sie, solange der Lauf wartet. */
+export type RoomAsk =
+  | { kind: "approval"; member: string; run_id: string; command: string; reason: string; choices: Decision[]; timeout_s?: number | null; at: number }
+  | { kind: "clarify"; member: string; run_id: string; clarify_id?: string | null; question: string; choices: string[]; at: number };
 export type Room = {
   id: string; name: string; archived: boolean; needs_user: boolean; created_at: number;
-  running: boolean; speaker: string | null; members: RoomMember[]; last_message?: RoomMessage | null; messages?: RoomMessage[];
+  running: boolean; speaker: string | null; asks: RoomAsk[]; members: RoomMember[]; last_message?: RoomMessage | null; messages?: RoomMessage[];
 };
 export type RoomEvent =
-  | { type: "state"; running: boolean; speaker: string | null }
+  | { type: "state"; running: boolean; speaker: string | null; asks: RoomAsk[] }
+  | { type: "asks"; asks: RoomAsk[] }
   | { type: "message"; message: RoomMessage }
   | { type: "turn.started"; turn: string }
   | { type: "member.started"; member: string; round: number }

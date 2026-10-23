@@ -5,8 +5,11 @@ import time
 
 import pytest
 
+from fastapi.testclient import TestClient
+
 from app.events import validate_event
-from tests.conftest import BASE, hosts_config
+from app.main import create_app
+from tests.conftest import BASE, HDR, hosts_config
 
 
 def sse_events(text):
@@ -356,3 +359,10 @@ def test_skills_and_toolsets_are_passed_through(client):
 def test_skills_of_an_offline_host_is_503_and_unknown_agent_404(client):
     assert client.get("/bff/h/laptop/hermes/default/skills").status_code == 503
     assert client.get("/bff/h/hikari/hermes/ghost/toolsets").status_code == 404
+
+
+def test_me_reports_the_build_when_one_is_set(make_settings):
+    for build, expected in (("3f5c30c", "3f5c30c"), ("", None)):
+        with TestClient(create_app(make_settings(build=build))) as c:
+            c.headers.update(HDR)
+            assert c.get("/bff/me").json()["build"] == expected

@@ -14,6 +14,7 @@ async def me(request: Request, user: User = Depends(current_user)):
         "user": {"id": user.id, "name": user.name},
         "auth_mode": settings.auth_mode,
         "fresh": is_fresh(request),
+        "build": settings.build or None,
     }
 
 

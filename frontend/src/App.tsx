@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ApiError, api, page as browser } from "./api";
 import { Shell } from "./components/Shell";
 import { HostsProvider } from "./hosts";
+import { RoomNeedsProvider } from "./roomNeeds";
 import { RunsProvider } from "./runs";
 import { UiProvider } from "./ui";
 import { AgentPage } from "./pages/AgentPage";
@@ -50,6 +51,7 @@ export function App() {
     <UiProvider>
     <HostsProvider>
     <RunsProvider>
+    <RoomNeedsProvider>
       <Shell me={me} path={path} page={page} onLogout={logout}>
         {(() => {
           switch (page.name) {
@@ -67,6 +69,7 @@ export function App() {
           }
         })()}
       </Shell>
+    </RoomNeedsProvider>
     </RunsProvider>
     </HostsProvider>
     </UiProvider>

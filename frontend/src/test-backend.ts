@@ -34,7 +34,7 @@ export function emitRoom(ev: RoomEvent) {
 }
 
 export const roomOf = (id: string, name: string, agents: string[], extra: Partial<Room> = {}): Room => ({
-  id, name, archived: false, needs_user: false, created_at: 1_792_000_000, running: false, speaker: null,
+  id, name, archived: false, needs_user: false, created_at: 1_792_000_000, running: false, speaker: null, asks: [],
   members: agents.map((a) => ({ host: "hikari", runtime: "hermes", agent: a, label: a, key: `hikari/hermes/${a}` })), ...extra,
 });
 
@@ -191,7 +191,7 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
   vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
     const method = init?.method ?? "GET";
     calls.push({ method, url, body: init?.body ? JSON.parse(String(init.body)) : undefined });
-    if (url === "/bff/me") return json({ user: { id: "42", name: "marc" }, auth_mode: "none", fresh: true });
+    if (url === "/bff/me") return json({ user: { id: "42", name: "marc" }, auth_mode: "none", fresh: true, build: "3f5c30c" });
     if (url === "/bff/hosts") return json({ hosts: hostsFor(agents), config_error: null });
     if (url === "/bff/ui") return json(uiState);
     if (url.startsWith("/bff/rooms")) {
