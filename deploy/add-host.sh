@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# Bindet einen weiteren Hermes-Host an die WebUI an (Laptop, zweiter Server, beliebig viele). Läuft als tenjin auf Hikari:
+#     bash deploy/add-host.sh <kennung> "<Anzeigename>" <adresse> [Optionen]
+#       --port N              Port der Hermes-API (Standard 8642)
+#       --profile NAME        Profil auf diesem Host, mehrfach möglich (Standard: default; mehrere = Multiplex-Gateway)
+#       --dashboard-port N    Port des Hermes-Dashboards dort (für Anbieter, SOUL und Profile); fragt zusätzlich den Dashboard-Token
+#       --home ORDNER         Zielordner der WebUI (Standard ~/hermes-webui)
+# Beispiel (Laptop im Tailnet):  bash deploy/add-host.sh laptop "Laptop" 100.100.3.4 --dashboard-port 9119
+# Ergänzt config/hosts.json um einen Eintrag (kind "remote"), fragt den API_SERVER_KEY des Hosts still ab (oder liest ihn von
+# stdin, Dashboard-Token als zweite Zeile) und legt ihn als HERMES_KEY_<KENNUNG> in webui.env ab. Danach: bash deploy/deploy.sh.
+# Bestehende Einträge bleiben unberührt, eine vorhandene Kennung wird nie überschrieben, nichts wird gelöscht.
+# Sicherungen: hosts.json.bak, webui.env.bak. Werte werden weder ausgegeben noch als Argument weitergereicht.
+usage() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-2}"; }
+
+[ $# -ge 3 ] || usage
+id="$1"; label="$2"; addr="$3"; shift 3
+port=8642; dash_port=""; home="$HOME/hermes-webui"; profiles=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --port) port="${2:?--port braucht eine Zahl}"; shift 2 ;;
+    --profile) profiles+=("${2:?--profile braucht einen Namen}"); shift 2 ;;
+    --dashboard-port) dash_port="${2:?--dashboard-port braucht eine Zahl}"; shift 2 ;;
+    --home) home="${2:?--home braucht einen Ordner}"; shift 2 ;;
+    -h|--help) usage 0 ;;
+    *) echo "Unbekannte Option: $1"; usage ;;
+  esac
+done
+[ ${#profiles[@]} -gt 0 ] || profiles=(default)
+
+[[ "$id" =~ ^[a-z0-9][a-z0-9-]{0,31}$ ]] || { echo "Kennung: nur a-z, 0-9 und -, höchstens 32 Zeichen (war: $id)"; exit 2; }
+[[ "$addr" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "Adresse: Hostname oder IP ohne Schema und Port (war: $addr)"; exit 2; }
+[[ "$port" =~ ^[0-9]{2,5}$ ]] || { echo "Port ungültig: $port"; exit 2; }
+[ -z "$dash_port" ] || [[ "$dash_port" =~ ^[0-9]{2,5}$ ]] || { echo "Dashboard-Port ungültig: $dash_port"; exit 2; }
+for p in "${profiles[@]}"; do [[ "$p" =~ ^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$ ]] || { echo "Profilname ungültig: $p"; exit 2; }; done
+
+cfg="$home/config/hosts.json"; envf="$home/webui.env"
+[ -f "$cfg" ] && [ -f "$envf" ] || { echo "Config oder webui.env fehlt in $home (erst deploy.sh starten)"; exit 1; }
+
+up="$(printf '%s' "$id" | tr 'a-z-' 'A-Z_')"
+key_var="HERMES_KEY_$up"; tok_var="HERMES_DASHBOARD_TOKEN_$up"
+
+# Eintrag zuerst prüfen und anlegen; die Werte kommen erst danach dran, damit eine abgelehnte Kennung nichts hinterlässt.
+export ADD_ID="$id" ADD_LABEL="$label" ADD_ADDR="$addr" ADD_PORT="$port" ADD_DASH="$dash_port" ADD_KEYVAR="$key_var" ADD_TOKVAR="$tok_var" ADD_PROFILES="${profiles[*]}"
+python3 - "$cfg" <<'PY' || exit 1
+import json, os, shutil, sys
+path = sys.argv[1]
+cfg = json.load(open(path))
+hosts = cfg.setdefault("hosts", [])
+if any(h.get("id") == os.environ["ADD_ID"] for h in hosts):
+    print(f"Der Host {os.environ['ADD_ID']} steht schon in {path}. Nichts geändert.")
+    sys.exit(1)
+profiles = os.environ["ADD_PROFILES"].split()
+runtime = {
+    "id": "hermes",
+    "base_url": f"http://{os.environ['ADD_ADDR']}:{os.environ['ADD_PORT']}",
+    "api_key_env": os.environ["ADD_KEYVAR"],
+    "multiplex": len(profiles) > 1,
+    "agents": profiles,
+}
+if os.environ["ADD_DASH"]:
+    runtime["dashboard"] = {"base_url": f"http://{os.environ['ADD_ADDR']}:{os.environ['ADD_DASH']}", "token_env": os.environ["ADD_TOKVAR"]}
+hosts.append({"id": os.environ["ADD_ID"], "label": os.environ["ADD_LABEL"], "kind": "remote", "address": os.environ["ADD_ADDR"], "runtimes": [runtime]})
+shutil.copy2(path, path + ".bak")
+tmp = path + ".new"
+with open(tmp, "w") as f:
+    json.dump(cfg, f, indent=2, ensure_ascii=False)
+    f.write("\n")
+os.replace(tmp, path)
+print(f"hosts.json: Host {os.environ['ADD_ID']} ergänzt (Hermes auf {os.environ['ADD_ADDR']}:{os.environ['ADD_PORT']}, Profile: {', '.join(profiles)}).")
+PY
+
+ask() {  # ask PROMPT  -> Wert auf stdout; am Terminal still, sonst eine Zeile von stdin
+  local v
+  if [ -t 0 ]; then read -rsp "$1: " v; echo >&2; else IFS= read -r v; fi
+  printf '%s' "$v" | tr -d '\r'
+}
+set_var() {  # set_var NAME  (Wert von stdin)
+  local val; val="$(cat)"
+  cp -p "$envf" "$envf.bak"
+  { grep -v "^$1=" "$envf.bak"; printf '%s=%s\n' "$1" "$val"; } > "$envf.new" && chmod 600 "$envf.new" && mv "$envf.new" "$envf"
+}
+
+key="$(ask "API_SERVER_KEY von $label")"
+[ -n "$key" ] || { echo "Kein Key eingegeben. Der Eintrag steht in hosts.json, der Key fehlt noch ($key_var in $envf)."; exit 1; }
+printf '%s' "$key" | set_var "$key_var"
+echo "webui.env: $key_var gesetzt (Länge ${#key})."
+[ "${#key}" -ge 16 ] || echo "Hinweis: Hermes startet seinen API-Server nicht mit einem Key unter 16 Zeichen. Stimmt der Wert?"
+if [ -n "$dash_port" ]; then
+  tok="$(ask "Dashboard-Token von $label")"
+  if [ -n "$tok" ]; then printf '%s' "$tok" | set_var "$tok_var"; echo "webui.env: $tok_var gesetzt (Länge ${#tok})."
+  else echo "Kein Dashboard-Token eingegeben: $tok_var fehlt noch."; fi
+  unset tok
+fi
+
+# Erreichbarkeit prüfen, ohne den Key als Argument zu übergeben (curl liest den Header von stdin).
+code="$(printf 'header = "Authorization: Bearer %s"\n' "$key" | curl -sS -m 6 -o /dev/null -w '%{http_code}' -K - "http://$addr:$port/v1/capabilities" 2>/dev/null)"
+unset key
+case "$code" in
+  200) echo "Prüfung: Hermes auf $addr:$port antwortet, der Key passt." ;;
+  401|403) echo "Prüfung: Hermes auf $addr:$port antwortet, lehnt den Key aber ab. $key_var in $envf muss dem API_SERVER_KEY dort entsprechen." ;;
+  000|"") echo "Prüfung: keine Verbindung zu $addr:$port. Auf dem Host: lauscht Hermes dort (API_SERVER_ENABLED=true, API_SERVER_HOST=$addr, API_SERVER_KEY mit mindestens 16 Zeichen)? Prüfen mit: ss -ltnp | grep $port" ;;
+  *) echo "Prüfung: Hermes auf $addr:$port antwortet mit HTTP $code." ;;
+esac
+echo "Jetzt die WebUI neu starten: bash deploy/deploy.sh"
