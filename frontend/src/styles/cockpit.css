@@ -112,12 +112,13 @@
 .ent.on{box-shadow:inset 2px 0 0 var(--crim)}
 .linkish{border:0;background:none;padding:0;color:var(--t1);font:inherit;text-decoration:underline;text-decoration-color:var(--line2);cursor:pointer}
 .linkish:hover{text-decoration-color:var(--crim)}
-.graph{width:100%;height:auto;max-height:68vh;background:var(--void);border:1px solid var(--line);border-radius:4px}
+.graph-wrap{overflow-x:auto}
+.graph{display:block;width:100%;min-width:640px;height:auto;max-height:68vh;background:var(--void);border:1px solid var(--line);border-radius:4px}
 .ge{stroke:var(--line2);stroke-width:1}
 .ge.hot{stroke:var(--crim-hi);stroke-width:1.6}
 .gn{cursor:pointer}
 .gn circle{stroke:var(--void);stroke-width:2}
-.gn text{fill:var(--t2);font:500 11px var(--sans);paint-order:stroke;stroke:var(--void);stroke-width:3px;pointer-events:none}
+.gn text{fill:var(--t2);font:500 11px var(--sans);paint-order:stroke;stroke:var(--void);stroke-width:3px}
 .gn:hover text,.gn.on text{fill:var(--t1)}
 .gn.on circle{stroke:var(--t1)}
 .gn:focus-visible circle{stroke:var(--crim-hi);stroke-width:3}

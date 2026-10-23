@@ -3,6 +3,8 @@ export type LayoutNode = { id: string };
 export type LayoutEdge = { source: string; target: string };
 export type Placed = { id: string; x: number; y: number; degree: number };
 
+const SMALL = 10;
+
 export function layout(nodes: LayoutNode[], edges: LayoutEdge[], width = 1000, height = 600, iterations = 220): Placed[] {
   const n = nodes.length;
   if (n === 0) return [];
@@ -54,10 +56,13 @@ export function layout(nodes: LayoutNode[], edges: LayoutEdge[], width = 1000, h
   // In den Rahmen skalieren, damit nichts am Rand abgeschnitten wird.
   const minX = Math.min(...x), maxX = Math.max(...x), minY = Math.min(...y), maxY = Math.max(...y);
   const pad = 36;
-  const sx = (width - 2 * pad) / Math.max(maxX - minX, 1), sy = (height - 2 * pad) / Math.max(maxY - minY, 1);
+  let sx = (width - 2 * pad) / Math.max(maxX - minX, 1), sy = (height - 2 * pad) / Math.max(maxY - minY, 1);
+  // Kleine Graphen behalten ihre Form (sonst wird eine Kette quer durchs Bild gezogen), große füllen den Rahmen.
+  if (n < SMALL) sx = sy = Math.min(sx, sy);
+  const offX = (width - 2 * pad - (maxX - minX) * sx) / 2, offY = (height - 2 * pad - (maxY - minY) * sy) / 2;
   return nodes.map((nd, i) => ({
     id: nd.id, degree: deg[i],
-    x: n === 1 ? width / 2 : pad + (x[i] - minX) * sx,
-    y: n === 1 ? height / 2 : pad + (y[i] - minY) * sy,
+    x: n === 1 ? width / 2 : pad + offX + (x[i] - minX) * sx,
+    y: n === 1 ? height / 2 : pad + offY + (y[i] - minY) * sy,
   }));
 }

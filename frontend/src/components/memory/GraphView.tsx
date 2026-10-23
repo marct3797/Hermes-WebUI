@@ -8,6 +8,7 @@ import { Icon } from "../Icon";
 const W = 1000;
 const H = 600;
 const KIND_CLASSES = 6;
+const LABEL_ROOM = 70;
 /** Beschriftet werden Knoten mit Verbindungen und, solange der Graph klein ist, alle. */
 const LABEL_ALL_UP_TO = 40;
 
@@ -19,7 +20,8 @@ export function GraphView({ provider }: { provider: string }) {
   const state = useAsync(() => api.memoryGraph(provider, { q }), [provider, q]);
   const graph = state.data;
 
-  const placed = useMemo(() => (graph ? layout(graph.nodes, graph.edges, W, H) : []), [graph]);
+  // Seitlich bleibt Platz für die Beschriftung der Randknoten.
+  const placed = useMemo(() => (graph ? layout(graph.nodes, graph.edges, W - 2 * LABEL_ROOM, H).map((p) => ({ ...p, x: p.x + LABEL_ROOM })) : []), [graph]);
   const at = useMemo(() => new Map(placed.map((p) => [p.id, p])), [placed]);
   const nodeById = useMemo(() => new Map((graph?.nodes ?? []).map((n) => [n.id, n])), [graph]);
   const kinds = useMemo(() => [...new Set((graph?.nodes ?? []).map((n) => n.kind ?? "—"))].sort(), [graph]);
@@ -55,6 +57,7 @@ export function GraphView({ provider }: { provider: string }) {
           </p>
           <div className="two">
             <div className="l">
+              <div className="graph-wrap">
               <svg className="graph" viewBox={`0 0 ${W} ${H}`} role="group" aria-label="Wissensgraph" preserveAspectRatio="xMidYMid meet">
                 {graph.edges.map((e, i) => {
                   const a = at.get(e.source), b = at.get(e.target);
@@ -81,6 +84,7 @@ export function GraphView({ provider }: { provider: string }) {
                   );
                 })}
               </svg>
+              </div>
               <ul className="legend" aria-label="Legende">
                 {kinds.map((k) => <li key={k}><i className={`swatch gk${kinds.indexOf(k) % KIND_CLASSES}`} />{k}</li>)}
               </ul>
