@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from ..adapters import UpstreamError
 from ..auth import User, current_user
-from ..memory import ID_RE, OBJ_RE, PROVIDER_TYPES, MemoryProvider
+from ..memory import GRAPH_TYPES, ID_RE, OBJ_RE, PROVIDER_TYPES, MemoryProvider, TTLCache
 from ..security import client_ip
 
 router = APIRouter(prefix="/bff/memory", dependencies=[Depends(current_user)])
@@ -45,9 +45,20 @@ async def list_providers(request: Request):
     }
 
 
+async def cached(request: Request, key: tuple, ttl: float, refresh: bool, load):
+    """Gleiche Anfrage binnen `ttl` Sekunden kommt aus dem Speicher; `?refresh=1` holt neu."""
+    cache = request.app.state.__dict__.setdefault("memcache", TTLCache(32))
+    hit = None if refresh else cache.get(key, ttl)
+    if hit is not None:
+        return hit
+    value = await upstream(load())
+    cache.put(key, value)
+    return value
+
+
 @router.get("/{provider_id}/stats")
-async def stats(provider: Prov):
-    return {"counts": await upstream(provider.stats())}
+async def stats(request: Request, provider: Prov, refresh: bool = False):
+    return {"counts": await cached(request, ("stats", provider.cfg.id), 30, refresh, provider.stats)}
 
 
 @router.get("/{provider_id}/items")
@@ -61,9 +72,22 @@ async def search(provider: Prov, q: str = Query(min_length=1, max_length=500), k
     return {"items": await upstream(provider.search(q, kind, limit))}
 
 
+Tag = Annotated[str, Query(pattern=r"^[\w .:@/+-]{1,64}$")]
+Period = Annotated[str, Query(pattern=r"^(1d|7d|30d|90d|365d)$")]
+
+
 @router.get("/{provider_id}/graph")
-async def graph(provider: Prov, q: str | None = Query(None, max_length=200), limit: int = Query(150, ge=10, le=500)):
-    return await upstream(provider.graph(q, limit))
+async def graph(request: Request, provider: Prov, type: Annotated[str, Query(pattern="^(" + "|".join(GRAPH_TYPES) + ")$")] = "world",
+                limit: int = Query(500, ge=1, le=2000), q: str | None = Query(None, max_length=200),
+                tags: Annotated[list[Tag] | None, Query(max_length=10)] = None, tags_match: Annotated[str, Query(pattern="^(any|all)$")] = "any",
+                refresh: bool = False):
+    key = ("graph", provider.cfg.id, type, limit, q or "", tuple(tags or ()), tags_match)
+    return await cached(request, key, 60, refresh, lambda: provider.graph(q, limit, type, tags, tags_match))
+
+
+@router.get("/{provider_id}/timeseries")
+async def timeseries(provider: Prov, type: Annotated[str, Query(pattern="^(" + "|".join(GRAPH_TYPES) + ")$")] = "world", period: Period = "30d"):
+    return await upstream(provider.timeseries(type, period))
 
 
 @router.get("/{provider_id}/entities")

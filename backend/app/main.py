@@ -8,6 +8,7 @@ import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
+from starlette.middleware.gzip import GZipMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .access_logging import CredentialQueryFilter
@@ -98,6 +99,7 @@ def create_app(
     app.state.souls = SoulHistory(settings.soul_dir)
 
     app.add_middleware(RedactionMiddleware)  # innerhalb von SecurityMiddleware: deren Header bleiben erhalten
+    app.add_middleware(GZipMiddleware, minimum_size=1024)  # innerhalb der Sicherheits-Header, vor TrustedHost
     app.add_middleware(SecurityMiddleware, settings=settings)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.host_list())
     # Operations-Routen vor den dynamischen Agent-Routen: sonst schluckt /bff/h/{host}/{runtime}/{agent} die _hostd/_manage-Pfade.

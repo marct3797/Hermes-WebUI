@@ -115,57 +115,23 @@ describe("Gedächtnis", () => {
     expect(calls.filter((c) => c.url.includes("/search")).map((c) => c.url)).toEqual(["/bff/memory/hindsight/search?q=tailnet"]);
   });
 
-  it("draws the graph and lists the neighbours of a clicked node", async () => {
+  it("opens the graph with fact-type tabs and counts and asks the BFF for the chosen type", async () => {
     await open();
     fireEvent.click(await tab("Graph"));
-    const graph = await screen.findByRole("group", { name: "Wissensgraph" });
-    expect(screen.getByText("3 Knoten · 2 Kanten")).toBeInTheDocument();
-    fireEvent.click(within(graph).getByRole("button", { name: /^Hikari \(server\)/ }));
-    const side = screen.getByRole("complementary", { name: "Auswahl" });
-    expect(within(side).getByText("Verbunden mit (2)")).toBeInTheDocument();
-    expect(within(side).getByRole("button", { name: "Marc" })).toBeInTheDocument();
-    expect(within(side).getByText(/betreibt/)).toBeInTheDocument();
+    const types = await screen.findByRole("tablist", { name: "Faktenart" });
+    await waitFor(() => expect(within(types).getByRole("tab", { name: /^Weltfakten/ })).toHaveTextContent("80"));
+    expect(await screen.findByText(/25 von 44\.272 Erinnerungen werden angezeigt/)).toBeInTheDocument();
+    fireEvent.click(within(types).getByRole("tab", { name: /^Erfahrung/ }));
+    await waitFor(() => expect(calls.some((c) => c.url.includes("/graph?type=experience&limit=500"))).toBe(true));
   });
 
-  it("hides kinds and lone nodes on request, and dims what is not connected to the chosen node", async () => {
-    await open();
-    fireEvent.click(await tab("Graph"));
-    const graph = await screen.findByRole("group", { name: "Wissensgraph" });
-    const kinds = screen.getByRole("group", { name: "Arten" });
-    fireEvent.click(within(kinds).getByRole("button", { name: /server/ }));
-    expect(screen.getByText("1 Knoten · 0 Kanten")).toBeInTheDocument();
-    expect(within(kinds).getByRole("button", { name: /server/ })).toHaveAttribute("aria-pressed", "false");
-    fireEvent.click(within(kinds).getByRole("button", { name: /server/ }));
-    expect(screen.getByText("3 Knoten · 2 Kanten")).toBeInTheDocument();
-    fireEvent.click(within(graph).getByRole("button", { name: /^Marc \(person\)/ }));
-    expect(within(graph).getByRole("button", { name: /^Tailnet/ }).getAttribute("class")).toContain("dim"); // zwei Schritte entfernt
-    expect(within(graph).getByRole("button", { name: /^Hikari/ }).getAttribute("class")).not.toContain("dim");
-    const links = screen.getByRole("group", { name: "Verbindungen" });
-    fireEvent.click(within(links).getByRole("button", { name: "betreibt" }));
-    expect(screen.getByText("3 Knoten · 1 Kanten")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("checkbox", { name: /Einzelne ohne Verbindung ausblenden \(1\)/ }));
-    expect(screen.getByText("2 Knoten · 1 Kanten")).toBeInTheDocument();
-  });
-
-  it("zooms with the buttons and goes back to the full view", async () => {
-    await open();
-    fireEvent.click(await tab("Graph"));
-    const graph = await screen.findByRole("group", { name: "Wissensgraph" });
-    const layer = graph.querySelector("svg > g, g")!;
-    expect(layer.getAttribute("transform")).toContain("scale(1)");
-    fireEvent.click(screen.getByRole("button", { name: "Vergrößern" }));
-    expect(layer.getAttribute("transform")).toContain("scale(1.3");
-    fireEvent.click(screen.getByRole("button", { name: "Ansicht zurücksetzen" }));
-    expect(layer.getAttribute("transform")).toContain("scale(1)");
-  });
-
-  it("says so when the graph is empty", async () => {
-    await open();
-    fireEvent.click(await tab("Graph"));
-    await screen.findByRole("group", { name: "Wissensgraph" });
-    fireEvent.change(screen.getByLabelText("Graph eingrenzen"), { target: { value: "leer" } });
-    fireEvent.click(screen.getByRole("button", { name: "Anzeigen" }));
-    expect(await screen.findByText("Der Graph ist leer für diese Eingrenzung.")).toBeInTheDocument();
+  it("opens a shared address with its filters", async () => {
+    ({ calls } = installBackend());
+    history.pushState(null, "", "/memory?tab=graph&type=observation&limit=1000&q=Codex&tags=a&tags=b&tags_match=all");
+    render(<App />);
+    await screen.findByRole("tablist", { name: "Faktenart" });
+    await waitFor(() => expect(calls.map((c) => c.url)).toContain("/bff/memory/hindsight/graph?type=observation&limit=1000&q=Codex&tags=a&tags=b&tags_match=all"));
+    expect(screen.getByRole("tab", { name: /^Beobachtungen/ })).toHaveAttribute("aria-selected", "true");
   });
 
   it("opens an entity with its observations", async () => {
