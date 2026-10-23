@@ -80,6 +80,14 @@ export function bounds(s: Sim): Box {
   return { x0, y0, x1, y1 };
 }
 
+/** Rahmen um die dichte Mitte (2. bis 98. Perzentil, mit Rand): einzelne weit entfernte Knoten drücken die Wolke nicht auf Briefmarkengröße. */
+export function robustBounds(s: Pick<Sim, "n" | "x" | "y">, lo = 0.02, hi = 0.98, pad = 0.08): Box {
+  if (!s.n) return { x0: -1, y0: -1, x1: 1, y1: 1 };
+  const q = (a: Float64Array, f: number) => { const c = Array.from(a.subarray(0, s.n)).sort((m, n) => m - n); return c[Math.min(c.length - 1, Math.max(0, Math.round(f * (c.length - 1))))]; };
+  const x0 = q(s.x, lo), x1 = q(s.x, hi), y0 = q(s.y, lo), y1 = q(s.y, hi), px = (x1 - x0) * pad, py = (y1 - y0) * pad;
+  return { x0: x0 - px, y0: y0 - py, x1: x1 + px, y1: y1 + py };
+}
+
 export type View = { x: number; y: number; k: number };
 /** Bildschirm (Pixel im Zeichenfeld, Mitte = Ursprung der Ansicht) <-> Welt. */
 export const toScreen = (v: View, w: number, h: number, x: number, y: number) => ({ x: w / 2 + v.x + x * v.k, y: h / 2 + v.y + y * v.k });

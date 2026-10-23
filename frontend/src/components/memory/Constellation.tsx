@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { bounds, createSim, fitView, hitTest, settled, setEdges, step, toScreen, type Sim, type View } from "../../graphForce";
+import { robustBounds, createSim, fitView, hitTest, settled, setEdges, step, toScreen, type Sim, type View } from "../../graphForce";
 import { linkColor } from "../../graphColor";
 import type { MemEdge, MemNode } from "../../types";
 
@@ -25,6 +25,7 @@ export function Constellation({ nodes, edges, colors, selected, highlight, onSel
   const view = useRef<View>({ x: 0, y: 0, k: 1 });
   const size = useRef({ w: W0, h: H0 });
   const frame = useRef(0);
+  const autoFit = useRef(true); // folgt der Wolke, bis jemand zoomt oder verschiebt
   const dirty = useRef(true);
   const [paused, setPaused] = useState(false);
   const [full, setFull] = useState(false);
@@ -99,13 +100,14 @@ export function Constellation({ nodes, edges, colors, selected, highlight, onSel
       frame.current = 0;
       const s = sim.current;
       if (s && !live.current.paused && !settled(s)) { step(s); step(s); dirty.current = true; }
+      if (s && autoFit.current) { const el = canvas.current; if (el?.clientWidth) size.current = { w: el.clientWidth, h: el.clientHeight || H0 }; const t = fitView(robustBounds(s), size.current.w, size.current.h), v = view.current, a = settled(s) ? 1 : 0.25; view.current = { k: v.k + (t.k - v.k) * a, x: v.x + (t.x - v.x) * a, y: v.y + (t.y - v.y) * a }; dirty.current = true; }
       if (dirty.current) { dirty.current = false; draw(); }
       if (s && !live.current.paused && !settled(s)) frame.current = requestAnimationFrame(tick);
     };
     frame.current = requestAnimationFrame(tick);
   }, [draw]);
 
-  const fit = useCallback(() => { view.current = fitView(bounds(sim.current), size.current.w, size.current.h); kick(); }, [kick]);
+  const fit = useCallback(() => { autoFit.current = true; view.current = fitView(robustBounds(sim.current), size.current.w, size.current.h); kick(); }, [kick]);
 
   // Neue Knotenmenge: frisches Layout, kurz vorgewärmt, dann einpassen.
   useEffect(() => {
@@ -113,7 +115,8 @@ export function Constellation({ nodes, edges, colors, selected, highlight, onSel
     sim.current = s;
     setEdges(s, pairs);
     for (let i = 0; i < WARMUP; i++) step(s);
-    view.current = fitView(bounds(s), size.current.w, size.current.h);
+    autoFit.current = true;
+    view.current = fitView(robustBounds(s), size.current.w, size.current.h);
     kick();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- nur bei neuer Knotenmenge neu anlegen
   }, [nodes]);
@@ -128,6 +131,7 @@ export function Constellation({ nodes, edges, colors, selected, highlight, onSel
   };
 
   const zoomAt = useCallback((factor: number, mx?: number, my?: number) => {
+    autoFit.current = false;
     const v = view.current, { w, h } = size.current;
     const k = Math.min(20, Math.max(0.05, v.k * factor)), f = k / v.k;
     const ox = (mx ?? w / 2) - w / 2, oy = (my ?? h / 2) - h / 2; // Zeiger relativ zur Mitte
@@ -149,7 +153,7 @@ export function Constellation({ nodes, edges, colors, selected, highlight, onSel
     if (d && e.buttons) {
       const dx = e.clientX - d.x, dy = e.clientY - d.y;
       if (Math.abs(dx) + Math.abs(dy) > 3) d.moved = true;
-      if (d.moved) { drag.current = { x: e.clientX, y: e.clientY, moved: true }; view.current = { ...view.current, x: view.current.x + dx, y: view.current.y + dy }; kick(); }
+      if (d.moved) { autoFit.current = false; drag.current = { x: e.clientX, y: e.clientY, moved: true }; view.current = { ...view.current, x: view.current.x + dx, y: view.current.y + dy }; kick(); }
       return;
     }
     const p = local(e), i = hitTest(sim.current, view.current, size.current.w, size.current.h, p.x, p.y);
@@ -163,13 +167,14 @@ export function Constellation({ nodes, edges, colors, selected, highlight, onSel
     onSelect(i >= 0 && i !== selected ? i : undefined);
   };
   const onDoubleClick = (e: React.MouseEvent) => { // Punkt unter dem Zeiger in die Mitte holen
+    autoFit.current = false;
     const p = local(e), { w, h } = size.current;
     view.current = { ...view.current, x: view.current.x - (p.x - w / 2), y: view.current.y - (p.y - h / 2) };
     kick();
   };
   const onKeyDown = (e: React.KeyboardEvent) => {
     const move: Record<string, [number, number]> = { ArrowLeft: [40, 0], ArrowRight: [-40, 0], ArrowUp: [0, 40], ArrowDown: [0, -40] };
-    if (move[e.key]) { e.preventDefault(); const [dx, dy] = move[e.key]; view.current = { ...view.current, x: view.current.x + dx, y: view.current.y + dy }; kick(); }
+    if (move[e.key]) { e.preventDefault(); autoFit.current = false; const [dx, dy] = move[e.key]; view.current = { ...view.current, x: view.current.x + dx, y: view.current.y + dy }; kick(); }
     else if (e.key === "+" || e.key === "=") zoomAt(1.3);
     else if (e.key === "-" || e.key === "−") zoomAt(1 / 1.3);
     else if (e.key === "0") fit();

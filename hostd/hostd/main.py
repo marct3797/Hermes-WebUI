@@ -78,7 +78,7 @@ def create_app(settings):
     async def info():
         return dict(version=__version__, clis=[dict(id=cli['id'], label=cli['label'],
                     available=shutil.which(cli['command'][0]) is not None, authenticated=checker.cached_state(cli['id']),
-                    auth_note='Status durch CLI-Befehl geprueft (GET /v1/auth); null = noch nicht geprueft oder unklar.') for cli in settings.clis],
+                    auth_note='Status per CLI-Befehl geprüft; leer, solange noch nicht geprüft.') for cli in settings.clis],
                     workspaces=[dict(id=w['id'], label=w['label']) for w in settings.workspaces])
 
     @app.get('/v1/auth')
