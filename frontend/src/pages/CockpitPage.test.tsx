@@ -33,7 +33,7 @@ describe("Cockpit", () => {
     expect(within(panel).getByText(/rm -r build · Raum Planungsrunde/)).toBeInTheDocument();
     const kpis = screen.getByRole("group", { name: "Kennzahlen" });
     expect(within(kpis).getByText("1 Freigabe")).toBeInTheDocument();
-    expect(document.title).toBe("(1) Hermes");
+    await waitFor(() => expect(document.title).toBe("(1) Hermes"));
     expect(within(panel).getByRole("link", { name: "Raum öffnen" })).toHaveAttribute("href", "/rooms/abcabcabcabc");
     fireEvent.click(within(panel).getByRole("button", { name: "Einmal erlauben" }));
     await waitFor(() => expect(calls.find((c) => c.url === "/bff/h/hikari/hermes/sora/runs/run_9/approval")?.body).toEqual({ decision: "once" }));
@@ -89,7 +89,7 @@ describe("Cockpit", () => {
     expect(within(card("raiden")).getByText("WARTET")).toBeInTheDocument();
     expect(within(card("raiden")).getByText(/wartet auf Freigabe/)).toBeInTheDocument();
     expect(within(card("sora")).getByText("LÄUFT")).toBeInTheDocument();
-    expect(document.title).toBe("(1) Hermes");
+    await waitFor(() => expect(document.title).toBe("(1) Hermes"));
 
     const needs = screen.getByRole("region", { name: "Braucht dich" });
     expect(within(needs).getByText("raiden fragt nach Freigabe")).toBeInTheDocument();
@@ -102,7 +102,7 @@ describe("Cockpit", () => {
     expect(posted("/approval")[0].url).toBe("/bff/h/hikari/hermes/raiden/runs/run_1/approval");
     expect(posted("/approval")[0].body).toEqual({ decision: "once" });
     expect(await within(needs).findByText("Entscheidung gespeichert")).toBeInTheDocument();
-    expect(document.title).toBe("Hermes");
+    await waitFor(() => expect(document.title).toBe("Hermes"));
     expect(within(card("raiden")).getByText("LÄUFT")).toBeInTheDocument();
   });
 

@@ -43,7 +43,7 @@ describe("Inbox", () => {
     const nav = within(screen.getByRole("complementary", { name: "Navigation" }));
     expect(nav.getByRole("link", { name: /^Räume/ })).toHaveTextContent("1");
     expect(nav.getByRole("link", { name: /^Inbox/ })).toHaveTextContent("1");
-    expect(document.title).toBe("(1) Hermes");
+    await waitFor(() => expect(document.title).toBe("(1) Hermes")); // der Titel wird in einem Effekt gesetzt, kurz nach dem Zähler
     expect(screen.queryByText("Nichts offen.")).not.toBeInTheDocument();
   });
 
