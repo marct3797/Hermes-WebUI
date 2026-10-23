@@ -3,9 +3,6 @@ from __future__ import annotations
 
 import re
 
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import Response
-
 # Rohtext statt JSON-Baum: trifft jede Stelle in jeder Tiefe, auch mit \u00ab-Escapes.
 FRAGMENT = re.compile(r"(?:«|\\u00ab)redacted:[^»\\]*(?:»|\\u00bb)", re.IGNORECASE)
 
@@ -14,14 +11,40 @@ def redact_fragments(text: str) -> str:
     return FRAGMENT.sub("«redacted»", text)
 
 
-class RedactionMiddleware(BaseHTTPMiddleware):
-    """Kürzt Key-Fragmente in allen JSON-Antworten unter /bff/h/. Streams (SSE) und Downloads bleiben unberührt."""
+class RedactionMiddleware:
+    """Kürzt Key-Fragmente in allen JSON-Antworten unter /bff/h/. Streams (SSE) und Downloads bleiben unberührt.
 
-    async def dispatch(self, request, call_next):
-        response = await call_next(request)
-        if not request.url.path.startswith("/bff/h/") or not response.headers.get("content-type", "").startswith("application/json"):
-            return response
-        body = b"".join([chunk async for chunk in response.body_iterator])
-        result = Response(redact_fragments(body.decode("utf-8", "replace")).encode(), status_code=response.status_code)
-        result.raw_headers = [(k, v) for k, v in response.raw_headers if k != b"content-length"] + result.raw_headers[:1]
-        return result
+    Reine ASGI-Middleware (kein BaseHTTPMiddleware): Antworten bleiben einteilig, damit GZip die Mindestgröße prüfen kann.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or not scope["path"].startswith("/bff/h/"):
+            return await self.app(scope, receive, send)
+        start: dict | None = None
+        chunks: list[bytes] = []
+        active = False  # JSON-Antwort, die gepuffert wird
+
+        async def wrapped(message):
+            nonlocal start, active
+            if message["type"] == "http.response.start":
+                headers = {k.lower(): v for k, v in message.get("headers", [])}
+                active = headers.get(b"content-type", b"").startswith(b"application/json")
+                if not active:
+                    return await send(message)
+                start = message
+                return None
+            if not active:
+                return await send(message)
+            chunks.append(message.get("body", b""))
+            if message.get("more_body"):
+                return None
+            body = redact_fragments(b"".join(chunks).decode("utf-8", "replace")).encode()
+            headers = [(k, v) for k, v in start["headers"] if k.lower() != b"content-length"] + [(b"content-length", str(len(body)).encode())]
+            await send({**start, "headers": headers})
+            await send({"type": "http.response.body", "body": body})
+            return None
+
+        await self.app(scope, receive, wrapped)
