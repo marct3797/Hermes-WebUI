@@ -106,13 +106,18 @@ export type SigilInput = { type: SigilConfig["type"]; glyph?: string; text?: str
 export type ProfileInput = { label: string | null; sigil: SigilInput | null };
 
 export type DiagStatus = "ok" | "warn" | "fail";
-export type DiagCheck = { id: string; label: string; status: DiagStatus; detail: string; ms: number | null };
+export type DiagCheck = { id: string; label: string; status: DiagStatus | "slow"; // "slow": Zeitlimit der Prüfung überschritten
+  detail: string; ms: number | null };
 export type DiagReport = { agent: string; status: DiagStatus; checks: DiagCheck[]; at: number };
 
 export type MemProvider = { id: string; type: string; label: string; bank: string; capabilities: string[] };
 export type MemItem = { id: string; text: string; kind: string | null; context: string | null; entities: string[]; at: number | null; tags: string[]; document: string | null };
 export type MemPage = { items: MemItem[]; total: number | null; limit: number; offset: number };
-export type MemGraph = { nodes: Array<{ id: string; label: string; kind: string | null }>; edges: Array<{ source: string; target: string; label: string | null; weight?: number }>; total: number; truncated: boolean };
+export type MemNode = { id: string; label: string; text: string | null; date: string | null; context: string | null; entities: string[]; kind: string | null };
+export type MemEdge = { source: string; target: string; type: string | null; weight?: number; entity?: string };
+export type MemRow = { id: string; text: string | null; context: string | null; entities: string[]; date: string | null; kind: string | null };
+export type MemGraph = { nodes: MemNode[]; edges: MemEdge[]; table_rows: MemRow[]; total: number; limit: number; returned: number; truncated: boolean; edges_dropped: number };
+export type MemSeries = { points: Array<{ t: string; count: number }> };
 export type MemEntity = { id: string; name: string; mentions: number; first_seen: number | null; last_seen: number | null };
 export type MemModel = { id: string; name: string; content: string | null; query: string | null; updated: number | null; tags: string[] };
 export type SkillInfo = { name: string; description?: string; category?: string; enabled?: boolean; provenance?: string };
@@ -163,3 +168,13 @@ export type ProviderMatrix = { available: boolean; reason: string | null; profil
 export type ModelProvider = { slug: string; name: string; current: boolean; authenticated: boolean; models: string[]; warning: string | null };
 export type OAuthStart = { session_id: string; flow?: string; user_code?: string; verification_url?: string; auth_url?: string; expires_in?: number; poll_interval?: number };
 export type OAuthPoll = { session_id: string; status: "pending" | "approved" | "error" | "expired" | string; error_message: string | null; expires_at: number | null };
+
+export type CliAuthEntry = { id: string; state: "signed_in" | "signed_out" | "unknown"; method: string | null; checked_at: string; reason: string | null };
+export type CliAuth = { available: boolean; reason: string | null; clis?: CliAuthEntry[] };
+/** Restkontingente (BFF, aus dem Dashboard-Plugin ai-usage-tracker). */
+export type QuotaWindow = { label: string; used_percent: number | null; remaining_percent: number | null; reset_at: string | null; reset_in_s: number | null; detail: string | null };
+export type QuotaState = "ok" | "exhausted" | "low" | "unavailable" | "auth_failed";
+export type QuotaProvider = { id: string; label: string; configured: boolean; active: boolean; quota_capable: boolean; plan: string | null; state: QuotaState; worst_remaining_percent: number | null; windows: QuotaWindow[]; reason: string | null };
+export type Quota = { state: "ok" | "plugin_missing" | "dashboard_unavailable" | "error"; reason: string | null; generated_at: string; cached: boolean; providers: QuotaProvider[] };
+export type QuotaItem = { host: string; runtime: string; profile: string; provider: string; label: string; state: QuotaState; remaining_percent: number | null; window: string | null; reset_in_s: number | null; reason: string | null };
+export type QuotaSummary = { runtimes: Array<{ host: string; runtime: string; state: Quota["state"]; reason: string | null }>; items: QuotaItem[]; worst: QuotaItem | null };

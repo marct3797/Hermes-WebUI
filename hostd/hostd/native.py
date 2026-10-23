@@ -88,7 +88,7 @@ def run(argv, *, cwd, env=None, timeout=8, limit=LIMIT):
 def git(root):
     root = Path(root)
     if root.is_symlink() or not (root / '.git').is_dir() or (root / '.git').is_symlink():
-        raise HTTPException(409, 'Workspace is not a standalone Git repository')
+        return {'repository': False, 'reason': 'Kein Git-Repository in diesem Arbeitsordner'}
     prefix = ['git', '-c', 'core.fsmonitor=false', '-c', 'core.untrackedCache=false',
               '-c', 'diff.external=', '-c', 'core.hooksPath=/dev/null', '--no-pager', '--literal-pathspecs']
     truncated = False

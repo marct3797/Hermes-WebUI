@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
+import { CLI_DOT } from "../components/providers/CliPanel";
+import type { CliAuth } from "../types";
 import "../styles/workspace.css";
 
 type Terminal = { id: string; cli: string; workspace: string; running: boolean; pid: number; created_at: number; exit_code?: number };
@@ -23,6 +25,7 @@ export function TerminalPage({ host }: { host: string }) {
   const [selected, setSelected] = useState("");
   const [cli, setCli] = useState("");
   const [workspace, setWorkspace] = useState("");
+  const [auth, setAuth] = useState<CliAuth>();
   const [error, setError] = useState<string>();
   const [gap, setGap] = useState<string>();
   const [connection, setConnection] = useState("Nicht verbunden");
@@ -37,12 +40,13 @@ export function TerminalPage({ host }: { host: string }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    setInfo(undefined); setTerminals([]); setSelected(""); setError(undefined);
+    setInfo(undefined); setTerminals([]); setSelected(""); setAuth(undefined); setError(undefined);
     try { noticeOptIn.current = sessionStorage.getItem("hermes-terminal-notifications") === "true"; setNotifications(noticeOptIn.current); } catch { /* private mode */ }
     request<Info>(`${base}/_hostd`, "GET", undefined, controller.signal).then(async (data) => {
       if (controller.signal.aborted) return;
-      setInfo(data); setCli(data.clis?.find((c) => c.available)?.id ?? ""); setWorkspace(data.workspaces?.[0]?.id ?? "");
+      setInfo(data); const wanted = new URLSearchParams(location.search).get("cli"); setCli(data.clis?.find((c) => c.available && c.id === wanted)?.id ?? data.clis?.find((c) => c.available)?.id ?? ""); setWorkspace(data.workspaces?.[0]?.id ?? "");
       if (data.available === false) return;
+      request<CliAuth>(`${base}/_cli-auth`, "GET", undefined, controller.signal).then((a) => { if (!controller.signal.aborted) setAuth(a); }).catch(() => {}); // Zustand ist nur Hinweis
       const list = await request<{ terminals: Terminal[] }>(`${base}/_terminals`, "GET", undefined, controller.signal);
       if (controller.signal.aborted) return;
       setTerminals(list.terminals);
@@ -133,6 +137,15 @@ export function TerminalPage({ host }: { host: string }) {
     try { await request(`${base}/_terminals/${encodeURIComponent(selected)}`, "DELETE"); const data = await request<{ terminals: Terminal[] }>(`${base}/_terminals`); setTerminals(data.terminals); }
     catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
+  const remove = async () => {
+    if (!selected || current?.running) return;
+    setBusy(true);
+    try {
+      await request(`${base}/_terminals/${encodeURIComponent(selected)}`, "DELETE");
+      const data = await request<{ terminals: Terminal[] }>(`${base}/_terminals`);
+      setTerminals(data.terminals); setSelected(data.terminals[0]?.id ?? "");
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  };
   const toggleNotifications = async (checked: boolean) => {
     try {
       noticeOptIn.current = checked && typeof Notification !== "undefined" && (Notification.permission === "granted" || await Notification.requestPermission() === "granted");
@@ -154,11 +167,12 @@ export function TerminalPage({ host }: { host: string }) {
         <label>Arbeitsordner <select className="field" value={workspace} onChange={(e) => setWorkspace(e.target.value)}><option value="" disabled>Arbeitsordner wählen</option>{info.workspaces?.map((w) => <option key={w.id} value={w.id}>{w.label}</option>)}</select></label>
         <button className="btn btn-s" disabled={busy || !cli || !workspace} onClick={() => void create()}>Terminal starten</button>
       </div>
+      {(() => { const st = auth?.clis?.find((c) => c.id === cli); return st && <p className="muted" role="status">Anmeldung: {CLI_DOT[st.state].text}{st.method ? ` (${st.method})` : ""}{st.reason ? ` · ${st.reason}` : ""}{st.state === "signed_out" ? ". Der Start bleibt möglich, die Anmeldung erfolgt im Terminal." : ""}</p>; })()}
       <p className="muted">Installation ist kein Anmeldenachweis. {info.clis?.find((c) => c.id === cli)?.auth_note ?? "Anmeldestatus unbekannt; Anmeldung bleibt in der CLI."}</p>
-      {terminals.length ? <label>Terminal auswählen <select className="field" value={selected} onChange={(e) => { setGap(undefined); setSelected(e.target.value); }}>{terminals.map((t) => <option value={t.id} key={t.id}>{t.cli} · {t.workspace} · {t.running ? "läuft" : "beendet"} · {t.id}</option>)}</select></label> : <p role="status">Keine Terminals. Ein Start führt die konfigurierte CLI aus.</p>}
+      {terminals.length ? <label>Terminal auswählen <select className="field" value={selected} onChange={(e) => { setGap(undefined); setSelected(e.target.value); }}>{terminals.map((t) => <option value={t.id} key={t.id}>{t.cli} · {t.workspace} · {t.running ? "läuft" : `Beendet · Exit ${t.exit_code ?? "unbekannt"}`} · {t.id}</option>)}</select></label> : <p role="status">Keine Terminals. Ein Start führt die konfigurierte CLI aus.</p>}
     </>}
     <div ref={container} className="terminal-viewport" aria-label="CLI Terminal" hidden={!selected} />
-    {selected && <><div className="workspace-toolbar"><p role="status">{connection}{current && !current.running ? ` · Exit ${current.exit_code ?? "unbekannt"}` : ""}</p><button className="btn btn-s btn-g" onClick={() => reconnect.current()}>Neu verbinden</button><button className="btn btn-s btn-g" disabled={busy || !current?.running} onClick={() => void stop()}>Prozess beenden</button></div>
+    {selected && <><div className="workspace-toolbar"><p role="status">{connection}{current && !current.running ? ` · Beendet · Exit ${current.exit_code ?? "unbekannt"}` : ""}</p><button className="btn btn-s btn-g" onClick={() => reconnect.current()}>Neu verbinden</button><button className="btn btn-s btn-g" disabled={busy || !current?.running} onClick={() => void stop()}>Prozess beenden</button>{current && !current.running && <button className="btn btn-s btn-g" disabled={busy} onClick={() => void remove()}>Entfernen</button>}</div>
       <div className="terminal-keys" aria-label="Mobile CLI-Tasten">{MOBILE_KEYS.map(([label, key]) => <button className="btn btn-s" key={label} disabled={!current?.running || connection !== "Verbunden"} onClick={() => { if (socket.current?.readyState === 1) socket.current.send(JSON.stringify({ type: "input", data: encodeInput(key) })); terminalRef.current?.focus(); }}>{label}</button>)}</div>
       <p className="muted small">Navigation und Verbindungsabbruch beenden den Prozess nicht. Ausgabe wird nur begrenzt wiederholt.</p></>}
   </main>;

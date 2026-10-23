@@ -67,6 +67,15 @@ class Settings(BaseSettings):
     # Wie lange ein Host-Status wiederverwendet wird (Sekunden).
     health_ttl_s: float = 5.0
     health_timeout_s: float = 2.0
+    # Verbindungspool zu den Runtimes: so lange bleibt eine ungenutzte Verbindung offen (httpx-Standard: 5 s, zu kurz für Polling im Minutentakt).
+    upstream_keepalive_s: float = 60.0
+    # Cache der Dashboard-Brücke (Sekunden). Bei einem Fehler gilt der alte Stand bis dash_stale_max_s als Notlösung.
+    dash_models_ttl_s: float = 300.0
+    dash_state_ttl_s: float = 20.0
+    dash_stale_max_s: float = 600.0
+    # Diagnose: Cache und Zeitlimit der Prüfung "Modelle und Anbieter".
+    diag_models_ttl_s: float = 60.0
+    diag_models_timeout_s: float = 8.0
 
     def host_list(self) -> list[str]:
         return _split(self.allowed_hosts)

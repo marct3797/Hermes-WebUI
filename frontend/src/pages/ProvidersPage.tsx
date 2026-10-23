@@ -3,8 +3,10 @@ import { api } from "../api";
 import { Icon } from "../components/Icon";
 import { PageHead } from "../components/PageHead";
 import { ProviderCard } from "../components/providers/ProviderCard";
+import { QuotaSection } from "../components/providers/QuotaBars";
 import type { AgentRef } from "../types";
 import { useAsync } from "../useAsync";
+import { useQuota } from "../useQuota";
 
 const DAYS = [7, 30, 90] as const;
 
@@ -16,6 +18,7 @@ export function ProvidersPage({ agent, label }: { agent: AgentRef; label: string
   const [showOff, setShowOff] = useState(false);
   const state = useAsync(() => api.providers(agent, days), [agent.host, agent.runtime, agent.agent, days, reload]);
 
+  const quota = useQuota((refresh) => api.quota(agent, refresh), [agent.host, agent.runtime, agent.agent]);
   const all = state.data?.providers ?? [];
   const active = all.filter((p) => p.configured || p.used);
   const off = all.filter((p) => !p.configured && !p.used);
@@ -51,7 +54,9 @@ export function ProvidersPage({ agent, label }: { agent: AgentRef; label: string
             </section>
           )}
 
-          <p className="hint">Keys gelten für dieses Profil ({agent.agent}), jedes Profil hat seine eigene Liste. Die Werte erscheinen nie in der WebUI, nur in geschwärzter Form. Restkontingente der Konten (etwa Abo-Fenster) zeigt die WebUI noch nicht: Hermes liefert sie nicht über sein Dashboard.</p>
+          <QuotaSection quota={quota.data} error={quota.error} loading={quota.loading} onReload={quota.reload} />
+
+          <p className="hint">Keys gelten für dieses Profil ({agent.agent}), jedes Profil hat seine eigene Liste. Die Werte erscheinen nie in der WebUI, nur in geschwärzter Form.</p>
         </>
       )}
 

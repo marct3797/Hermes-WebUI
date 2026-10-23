@@ -64,6 +64,10 @@ systemctl --user enable --now hermes-hostd.service
 systemctl --user status hermes-hostd.service
 ```
 
+On a host with `~/.hermes` the installer also runs `python -m hostd.discover --config CONFIG`,
+which adds `default` and every folder in `~/.hermes/profiles/` under `profiles`
+(`{"name": {"path": "..."}}`). Existing entries are never changed; one summary line is printed.
+
 No root service, credential migration, or automatic lingering setup is performed.
 A user unit normally stops at logout unless the administrator already enabled
 lingering. A custom `--unit-dir` must be on the user's systemd unit search path.
@@ -79,8 +83,13 @@ environment variable (ASCII, no whitespace, at least 32 characters), then run
 
 All HTTP and WebSocket requests require `Authorization: Bearer …`.
 
-- `GET /v1/info`: executable availability only; no process/version/login probes.
-  `authenticated` is always `null` with an explicit auth note.
+- `GET /v1/info`: executable availability. `authenticated` comes from the `/v1/auth`
+  cache (`null` until checked or when unclear); it never runs a probe itself.
+- `GET /v1/auth[?refresh=1]`: `{clis:[{id,state:signed_in|signed_out|unknown,method,checked_at,reason}]}`.
+  Fixed status commands per CLI id (`codex login status`, `claude auth status`,
+  `opencode auth list`, `agy models`), never taken from the config, 15 s timeout, no
+  model run, output never logged or returned. Cached 60 s; `refresh=1` is limited to
+  one real check per CLI per 10 s. Unknown ids report `unknown`.
 - `GET /v1/terminals`: `{terminals:[Terminal]}`.
 - `POST /v1/terminals`: `{cli,workspace,cols:80,rows:24}`. Rejects extra fields.
 - `DELETE /v1/terminals/{id}`: terminates the process group, removes the record.

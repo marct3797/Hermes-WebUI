@@ -4,14 +4,14 @@ import "../styles/workspace.css";
 type Workspace = { id: string; label: string };
 type Entry = { name: string; path: string; kind: "directory" | "file"; size?: number };
 type Files = { entries?: Entry[]; content?: string; truncated?: boolean; mime?: string };
-type Git = { branch: string; status: string; diff: string; remotes: { name: string; url: string }[]; truncated?: boolean };
+type Git = { repository?: boolean; reason?: string;  branch: string; status: string; diff: string; remotes: { name: string; url: string }[]; truncated?: boolean };
 const PREVIEW_LIMIT = 65536;
 
 async function request<T>(url: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   const response = await fetch(url, { method: body === undefined ? "GET" : "POST", credentials: "same-origin", signal,
     headers: { "X-Requested-With": "hermes-webui", ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
-  if (!response.ok) throw new Error(`Anfrage fehlgeschlagen (${response.status}); ggf. frisch anmelden.`);
+  if (!response.ok) throw new Error(`Anfrage fehlgeschlagen (${response.status})${response.status === 401 || response.status === 403 ? "; ggf. frisch anmelden" : ""}.`);
   return response.json();
 }
 
@@ -120,7 +120,7 @@ export function WorkspacePage({ host, initialWorkspace }: { host: string; initia
     {workspace && <div className="workspace-grid">
       <section className="workspace-files" aria-label="Dateien"><h2>Dateien</h2><p className="mono">/{directory}</p>
         {directory && <button className="btn btn-s btn-g" onClick={() => { setDirectory(directory.split("/").slice(0, -1).join("/")); setSelected(undefined); previewRequest.current++; }}>Übergeordneter Ordner</button>}
-        {!entries ? <p role="status">Lade Dateien…</p> : entries.length === 0 ? <p className="muted">Ordner ist leer.</p> : <ul>{entries.map((entry) => <li key={entry.path}><button className="btn btn-g" onClick={() => void open(entry)}>{entry.name}{entry.kind === "directory" ? "/" : ""}</button></li>)}</ul>}
+        {!entries ? <p role="status">Lade Dateien…</p> : entries.length === 0 ? <p className="muted">Dieser Arbeitsordner ist leer.</p> : <ul>{entries.map((entry) => <li key={entry.path}><button className="btn btn-g" onClick={() => void open(entry)}>{entry.name}{entry.kind === "directory" ? "/" : ""}</button></li>)}</ul>}
       </section>
       <section className="workspace-preview" aria-label="Dateivorschau"><h2>{selected ?? "Vorschau"}</h2>
         {selected ? <><a className="inline-link" href={`${base}/_files/download?${query(selected)}`} download>Datei herunterladen</a>
@@ -128,7 +128,7 @@ export function WorkspacePage({ host, initialWorkspace }: { host: string; initia
           {preview?.truncated && <p role="status">Vorschau gekürzt (maximal 64 KiB).</p>}</> : <p className="muted">Datei auswählen. PDF und Binärdateien werden nur heruntergeladen.</p>}
       </section>
       <section className="workspace-git" aria-label="Git"><h2>Git · {git?.branch ?? "Arbeitsordner"}</h2>
-        {gitError ? <p role="alert">{gitError}</p> : !git ? <p role="status">Lade Git…</p> : <><pre aria-label="Git Status">{git.status || "Keine Änderungen."}</pre><pre aria-label="Git Diff">{git.diff?.slice(0, PREVIEW_LIMIT) || "Kein Diff."}</pre>{(git.truncated || git.diff?.length > PREVIEW_LIMIT) && <p role="status">Git-Ausgabe gekürzt.</p>}{git.remotes?.map((remote) => <p className="mono" key={remote.name}>{remote.name}: {remote.url}</p>)}</>}
+        {gitError ? <p role="alert">{gitError}</p> : !git ? <p role="status">Lade Git…</p> : git.repository === false ? <p className="muted" role="status">{git.reason ?? "Kein Git-Repository in diesem Arbeitsordner"}</p> : <><pre aria-label="Git Status">{git.status || "Keine Änderungen."}</pre><pre aria-label="Git Diff">{git.diff?.slice(0, PREVIEW_LIMIT) || "Kein Diff."}</pre>{(git.truncated || git.diff?.length > PREVIEW_LIMIT) && <p role="status">Git-Ausgabe gekürzt.</p>}{git.remotes?.map((remote) => <p className="mono" key={remote.name}>{remote.name}: {remote.url}</p>)}</>}
       </section>
     </div>}
   </main>;

@@ -8,19 +8,23 @@ import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
+from starlette.middleware.gzip import GZipMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .access_logging import CredentialQueryFilter
 from .audit import AuditLog
 from .auth import SessionStore, assert_auth_configured
 from .config import Settings, get_settings
-from .dashboard import SoulHistory
+from .cache import TtlCache
+from .dashboard import CacheCfg, SoulHistory
 from .hosts import HostService
 from .oidc import OidcClient
 from .registry import AGENT_RE, Registry
 from .memory import MemoryRegistry
 from .rooms import RoomService
-from .routes import agents, auth, dashboard as dashboard_routes, hosts, memory as memory_routes, operations as operations_routes, rooms as rooms_routes, ui as ui_routes
+from .routes import agents, auth, cli_auth, dashboard as dashboard_routes, hosts, memory as memory_routes, operations as operations_routes, rooms as rooms_routes, ui as ui_routes
+from .redaction import RedactionMiddleware
+from .quota import RefreshGate
 from .security import RateLimiter, SecurityMiddleware
 from .ui import UiConfig
 from .static import FingerprintedFiles
@@ -57,7 +61,8 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         app.state.http = httpx.AsyncClient(
-            timeout=settings.upstream_timeout_s, transport=transport, follow_redirects=False
+            timeout=settings.upstream_timeout_s, transport=transport, follow_redirects=False,
+            limits=httpx.Limits(max_connections=100, max_keepalive_connections=20, keepalive_expiry=settings.upstream_keepalive_s),
         )
         app.state.hosts = HostService(
             app.state.registry, app.state.http,
@@ -77,6 +82,8 @@ def create_app(
         openapi_url=None if settings.env == "prod" else "/bff/openapi.json",
     )
     app.state.settings = settings
+    app.state.diag_cache = TtlCache()
+    app.state.dash_cache = CacheCfg(TtlCache(), settings.dash_models_ttl_s, settings.dash_state_ttl_s, settings.dash_stale_max_s)
 
     @app.exception_handler(RequestValidationError)
     async def invalid_input(_request: Request, exc: RequestValidationError):
@@ -88,21 +95,26 @@ def create_app(
     app.state.ui = UiConfig(settings.ui_file)
     app.state.memory = MemoryRegistry(settings.memory_file)
     app.state.limiter = RateLimiter(settings.runs_per_minute)
+    app.state.quota_gate = RefreshGate()
     app.state.login_limiter = RateLimiter(settings.logins_per_minute)
     app.state.sessions = SessionStore(settings.session_idle_s, settings.session_max_s)
     app.state.pending_logins = {}
     app.state.audit = AuditLog(settings.audit_file)
     app.state.souls = SoulHistory(settings.soul_dir)
 
+    app.add_middleware(RedactionMiddleware)  # innerhalb von SecurityMiddleware: deren Header bleiben erhalten
+    app.add_middleware(GZipMiddleware, minimum_size=1024)  # innerhalb der Sicherheits-Header, vor TrustedHost
     app.add_middleware(SecurityMiddleware, settings=settings)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.host_list())
     # Operations-Routen vor den dynamischen Agent-Routen: sonst schluckt /bff/h/{host}/{runtime}/{agent} die _hostd/_manage-Pfade.
     app.include_router(operations_routes.router)
+    app.include_router(cli_auth.router)
     app.include_router(auth.router)
     app.include_router(hosts.router)
     app.include_router(agents.router)
     app.include_router(dashboard_routes.router)
     app.include_router(dashboard_routes.host_router)
+    app.include_router(dashboard_routes.quota_router)
     app.include_router(memory_routes.router)
     app.include_router(rooms_routes.router)
     app.include_router(ui_routes.router)

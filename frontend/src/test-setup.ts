@@ -1,6 +1,7 @@
 import "@testing-library/dom";
 import "@testing-library/jest-dom/vitest";
 import { beforeEach } from "vitest";
+import { resetDataCache } from "./dataCache";
 
 // jsdom kennt kein WebGL und meldet getContext als „nicht implementiert“; der Shader fällt dann still weg, wie ohne WebGL im Browser.
 HTMLCanvasElement.prototype.getContext = (() => null) as unknown as typeof HTMLCanvasElement.prototype.getContext;
@@ -8,6 +9,7 @@ HTMLCanvasElement.prototype.getContext = (() => null) as unknown as typeof HTMLC
 // Persistierte Run-IDs dürfen nicht zwischen unabhängigen Tests überleben:
 // Recovery speichert sie absichtlich in sessionStorage, Tests setzen ihre Daten selbst.
 beforeEach(() => {
+  resetDataCache();
   try { sessionStorage.clear(); } catch { /* ohne Speicher */ }
   try { localStorage.clear(); } catch { /* ohne Speicher */ }
 });

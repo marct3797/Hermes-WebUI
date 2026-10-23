@@ -2,7 +2,7 @@ import { useState } from "react";
 import { api } from "../api";
 import { DiagChecks } from "../components/DiagChecks";
 import { Icon } from "../components/Icon";
-import { GraphView } from "../components/memory/GraphView";
+import { GraphView, readGraphQuery, type GraphInit } from "../components/memory/GraphView";
 import { EntitiesView, ItemsView, ModelsView, ReflectView, SearchView, StatsView, type Nav } from "../components/memory/Views";
 import { PageHead } from "../components/PageHead";
 import type { DiagReport, MemProvider } from "../types";
@@ -22,12 +22,12 @@ const TABS: Array<{ id: string; label: string; needs: string }> = [
 /** Womit eine Ansicht geöffnet wird, wenn man aus einer anderen hierher springt. */
 type Focus = { entity?: string; q?: string };
 
-function View({ tab, provider, nav, focus }: { tab: string; provider: string; nav: Nav; focus: Focus }) {
+function View({ tab, provider, nav, focus, graph }: { tab: string; provider: string; nav: Nav; focus: Focus; graph: GraphInit }) {
   switch (tab) {
     case "stats": return <StatsView provider={provider} nav={nav} />;
     case "items": return <ItemsView provider={provider} nav={nav} initialQuery={focus.q} />;
     case "search": return <SearchView provider={provider} nav={nav} />;
-    case "graph": return <GraphView provider={provider} />;
+    case "graph": return <GraphView provider={provider} initial={graph} />;
     case "entities": return <EntitiesView provider={provider} nav={nav} initial={focus.entity} />;
     case "models": return <ModelsView provider={provider} />;
     case "reflect": return <ReflectView provider={provider} />;
@@ -43,7 +43,9 @@ function View({ tab, provider, nav, focus }: { tab: string; provider: string; na
 export function MemoryPage() {
   const list = useAsync(() => api.memoryProviders(), []);
   const [chosen, setChosen] = useState<string>();
-  const [tabId, setTabId] = useState<string>();
+  // Eine geteilte Adresse (?tab=graph&type=…) öffnet die Seite gleich mit diesem Graphen.
+  const [shared] = useState(() => readGraphQuery(window.location.search));
+  const [tabId, setTabId] = useState<string | undefined>(shared.tab);
   const [focus, setFocus] = useState<Focus>({});
   const [report, setReport] = useState<DiagReport>();
   const [checking, setChecking] = useState(false);
@@ -105,7 +107,7 @@ export function MemoryPage() {
             ))}
           </div>
           <div className="mem-body" role="tabpanel" aria-label={tab.label}>
-            <View key={`${provider.id}/${tab.id}/${focus.entity ?? ""}/${focus.q ?? ""}`} tab={tab.id} provider={provider.id} nav={nav} focus={focus} />
+            <View key={`${provider.id}/${tab.id}/${focus.entity ?? ""}/${focus.q ?? ""}`} tab={tab.id} provider={provider.id} nav={nav} focus={focus} graph={shared} />
           </div>
         </>
       )}

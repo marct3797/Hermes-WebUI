@@ -3,6 +3,7 @@ import base64
 import sys
 import os
 import json
+import time
 
 import pytest
 from fastapi.testclient import TestClient
@@ -226,3 +227,34 @@ def test_real_pty_roundtrip_resize_replay_and_shutdown(tmp_path):
         assert terminal.fd == -1
 
     asyncio.run(exercise())
+
+
+def test_exited_terminal_is_listed_deletable_and_pruned_after_ttl(tmp_path, monkeypatch):
+    from hostd.main import create_app
+    headers = {'Authorization': 'Bearer ' + 't' * 40, 'Origin': 'https://console.example'}
+    settings = configured(tmp_path, monkeypatch, exited_ttl_s=1)
+    settings.clis[0]['command'] = [sys.executable, '-c', 'print("bye")']
+    with TestClient(create_app(settings)) as client:
+        def listing():
+            return client.get('/v1/terminals', headers=headers).json()['terminals']
+        first = client.post('/v1/terminals', headers=headers, json={'cli': 'cat', 'workspace': 'test'}).json()
+        for _ in range(100):
+            if not listing()[0]['running']:
+                break
+            time.sleep(.05)
+        entry = listing()[0]
+        assert entry['running'] is False and entry['exit_code'] == 0  # echte Form wie real_terminals_after_exit.json
+        # Replay bleibt bis zum Ablauf erhalten.
+        with client.websocket_connect('/v1/terminals/' + first['id'] + '/stream', headers=headers) as ws:
+            assert ws.receive_json()['type'] == 'state'
+            assert b'bye' in base64.b64decode(ws.receive_json()['data'])
+        assert client.delete('/v1/terminals/' + first['id'], headers=headers).status_code == 200
+        second = client.post('/v1/terminals', headers=headers, json={'cli': 'cat', 'workspace': 'test'}).json()
+        time.sleep(1.5)
+        assert listing() == [] or all(t['id'] != second['id'] for t in listing())
+        assert client.delete('/v1/terminals/' + second['id'], headers=headers).status_code == 404
+
+
+def test_invalid_exited_ttl_rejected(tmp_path, monkeypatch):
+    with pytest.raises(ValueError):
+        configured(tmp_path, monkeypatch, exited_ttl_s=-1)

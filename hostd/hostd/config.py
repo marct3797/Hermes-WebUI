@@ -8,6 +8,9 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 
+EXITED_TTL_S = 600  # beendete Terminals bleiben so lange in der Liste (Replay inklusive)
+
+
 @dataclass
 class Settings:
     listen_host: str = '127.0.0.1'
@@ -19,6 +22,8 @@ class Settings:
     profiles: dict = field(default_factory=dict)
     allow_shell: bool = False
     max_terminals: int = 8
+    exited_ttl_s: int = EXITED_TTL_S
+    probe_overrides: dict = field(default_factory=dict)  # nur Tests: ID -> argv; load() ignoriert es
 
     @classmethod
     def from_dict(cls, value):
@@ -38,6 +43,8 @@ class Settings:
             raise ValueError('shell command mode is not supported')
         if type(settings.max_terminals) is not int or not 1 <= settings.max_terminals <= 64:
             raise ValueError('invalid max_terminals')
+        if type(settings.exited_ttl_s) is not int or not 0 <= settings.exited_ttl_s <= 86400:
+            raise ValueError('invalid exited_ttl_s')
         for origin in settings.allowed_origins:
             parsed = urlsplit(origin)
             if (parsed.scheme not in ('http', 'https') or not parsed.netloc or
@@ -65,7 +72,9 @@ class Settings:
 
     @classmethod
     def load(cls, path):
-        return cls.from_dict(json.loads(Path(path).read_text()))
+        value = json.loads(Path(path).read_text())
+        value.pop('probe_overrides', None)  # Config darf keine Statusbefehle setzen
+        return cls.from_dict(value)
 
     def token(self):
         token = os.environ.get(self.token_env, '')

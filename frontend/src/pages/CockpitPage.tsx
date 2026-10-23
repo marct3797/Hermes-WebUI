@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { QuotaKpi } from "../components/cockpit/QuotaKpi";
 import { AgentCard } from "../components/cockpit/AgentCard";
 import { UsagePanel } from "../components/cockpit/UsagePanel";
 import { NeedsPanel, RunningPanel, SystemPanel } from "../components/cockpit/Panels";
@@ -110,6 +111,7 @@ export function CockpitPage() {
           <span className="v">{all.length}</span>
           <span className="kpi-note">{onlineAgents} erreichbar</span>
         </div>
+        <QuotaKpi />
       </div>
 
       {onlineRefs.length > 0 && <UsagePanel stats={usage.stats} byAgent={usage.byAgent} loading={usage.loading} now={now} />}

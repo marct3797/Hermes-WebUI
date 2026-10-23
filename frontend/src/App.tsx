@@ -7,19 +7,20 @@ import { RoomNeedsProvider } from "./roomNeeds";
 import { RunsProvider } from "./runs";
 import { UiProvider } from "./ui";
 import { AgentPage } from "./pages/AgentPage";
-import { HostsPage } from "./pages/HostsPage";
 import { CockpitPage } from "./pages/CockpitPage";
-import { InboxPage } from "./pages/InboxPage";
-import { MemoryPage } from "./pages/MemoryPage";
-import { ProvidersHubPage } from "./pages/ProvidersHubPage";
-import { RoomPage } from "./pages/RoomPage";
-import { RoomsPage } from "./pages/RoomsPage";
-import { SettingsPage } from "./pages/SettingsPage";
-import { SystemPage } from "./pages/SystemPage";
 import { NotFoundPage } from "./pages/Placeholders";
 import { navigate, parsePath, usePath } from "./router";
 import type { Me } from "./types";
 
+// Seltene oder schwere Seiten laden erst beim Öffnen (kleineres Startbundle); AgentPage und Cockpit bleiben im Start.
+const HostsPage = lazy(() => import("./pages/HostsPage").then(m => ({ default: m.HostsPage })));
+const InboxPage = lazy(() => import("./pages/InboxPage").then(m => ({ default: m.InboxPage })));
+const MemoryPage = lazy(() => import("./pages/MemoryPage").then(m => ({ default: m.MemoryPage })));
+const ProvidersHubPage = lazy(() => import("./pages/ProvidersHubPage").then(m => ({ default: m.ProvidersHubPage })));
+const RoomPage = lazy(() => import("./pages/RoomPage").then(m => ({ default: m.RoomPage })));
+const RoomsPage = lazy(() => import("./pages/RoomsPage").then(m => ({ default: m.RoomsPage })));
+const SettingsPage = lazy(() => import("./pages/SettingsPage").then(m => ({ default: m.SettingsPage })));
+const SystemPage = lazy(() => import("./pages/SystemPage").then(m => ({ default: m.SystemPage })));
 const OperationsPage = lazy(() => import("./pages/OperationsPage").then(m => ({ default: m.OperationsPage })));
 const TerminalPage = lazy(() => import("./pages/TerminalPage").then(m => ({ default: m.TerminalPage })));
 const WorkspacePage = lazy(() => import("./pages/WorkspacePage").then(m => ({ default: m.WorkspacePage })));

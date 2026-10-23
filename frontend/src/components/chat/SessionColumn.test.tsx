@@ -11,10 +11,11 @@ import { SessionColumn } from "./SessionColumn";
 afterEach(cleanup);
 
 const now = Date.now();
+const startOfToday = new Date().setHours(0, 0, 0, 0); // "Gestern" muss unabhängig von der Uhrzeit des Testlaufs gestern sein
 const SESSIONS: SessionSummary[] = [
   { id: "a", title: "Tests prüfen", updatedAt: now, messageCount: 8 },
   { id: "b", title: "Adapter lesen", updatedAt: now - 3_000, pinned: true },
-  { id: "c", title: "Gestern erledigt", updatedAt: now - 30 * 3_600_000 },
+  { id: "c", title: "Gestern erledigt", updatedAt: startOfToday - 12 * 3_600_000 },
   { id: "d", title: "Nightly Lint", updatedAt: now, source: "cron" },
 ];
 

@@ -14,11 +14,24 @@ export async function operationsHttp<T>(path: string, init?: RequestInit): Promi
   return response.json() as Promise<T>;
 }
 
+export type Schedule = string | { kind: string; expr?: string; minutes?: number; display?: string };
+/** Hermes liefert den Zeitplan als Objekt (cron oder interval), ältere Mocks als String. */
+export function scheduleText(s: Schedule | null | undefined): string {
+  if (typeof s === "string") return s || "Kein Zeitplan gemeldet";
+  return text(s?.display) || text(s?.expr) || (typeof s?.minutes === "number" ? `alle ${s.minutes} Minuten` : "Kein Zeitplan gemeldet");
+}
+/** Nur der Cron-Ausdruck ist bearbeitbar; Intervalle werden angezeigt. */
+export function editableSchedule(s: Schedule | null | undefined): string | undefined {
+  return typeof s === "string" ? s : s?.kind === "cron" && typeof s.expr === "string" ? s.expr : undefined;
+}
+/** API-Felder nie ungeprüft als React-Kind: Objekte würden die ganze Seite abstürzen lassen. */
+export const text = (v: unknown): string => typeof v === "string" ? v : typeof v === "number" || typeof v === "boolean" ? String(v) : "";
+
 export type Availability = { available?: boolean; configured?: boolean; supported?: boolean; reason?: string; warnings?: string[]; truncated?: boolean };
 export type Entry = { id: string; title?: string; transitions?: string[]; name?: string; label?: string; description?: string; enabled?: boolean; status?: string; actions?: string[] };
 export type Source = Entry & { url?: string; reviewed?: boolean; installable?: boolean; trust?: string; kind?: string; requirements?: string[] };
 export type Catalog = Availability & { profiles?: { id: string }[]; sources?: Source[] };
-export type Listing = Availability & { actions?: string[]; note?: string; items?: Entry[]; content?: string; redacted?: boolean; columns?: string[]; tasks?: (Entry & { title: string; status: string; transitions?: string[] })[]; jobs?: (Entry & { schedule?: string; paused?: boolean })[] };
+export type Listing = Availability & { actions?: string[]; note?: string; items?: Entry[]; content?: string; redacted?: boolean; columns?: string[]; tasks?: (Entry & { title: string; status: string; transitions?: string[] })[]; jobs?: (Entry & { schedule?: Schedule; paused?: boolean })[] };
 export const labels: Record<string, string> = { enable: "Aktivieren", disable: "Deaktivieren", install: "Installieren", pause: "Pausieren", resume: "Fortsetzen", edit: "Bearbeiten" };
 
 export function unavailable(data: Availability): string | undefined {

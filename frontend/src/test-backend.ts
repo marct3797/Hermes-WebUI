@@ -1,6 +1,8 @@
 import { act } from "@testing-library/react";
 import { vi } from "vitest";
-import type { HostInfo, ProfileInput, Room, RoomEvent, SigilConfig, StreamEvent, UiConfig } from "./types";
+import quotaFixture from "./fixtures/quota_laptop.json";
+import graphFixture from "./fixtures/bff_graph_world.json";
+import type { HostInfo, MemGraph, ProfileInput, Room, RoomEvent, SigilConfig, StreamEvent, UiConfig } from "./types";
 
 /** Gemeinsame Test-Attrappen: BFF-Antworten und EventSource für die Seiten-Tests. */
 
@@ -70,6 +72,8 @@ const MEM_ITEMS = [
   memItem("f3", "Hikari läuft im Tailnet.", "world", ["Hikari"]),
 ];
 
+const GRAPH_WORLD = graphFixture as unknown as MemGraph;
+
 /** Gedächtnis-Routen des BFF in Hindsights Form (nach der Normalisierung durch das BFF). */
 function memoryRoute(url: string, method: string, capabilities: string[], json: (b: unknown, s?: number) => Response, body?: Record<string, unknown>): Response | undefined {
   const u = new URL(url, "http://bff");
@@ -88,10 +92,13 @@ function memoryRoute(url: string, method: string, capabilities: string[], json: 
   }
   if (what === "search") return json({ items: MEM_ITEMS.filter((i) => i.text.toLowerCase().includes(q.toLowerCase())) });
   if (what === "graph") {
-    if (q === "leer") return json({ nodes: [], edges: [], total: 0, truncated: false });
-    return json({ nodes: [{ id: "n1", label: "Marc", kind: "person" }, { id: "n2", label: "Hikari", kind: "server" }, { id: "n3", label: "Tailnet", kind: "server" }],
-      edges: [{ source: "n1", target: "n2", label: "betreibt" }, { source: "n2", target: "n3", label: null }], total: 3, truncated: false });
+    if (q === "leer") return json({ ...GRAPH_WORLD, nodes: [], edges: [], table_rows: [], total: 0, returned: 0, truncated: false, edges_dropped: 0 });
+    const type = u.searchParams.get("type") ?? "world", limit = Number(u.searchParams.get("limit") ?? 500);
+    // Antwort in der Form, die das BFF aus der echten Hindsight-Antwort macht (fixtures/bff_graph_world.json); `total` täuscht ein großes Gedächtnis vor.
+    const nodes = GRAPH_WORLD.nodes.slice(0, limit).map((n) => ({ ...n, kind: type }));
+    return json({ ...GRAPH_WORLD, nodes, table_rows: GRAPH_WORLD.table_rows.slice(0, limit).map((r) => ({ ...r, kind: type })), limit, returned: nodes.length, total: 44272 });
   }
+  if (what === "timeseries") return json({ points: [{ t: "2026-10-21T00:00:00+00:00", count: 3 }, { t: "2026-10-22T00:00:00+00:00", count: 9 }, { t: "2026-10-23T00:00:00+00:00", count: 25 }] });
   if (what === "entities" && rest) return json({ id: rest, name: "Marc", mentions: 7, first_seen: null, last_seen: 1_792_000_000_000, observations: [MEM_ITEMS[1]] });
   if (what === "entities") return json({ items: [{ id: "e1", name: "Marc", mentions: 7, first_seen: null, last_seen: null }, { id: "e2", name: "Hikari", mentions: 4, first_seen: null, last_seen: null }], total: 2 });
   if (what === "models") return json({ items: [{ id: "m1", name: "Zuhause", content: "**Netz:** Tailscale", query: "Wie sieht das Netz aus?", updated: 1_792_000_000_000, tags: ["netz"] }] });
@@ -131,6 +138,29 @@ function accountState(dash: DashState, id: string, provider: string) {
   return { configured: false, via: null, detail: null };
 }
 
+/** Kontingente: die echte, bereinigte Antwort des Plugins (vom BFF normalisiert). `expired` lässt den OpenCode-Key des Profils „default“ ablaufen. */
+export type QuotaMode = "ok" | "missing" | "expired" | "offline";
+function quotaOf(profile: string, mode: QuotaMode) {
+  const base = quotaFixture as unknown as { state: string; reason: string | null; generated_at: string; cached: boolean; providers: Array<Record<string, unknown>> };
+  if (mode === "missing") return { ...base, state: "plugin_missing", reason: "Plugin ai-usage-tracker auf diesem Host nicht installiert", providers: [] };
+  if (mode === "offline") return { ...base, state: "dashboard_unavailable", reason: "Das Dashboard ist nicht erreichbar", providers: [] };
+  if (mode === "expired" && profile === "default") {
+    return { ...base, providers: base.providers.map((p) => (p.id === "opencode-go" ? { ...p, state: "auth_failed", windows: [], worst_remaining_percent: null, reason: "HTTP 401 unauthorized: Key abgelaufen" } : p)) };
+  }
+  return base;
+}
+function quotaSummary(agents: string[], mode: QuotaMode) {
+  const items = agents.flatMap((profile) => (quotaOf(profile, mode).providers as Array<{ id: string; label: string; state: string; windows: Array<{ label: string; remaining_percent: number; reset_in_s: number }> }>)
+    .filter((p) => p.state === "auth_failed" || p.windows.length > 0)
+    .map((p) => {
+      const w = [...p.windows].sort((a, b) => a.remaining_percent - b.remaining_percent)[0];
+      return { host: "hikari", runtime: "hermes", profile, provider: p.id, label: p.label, state: p.state, remaining_percent: w?.remaining_percent ?? null, window: w?.label ?? null, reset_in_s: w?.reset_in_s ?? null, reason: null };
+    }));
+  const rank = (i: { remaining_percent: number | null }) => i.remaining_percent ?? -1;
+  return { runtimes: [{ host: "hikari", runtime: "hermes", state: mode === "missing" ? "plugin_missing" : mode === "offline" ? "dashboard_unavailable" : "ok", reason: mode === "ok" || mode === "expired" ? null : quotaOf("x", mode).reason }],
+    items, worst: [...items].sort((a, b) => rank(a) - rank(b))[0] ?? null };
+}
+
 function providerMatrix(agents: string[], dash: DashState) {
   const profiles = agents.map((name) => ({ name, model: dash.available ? dash.model.model : null, provider: dash.available ? dash.model.provider : null, default: name === "default", gateway_running: true, error: null }));
   return {
@@ -146,7 +176,7 @@ function providersOverview(dash: DashState, days: number) {
     // Anthropic und Gemini bieten auch eine Anmeldung an, beide sind hier nicht angemeldet.
     const oauth = id === "openrouter" || id === "opencode-go" ? null : { logged_in: dash.loggedIn.has(id), flow: "pkce", source: null, expires_at: null, cli_command: `hermes auth add ${id}`, docs_url: null };
     return { id, label, configured: set, used: !!usage, oauth, usage,
-      keys: [{ var: varName, set, redacted: set ? "sk-a…1234" : null, description: "", url: "https://example.invalid/keys", secret: true, advanced: false }] };
+      keys: [{ var: varName, set, redacted: set ? "«redacted»" : null, description: "", url: "https://example.invalid/keys", secret: true, advanced: false }] };
   });
   const codex = dash.loggedIn.has("openai-codex");
   providers.push({ id: "openai-codex", label: "OpenAI Codex", configured: codex, used: false, keys: [], usage: null,
@@ -239,6 +269,7 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
   const uiState: UiConfig = { ...baseUi(), ...uiOverride };
   const calls: Call[] = [];
   const rooms: Room[] = [];
+  const quota: { mode: QuotaMode } = { mode: "ok" };
   const dash: DashState = {
     available: true, reason: null, soul: "Du bist Raiden.\nDu antwortest knapp.\n", description: "", model: { provider: "mock", model: "mock-large" },
     history: [], versions: {}, stepUp: false, keys: { ANTHROPIC_API_KEY: "sk-ant-geheim-1234" },
@@ -297,6 +328,17 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
       }
       return json(uiState);
     }
+    if (url.endsWith("/_cli-auth") || url.endsWith("/_cli-auth/refresh")) {
+      const refreshed = url.endsWith("/refresh");
+      if (url.startsWith("/bff/h/laptop/")) return json({ available: false, reason: "Host-Dienst nicht eingerichtet" });
+      return json({ available: true, reason: null, clis: [
+        { id: "codex", state: "signed_in", method: "ChatGPT", checked_at: "2026-01-01T00:00:00+00:00", reason: null },
+        { id: "claude", state: refreshed ? "signed_in" : "signed_out", method: refreshed ? "claude.ai" : null, checked_at: "2026-01-01T00:00:00+00:00", reason: null },
+        { id: "opencode", state: "unknown", method: null, checked_at: "2026-01-01T00:00:00+00:00", reason: "Zeitueberschreitung (15 s)" }] });
+    }
+    const qm = quota.mode;
+    if (url === "/bff/quota/summary") return json(quotaSummary(agents, qm));
+    if (/^\/bff\/h\/hikari\/hermes\/_quota(\?refresh=1)?$/.test(url)) return json({ profiles: Object.fromEntries(agents.map((a) => [a, quotaOf(a, qm)])) });
     if (url === "/bff/h/hikari/hermes/_provider-matrix") return json(providerMatrix(agents, dash));
     if (url === "/bff/h/laptop/hermes/_provider-matrix") return json({ detail: "Hermes nicht erreichbar: keine Verbindung zu 100.100.3.4:8642. Läuft der API-Server dort und lauscht auf dieser Adresse?" }, 502);
     const m = /^\/bff\/h\/hikari\/hermes\/([^/]+)(\/.*)$/.exec(url);
@@ -304,6 +346,7 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
       const rest = m[2];
       const d = dashboardRoute(rest, method, m[1], dash, json, init?.body ? JSON.parse(String(init.body)) : undefined);
       if (d) return d;
+      if (/^\/quota(\?refresh=1)?$/.test(rest)) return json(quotaOf(m[1], qm));
       if (rest === "/status") return json({ state: "online", online: true, version: "0.21.6", features, error: null });
       if (rest === "/models") return json({ providers: [{ slug: "mock", name: "Mock", authenticated: true, is_current: true, models: ["mock-large", "mock-small"] }], model: "mock-large", provider: "mock" });
       if (rest === "/skills") return json({ object: "list", data: [{ name: "plan", description: "Zerlegt Aufgaben in Schritte.", category: "software-development" }, { name: "himalaya", description: "E-Mail über IMAP.", category: "email" }] });
@@ -319,5 +362,5 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
     return json({ detail: "nicht da" }, 404);
   }));
   const posted = (suffix: string) => calls.filter((c) => c.method === "POST" && c.url.endsWith(suffix));
-  return { calls, posted, rooms, dash };
+  return { calls, posted, rooms, dash, quota };
 }

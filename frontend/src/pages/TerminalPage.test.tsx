@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { TerminalPage } from "./TerminalPage";
+import exited from "../fixtures/real/real_terminals_after_exit.json";
+import info from "../fixtures/real/real_hostd_info.json";
 
 const xterm = vi.hoisted(() => ({ write: vi.fn(), dispose: vi.fn(), reset: vi.fn(), fit: vi.fn(), input: undefined as undefined | ((data: string) => void) }));
 vi.mock("@xterm/xterm", () => ({ Terminal: class {
@@ -45,9 +47,35 @@ describe("terminal", () => {
     expect(fetcher.mock.calls.some(([, opts]) => opts?.method === "DELETE" || opts?.method === "POST")).toBe(false);
     expect(xterm.dispose).toHaveBeenCalled();
   });
+  it("preselects the CLI from the query and shows its sign-in state without blocking start", async () => {
+    setup();
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => ({ ok: true, json: async (): Promise<unknown> =>
+      url.endsWith("_hostd") ? { available: true, clis: [{ id: "codex", label: "Codex", available: true }, { id: "claude", label: "Claude", available: true }], workspaces: [{ id: "repo", label: "Repository" }] }
+      : url.endsWith("_cli-auth") ? { available: true, reason: null, clis: [{ id: "claude", state: "signed_out", method: null, checked_at: "x", reason: null }] } : { terminals: [] } })));
+    history.pushState(null, "", "/hosts/laptop/terminal?cli=claude");
+    render(<TerminalPage host="laptop" />);
+    expect(await screen.findByText(/Anmeldung: abgemeldet/)).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /^CLI/ })).toHaveValue("claude");
+    expect(screen.getByRole("button", { name: "Terminal starten" })).toBeEnabled();
+    history.pushState(null, "", "/");
+  });
   it("shows an explicit unconfigured state", async () => {
     setup(false); render(<TerminalPage host="hikari" />);
     expect(await screen.findByText("Nicht eingerichtet")).toBeInTheDocument();
     expect(Socket.all).toHaveLength(0);
+  });
+  it("shows an exited terminal (real shape) as Beendet with Exit code and removes it via DELETE", async () => {
+    Socket.all = []; vi.stubGlobal("WebSocket", Socket);
+    let list: unknown[] = exited.terminals;
+    const fetcher = vi.fn(async (url: string, opts?: RequestInit) => {
+      if (opts?.method === "DELETE") { list = []; return { ok: true, json: async () => ({ ok: true }) }; }
+      return { ok: true, json: async () => url.endsWith("_hostd") ? info : { terminals: list } };
+    });
+    vi.stubGlobal("fetch", fetcher);
+    render(<TerminalPage host="laptop" />);
+    expect(await screen.findByRole("option", { name: /Beendet · Exit 0/ })).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "Entfernen" }));
+    await waitFor(() => expect(fetcher.mock.calls.some(([url, o]) => o?.method === "DELETE" && String(url).endsWith(`/_terminals/${exited.terminals[0].id}`))).toBe(true));
+    expect(await screen.findByText(/Keine Terminals/)).toBeInTheDocument();
   });
 });

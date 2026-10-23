@@ -12,3 +12,6 @@ backend/hosts.json
 
 # Arbeitsordner der Prüfung gegen echtes Hermes (backend/devtools/real)
 .real/
+
+# Symlink oder Ordner (auch als Datei, z. B. in Worktrees)
+node_modules

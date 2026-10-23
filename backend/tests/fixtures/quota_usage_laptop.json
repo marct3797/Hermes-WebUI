@@ -1,0 +1,268 @@
+{
+ "generated_at": "2026-10-23T23:12:35.170262+00:00",
+ "profile": "default",
+ "probe_seconds": 0.77,
+ "profiles": [
+  {
+   "name": "default",
+   "path": "/home/user/.hermes",
+   "is_default": true,
+   "is_server": true,
+   "gateway_running": true
+  }
+ ],
+ "providers": [
+  {
+   "id": "anthropic",
+   "label": "Anthropic",
+   "configured": false,
+   "quota_capable": true,
+   "active": true,
+   "last_active_at": 1792797152.516232,
+   "quota": {
+    "available": true,
+    "source": "oauth_usage_api",
+    "title": "Account limits",
+    "plan": null,
+    "windows": [
+     {
+      "label": "Current session",
+      "used_percent": 26.0,
+      "remaining_percent": 74.0,
+      "reset_at": "2026-10-24T02:49:59.732015+00:00",
+      "detail": null
+     },
+     {
+      "label": "Current week",
+      "used_percent": 27.0,
+      "remaining_percent": 73.0,
+      "reset_at": "2026-10-28T19:59:59.732030+00:00",
+      "detail": null
+     }
+    ],
+    "details": [],
+    "unavailable_reason": null,
+    "fetched_at": "2026-10-23T23:12:34.963009+00:00"
+   }
+  },
+  {
+   "id": "openai-codex",
+   "label": "ChatGPT or Codex Subscription",
+   "configured": true,
+   "quota_capable": true,
+   "active": true,
+   "last_active_at": 1792794612.3643556,
+   "quota": {
+    "available": true,
+    "source": "usage_api",
+    "title": "Account limits",
+    "plan": "Plus",
+    "windows": [
+     {
+      "label": "Session",
+      "used_percent": 100.0,
+      "remaining_percent": 0.0,
+      "reset_at": "2026-10-24T00:12:07+00:00",
+      "detail": null
+     },
+     {
+      "label": "Weekly",
+      "used_percent": 16.0,
+      "remaining_percent": 84.0,
+      "reset_at": "2026-10-30T19:12:07+00:00",
+      "detail": null
+     }
+    ],
+    "details": [],
+    "unavailable_reason": null,
+    "fetched_at": "2026-10-23T23:12:34.964916+00:00"
+   }
+  },
+  {
+   "id": "custom",
+   "label": "custom",
+   "configured": false,
+   "quota_capable": false,
+   "active": true,
+   "last_active_at": 1792708482.5263214,
+   "quota": {
+    "available": false,
+    "source": "none",
+    "title": "Account limits",
+    "plan": null,
+    "windows": [],
+    "details": [],
+    "unavailable_reason": "No public subscription-quota API for this provider.",
+    "fetched_at": null
+   }
+  },
+  {
+   "id": "copilot",
+   "label": "GitHub Copilot",
+   "configured": true,
+   "quota_capable": true,
+   "active": false,
+   "last_active_at": null,
+   "quota": {
+    "available": true,
+    "source": "copilot_internal",
+    "title": "GitHub Copilot limits",
+    "plan": "individual",
+    "windows": [
+     {
+      "label": "Chat",
+      "used_percent": 0.0,
+      "remaining_percent": 100.0,
+      "reset_at": "2026-11-01",
+      "detail": "200 of 200 left"
+     },
+     {
+      "label": "Completions",
+      "used_percent": 0.0,
+      "remaining_percent": 100.0,
+      "reset_at": "2026-11-01",
+      "detail": "2000 of 2000 left"
+     }
+    ],
+    "details": [
+     "Premium requests: not included in this plan",
+     "Plan: individual"
+    ],
+    "unavailable_reason": null,
+    "fetched_at": "2026-10-23T23:12:35.168602+00:00"
+   }
+  },
+  {
+   "id": "gemini",
+   "label": "Google AI Studio",
+   "configured": true,
+   "quota_capable": false,
+   "active": false,
+   "last_active_at": null,
+   "quota": {
+    "available": false,
+    "source": "none",
+    "title": "Account limits",
+    "plan": null,
+    "windows": [],
+    "details": [],
+    "unavailable_reason": "No public subscription-quota API for this provider.",
+    "fetched_at": null
+   }
+  },
+  {
+   "id": "huggingface",
+   "label": "Hugging Face",
+   "configured": true,
+   "quota_capable": false,
+   "active": false,
+   "last_active_at": null,
+   "quota": {
+    "available": false,
+    "source": "none",
+    "title": "Account limits",
+    "plan": null,
+    "windows": [],
+    "details": [],
+    "unavailable_reason": "No public subscription-quota API for this provider.",
+    "fetched_at": null
+   }
+  },
+  {
+   "id": "nous",
+   "label": "Nous Portal",
+   "configured": true,
+   "quota_capable": true,
+   "active": false,
+   "last_active_at": null,
+   "quota": {
+    "available": false,
+    "source": "portal-account",
+    "title": "Account limits",
+    "plan": null,
+    "windows": [],
+    "details": [],
+    "unavailable_reason": "Not signed in to Nous Portal, or the portal returned no subscription data.",
+    "fetched_at": null
+   }
+  },
+  {
+   "id": "omniroute",
+   "label": "Omniroute",
+   "configured": false,
+   "quota_capable": false,
+   "active": true,
+   "last_active_at": 1792289512.2733347,
+   "quota": {
+    "available": false,
+    "source": "none",
+    "title": "Account limits",
+    "plan": null,
+    "windows": [],
+    "details": [],
+    "unavailable_reason": "Provider not in the Hermes catalog.",
+    "fetched_at": null
+   }
+  },
+  {
+   "id": "opencode-go",
+   "label": "OpenCode Go",
+   "configured": true,
+   "quota_capable": true,
+   "active": true,
+   "last_active_at": 1792796870.709158,
+   "quota": {
+    "available": true,
+    "source": "zen_go_usage",
+    "title": "OpenCode Go limits",
+    "plan": "Go",
+    "windows": [
+     {
+      "label": "Rolling (5h)",
+      "used_percent": 1.0,
+      "remaining_percent": 99.0,
+      "reset_at": "2026-10-24T02:54:14.000Z",
+      "detail": null
+     },
+     {
+      "label": "Weekly",
+      "used_percent": 32.0,
+      "remaining_percent": 68.0,
+      "reset_at": "2026-10-26T00:00:00.000Z",
+      "detail": null
+     },
+     {
+      "label": "Monthly",
+      "used_percent": 100.0,
+      "remaining_percent": 0.0,
+      "reset_at": "2026-10-24T02:11:11.000Z",
+      "detail": "status: rate-limited"
+     }
+    ],
+    "details": [],
+    "unavailable_reason": null,
+    "fetched_at": "2026-10-23T23:12:35.169606+00:00"
+   }
+  },
+  {
+   "id": "opencode-zen",
+   "label": "OpenCode Zen",
+   "configured": true,
+   "quota_capable": true,
+   "active": false,
+   "last_active_at": null,
+   "quota": {
+    "available": false,
+    "source": "zen_credits",
+    "title": "Account limits",
+    "plan": null,
+    "windows": [],
+    "details": [],
+    "unavailable_reason": "OpenCode Zen exposes no reachable credits/usage endpoint for this key — it is pay-as-you-go.",
+    "fetched_at": null
+   }
+  }
+ ],
+ "cached": false,
+ "cache_age_seconds": 0.0
+}

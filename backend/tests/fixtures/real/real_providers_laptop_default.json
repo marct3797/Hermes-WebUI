@@ -1,0 +1,86 @@
+{
+ "providers": [
+  {
+   "id": "opencode-go",
+   "label": "OpenCode Go",
+   "keys": [
+    {
+     "var": "OPENCODE_GO_API_KEY",
+     "set": true,
+     "redacted": "«redacted:oc_s...87r9»",
+     "description": "OpenCode Go API key ($10/month subscription for open models)",
+     "url": "https://opencode.ai/auth",
+     "secret": "[REDACTED]",
+     "advanced": true
+    },
+    {
+     "var": "OPENCODE_GO_BASE_URL",
+     "set": false,
+     "redacted": null,
+     "description": "OpenCode Go base URL override",
+     "url": null,
+     "secret": "[REDACTED]",
+     "advanced": true
+    }
+   ],
+   "oauth": null,
+   "usage": {
+    "sessions": 214,
+    "input_tokens": "[REDACTED]",
+    "output_tokens": "[REDACTED]",
+    "cost_usd": 0.0,
+    "last_used_at": 1792796870.709158,
+    "models": [
+     "muse-spark-1.3-contributor",
+     "gemini-4-argon-contributor",
+     "mimo-v2.5"
+    ]
+   },
+   "configured": true,
+   "used": true
+  },
+  {
+   "id": "openai-codex",
+   "label": "ChatGPT or Codex Subscription",
+   "keys": [],
+   "oauth": {
+    "logged_in": true,
+    "flow": "device_code",
+    "source": "chatgpt",
+    "expires_at": null,
+    "cli_command": "hermes auth add openai-codex",
+    "docs_url": "https://platform.openai.com/docs"
+   },
+   "usage": {
+    "sessions": 9,
+    "input_tokens": "[REDACTED]",
+    "output_tokens": "[REDACTED]",
+    "cost_usd": 0.0,
+    "last_used_at": 1792794612.3643556,
+    "models": [
+     "gpt-6.1-sol"
+    ]
+   },
+   "configured": true,
+   "used": true
+  },
+  {
+   "id": "claude-code",
+   "label": "Anthropic OAuth: Required Extra Usage Credits to Use Subscription",
+   "keys": [],
+   "oauth": {
+    "logged_in": true,
+    "flow": "external",
+    "source": "~/.claude/.credentials.json",
+    "expires_at": 1792814145825,
+    "cli_command": "claude setup-token",
+    "docs_url": "https://docs.claude.com/en/docs/claude-code"
+   },
+   "usage": null,
+   "configured": true,
+   "used": false
+  }
+ ],
+ "period_days": 30,
+ "warnings": []
+}

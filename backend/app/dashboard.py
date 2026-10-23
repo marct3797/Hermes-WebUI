@@ -20,6 +20,8 @@ from typing import Any
 import httpx
 
 from .adapters import UpstreamError
+from .quota import PLUGIN_MISSING
+from .cache import TtlCache
 from .registry import DashboardCfg
 
 SOUL_MAX_CHARS = 100_000  # SOUL.md geht in den Systemprompt; mehr ist nie sinnvoll
@@ -33,9 +35,31 @@ def digest(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
 
+class CacheCfg:
+    """TTLs in Sekunden (per Umgebung überschreibbar, siehe Settings). Standard: Modelle 5 min, Profile und Env 20 s."""
+
+    def __init__(self, cache: TtlCache, models_ttl: float = 300.0, state_ttl: float = 20.0, stale_max: float = 600.0):
+        self.cache, self.models_ttl, self.state_ttl, self.stale_max = cache, models_ttl, state_ttl, stale_max
+
+
 class DashboardClient:
-    def __init__(self, cfg: DashboardCfg, http: httpx.AsyncClient):
-        self._cfg, self._http = cfg, http
+    def __init__(self, cfg: DashboardCfg, http: httpx.AsyncClient, caching: CacheCfg | None = None):
+        self._cfg, self._http, self._caching = cfg, http, caching
+        self.stale = False  # wurde in diesem Client mindestens eine Antwort aus dem alten Stand bedient?
+
+    async def _cached(self, kind: str, name: str, ttl_of: str, load):
+        c = self._caching
+        if c is None:
+            return await load()
+        value, stale = await c.cache.get((self._cfg.base_url, kind, name), getattr(c, ttl_of), load, stale_max=c.stale_max)
+        self.stale = self.stale or stale
+        return value
+
+    def _changed(self) -> None:
+        """Nach jedem schreibenden Aufruf: alles zu diesem Dashboard verwerfen (Profile, Env und Modelle hängen zusammen)."""
+        if self._caching:
+            base = self._cfg.base_url
+            self._caching.cache.invalidate(lambda k: k[0] == base)
 
     async def _call(self, method: str, path: str, *, json_body: Any = None, params: dict[str, str] | None = None, missing: str | None = None,
                     explain: bool = False) -> Any:
@@ -65,7 +89,7 @@ class DashboardClient:
             raise UpstreamError(502, "Das Dashboard antwortet nicht im erwarteten Format") from e
 
     async def profiles(self) -> list[dict[str, Any]]:
-        body = await self._call("GET", "/api/profiles")
+        body = await self._cached("profiles", "", "state_ttl", lambda: self._call("GET", "/api/profiles"))
         items = body.get("profiles") if isinstance(body, dict) else None
         if not isinstance(items, list):
             raise UpstreamError(502, "Das Dashboard liefert keine Profilliste")
@@ -85,19 +109,25 @@ class DashboardClient:
 
     async def set_description(self, name: str, text: str) -> None:
         await self._call("PUT", f"/api/profiles/{name}/description", json_body={"description": text})
+        self._changed()
 
     async def set_model(self, name: str, provider: str, model: str) -> None:
         await self._call("PUT", f"/api/profiles/{name}/model", json_body={"provider": provider, "model": model})
+        self._changed()
 
     # Anbieter, Keys und Nutzung eines Profils: das Profil steht als Abfrageparameter (`?profile=`), nicht im Pfad.
     async def env(self, name: str) -> Any:
-        return await self._call("GET", "/api/env", params={"profile": name})
+        return await self._cached("env", name, "state_ttl", lambda: self._call("GET", "/api/env", params={"profile": name}))
 
     async def oauth_providers(self, name: str) -> Any:
         return await self._call("GET", "/api/providers/oauth", params={"profile": name})
 
     async def model_analytics(self, name: str, days: int) -> Any:
         return await self._call("GET", "/api/analytics/models", params={"profile": name, "days": str(days)})
+
+    async def quota(self, name: str, refresh: bool) -> Any:
+        """Restkontingente über das Dashboard-Plugin `ai-usage-tracker`. 404 heißt: Plugin auf diesem Dashboard nicht installiert."""
+        return await self._call("GET", "/api/plugins/ai-usage-tracker/usage", params={"profile": name, "refresh": "1" if refresh else "0"}, missing=PLUGIN_MISSING)
 
     # Skills und Werkzeuge eines Profils: Ersatzquelle, wenn die Agent-API sie nicht auflisten kann.
     async def skills(self, name: str) -> list[dict[str, Any]]:
@@ -115,28 +145,36 @@ class DashboardClient:
 
     # Modelle und Anmeldungen: welche Anbieter ein Profil nutzen kann und wie man sich bei ihnen anmeldet.
     async def model_options(self, name: str) -> Any:
-        return await self._call("GET", "/api/model/options", params={"profile": name})
+        return await self._cached("models", name, "models_ttl", lambda: self._call("GET", "/api/model/options", params={"profile": name}))
 
     async def oauth_start(self, name: str, provider: str) -> Any:
         return await self._call("POST", f"/api/providers/oauth/{provider}/start", params={"profile": name}, missing="Dieser Anbieter kennt keine Anmeldung über das Dashboard", explain=True)
 
     async def oauth_poll(self, name: str, provider: str, session: str) -> Any:
-        return await self._call("GET", f"/api/providers/oauth/{provider}/poll/{session}", params={"profile": name}, missing="Die Anmeldung ist abgelaufen", explain=True)
+        body = await self._call("GET", f"/api/providers/oauth/{provider}/poll/{session}", params={"profile": name}, missing="Die Anmeldung ist abgelaufen", explain=True)
+        if isinstance(body, dict) and body.get("status") not in (None, "pending"):
+            self._changed()  # Anmeldung abgeschlossen (oder gescheitert): Env und Modellliste können sich geändert haben
+        return body
 
     async def oauth_submit(self, name: str, provider: str, session: str, code: str) -> Any:
-        return await self._call("POST", f"/api/providers/oauth/{provider}/submit", params={"profile": name}, json_body={"session_id": session, "code": code}, missing="Die Anmeldung ist abgelaufen", explain=True)
+        body = await self._call("POST", f"/api/providers/oauth/{provider}/submit", params={"profile": name}, json_body={"session_id": session, "code": code}, missing="Die Anmeldung ist abgelaufen", explain=True)
+        self._changed()
+        return body
 
     async def oauth_cancel(self, session: str) -> None:
         await self._call("DELETE", f"/api/providers/oauth/sessions/{session}", missing="Die Anmeldung ist abgelaufen")
 
     async def oauth_disconnect(self, name: str, provider: str) -> Any:
-        return await self._call("DELETE", f"/api/providers/oauth/{provider}", params={"profile": name}, missing="Dieser Anbieter ist nicht angemeldet")
+        body = await self._call("DELETE", f"/api/providers/oauth/{provider}", params={"profile": name}, missing="Dieser Anbieter ist nicht angemeldet")
+        self._changed()
+        return body
 
     async def validate_key(self, var: str, value: str) -> Any:
         return await self._call("POST", "/api/providers/validate", json_body={"key": var, "value": value})
 
     async def set_key(self, name: str, var: str, value: str) -> None:
         await self._call("PUT", "/api/env", params={"profile": name}, json_body={"key": var, "value": value})
+        self._changed()
 
 
 class SoulConflict(Exception):

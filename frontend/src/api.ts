@@ -1,4 +1,5 @@
-import type { AgentRef, AgentStatus, Decision, DiagReport, HostsResponse, MemEntity, MemGraph, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import { invalidate } from "./dataCache";
+import type { AgentRef, AgentStatus, CliAuth, Decision, DiagReport, HostsResponse, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string, public data?: Record<string, unknown>) {
@@ -22,12 +23,13 @@ export function toLogin(stepUp = false) {
 /** Nur für Tests: erlaubt einen weiteren Redirect. */
 export const resetRedirect = () => { redirecting = false; };
 
-export async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
+export async function call<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   const res = await fetch(path, {
     method,
     headers: { "X-Requested-With": "hermes-webui", ...(body ? { "Content-Type": "application/json" } : {}) },
     body: body ? JSON.stringify(body) : undefined,
     credentials: "same-origin",
+    signal,
   });
   if (!res.ok) {
     let detail = res.statusText;
@@ -50,19 +52,21 @@ export async function call<T>(method: string, path: string, body?: unknown): Pro
 }
 
 const mem = (p: string) => `/bff/memory/${encodeURIComponent(p)}`;
-const qs = (o: Record<string, string | number | undefined>) => {
-  const e = Object.entries(o).filter(([, v]) => v !== undefined && v !== "");
-  return e.length ? `?${e.map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join("&")}` : "";
+const qs = (o: Record<string, string | number | boolean | string[] | undefined>) => {
+  const e = Object.entries(o).flatMap(([k, v]) => (v === undefined || v === "" || v === false ? [] : (Array.isArray(v) ? v : [v]).map((x) => `${k}=${encodeURIComponent(String(x === true ? 1 : x))}`)));
+  return e.length ? `?${e.join("&")}` : "";
 };
 
 const base = (a: AgentRef) => `/bff/h/${encodeURIComponent(a.host)}/${encodeURIComponent(a.runtime)}/${encodeURIComponent(a.agent)}`;
 const id = encodeURIComponent;
+/** Nach Schreibzugriffen auf Sessions sind die zwischengespeicherten Listen (Cockpit) veraltet. */
+const dropSessions = () => invalidate("sessions:");
 
 export const api = {
   me: () => call<Me>("GET", "/bff/me"),
   logout: () => call<void>("POST", "/auth/logout"),
-  hosts: () => call<HostsResponse>("GET", "/bff/hosts"),
-  ui: () => call<UiConfig>("GET", "/bff/ui"),
+  hosts: (signal?: AbortSignal) => call<HostsResponse>("GET", "/bff/hosts", undefined, signal),
+  ui: (signal?: AbortSignal) => call<UiConfig>("GET", "/bff/ui", undefined, signal),
   saveProfile: (key: string, body: ProfileInput) =>
     call<UiConfig>("PUT", `/bff/ui/profiles/${key.split("/").map(encodeURIComponent).join("/")}`, body),
   saveShader: (body: ShaderConfig) => call<UiConfig>("PUT", "/bff/ui/shader", body),
@@ -71,13 +75,13 @@ export const api = {
   diagnoseRun: (a: AgentRef) => call<DiagReport>("POST", `${base(a)}/diagnose/run`, {}),
   models: (a: AgentRef) => call<unknown>("GET", `${base(a)}/models`),
   // Die erste Seite in Standardgröße braucht keine Parameter (das BFF nimmt 30).
-  sessions: (a: AgentRef, offset = 0, limit = 30) =>
-    call<unknown>("GET", `${base(a)}/sessions${offset || limit !== 30 ? `?limit=${limit}&offset=${offset}` : ""}`),
-  renameSession: (a: AgentRef, sid: string, title: string) => call<unknown>("PATCH", `${base(a)}/sessions/${id(sid)}`, { title }),
-  deleteSession: (a: AgentRef, sid: string) => call<unknown>("DELETE", `${base(a)}/sessions/${id(sid)}`),
+  sessions: (a: AgentRef, offset = 0, limit = 30, signal?: AbortSignal) =>
+    call<unknown>("GET", `${base(a)}/sessions${offset || limit !== 30 ? `?limit=${limit}&offset=${offset}` : ""}`, undefined, signal),
+  renameSession: (a: AgentRef, sid: string, title: string) => call<unknown>("PATCH", `${base(a)}/sessions/${id(sid)}`, { title }).finally(dropSessions),
+  deleteSession: (a: AgentRef, sid: string) => call<unknown>("DELETE", `${base(a)}/sessions/${id(sid)}`).finally(dropSessions),
   messages: (a: AgentRef, sid: string) => call<unknown>("GET", `${base(a)}/sessions/${id(sid)}/messages`),
   startRun: (a: AgentRef, body: { text: string; session_id?: string; model?: string; images?: string[]; idempotency_key?: string }) =>
-    call<{ run_id: string; session_id?: string | null }>("POST", `${base(a)}/runs`, body),
+    call<{ run_id: string; session_id?: string | null }>("POST", `${base(a)}/runs`, body).finally(dropSessions),
   fork: (a: AgentRef, sid: string) => call<{ session_id: string }>("POST", `${base(a)}/sessions/${id(sid)}/fork`, {}),
   runStatus: (a: AgentRef, rid: string) => call<{ status?: string }>("GET", `${base(a)}/runs/${id(rid)}`),
   stop: (a: AgentRef, rid: string) => call<unknown>("POST", `${base(a)}/runs/${id(rid)}/stop`, {}),
@@ -94,6 +98,11 @@ export const api = {
   restoreSoul: (a: AgentRef, vid: string) => call<SoulSaved & { content: string }>("POST", `${base(a)}/soul/restore`, { id: vid }),
   saveDescription: (a: AgentRef, description: string) => call<{ ok: boolean; description: string }>("PUT", `${base(a)}/profile/description`, { description }),
   providerMatrix: (host: string, runtime: string) => call<ProviderMatrix>("GET", `/bff/h/${encodeURIComponent(host)}/${encodeURIComponent(runtime)}/_provider-matrix`),
+  cliAuth: (host: string) => call<CliAuth>("GET", `/bff/h/${encodeURIComponent(host)}/_cli-auth`),
+  cliAuthRefresh: (host: string) => call<CliAuth>("POST", `/bff/h/${encodeURIComponent(host)}/_cli-auth/refresh`),
+  quota: (a: AgentRef, refresh = false) => call<Quota>("GET", `${base(a)}/quota${refresh ? "?refresh=1" : ""}`),
+  runtimeQuota: (host: string, runtime: string, refresh = false) => call<{ profiles: Record<string, Quota> }>("GET", `/bff/h/${encodeURIComponent(host)}/${encodeURIComponent(runtime)}/_quota${refresh ? "?refresh=1" : ""}`),
+  quotaSummary: () => call<QuotaSummary>("GET", "/bff/quota/summary"),
   profileModels: (a: AgentRef) => call<{ providers: ModelProvider[] }>("GET", `${base(a)}/providers/models`),
   oauthStart: (a: AgentRef, provider: string) => call<OAuthStart>("POST", `${base(a)}/providers/oauth/${encodeURIComponent(provider)}/start`),
   oauthPoll: (a: AgentRef, provider: string, session: string) => call<OAuthPoll>("GET", `${base(a)}/providers/oauth/${encodeURIComponent(provider)}/poll/${encodeURIComponent(session)}`),
@@ -108,7 +117,8 @@ export const api = {
   memoryStats: (p: string) => call<{ counts: Array<{ key: string; value: number }> }>("GET", `${mem(p)}/stats`),
   memoryItems: (p: string, o: { q?: string; kind?: string; limit?: number; offset?: number }) => call<MemPage>("GET", `${mem(p)}/items${qs(o)}`),
   memorySearch: (p: string, q: string, kind?: string) => call<{ items: MemItem[] }>("GET", `${mem(p)}/search${qs({ q, kind })}`),
-  memoryGraph: (p: string, o: { q?: string; limit?: number } = {}) => call<MemGraph>("GET", `${mem(p)}/graph${qs(o)}`),
+  memoryGraph: (p: string, o: { type?: string; q?: string; limit?: number; tags?: string[]; tags_match?: string; refresh?: boolean } = {}) => call<MemGraph>("GET", `${mem(p)}/graph${qs(o)}`),
+  memoryTimeseries: (p: string, o: { type?: string; period?: string } = {}) => call<MemSeries>("GET", `${mem(p)}/timeseries${qs(o)}`),
   memoryEntities: (p: string, o: { limit?: number; offset?: number } = {}) => call<{ items: MemEntity[]; total: number | null }>("GET", `${mem(p)}/entities${qs(o)}`),
   memoryEntity: (p: string, id: string) => call<MemEntity & { observations: MemItem[] }>("GET", `${mem(p)}/entities/${encodeURIComponent(id)}`),
   memoryModels: (p: string) => call<{ items: MemModel[] }>("GET", `${mem(p)}/models`),

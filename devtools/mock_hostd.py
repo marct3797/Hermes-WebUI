@@ -35,6 +35,11 @@ def create_mock():
         return {"version": "test", "clis": [{"id": "codex", "label": "Codex", "available": True,
                 "authenticated": None}], "workspaces": [{"id": "repo", "label": "Repo"}]}
 
+    @app.get("/v1/auth")
+    async def auth(refresh: int = 0):
+        return {"clis": [{"id": "codex", "state": "signed_in", "method": "ChatGPT",
+                          "checked_at": "2026-01-01T00:00:00+00:00", "reason": None}]}
+
     @app.get("/v1/terminals")
     async def terminals():
         return {"terminals": list(app.state.terminals.values())}

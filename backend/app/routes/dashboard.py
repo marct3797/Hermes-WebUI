@@ -17,11 +17,13 @@ from ..dashboard import (
     DESCRIPTION_MAX_CHARS, SOUL_MAX_CHARS, VERSION_RE, DashboardClient, SoulConflict, SoulHistory, digest, save_soul,
 )
 from ..hosts import Target
+from ..quota import PLUGIN_MISSING, failure, normalize, summary_items
 from ..providers import ACCOUNTS, build_matrix, build_overview, normalize_models, provider_keys
 from ..security import client_ip
 from .agents import HostId, RuntimeId, Tgt, audit as audit_target, upstream
 
 router = APIRouter(prefix="/bff/h/{host}/{runtime}/{agent}", dependencies=[Depends(current_user)])
+quota_router = APIRouter(prefix="/bff/quota", dependencies=[Depends(current_user)])
 host_router = APIRouter(prefix="/bff/h/{host}/{runtime}", dependencies=[Depends(current_user)])  # eine Ebene höher: alle Profile einer Runtime
 
 VersionId = Annotated[str, Path(pattern=VERSION_RE.pattern)]
@@ -33,7 +35,7 @@ def dashboard_of(target: Tgt, request: Request) -> DashboardClient:
     cfg = target.runtime.dashboard
     if cfg is None:
         raise HTTPException(501, NOT_CONFIGURED)
-    return DashboardClient(cfg, request.app.state.http)
+    return DashboardClient(cfg, request.app.state.http, request.app.state.dash_cache)
 
 
 Dash = Annotated[DashboardClient, Depends(dashboard_of)]
@@ -57,7 +59,7 @@ async def dashboard_status(target: Tgt, request: Request):
     if cfg is None:
         return {"available": False, "reason": NOT_CONFIGURED, "profile": None}
     try:
-        found = await DashboardClient(cfg, request.app.state.http).profile(target.agent.id)
+        found = await DashboardClient(cfg, request.app.state.http, request.app.state.dash_cache).profile(target.agent.id)
     except UpstreamError as e:
         return {"available": False, "reason": e.detail, "profile": None}
     profile = {k: found.get(k) for k in PROFILE_FIELDS} if found else None
@@ -164,7 +166,7 @@ async def providers_overview(target: Tgt, dash: Dash, days: int = Query(30, ge=1
     (oauth, oauth_err), (usage, usage_err) = await asyncio.gather(_tolerated(dash.oauth_providers(name)), _tolerated(dash.model_analytics(name, days)))
     env = await upstream(env_task)
     warnings = [f"{what} nicht ladbar: {err}" for what, err in (("Anmeldestatus", oauth_err), ("Nutzung", usage_err)) if err]
-    return {**build_overview(env, oauth, usage, days), "warnings": warnings}
+    return {**build_overview(env, oauth, usage, days), "warnings": warnings, **({"stale": True} if dash.stale else {})}
 
 
 class KeyIn(BaseModel):
@@ -215,7 +217,8 @@ SessionId = Annotated[str, Path(pattern=r"^[A-Za-z0-9_-]{8,128}$")]
 @router.get("/providers/models")
 async def provider_models(target: Tgt, dash: Dash):
     """Anbieter und Modelle, aus denen dieses Profil wählen kann (angemeldete zuerst, der aktuelle ganz oben)."""
-    return {"providers": normalize_models(await upstream(dash.model_options(target.agent.id)))}
+    providers = normalize_models(await upstream(dash.model_options(target.agent.id)))
+    return {"providers": providers, **({"stale": True} if dash.stale else {})}
 
 
 @router.post("/providers/oauth/{provider}/start")
@@ -268,7 +271,7 @@ async def provider_matrix(request: Request, host: HostId, runtime: RuntimeId):
     empty = {"profiles": fallback, "accounts": [{"id": a["id"], "label": a["label"], "cli": a["cli"], "login": a["login"], "provider": a["provider"], "hint": a["hint"], "profiles": {}} for a in ACCOUNTS]}
     if rt.dashboard is None:
         return {"available": False, "reason": NOT_CONFIGURED, **empty}
-    dash = DashboardClient(rt.dashboard, request.app.state.http)
+    dash = DashboardClient(rt.dashboard, request.app.state.http, request.app.state.dash_cache)
     try:
         profiles = await dash.profiles()
     except UpstreamError as e:
@@ -280,7 +283,77 @@ async def provider_matrix(request: Request, host: HostId, runtime: RuntimeId):
         (env, env_err), (oauth, _) = await asyncio.gather(_tolerated(dash.env(name)), _tolerated(dash.oauth_providers(name)))
         return name, (build_overview(env, oauth, None, 0) if env is not None else None), env_err
 
-    rows = await asyncio.gather(*(one(str(p["name"])) for p in profiles if p.get("name")))
+    gate = asyncio.Semaphore(4)  # die Abfragen je Profil laufen parallel, aber nicht alle auf einmal
+
+    async def limited(name: str):
+        async with gate:
+            return await one(name)
+
+    rows = await asyncio.gather(*(limited(str(p["name"])) for p in profiles if p.get("name")))
     overviews = {name: ov for name, ov, _ in rows}
     errors = {name: err for name, _, err in rows if err}
-    return {"available": True, "reason": None, **build_matrix(profiles, overviews, errors)}
+    return {"available": True, "reason": None, **build_matrix(profiles, overviews, errors), **({"stale": True} if dash.stale else {})}
+
+
+# --- Restkontingente (Dashboard-Plugin ai-usage-tracker) ---------------------------------------------------
+QUOTA_TIMEOUT_S = 12
+QUOTA_PARALLEL = 4
+
+
+async def _quota_of(request: Request, host: str, runtime: str, rt, name: str, refresh: bool) -> dict[str, Any]:
+    """Normalisierte Kontingente eines Profils. Fehler sind Daten (`state`), damit ein Profil die anderen nicht kippt."""
+    if rt.dashboard is None:
+        return failure("dashboard_unavailable", NOT_CONFIGURED)
+    if refresh and not request.app.state.quota_gate.allow(f"{host}/{runtime}/{name}"):
+        refresh = False  # höchstens ein erzwungenes Neuladen je Profil alle 15 s; sonst der 60-s-Cache des Plugins
+    try:
+        body = await asyncio.wait_for(DashboardClient(rt.dashboard, request.app.state.http).quota(name, refresh), QUOTA_TIMEOUT_S)
+    except asyncio.TimeoutError:
+        return failure("error", "Das Dashboard antwortet nicht rechtzeitig")
+    except UpstreamError as e:
+        if e.status == 404 and e.detail == PLUGIN_MISSING:
+            return failure("plugin_missing", PLUGIN_MISSING)
+        return failure("dashboard_unavailable" if e.status in (503, 504) else "error", e.detail)
+    return normalize(body)
+
+
+@router.get("/quota")
+async def agent_quota(request: Request, host: HostId, runtime: RuntimeId, target: Tgt, refresh: int = Query(0, ge=0, le=1)):
+    _, rt = runtime_of(request, host, runtime)
+    return await _quota_of(request, host, runtime, rt, target.agent.id, bool(refresh))
+
+
+@host_router.get("/_quota")
+async def runtime_quota(request: Request, host: HostId, runtime: RuntimeId, refresh: int = Query(0, ge=0, le=1)):
+    """Alle in der Config geführten Profile der Runtime, parallel (höchstens 4 gleichzeitig)."""
+    _, rt = runtime_of(request, host, runtime)
+    sem = asyncio.Semaphore(QUOTA_PARALLEL)
+
+    async def one(name: str):
+        async with sem:
+            return name, await _quota_of(request, host, runtime, rt, name, bool(refresh))
+
+    return {"profiles": dict(await asyncio.gather(*(one(a.id) for a in rt.agents)))}
+
+
+@quota_router.get("/summary")
+async def quota_summary(request: Request):
+    """Cockpit: je Host/Profil/Anbieter das schlechteste Fenster, dazu der Zustand je Runtime. `worst` ist der knappste Eintrag insgesamt."""
+    reg = request.app.state.hosts.registry
+    sem = asyncio.Semaphore(QUOTA_PARALLEL)
+    rts = [(h, rt) for h in reg.hosts() for rt in h.runtimes if rt.dashboard is not None]
+
+    async def one(h, rt, name):
+        async with sem:
+            return name, await _quota_of(request, h.id, rt.id, rt, name, False)
+
+    results = await asyncio.gather(*(asyncio.gather(*(one(h, rt, a.id) for a in rt.agents)) for h, rt in rts))
+    runtimes, items = [], []
+    for (h, rt), profiles in zip(rts, results):
+        states = {q["state"] for _, q in profiles}
+        bad = next(((q["state"], q["reason"]) for _, q in profiles if q["state"] != "ok"), None)
+        runtimes.append({"host": h.id, "runtime": rt.id, "state": "ok" if "ok" in states else (bad[0] if bad else "ok"), "reason": None if "ok" in states or not bad else bad[1]})
+        for name, q in profiles:
+            items += summary_items(h.id, rt.id, name, q)
+    rank = lambda i: (i["remaining_percent"] if i["remaining_percent"] is not None else -1.0)  # abgelaufener Zugang zählt wie erschöpft
+    return {"runtimes": runtimes, "items": items, "worst": min(items, key=rank, default=None)}

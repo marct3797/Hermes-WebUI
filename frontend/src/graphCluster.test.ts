@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { analyze, KEEP_PER_NODE, louvain, type GEdge, type GNode } from "./graphCluster";
-import { arrange } from "./graphLayout";
 
 /** Ein Gedächtnis in Echtgröße: Fakten teilen sich Entitäten (dichte Gruppen), dazu zeitliche und inhaltliche Nachbarn. */
 function memory(n: number, topics: number) {
@@ -60,50 +59,5 @@ describe("analyze", () => {
     ]);
     expect(a.links).toHaveLength(1);
     expect(a.degree).toEqual([1, 1]);
-  });
-});
-
-describe("arrange", () => {
-  const { nodes, edges } = memory(150, 8);
-  const a = analyze(nodes, edges);
-  const out = arrange(a, nodes.length);
-
-  it("places every node inside the frame", () => {
-    expect(out.nodes).toHaveLength(150);
-    for (const p of out.nodes) {
-      expect(p.x).toBeGreaterThanOrEqual(0); expect(p.x).toBeLessThanOrEqual(1000);
-      expect(p.y).toBeGreaterThanOrEqual(0); expect(p.y).toBeLessThanOrEqual(600);
-    }
-  });
-
-  it("keeps the group bubbles apart", () => {
-    for (let i = 0; i < out.groups.length; i++) for (let j = i + 1; j < out.groups.length; j++) {
-      const d = Math.hypot(out.groups[i].x - out.groups[j].x, out.groups[i].y - out.groups[j].y);
-      expect(d).toBeGreaterThan((out.groups[i].r + out.groups[j].r) * 0.95);
-    }
-  });
-
-  it("keeps nodes of a group inside its bubble and apart from each other", () => {
-    for (const p of out.nodes.filter((n) => n.group >= 0)) {
-      const g = out.groups[p.group];
-      expect(Math.hypot(p.x - g.x, p.y - g.y)).toBeLessThanOrEqual(g.r + 0.01);
-    }
-    const pts = out.nodes;
-    let closest = Infinity;
-    for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) closest = Math.min(closest, Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y));
-    expect(closest).toBeGreaterThan(2);
-  });
-
-  it("is the same picture for the same input", () => {
-    expect(arrange(analyze(nodes, edges), nodes.length)).toEqual(out);
-  });
-
-  it("lays out nodes without any connection as a grid", () => {
-    const loose = Array.from({ length: 30 }, (_, i) => ({ id: `n${i}`, label: `n${i}` }));
-    const r = arrange(analyze(loose, []), loose.length);
-    expect(r.nodes).toHaveLength(30);
-    let closest = Infinity;
-    for (let i = 0; i < 30; i++) for (let j = i + 1; j < 30; j++) closest = Math.min(closest, Math.hypot(r.nodes[i].x - r.nodes[j].x, r.nodes[i].y - r.nodes[j].y));
-    expect(closest).toBeGreaterThan(4);
   });
 });

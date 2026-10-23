@@ -1,0 +1,985 @@
+{
+ "nodes": [
+  {
+   "data": {
+    "id": "3b18c24e-2409-5884-ab06-8b9ae5333ecf",
+    "label": "Beispiel-Erinnerung 1",
+    "text": "Beispiel-Erinnerung 1: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T22:54:54.140000+00:00",
+    "context": "Beispielkontext A",
+    "entities": "SERVICE:Beispiel-Entität 1, Beispiel-Entität 1, Beispiel-Entität 5",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "f5c81e1f-58c8-5864-98ae-fe72f6b3bc3a",
+    "label": "Beispiel-Erinnerung 2",
+    "text": "Beispiel-Erinnerung 2: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T22:54:54.130000+00:00",
+    "context": "Beispielkontext B",
+    "entities": "Beispiel-Entität 2, Beispiel-Entität 6",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "3d1ceb6d-048a-514e-8118-b70db81b9cd1",
+    "label": "Beispiel-Erinnerung 3",
+    "text": "Beispiel-Erinnerung 3: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T22:54:54.120000+00:00",
+    "context": "Beispielkontext C",
+    "entities": "Beispiel-Entität 3, Beispiel-Entität 7",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "772e0f15-2c47-5206-a824-09850a2f49a2",
+    "label": "Beispiel-Erinnerung 4",
+    "text": "Beispiel-Erinnerung 4: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T22:54:54.110000+00:00",
+    "context": "Beispielkontext A",
+    "entities": "Beispiel-Entität 4, Beispiel-Entität 5",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "2a7abb69-bcaf-59a0-80f9-44f9e617e6ff",
+    "label": "Beispiel-Erinnerung 5",
+    "text": "Beispiel-Erinnerung 5: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T22:54:54.100000+00:00",
+    "context": "Beispielkontext B",
+    "entities": "Beispiel-Entität 1, Beispiel-Entität 6",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "8873a80c-d509-52b2-8e55-222d0c1804e9",
+    "label": "Beispiel-Erinnerung 6",
+    "text": "Beispiel-Erinnerung 6: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T22:54:54.090000+00:00",
+    "context": "Beispielkontext C",
+    "entities": "Beispiel-Entität 2, Beispiel-Entität 7",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "22c5557f-4847-5738-9c3f-13d0bcf50f36",
+    "label": "Beispiel-Erinnerung 7",
+    "text": "Beispiel-Erinnerung 7: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T22:54:54.080000+00:00",
+    "context": "Beispielkontext A",
+    "entities": "Beispiel-Entität 3, Beispiel-Entität 5",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "69393b5c-2069-5de6-b9be-4b37edf7c9c5",
+    "label": "Beispiel-Erinnerung 8",
+    "text": "Beispiel-Erinnerung 8: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T22:54:54.070000+00:00",
+    "context": "Beispielkontext B",
+    "entities": "Beispiel-Entität 4, Beispiel-Entität 6",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "8f6c6ecc-7725-5372-abe3-c42b23c751f2",
+    "label": "Beispiel-Erinnerung 9",
+    "text": "Beispiel-Erinnerung 9: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T22:54:54.060000+00:00",
+    "context": "Beispielkontext C",
+    "entities": "Beispiel-Entität 1, Beispiel-Entität 7",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "3a1ebf77-8645-5244-8a57-7633e9e534be",
+    "label": "Beispiel-Erinnerung 10",
+    "text": "Beispiel-Erinnerung 10: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T22:54:54.050000+00:00",
+    "context": "Beispielkontext A",
+    "entities": "Beispiel-Entität 2, Beispiel-Entität 5",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "d242afc9-fbef-507a-8ca5-57a95e28a8c1",
+    "label": "Beispiel-Erinnerung 11",
+    "text": "Beispiel-Erinnerung 11: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T22:22:33.030000+00:00",
+    "context": "Beispielkontext B",
+    "entities": "Beispiel-Entität 3, Beispiel-Entität 6",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "d9106676-bc4f-5014-b72e-3de6c5dfc6ce",
+    "label": "Beispiel-Erinnerung 12",
+    "text": "Beispiel-Erinnerung 12: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T22:54:54.020000+00:00",
+    "context": "Beispielkontext C",
+    "entities": "Beispiel-Entität 4, Beispiel-Entität 7",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "98fd5cef-d099-519d-8be1-e112c0101908",
+    "label": "Beispiel-Erinnerung 13",
+    "text": "Beispiel-Erinnerung 13: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T22:22:05.010000+00:00",
+    "context": "Beispielkontext A",
+    "entities": "Beispiel-Entität 1, Beispiel-Entität 5",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "825561fa-339f-5e84-8b83-502498a42ca8",
+    "label": "Beispiel-Erinnerung 14",
+    "text": "Beispiel-Erinnerung 14: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T22:22:05+00:00",
+    "context": "Beispielkontext B",
+    "entities": "Beispiel-Entität 2, Beispiel-Entität 6",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "bdf0c9c9-dc2f-5eef-9212-c8957fe6933e",
+    "label": "Beispiel-Erinnerung 15",
+    "text": "Beispiel-Erinnerung 15: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T22:02:25.010000+00:00",
+    "context": "Beispielkontext C",
+    "entities": "Beispiel-Entität 3, Beispiel-Entität 7",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "55f15173-eb4c-5d94-9e83-195636b92b2e",
+    "label": "Beispiel-Erinnerung 16",
+    "text": "Beispiel-Erinnerung 16: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T22:01:52+00:00",
+    "context": "Beispielkontext A",
+    "entities": "Beispiel-Entität 4, Beispiel-Entität 5",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "cdc692d2-0164-5ca8-b865-e9c754ef88a1",
+    "label": "Beispiel-Erinnerung 17",
+    "text": "Beispiel-Erinnerung 17: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T21:58:44.230000+00:00",
+    "context": "Beispielkontext B",
+    "entities": "Beispiel-Entität 1, Beispiel-Entität 6",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "78b30b27-005c-5530-ac73-890661a25e97",
+    "label": "Beispiel-Erinnerung 18",
+    "text": "Beispiel-Erinnerung 18: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T21:58:44.220000+00:00",
+    "context": "Beispielkontext C",
+    "entities": "Beispiel-Entität 2, Beispiel-Entität 7",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "8d670f7a-6b52-59ba-a174-2ddc50236ffc",
+    "label": "Beispiel-Erinnerung 19",
+    "text": "Beispiel-Erinnerung 19: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T21:58:44.210000+00:00",
+    "context": "Beispielkontext A",
+    "entities": "Beispiel-Entität 3, Beispiel-Entität 5",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "21be5746-b26b-5ac2-936e-10331c8fb97e",
+    "label": "Beispiel-Erinnerung 20",
+    "text": "Beispiel-Erinnerung 20: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T21:58:44.200000+00:00",
+    "context": "Beispielkontext B",
+    "entities": "Beispiel-Entität 4, Beispiel-Entität 6",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "c4a1c9ca-3328-5094-b50e-502d96c3fdc9",
+    "label": "Beispiel-Erinnerung 21",
+    "text": "Beispiel-Erinnerung 21: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T21:58:44.190000+00:00",
+    "context": "Beispielkontext C",
+    "entities": "Beispiel-Entität 1, Beispiel-Entität 7",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "02819c24-8a14-5853-a598-6e8a046a7fee",
+    "label": "Beispiel-Erinnerung 22",
+    "text": "Beispiel-Erinnerung 22: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T21:58:44.180000+00:00",
+    "context": "Beispielkontext A",
+    "entities": "Beispiel-Entität 2, Beispiel-Entität 5",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "8df8d249-6b3a-5c77-a0d2-401f4a28bd6b",
+    "label": "Beispiel-Erinnerung 23",
+    "text": "Beispiel-Erinnerung 23: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T21:58:44.160000+00:00",
+    "context": "Beispielkontext B",
+    "entities": "Beispiel-Entität 3, Beispiel-Entität 6",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "0a9b4376-a06e-5efa-95f2-a9bb0aea06b9",
+    "label": "Beispiel-Erinnerung 24",
+    "text": "Beispiel-Erinnerung 24: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T21:58:44.150000+00:00",
+    "context": "Beispielkontext C",
+    "entities": "Beispiel-Entität 4, Beispiel-Entität 7",
+    "color": "#42a5f5"
+   }
+  },
+  {
+   "data": {
+    "id": "321d9932-6fba-5d4c-8efb-3a5e10b525bb",
+    "label": "Beispiel-Erinnerung 25",
+    "text": "Beispiel-Erinnerung 25: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+    "date": "2026-10-23T21:58:44.140000+00:00",
+    "context": "Beispielkontext A",
+    "entities": "Beispiel-Entität 1, Beispiel-Entität 5",
+    "color": "#42a5f5"
+   }
+  }
+ ],
+ "edges": [
+  {
+   "data": {
+    "id": "4f8d840c-6a4c-5850-bf3e-42cc44e60b2b",
+    "source": "bdf0c9c9-dc2f-5eef-9212-c8957fe6933e",
+    "target": "55f15173-eb4c-5d94-9e83-195636b92b2e",
+    "linkType": "caused_by",
+    "weight": 1.0,
+    "entityName": "",
+    "color": "#999999",
+    "lineStyle": "solid"
+   }
+  },
+  {
+   "data": {
+    "id": "82bb1692-def6-5c9d-8b7b-a7aadc60fdb5",
+    "source": "825561fa-339f-5e84-8b83-502498a42ca8",
+    "target": "825561fa-339f-5e84-8b83-502498a42ca8",
+    "linkType": "semantic",
+    "weight": 1.0,
+    "entityName": "",
+    "color": "#ff69b4",
+    "lineStyle": "solid"
+   }
+  },
+  {
+   "data": {
+    "id": "508c4bac-ab36-5315-8dc7-b5a8551ee85a",
+    "source": "98fd5cef-d099-519d-8be1-e112c0101908",
+    "target": "825561fa-339f-5e84-8b83-502498a42ca8",
+    "linkType": "caused_by",
+    "weight": 1.0,
+    "entityName": "",
+    "color": "#999999",
+    "lineStyle": "solid"
+   }
+  },
+  {
+   "data": {
+    "id": "a295d9da-df82-5512-9da9-c1e56ed0efe9",
+    "source": "321d9932-6fba-5d4c-8efb-3a5e10b525bb",
+    "target": "c770908e-58e2-5059-8d2a-9f01c2fb2826",
+    "linkType": "caused_by",
+    "weight": 1.0,
+    "entityName": "",
+    "color": "#999999",
+    "lineStyle": "solid"
+   }
+  },
+  {
+   "data": {
+    "id": "83fa8284-c80c-532e-96f7-93d1802d9cd4",
+    "source": "98fd5cef-d099-519d-8be1-e112c0101908",
+    "target": "98fd5cef-d099-519d-8be1-e112c0101908",
+    "linkType": "semantic",
+    "weight": 1.0,
+    "entityName": "",
+    "color": "#ff69b4",
+    "lineStyle": "solid"
+   }
+  },
+  {
+   "data": {
+    "id": "8b57f7ef-0d8d-52e3-8de7-d03eadfeaad5",
+    "source": "effb6326-1ae4-5354-80f9-977c68199b28",
+    "target": "1feadb39-d6e0-5088-be7e-53b00b5d067a",
+    "linkType": "temporal",
+    "weight": 0.9999998842592592,
+    "entityName": "",
+    "color": "#00bcd4",
+    "lineStyle": "dashed"
+   }
+  },
+  {
+   "data": {
+    "id": "9511daa1-7428-5749-8413-fa9a97dda435",
+    "source": "1feadb39-d6e0-5088-be7e-53b00b5d067a",
+    "target": "effb6326-1ae4-5354-80f9-977c68199b28",
+    "linkType": "temporal",
+    "weight": 0.9999998842592592,
+    "entityName": "",
+    "color": "#00bcd4",
+    "lineStyle": "dashed"
+   }
+  },
+  {
+   "data": {
+    "id": "b091c0e6-424f-5687-b039-0c85ed7d2b3c",
+    "source": "825561fa-339f-5e84-8b83-502498a42ca8",
+    "target": "98fd5cef-d099-519d-8be1-e112c0101908",
+    "linkType": "temporal",
+    "weight": 0.9999998842592592,
+    "entityName": "",
+    "color": "#00bcd4",
+    "lineStyle": "dashed"
+   }
+  },
+  {
+   "data": {
+    "id": "4b64ef0a-b8dd-53f0-be63-942171fef7ee",
+    "source": "3b18c24e-2409-5884-ab06-8b9ae5333ecf",
+    "target": "f5c81e1f-58c8-5864-98ae-fe72f6b3bc3a",
+    "linkType": "temporal",
+    "weight": 0.9999998842592592,
+    "entityName": "",
+    "color": "#00bcd4",
+    "lineStyle": "dashed"
+   }
+  },
+  {
+   "data": {
+    "id": "61bde54e-63e9-5baf-b8ea-e71d6e0909f0",
+    "source": "f5c81e1f-58c8-5864-98ae-fe72f6b3bc3a",
+    "target": "3b18c24e-2409-5884-ab06-8b9ae5333ecf",
+    "linkType": "temporal",
+    "weight": 0.9999998842592592,
+    "entityName": "",
+    "color": "#00bcd4",
+    "lineStyle": "dashed"
+   }
+  },
+  {
+   "data": {
+    "id": "6ae2eff8-4d95-5b81-a53c-78c11027680f",
+    "source": "8f6c6ecc-7725-5372-abe3-c42b23c751f2",
+    "target": "3a1ebf77-8645-5244-8a57-7633e9e534be",
+    "linkType": "temporal",
+    "weight": 0.9999998842592592,
+    "entityName": "",
+    "color": "#00bcd4",
+    "lineStyle": "dashed"
+   }
+  },
+  {
+   "data": {
+    "id": "3ea64cfd-8349-5ac0-a477-ef5c07d3e36e",
+    "source": "2a7abb69-bcaf-59a0-80f9-44f9e617e6ff",
+    "target": "8873a80c-d509-52b2-8e55-222d0c1804e9",
+    "linkType": "temporal",
+    "weight": 0.9999998842592592,
+    "entityName": "",
+    "color": "#00bcd4",
+    "lineStyle": "dashed"
+   }
+  },
+  {
+   "data": {
+    "id": "510b7f42-9b9f-513e-b035-dd23496774a3",
+    "source": "3a1ebf77-8645-5244-8a57-7633e9e534be",
+    "target": "8f6c6ecc-7725-5372-abe3-c42b23c751f2",
+    "linkType": "temporal",
+    "weight": 0.9999998842592592,
+    "entityName": "",
+    "color": "#00bcd4",
+    "lineStyle": "dashed"
+   }
+  },
+  {
+   "data": {
+    "id": "1f94aaad-2b60-58fa-a8a3-aa567cda0a1e",
+    "source": "8873a80c-d509-52b2-8e55-222d0c1804e9",
+    "target": "2a7abb69-bcaf-59a0-80f9-44f9e617e6ff",
+    "linkType": "temporal",
+    "weight": 0.9999998842592592,
+    "entityName": "",
+    "color": "#00bcd4",
+    "lineStyle": "dashed"
+   }
+  },
+  {
+   "data": {
+    "id": "aedc0698-431d-54ad-8dc0-6cda324fac74",
+    "source": "2a7abb69-bcaf-59a0-80f9-44f9e617e6ff",
+    "target": "772e0f15-2c47-5206-a824-09850a2f49a2",
+    "linkType": "temporal",
+    "weight": 0.9999998842592592,
+    "entityName": "",
+    "color": "#00bcd4",
+    "lineStyle": "dashed"
+   }
+  },
+  {
+   "data": {
+    "id": "823b0de9-51f5-59d2-b7c8-c8897ca3fc99",
+    "source": "772e0f15-2c47-5206-a824-09850a2f49a2",
+    "target": "2a7abb69-bcaf-59a0-80f9-44f9e617e6ff",
+    "linkType": "temporal",
+    "weight": 0.9999998842592592,
+    "entityName": "",
+    "color": "#00bcd4",
+    "lineStyle": "dashed"
+   }
+  },
+  {
+   "data": {
+    "id": "8dafe0a8-c8c3-521c-bd53-e30446c79372",
+    "source": "8873a80c-d509-52b2-8e55-222d0c1804e9",
+    "target": "22c5557f-4847-5738-9c3f-13d0bcf50f36",
+    "linkType": "temporal",
+    "weight": 0.9999998842592592,
+    "entityName": "",
+    "color": "#00bcd4",
+    "lineStyle": "dashed"
+   }
+  },
+  {
+   "data": {
+    "id": "5897dfcb-5396-5c54-97e9-42f0d993920b",
+    "source": "22c5557f-4847-5738-9c3f-13d0bcf50f36",
+    "target": "8873a80c-d509-52b2-8e55-222d0c1804e9",
+    "linkType": "temporal",
+    "weight": 0.9999998842592592,
+    "entityName": "",
+    "color": "#00bcd4",
+    "lineStyle": "dashed"
+   }
+  },
+  {
+   "data": {
+    "id": "1c53396f-7fdb-57bf-92d9-4f35ca1cc47a",
+    "source": "772e0f15-2c47-5206-a824-09850a2f49a2",
+    "target": "3d1ceb6d-048a-514e-8118-b70db81b9cd1",
+    "linkType": "temporal",
+    "weight": 0.9999998842592592,
+    "entityName": "",
+    "color": "#00bcd4",
+    "lineStyle": "dashed"
+   }
+  },
+  {
+   "data": {
+    "id": "34291318-4d33-5c2c-a704-2e8e23375f9b",
+    "source": "7c3bbdc0-7c91-54ca-bb7e-e5beb8156dde",
+    "target": "12470355-d06c-5540-9097-325a7d3ca8ff",
+    "linkType": "temporal",
+    "weight": 0.9999998842592592,
+    "entityName": "",
+    "color": "#00bcd4",
+    "lineStyle": "dashed"
+   }
+  },
+  {
+   "data": {
+    "id": "030f75a2-0235-5a29-836b-5c0f231ff924",
+    "source": "3d1ceb6d-048a-514e-8118-b70db81b9cd1",
+    "target": "772e0f15-2c47-5206-a824-09850a2f49a2",
+    "linkType": "temporal",
+    "weight": 0.9999998842592592,
+    "entityName": "",
+    "color": "#00bcd4",
+    "lineStyle": "dashed"
+   }
+  },
+  {
+   "data": {
+    "id": "21daaefb-2b92-5e4a-8fab-8c1c8517ad4d",
+    "source": "69393b5c-2069-5de6-b9be-4b37edf7c9c5",
+    "target": "22c5557f-4847-5738-9c3f-13d0bcf50f36",
+    "linkType": "temporal",
+    "weight": 0.9999998842592592,
+    "entityName": "",
+    "color": "#00bcd4",
+    "lineStyle": "dashed"
+   }
+  },
+  {
+   "data": {
+    "id": "ccd38e92-5ac4-5b5b-947a-298259e23167",
+    "source": "22c5557f-4847-5738-9c3f-13d0bcf50f36",
+    "target": "69393b5c-2069-5de6-b9be-4b37edf7c9c5",
+    "linkType": "temporal",
+    "weight": 0.9999998842592592,
+    "entityName": "",
+    "color": "#00bcd4",
+    "lineStyle": "dashed"
+   }
+  },
+  {
+   "data": {
+    "id": "9220222f-04e6-5e49-a684-502be1fab90f",
+    "source": "0a9b4376-a06e-5efa-95f2-a9bb0aea06b9",
+    "target": "321d9932-6fba-5d4c-8efb-3a5e10b525bb",
+    "linkType": "temporal",
+    "weight": 0.9999998842592592,
+    "entityName": "",
+    "color": "#00bcd4",
+    "lineStyle": "dashed"
+   }
+  },
+  {
+   "data": {
+    "id": "626d9fff-3cea-5fb9-b865-61917a0c63d4",
+    "source": "321d9932-6fba-5d4c-8efb-3a5e10b525bb",
+    "target": "0a9b4376-a06e-5efa-95f2-a9bb0aea06b9",
+    "linkType": "temporal",
+    "weight": 0.9999998842592592,
+    "entityName": "",
+    "color": "#00bcd4",
+    "lineStyle": "dashed"
+   }
+  }
+ ],
+ "table_rows": [
+  {
+   "id": "3b18c24e-2409-5884-ab06-8b9ae5333ecf",
+   "text": "Beispiel-Erinnerung 1: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext A",
+   "occurred_start": null,
+   "occurred_end": null,
+   "mentioned_at": "2026-10-23T22:54:54.140000+00:00",
+   "date": "2026-10-23 22:54",
+   "entities": "Beispiel-Entität 1, Beispiel-Entität 5",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "007ae4aa-24ba-50f5-9be8-ac42a4b11c83",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:55:47.776052+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "f5c81e1f-58c8-5864-98ae-fe72f6b3bc3a",
+   "text": "Beispiel-Erinnerung 2: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext B",
+   "occurred_start": null,
+   "occurred_end": null,
+   "mentioned_at": "2026-10-23T22:54:54.130000+00:00",
+   "date": "2026-10-23 22:54",
+   "entities": "Beispiel-Entität 2, Beispiel-Entität 6",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "007ae4aa-24ba-50f5-9be8-ac42a4b11c83",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:55:47.776052+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "3d1ceb6d-048a-514e-8118-b70db81b9cd1",
+   "text": "Beispiel-Erinnerung 3: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext C",
+   "occurred_start": null,
+   "occurred_end": null,
+   "mentioned_at": "2026-10-23T22:54:54.120000+00:00",
+   "date": "2026-10-23 22:54",
+   "entities": "Beispiel-Entität 3, Beispiel-Entität 7",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "007ae4aa-24ba-50f5-9be8-ac42a4b11c83",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:55:47.776052+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "772e0f15-2c47-5206-a824-09850a2f49a2",
+   "text": "Beispiel-Erinnerung 4: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext A",
+   "occurred_start": null,
+   "occurred_end": null,
+   "mentioned_at": "2026-10-23T22:54:54.110000+00:00",
+   "date": "2026-10-23 22:54",
+   "entities": "Beispiel-Entität 4, Beispiel-Entität 5",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "007ae4aa-24ba-50f5-9be8-ac42a4b11c83",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:55:47.776052+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "2a7abb69-bcaf-59a0-80f9-44f9e617e6ff",
+   "text": "Beispiel-Erinnerung 5: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext B",
+   "occurred_start": null,
+   "occurred_end": null,
+   "mentioned_at": "2026-10-23T22:54:54.100000+00:00",
+   "date": "2026-10-23 22:54",
+   "entities": "Beispiel-Entität 1, Beispiel-Entität 6",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "007ae4aa-24ba-50f5-9be8-ac42a4b11c83",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:55:47.776052+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "8873a80c-d509-52b2-8e55-222d0c1804e9",
+   "text": "Beispiel-Erinnerung 6: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext C",
+   "occurred_start": "2026-10-23T22:54:54.090000+00:00",
+   "occurred_end": "2026-10-23T22:54:54.090000+00:00",
+   "mentioned_at": "2026-10-23T22:54:54.090000+00:00",
+   "date": "2026-10-23 22:54",
+   "entities": "Beispiel-Entität 2, Beispiel-Entität 7",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "a77954ed-6518-51e1-a3f2-fc7e653d3312",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:55:47.776052+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "22c5557f-4847-5738-9c3f-13d0bcf50f36",
+   "text": "Beispiel-Erinnerung 7: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext A",
+   "occurred_start": null,
+   "occurred_end": null,
+   "mentioned_at": "2026-10-23T22:54:54.080000+00:00",
+   "date": "2026-10-23 22:54",
+   "entities": "Beispiel-Entität 3, Beispiel-Entität 5",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "a77954ed-6518-51e1-a3f2-fc7e653d3312",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:55:47.776052+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "69393b5c-2069-5de6-b9be-4b37edf7c9c5",
+   "text": "Beispiel-Erinnerung 8: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext B",
+   "occurred_start": "2026-10-23T22:54:54.070000+00:00",
+   "occurred_end": "2026-10-23T22:54:54.070000+00:00",
+   "mentioned_at": "2026-10-23T22:54:54.070000+00:00",
+   "date": "2026-10-23 22:54",
+   "entities": "Beispiel-Entität 4, Beispiel-Entität 6",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "a77954ed-6518-51e1-a3f2-fc7e653d3312",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:55:47.776052+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "8f6c6ecc-7725-5372-abe3-c42b23c751f2",
+   "text": "Beispiel-Erinnerung 9: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext C",
+   "occurred_start": "2026-10-23T22:54:54.060000+00:00",
+   "occurred_end": "2026-10-23T22:54:54.060000+00:00",
+   "mentioned_at": "2026-10-23T22:54:54.060000+00:00",
+   "date": "2026-10-23 22:54",
+   "entities": "Beispiel-Entität 1, Beispiel-Entität 7",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "a77954ed-6518-51e1-a3f2-fc7e653d3312",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:55:47.776052+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "3a1ebf77-8645-5244-8a57-7633e9e534be",
+   "text": "Beispiel-Erinnerung 10: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext A",
+   "occurred_start": null,
+   "occurred_end": null,
+   "mentioned_at": "2026-10-23T22:54:54.050000+00:00",
+   "date": "2026-10-23 22:54",
+   "entities": "Beispiel-Entität 2, Beispiel-Entität 5",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "a77954ed-6518-51e1-a3f2-fc7e653d3312",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:55:47.776052+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "d242afc9-fbef-507a-8ca5-57a95e28a8c1",
+   "text": "Beispiel-Erinnerung 11: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext B",
+   "occurred_start": "2026-10-23T22:22:33.030000+00:00",
+   "occurred_end": "2026-10-23T22:22:33.030000+00:00",
+   "mentioned_at": "2026-10-23T22:54:54.030000+00:00",
+   "date": "2026-10-23 22:22",
+   "entities": "Beispiel-Entität 3, Beispiel-Entität 6",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "76d9c5e9-b488-5d6c-b494-0767b096f734",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:55:47.776052+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "d9106676-bc4f-5014-b72e-3de6c5dfc6ce",
+   "text": "Beispiel-Erinnerung 12: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext C",
+   "occurred_start": null,
+   "occurred_end": null,
+   "mentioned_at": "2026-10-23T22:54:54.020000+00:00",
+   "date": "2026-10-23 22:54",
+   "entities": "Beispiel-Entität 4, Beispiel-Entität 7",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "76d9c5e9-b488-5d6c-b494-0767b096f734",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:55:47.776052+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "98fd5cef-d099-519d-8be1-e112c0101908",
+   "text": "Beispiel-Erinnerung 13: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext A",
+   "occurred_start": "2026-10-23T22:22:05.010000+00:00",
+   "occurred_end": "2026-10-23T22:22:05.010000+00:00",
+   "mentioned_at": "2026-10-23T22:22:05.010000+00:00",
+   "date": "2026-10-23 22:22",
+   "entities": "Beispiel-Entität 1, Beispiel-Entität 5",
+   "document_id": "16ff1154-b70d-52cc-9d63-d8ad32b44759",
+   "chunk_id": "622c39be-11e2-508b-ae94-ee596bbd9570",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:22:28.395186+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "825561fa-339f-5e84-8b83-502498a42ca8",
+   "text": "Beispiel-Erinnerung 14: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext B",
+   "occurred_start": null,
+   "occurred_end": null,
+   "mentioned_at": "2026-10-23T22:22:05+00:00",
+   "date": "2026-10-23 22:22",
+   "entities": "Beispiel-Entität 2, Beispiel-Entität 6",
+   "document_id": "16ff1154-b70d-52cc-9d63-d8ad32b44759",
+   "chunk_id": "622c39be-11e2-508b-ae94-ee596bbd9570",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:22:28.395186+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "bdf0c9c9-dc2f-5eef-9212-c8957fe6933e",
+   "text": "Beispiel-Erinnerung 15: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext C",
+   "occurred_start": "2026-10-23T22:02:25.010000+00:00",
+   "occurred_end": "2026-10-23T22:02:25.010000+00:00",
+   "mentioned_at": "2026-10-23T22:08:56.010000+00:00",
+   "date": "2026-10-23 22:02",
+   "entities": "Beispiel-Entität 3, Beispiel-Entität 7",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "04914b9a-eda9-5d2b-aa95-248332540298",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:09:38.566627+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "55f15173-eb4c-5d94-9e83-195636b92b2e",
+   "text": "Beispiel-Erinnerung 16: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext A",
+   "occurred_start": "2026-10-23T22:01:52+00:00",
+   "occurred_end": "2026-10-23T22:01:52+00:00",
+   "mentioned_at": "2026-10-23T22:08:56+00:00",
+   "date": "2026-10-23 22:01",
+   "entities": "Beispiel-Entität 4, Beispiel-Entität 5",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "04914b9a-eda9-5d2b-aa95-248332540298",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:09:38.566627+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "cdc692d2-0164-5ca8-b865-e9c754ef88a1",
+   "text": "Beispiel-Erinnerung 17: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext B",
+   "occurred_start": null,
+   "occurred_end": null,
+   "mentioned_at": "2026-10-23T21:58:44.230000+00:00",
+   "date": "2026-10-23 21:58",
+   "entities": "Beispiel-Entität 1, Beispiel-Entität 6",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "499df0ce-4944-5321-b90a-9b169fb19600",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:00:45.380407+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "78b30b27-005c-5530-ac73-890661a25e97",
+   "text": "Beispiel-Erinnerung 18: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext C",
+   "occurred_start": null,
+   "occurred_end": null,
+   "mentioned_at": "2026-10-23T21:58:44.220000+00:00",
+   "date": "2026-10-23 21:58",
+   "entities": "Beispiel-Entität 2, Beispiel-Entität 7",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "499df0ce-4944-5321-b90a-9b169fb19600",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:00:45.380407+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "8d670f7a-6b52-59ba-a174-2ddc50236ffc",
+   "text": "Beispiel-Erinnerung 19: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext A",
+   "occurred_start": null,
+   "occurred_end": null,
+   "mentioned_at": "2026-10-23T21:58:44.210000+00:00",
+   "date": "2026-10-23 21:58",
+   "entities": "Beispiel-Entität 3, Beispiel-Entität 5",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "499df0ce-4944-5321-b90a-9b169fb19600",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:00:45.380407+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "21be5746-b26b-5ac2-936e-10331c8fb97e",
+   "text": "Beispiel-Erinnerung 20: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext B",
+   "occurred_start": null,
+   "occurred_end": null,
+   "mentioned_at": "2026-10-23T21:58:44.200000+00:00",
+   "date": "2026-10-23 21:58",
+   "entities": "Beispiel-Entität 4, Beispiel-Entität 6",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "da1b33a2-7735-5d22-9f34-58ab406f75be",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:00:45.380407+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "c4a1c9ca-3328-5094-b50e-502d96c3fdc9",
+   "text": "Beispiel-Erinnerung 21: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext C",
+   "occurred_start": null,
+   "occurred_end": null,
+   "mentioned_at": "2026-10-23T21:58:44.190000+00:00",
+   "date": "2026-10-23 21:58",
+   "entities": "Beispiel-Entität 1, Beispiel-Entität 7",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "da1b33a2-7735-5d22-9f34-58ab406f75be",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:00:45.380407+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "02819c24-8a14-5853-a598-6e8a046a7fee",
+   "text": "Beispiel-Erinnerung 22: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext A",
+   "occurred_start": null,
+   "occurred_end": null,
+   "mentioned_at": "2026-10-23T21:58:44.180000+00:00",
+   "date": "2026-10-23 21:58",
+   "entities": "Beispiel-Entität 2, Beispiel-Entität 5",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "4b9200b7-eeb3-574b-8bc7-3fca7fed59d9",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:00:45.380407+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "8df8d249-6b3a-5c77-a0d2-401f4a28bd6b",
+   "text": "Beispiel-Erinnerung 23: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext B",
+   "occurred_start": null,
+   "occurred_end": null,
+   "mentioned_at": "2026-10-23T21:58:44.160000+00:00",
+   "date": "2026-10-23 21:58",
+   "entities": "Beispiel-Entität 3, Beispiel-Entität 6",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "4b9200b7-eeb3-574b-8bc7-3fca7fed59d9",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:00:45.380407+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "0a9b4376-a06e-5efa-95f2-a9bb0aea06b9",
+   "text": "Beispiel-Erinnerung 24: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext C",
+   "occurred_start": null,
+   "occurred_end": null,
+   "mentioned_at": "2026-10-23T21:58:44.150000+00:00",
+   "date": "2026-10-23 21:58",
+   "entities": "Beispiel-Entität 4, Beispiel-Entität 7",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "4b9200b7-eeb3-574b-8bc7-3fca7fed59d9",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:00:45.380407+00:00",
+   "proof_count": 1
+  },
+  {
+   "id": "321d9932-6fba-5d4c-8efb-3a5e10b525bb",
+   "text": "Beispiel-Erinnerung 25: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext A",
+   "occurred_start": null,
+   "occurred_end": null,
+   "mentioned_at": "2026-10-23T21:58:44.140000+00:00",
+   "date": "2026-10-23 21:58",
+   "entities": "Beispiel-Entität 1, Beispiel-Entität 5",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "530b40b5-47d4-5b7d-ae23-e522ebf50a7e",
+   "fact_type": "world",
+   "tags": [],
+   "created_at": "2026-10-23T22:00:45.380407+00:00",
+   "proof_count": 1
+  }
+ ],
+ "total_units": 44272,
+ "limit": 40
+}
