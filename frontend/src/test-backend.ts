@@ -72,7 +72,7 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
       const rest = m[2];
       if (rest === "/status") return json({ state: "online", online: true, version: "0.21.6", features, error: null });
       if (rest === "/models") return json({ models: [{ id: "mock-large" }] });
-      if (rest === "/sessions") return json({ data: [{ id: `alt-${m[1]}`, title: `Alter Chat von ${m[1]}`, last_active_at: Math.floor(Date.now() / 1000) - 7200 }] });
+      if (rest === "/sessions") return json({ data: [{ id: `alt-${m[1]}`, title: `Alter Chat von ${m[1]}`, last_active_at: Math.floor(Date.now() / 1000) - 7260 }] });
       if (method === "POST" && rest === "/runs") { runs += 1; return json({ run_id: `run_${runs}`, session_id: `s${runs}` }); }
       if (method === "POST" && /^\/runs\/run_\d+\/(approval|steer|stop|clarify)$/.test(rest)) return json({});
     }

@@ -90,11 +90,13 @@ async def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="http://127.0.0.1:9121")
     ap.add_argument("--profile", default="default", help="Profil hinter /p/<profil>; leer = ohne Multiplex")
-    ap.add_argument("--key-env", default="HERMES_KEY_HIKARI")
+    ap.add_argument("--key-env", default=None, help="Standard: HERMES_KEY_<PROFIL> (default: HERMES_KEY_HIKARI)")
     ap.add_argument("--wait", type=float, default=60.0, help="Sekunden, die der Ereignisstrom höchstens gelesen wird")
     args = ap.parse_args()
 
-    key = os.environ.get(args.key_env, "")
+    profile_arg = args.profile or "default"
+    key_env = args.key_env or ("HERMES_KEY_HIKARI" if profile_arg == "default" else f"HERMES_KEY_{profile_arg.upper()}")
+    key = os.environ.get(key_env, "")
     headers = {"Authorization": f"Bearer {key}"} if key else {}
     profile = args.profile or None
     report: dict[str, Any] = {"key_gesetzt": bool(key), "profil": profile}

@@ -128,7 +128,17 @@ class HermesAdapter(RuntimeAdapter):
         run_id = data.get("run_id") if isinstance(data, dict) else None
         if not run_id:
             raise UpstreamError(502, "Hermes lieferte keine run_id")
-        return RunInfo(str(run_id), data.get("session_id"))
+        session_id = data.get("session_id") or req.session_id
+        if not session_id:
+            # Hermes 0.21.6 nennt die Session nicht in der Antwort auf POST /v1/runs, sondern im Lauf-Status.
+            # Ohne sie begänne jede Folgenachricht eine neue Session.
+            try:
+                status = await self._request("GET", agent, f"/v1/runs/{run_id}")
+            except UpstreamError:
+                status = {}
+            found = status.get("session_id") if isinstance(status, dict) else None
+            session_id = found if isinstance(found, str) and found else None
+        return RunInfo(str(run_id), session_id)
 
     async def stop(self, agent: str, run_id: str) -> None:
         await self._request("POST", agent, f"/v1/runs/{run_id}/stop", json={})

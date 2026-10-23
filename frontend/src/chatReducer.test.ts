@@ -130,6 +130,12 @@ describe("parsers", () => {
     ] });
     expect(items.map((i) => i.kind === "message" && i.text)).toEqual(["a", "b"]);
   });
+  it("reads the history from a Hermes list object or a bare array", () => {
+    const msgs = [{ role: "user", content: "a" }, { role: "assistant", content: "b" }];
+    expect(historyItems({ object: "list", data: msgs }).length).toBe(2);
+    expect(historyItems(msgs).length).toBe(2);
+    expect(historyItems(null)).toEqual([]);
+  });
   it("accepts several session list shapes", () => {
     expect(sessionList({ sessions: [{ id: "1", title: "T" }] })[0].title).toBe("T");
     expect(sessionList([{ id: "2" }])[0].title).toBe("Ohne Titel");

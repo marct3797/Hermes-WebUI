@@ -175,8 +175,10 @@ async def test_agent_key_overrides_runtime_key():
     a = HermesAdapter(c, httpx.AsyncClient(transport=httpx.MockTransport(handler)))
     await a.start_run("raiden", RunInput("hi"))
     await a.start_run("sora", RunInput("hi"))
-    assert seen[0].headers["authorization"] == "Bearer raiden-key"
-    assert seen[1].headers["authorization"] == "Bearer runtime-key"
+    # Je Start folgt ein GET auf den Lauf-Status (Session-ID); alle Aufrufe tragen den Key ihres Agents.
+    keys = [(r.method, r.url.path.split("/")[2], r.headers["authorization"]) for r in seen]
+    assert keys == [("POST", "raiden", "Bearer raiden-key"), ("GET", "raiden", "Bearer raiden-key"),
+                    ("POST", "sora", "Bearer runtime-key"), ("GET", "sora", "Bearer runtime-key")]
 
 
 def test_parse_config_reads_agent_key_from_env_and_hides_it():
@@ -189,6 +191,36 @@ def test_parse_config_reads_agent_key_from_env_and_hides_it():
     assert rt.api_key == "rt-secret"
     assert keys == {"default": "", "inari": "inari-secret", "sora": ""}  # fehlende Variable: Key der Runtime gilt
     assert "inari-secret" not in repr(rt) and "inari-secret" not in repr(rt.agents)
+
+
+async def test_start_run_reads_session_id_from_run_status():
+    """Hermes 0.21.6: POST /v1/runs liefert nur run_id, die Session steht im Lauf-Status."""
+    seen = []
+
+    def handler(req: httpx.Request):
+        seen.append((req.method, req.url.path))
+        if req.method == "POST":
+            return httpx.Response(202, json={"run_id": "run_7", "status": "started", "replayed": False})
+        return httpx.Response(200, json={"run_id": "run_7", "status": "running", "session_id": "0f0e0d0c-aaaa-bbbb-cccc-1234567890ab"})
+
+    info = await adapter(handler).start_run("raiden", RunInput("hi"))
+    assert info.session_id == "0f0e0d0c-aaaa-bbbb-cccc-1234567890ab"
+    assert seen == [("POST", "/p/raiden/v1/runs"), ("GET", "/p/raiden/v1/runs/run_7")]
+
+
+async def test_start_run_keeps_given_session_and_survives_status_failure():
+    calls = []
+
+    def handler(req: httpx.Request):
+        calls.append(req.method)
+        if req.method == "POST":
+            return httpx.Response(202, json={"run_id": "run_7"})
+        return httpx.Response(404, json={"error": "run_not_found"})
+
+    a = adapter(handler)
+    assert (await a.start_run("raiden", RunInput("hi", session_id="s0"))).session_id == "s0"
+    assert calls == ["POST"]  # bekannte Session: kein zusätzlicher Aufruf
+    assert (await a.start_run("raiden", RunInput("hi"))).session_id is None  # Status nicht lesbar: kein Abbruch
 
 
 async def test_no_prefix_without_multiplex_and_plain_text_input():

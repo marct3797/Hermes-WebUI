@@ -195,7 +195,9 @@ const settleMessages = (items: Item[]): Item[] =>
 
 /** Verlauf aus /api/sessions/{id}/messages. Nur Nutzer- und Assistententext; Tool-Rollen entfallen. */
 export function historyItems(payload: unknown): Item[] {
-  const list = Array.isArray(payload) ? payload : (payload as { messages?: unknown[] } | null)?.messages ?? [];
+  // Mock und ältere Formen: `messages`; Hermes' Listen heißen sonst `data` (wie bei den Sessions).
+  const p = payload as { messages?: unknown[]; data?: unknown[]; items?: unknown[] } | null;
+  const list = Array.isArray(payload) ? payload : p?.messages ?? p?.data ?? p?.items ?? [];
   const items: Item[] = [];
   for (const raw of list as Array<Record<string, unknown>>) {
     const role = raw.role;
