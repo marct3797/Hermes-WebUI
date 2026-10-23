@@ -1,0 +1,874 @@
+{
+ "nodes": [
+  {
+   "id": "19006409-15d4-497d-a0b4-04e8b8c9e151",
+   "label": "Noch ungeprüft und nur mit Fre...",
+   "text": "Noch ungeprüft und nur mit Freigabe: Schreiben von SOUL/Keys/Uploads, Anlegen von Räumen, Codex-Gerätecode-Anmeldung, Plugin-Install | Verändern Zustand oder lösen Modellläufe aus, daher Freigabe erforderlich",
+   "date": "2026-10-23T22:54:54.140000+00:00",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "Codex",
+    "WebUI",
+    "Soul"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "ca394c01-f5f9-4269-b947-b9d9ae6f1bd3",
+   "label": "Für 'ultimative' WebUI geplant...",
+   "text": "Für 'ultimative' WebUI geplant: Key-Gesundheitscheck mit Ablauf/Limit/Reset in Anbieter-Tabelle und System-Seite, 'Anmeldung prüfen'-Knopf je CLI ohne Modelllauf, Live-Übersicht aller Terminals/Runs mit Benachrichtigung, Fallback-Anbieter je Profil, Kanban gegen Forgejo-Issues, Tests gegen echte Antwortformen | Wichtige Projekt-Updates und Ziele für WebUI-Ausbau",
+   "date": "2026-10-23T22:54:54.130000+00:00",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "Forgejo",
+    "WebUI"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "7329701e-e21c-4fa3-a1a9-9dc677ca9a40",
+   "label": "WebUI zeigt Key-Anfang und -En...",
+   "text": "WebUI zeigt Key-Anfang und -Ende (oc_s...87r9) obwohl Text sagt Werte erschienen nie, und HTTP-Header 'Server: uvicorn' ist sichtbar | Sicherheits- und datenschutzrelevante Anzeigeabweichung",
+   "date": "2026-10-23T22:54:54.120000+00:00",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "Uvicorn",
+    "uvicorn",
+    "WebUI"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "35ad01d6-9ed3-4764-b507-c81b10dd458e",
+   "label": "Gedächtnis-Graph enthält 84.23...",
+   "text": "Gedächtnis-Graph enthält 84.231 Knoten, Anzeige zeigt nur 150 | Infrastruktur-Fakt zur Graph-Größe und Anzeige-Limitierung",
+   "date": "2026-10-23T22:54:54.110000+00:00",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "Gedächtnis-Graph",
+    "WebUI"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "1f129ac4-ff50-40bd-a9e2-8aaef2e3e3fe",
+   "label": "Anbieter-Seite der WebUI ist v...",
+   "text": "Anbieter-Seite der WebUI ist veraltet ('Terminal-Dienst nicht angebunden', 'Claude Code NOCH NICHT ANGEBUNDEN'), tatsächlich laufen die CLIs | Dokumentiert Diskrepanz zwischen Anzeige und Infrastruktur-Status",
+   "date": "2026-10-23T22:54:54.100000+00:00",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "Terminal-Dienst",
+    "Claude Code",
+    "WebUI"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "30794659-403e-473d-87e0-bac726da3423",
+   "label": "User will ultimative WebUI err...",
+   "text": "User will ultimative WebUI erreichen und hat Live-Test aller Funktionen mit Report zu Funktion, Nacharbeit und Erweiterungen beauftragt; voller Livetest-Bericht liegt unter `/home/marct/.hermes/attachments/Hermes-WebUI-Livetest-2026-10-24.md` | When: 24. Oktober 2026 | Involving: user | Grundlage für Nacharbeit und Ausbau zur ultimativen Web UI",
+   "date": "2026-10-23T22:54:54.090000+00:00",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "User",
+    "WebUI",
+    "/home/marct/.hermes/attachments/Hermes-WebUI-Livetest-2026-10-24.md"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "948a13e0-65c7-4a05-b8f7-92d90ab1b744",
+   "label": "Suche, Kanban, Logs und Erweit...",
+   "text": "Suche, Kanban, Logs und Erweiterungen in WebUI sind leer (\"Keine Profile verfügbar\"), weil hostd-Config auf beiden Hosts \"profiles\": {} hat und der Installer sie nicht füllt | Fehlende Profile-Konfiguration und Installer-Lücke",
+   "date": "2026-10-23T22:54:54.080000+00:00",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "Laptop",
+    "Hikari",
+    "hostd",
+    "WebUI"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "50010389-c856-4e0c-8a9a-af6ceaa7f098",
+   "label": "Hikari-Profil `default` hat ab...",
+   "text": "Hikari-Profil `default` hat abgelaufenen OpenCode-Key (Lauf endet mit HTTP 401: This API key has expired), Anbieter-Tabelle und System-Seite zeigen trotzdem \"in Ordnung\"; Key muss getauscht werden, WebUI soll Keys künftig auf Gültigkeit prüfen | When: 24. Oktober 2026 | Falsche Statusanzeige verdeckt ungültigen Key",
+   "date": "2026-10-23T22:54:54.070000+00:00",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "OPENCODE",
+    "OpenCode",
+    "Hikari",
+    "WebUI"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "d8befc93-81d9-4ff6-b0d4-e1e01620eac5",
+   "label": "Zeitpläne (/jobs) stürzen bei ...",
+   "text": "Zeitpläne (/jobs) stürzen bei 8 von 9 Hikari-Profilen mit React-Fehler #31 ab, weil Hermes den Zeitplan als Objekt {kind, expr, display} liefert und Views.tsx:29 es als Text rendert (Mock lieferte String); Fix ist eine Zeile plus Test | When: 24. Oktober 2026 | Unterschied zwischen Mock (String) und Live-Daten (Objekt) verursacht Absturz",
+   "date": "2026-10-23T22:54:54.060000+00:00",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "React",
+    "Hikari",
+    "Views.tsx",
+    "WebUI"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "c42826fd-94ca-45df-bfe2-7e2407a6ad11",
+   "label": "Live-WebUI läuft unter https:/...",
+   "text": "Live-WebUI läuft unter https://agents.thiel.digital mit Anmeldung via Forgejo (OIDC) und 2FA, getestet als `tenjin`; Hosts Hikari (Hermes 0.21.6) und Laptop (Hermes 0.22.5) sind online mit zusammen 10 Agents",
+   "date": "2026-10-23T22:54:54.050000+00:00",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "Laptop",
+    "Hikari",
+    "agents.thiel.digital",
+    "Forgejo",
+    "hermes",
+    "@tenjin",
+    "Tenjin",
+    "OIDC",
+    "WebUI"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "002bb66a-0d4c-4f55-a77d-66e8840dac00",
+   "label": "User hat als Admin ein neues P...",
+   "text": "User hat als Admin ein neues Passwort für Forgejo-Nutzer `tenjin` gesetzt und den Vault-Eintrag aktualisiert, nachdem das alte Passwort (per Benutzername und E-Mail geprüft) von Forgejo abgewiesen wurde. | When: 24. Oktober 2026, ca. 00:22 Uhr | Involving: user, tenjin | Altes Passwort war ungültig, kein Weiter-Raten durch Agent",
+   "date": "2026-10-23T22:22:33.030000+00:00",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "User",
+    "Forgejo",
+    "@tenjin",
+    "Tenjin",
+    "Vault"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "1d56a84f-74e0-4b8b-a7b1-d6d7b3cdee19",
+   "label": "WebUI-Login läuft über Forgejo...",
+   "text": "WebUI-Login läuft über Forgejo-OAuth unter `git.thiel.digital/login/oauth/authorize`. | When: 24. Oktober 2026 | Anmeldeweg für WebUI-Zugang",
+   "date": "2026-10-23T22:54:54.020000+00:00",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "Forgejo",
+    "git.thiel.digital",
+    "OIDC",
+    "WebUI"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "33630bff-69d2-480c-9da6-39ecb8d2189a",
+   "label": "OIDC_ALLOWED_SUB-Erweiterung i...",
+   "text": "OIDC_ALLOWED_SUB-Erweiterung in webui.env wurde erst nach Container-Recreate aktiv, davor 403 not_allowed trotz korrekter Config-Datei. | When: 24. Oktober 2026 | Belegt env_file-Verhalten: Restart reicht nicht für neue Werte",
+   "date": "2026-10-23T22:22:05.010000+00:00",
+   "context": "Docker env_file Verhalten Hikari",
+   "entities": [
+    "Docker",
+    "Hikari",
+    "webui.env",
+    "OIDC",
+    "WebUI",
+    "OIDC_ALLOWED_SUB"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "944703d5-5702-4682-9a52-fb2b374b2075",
+   "label": "Hikari WebUI Container nutzt e...",
+   "text": "Hikari WebUI Container nutzt env_file aus webui.env: ein plain docker restart liest die env-Datei nicht neu ein, Werte bleiben alt. Nach jeder webui.env-Änderung muss der Container neu erstellt werden (deploy.sh oder compose up -d). | Sonst gelten alte Werte weiter, Recreate ist erforderlich damit Config-Änderungen wirksam werden",
+   "date": "2026-10-23T22:22:05+00:00",
+   "context": "Docker env_file Verhalten Hikari",
+   "entities": [
+    "Docker",
+    "Hikari",
+    "deploy.sh",
+    "webui.env",
+    "WebUI"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "88d1f68c-12c4-4a5b-9c3b-904e923bf9ac",
+   "label": "Hikari und privates Forgejo la...",
+   "text": "Hikari und privates Forgejo laufen auf main-Stand b130596, Hikari öffentlich unter https://agents.thiel.digital deployed | When: 24. Oktober 2026, 00:02 Uhr",
+   "date": "2026-10-23T22:02:25.010000+00:00",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "b130596",
+    "Hikari",
+    "Hermes WebUI",
+    "agents.thiel.digital",
+    "Forgejo",
+    "Hermes-WebUI"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "aa1264b5-2393-4f33-a2ab-2f1baadb7151",
+   "label": "User hat PR #6 „Feat/verified ...",
+   "text": "User hat PR #6 „Feat/verified agent console“ in marct3797/Hermes-WebUI von feat/verified-agent-console nach main gemerged (42 Commits, 251 geänderte Dateien, +31.136/-1) | When: 24. Oktober 2026, 00:01 Uhr | Involving: user (marct3797)",
+   "date": "2026-10-23T22:01:52+00:00",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "marct3797@",
+    "User",
+    "Hermes WebUI",
+    "feat/verified-agent-console",
+    "PR #6",
+    "main",
+    "marct3797",
+    "github.com",
+    "Hermes-WebUI"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "89b4f3e7-ed53-45a9-a024-3e802343c56c",
+   "label": "Plan: Nach grüner CI und Merge...",
+   "text": "Plan: Nach grüner CI und Merge von PR #6 den neuen `main`-Stand auf Hikari holen und den live Build erneut verifizieren. | When: nach Merge von PR #6 | Involving: user | Damit ein normaler Clone nach dem Merge den funktionierenden Stand erhält.",
+   "date": "2026-10-23T21:58:44.230000+00:00",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "Hikari",
+    "User",
+    "Hermes WebUI",
+    "PR #6",
+    "main",
+    "Hermes-WebUI"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "5f70c31e-0500-431d-b1c1-a85ac09bfabd",
+   "label": "PR #6 wurde über den Account m...",
+   "text": "PR #6 wurde über den Account marct3797 erstellt, weil der User-Account vertrauenswürdig ist und der Agent-Account es nicht war, damit der PR für alle sichtbar ist. | When: 23. Oktober 2026 | Involving: marct3797 (user) | Damit der PR für alle sichtbar ist und die Anwendung nach Merge erstmals auf `main` liegt.",
+   "date": "2026-10-23T21:58:44.220000+00:00",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "marct3797@",
+    "User",
+    "Hermes WebUI",
+    "PR #6",
+    "marct3797",
+    "GitHub",
+    "Hermes-WebUI"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "83d241e4-a1ab-4785-b79d-7f5d672adc56",
+   "label": "PR #6 'Feat/verified agent con...",
+   "text": "PR #6 'Feat/verified agent console' im Repository marct3797/Hermes-WebUI ist offen und soll 42 Commits von `feat/verified-agent-console` nach `main` mergen (251 geänderte Dateien, +31.136 / -1). | When: 23. Oktober 2026 | Involving: marct3797 (user), claude",
+   "date": "2026-10-23T21:58:44.210000+00:00",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "marct3797@",
+    "User",
+    "Hermes WebUI",
+    "Claude",
+    "feat/verified-agent-console",
+    "PR #6",
+    "main",
+    "marct3797",
+    "GitHub",
+    "Hermes-WebUI"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "c9a11497-7284-427f-a405-ec6a80e8be59",
+   "label": "User ist im richtigen Branch f...",
+   "text": "User ist im richtigen Branch feat/verified-agent-console, sieht den erwarteten Inhalt aber nicht; für den öffentlich vorhandenen Branch fehlt der PR und er soll direkt über den Compare-Link main...feat/verified-agent-console erstellt werden | When: 23. Oktober 2026 | Involving: user | Offenes Problem mit fehlendem PR als Lösungsweg",
+   "date": "2026-10-23T21:58:44.200000+00:00",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "User",
+    "Hermes WebUI",
+    "feat/verified-agent-console",
+    "GitHub",
+    "Hermes-WebUI"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "0fffb8a7-689b-48fd-8a99-d3747c0664ff",
+   "label": "Hermes-WebUI-Repo (marct3797/H...",
+   "text": "Hermes-WebUI-Repo (marct3797/Hermes-WebUI) hat 4 offene PRs, alle von marct3797: #4 „Pakete 1–7: echte Hermes-Funktionen, Gedächtnis, Gruppenchats, SOUL, Anbieter“, #3 „Design v2, Profil-Seite und Betrieb auf Hikari“, #2 „Phase 0: Fundament mit Host- und Runtime-Achse“, #1 „Initial implementation of Hermes WebUI with chat interface“ | When: 23. Oktober 2026 | Involving: marct3797 | Wichtiges Projekt-Update zum Stand der offenen PRs",
+   "date": "2026-10-23T21:58:44.190000+00:00",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "marct3797@",
+    "Hermes WebUI",
+    "GitHub",
+    "marct3797",
+    "Hermes-WebUI"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "9db26e05-7282-47c3-9bad-72c5bd0fb0c8",
+   "label": "Neuer Lösungsweg: User erstell...",
+   "text": "Neuer Lösungsweg: User erstellt selbst den PR für `feat/verified-agent-console` über den gelben Hinweis auf der Pulls-Seite, Assistent prüft CI grün gegen, User mergt. | Involving: user, Hermes Agent | PR vom vertrauenswürdigen Owner-Account ist sofort für alle sichtbar und startet CI",
+   "date": "2026-10-23T21:58:44.180000+00:00",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "User",
+    "Hermes WebUI",
+    "feat/verified-agent-console",
+    "GitHub",
+    "Hermes-WebUI"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "51f1bd7a-6749-468e-9bd2-d70b5c0d7765",
+   "label": "Repository `marct3797/Hermes-W...",
+   "text": "Repository `marct3797/Hermes-WebUI` zeigt 4 offene / 0 geschlossene PRs, alle von marct3797 als Owner: #4 „Pakete 1–7: echte Hermes-Funktionen, Gedächtnis, Gruppenchats, SOUL, Anbieter“, #3 „Design v2, Profil-Seite und Betrieb auf Hikari“, #2 „Phase 0: Fundament mit Host- und Runtime-Achse“, #1 „Initial implementation of Hermes WebUI with chat interface“. | When: 23. Oktober 2026 | Involving: marct3797 (Owner) | Belegt, dass PR Nr. 5 selbst für den Owner unsichtbar ist",
+   "date": "2026-10-23T21:58:44.160000+00:00",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "marct3797@",
+    "User",
+    "Hermes WebUI",
+    "marct3797",
+    "GitHub",
+    "Hermes-WebUI"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "8fd26128-96e4-4715-a6bb-adb047c7fcb6",
+   "label": "Branch `feat/verified-agent-co...",
+   "text": "Branch `feat/verified-agent-console` mit Stand `1561154` liegt öffentlich auf GitHub, ist gepusht, live deployed und verifiziert.",
+   "date": "2026-10-23T21:58:44.150000+00:00",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "1561154",
+    "Hermes WebUI",
+    "feat/verified-agent-console",
+    "GitHub",
+    "Hermes-WebUI"
+   ],
+   "kind": "world"
+  },
+  {
+   "id": "8859d0e1-89b6-41a1-b6af-90be0c9c40fa",
+   "label": "Vereinbart: marct3797 erstellt...",
+   "text": "Vereinbart: marct3797 erstellt den PR selbst aus Branch feat/verified-agent-console (Head 1561154), Agent schließt danach seine unsichtbare Nr. 5, ohne den User-Account anzufassen | When: 23. Oktober 2026 | Involving: marct3797 (user), tenjin2026 (Agent-Account) | PR von marct3797 ist sofort für alle sichtbar und umgeht den Spamfilter",
+   "date": "2026-10-23T21:58:44.140000+00:00",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "marct3797@",
+    "User",
+    "@tenjin2026",
+    "Hermes WebUI",
+    "marct3797",
+    "tenjin2026",
+    "feat/verified-agent-console",
+    "GitHub",
+    "Hermes-WebUI"
+   ],
+   "kind": "world"
+  }
+ ],
+ "edges": [
+  {
+   "source": "88d1f68c-12c4-4a5b-9c3b-904e923bf9ac",
+   "target": "aa1264b5-2393-4f33-a2ab-2f1baadb7151",
+   "type": "causal",
+   "weight": 1.0
+  },
+  {
+   "source": "944703d5-5702-4682-9a52-fb2b374b2075",
+   "target": "944703d5-5702-4682-9a52-fb2b374b2075",
+   "type": "semantic",
+   "weight": 1.0
+  },
+  {
+   "source": "33630bff-69d2-480c-9da6-39ecb8d2189a",
+   "target": "944703d5-5702-4682-9a52-fb2b374b2075",
+   "type": "causal",
+   "weight": 1.0
+  },
+  {
+   "source": "33630bff-69d2-480c-9da6-39ecb8d2189a",
+   "target": "33630bff-69d2-480c-9da6-39ecb8d2189a",
+   "type": "semantic",
+   "weight": 1.0
+  },
+  {
+   "source": "944703d5-5702-4682-9a52-fb2b374b2075",
+   "target": "33630bff-69d2-480c-9da6-39ecb8d2189a",
+   "type": "temporal",
+   "weight": 0.9999998842592592
+  },
+  {
+   "source": "19006409-15d4-497d-a0b4-04e8b8c9e151",
+   "target": "ca394c01-f5f9-4269-b947-b9d9ae6f1bd3",
+   "type": "temporal",
+   "weight": 0.9999998842592592
+  },
+  {
+   "source": "ca394c01-f5f9-4269-b947-b9d9ae6f1bd3",
+   "target": "19006409-15d4-497d-a0b4-04e8b8c9e151",
+   "type": "temporal",
+   "weight": 0.9999998842592592
+  },
+  {
+   "source": "d8befc93-81d9-4ff6-b0d4-e1e01620eac5",
+   "target": "c42826fd-94ca-45df-bfe2-7e2407a6ad11",
+   "type": "temporal",
+   "weight": 0.9999998842592592
+  },
+  {
+   "source": "1f129ac4-ff50-40bd-a9e2-8aaef2e3e3fe",
+   "target": "30794659-403e-473d-87e0-bac726da3423",
+   "type": "temporal",
+   "weight": 0.9999998842592592
+  },
+  {
+   "source": "c42826fd-94ca-45df-bfe2-7e2407a6ad11",
+   "target": "d8befc93-81d9-4ff6-b0d4-e1e01620eac5",
+   "type": "temporal",
+   "weight": 0.9999998842592592
+  },
+  {
+   "source": "30794659-403e-473d-87e0-bac726da3423",
+   "target": "1f129ac4-ff50-40bd-a9e2-8aaef2e3e3fe",
+   "type": "temporal",
+   "weight": 0.9999998842592592
+  },
+  {
+   "source": "1f129ac4-ff50-40bd-a9e2-8aaef2e3e3fe",
+   "target": "35ad01d6-9ed3-4764-b507-c81b10dd458e",
+   "type": "temporal",
+   "weight": 0.9999998842592592
+  },
+  {
+   "source": "35ad01d6-9ed3-4764-b507-c81b10dd458e",
+   "target": "1f129ac4-ff50-40bd-a9e2-8aaef2e3e3fe",
+   "type": "temporal",
+   "weight": 0.9999998842592592
+  },
+  {
+   "source": "30794659-403e-473d-87e0-bac726da3423",
+   "target": "948a13e0-65c7-4a05-b8f7-92d90ab1b744",
+   "type": "temporal",
+   "weight": 0.9999998842592592
+  },
+  {
+   "source": "948a13e0-65c7-4a05-b8f7-92d90ab1b744",
+   "target": "30794659-403e-473d-87e0-bac726da3423",
+   "type": "temporal",
+   "weight": 0.9999998842592592
+  },
+  {
+   "source": "35ad01d6-9ed3-4764-b507-c81b10dd458e",
+   "target": "7329701e-e21c-4fa3-a1a9-9dc677ca9a40",
+   "type": "temporal",
+   "weight": 0.9999998842592592
+  },
+  {
+   "source": "7329701e-e21c-4fa3-a1a9-9dc677ca9a40",
+   "target": "35ad01d6-9ed3-4764-b507-c81b10dd458e",
+   "type": "temporal",
+   "weight": 0.9999998842592592
+  },
+  {
+   "source": "50010389-c856-4e0c-8a9a-af6ceaa7f098",
+   "target": "948a13e0-65c7-4a05-b8f7-92d90ab1b744",
+   "type": "temporal",
+   "weight": 0.9999998842592592
+  },
+  {
+   "source": "948a13e0-65c7-4a05-b8f7-92d90ab1b744",
+   "target": "50010389-c856-4e0c-8a9a-af6ceaa7f098",
+   "type": "temporal",
+   "weight": 0.9999998842592592
+  },
+  {
+   "source": "8fd26128-96e4-4715-a6bb-adb047c7fcb6",
+   "target": "8859d0e1-89b6-41a1-b6af-90be0c9c40fa",
+   "type": "temporal",
+   "weight": 0.9999998842592592
+  },
+  {
+   "source": "8859d0e1-89b6-41a1-b6af-90be0c9c40fa",
+   "target": "8fd26128-96e4-4715-a6bb-adb047c7fcb6",
+   "type": "temporal",
+   "weight": 0.9999998842592592
+  }
+ ],
+ "table_rows": [
+  {
+   "id": "19006409-15d4-497d-a0b4-04e8b8c9e151",
+   "text": "Noch ungeprüft und nur mit Freigabe: Schreiben von SOUL/Keys/Uploads, Anlegen von Räumen, Codex-Gerätecode-Anmeldung, Plugin-Install | Verändern Zustand oder lösen Modellläufe aus, daher Freigabe erforderlich",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "Codex",
+    "WebUI",
+    "Soul"
+   ],
+   "date": "2026-10-23T22:54:54.140000+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "ca394c01-f5f9-4269-b947-b9d9ae6f1bd3",
+   "text": "Für 'ultimative' WebUI geplant: Key-Gesundheitscheck mit Ablauf/Limit/Reset in Anbieter-Tabelle und System-Seite, 'Anmeldung prüfen'-Knopf je CLI ohne Modelllauf, Live-Übersicht aller Terminals/Runs mit Benachrichtigung, Fallback-Anbieter je Profil, Kanban gegen Forgejo-Issues, Tests gegen echte Antwortformen | Wichtige Projekt-Updates und Ziele für WebUI-Ausbau",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "Forgejo",
+    "WebUI"
+   ],
+   "date": "2026-10-23T22:54:54.130000+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "7329701e-e21c-4fa3-a1a9-9dc677ca9a40",
+   "text": "WebUI zeigt Key-Anfang und -Ende (oc_s...87r9) obwohl Text sagt Werte erschienen nie, und HTTP-Header 'Server: uvicorn' ist sichtbar | Sicherheits- und datenschutzrelevante Anzeigeabweichung",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "Uvicorn",
+    "uvicorn",
+    "WebUI"
+   ],
+   "date": "2026-10-23T22:54:54.120000+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "35ad01d6-9ed3-4764-b507-c81b10dd458e",
+   "text": "Gedächtnis-Graph enthält 84.231 Knoten, Anzeige zeigt nur 150 | Infrastruktur-Fakt zur Graph-Größe und Anzeige-Limitierung",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "Gedächtnis-Graph",
+    "WebUI"
+   ],
+   "date": "2026-10-23T22:54:54.110000+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "1f129ac4-ff50-40bd-a9e2-8aaef2e3e3fe",
+   "text": "Anbieter-Seite der WebUI ist veraltet ('Terminal-Dienst nicht angebunden', 'Claude Code NOCH NICHT ANGEBUNDEN'), tatsächlich laufen die CLIs | Dokumentiert Diskrepanz zwischen Anzeige und Infrastruktur-Status",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "Terminal-Dienst",
+    "Claude Code",
+    "WebUI"
+   ],
+   "date": "2026-10-23T22:54:54.100000+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "30794659-403e-473d-87e0-bac726da3423",
+   "text": "User will ultimative WebUI erreichen und hat Live-Test aller Funktionen mit Report zu Funktion, Nacharbeit und Erweiterungen beauftragt; voller Livetest-Bericht liegt unter `/home/marct/.hermes/attachments/Hermes-WebUI-Livetest-2026-10-24.md` | When: 24. Oktober 2026 | Involving: user | Grundlage für Nacharbeit und Ausbau zur ultimativen Web UI",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "User",
+    "WebUI",
+    "/home/marct/.hermes/attachments/Hermes-WebUI-Livetest-2026-10-24.md"
+   ],
+   "date": "2026-10-23T22:54:54.090000+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "948a13e0-65c7-4a05-b8f7-92d90ab1b744",
+   "text": "Suche, Kanban, Logs und Erweiterungen in WebUI sind leer (\"Keine Profile verfügbar\"), weil hostd-Config auf beiden Hosts \"profiles\": {} hat und der Installer sie nicht füllt | Fehlende Profile-Konfiguration und Installer-Lücke",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "Laptop",
+    "Hikari",
+    "hostd",
+    "WebUI"
+   ],
+   "date": "2026-10-23T22:54:54.080000+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "50010389-c856-4e0c-8a9a-af6ceaa7f098",
+   "text": "Hikari-Profil `default` hat abgelaufenen OpenCode-Key (Lauf endet mit HTTP 401: This API key has expired), Anbieter-Tabelle und System-Seite zeigen trotzdem \"in Ordnung\"; Key muss getauscht werden, WebUI soll Keys künftig auf Gültigkeit prüfen | When: 24. Oktober 2026 | Falsche Statusanzeige verdeckt ungültigen Key",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "OPENCODE",
+    "OpenCode",
+    "Hikari",
+    "WebUI"
+   ],
+   "date": "2026-10-23T22:54:54.070000+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "d8befc93-81d9-4ff6-b0d4-e1e01620eac5",
+   "text": "Zeitpläne (/jobs) stürzen bei 8 von 9 Hikari-Profilen mit React-Fehler #31 ab, weil Hermes den Zeitplan als Objekt {kind, expr, display} liefert und Views.tsx:29 es als Text rendert (Mock lieferte String); Fix ist eine Zeile plus Test | When: 24. Oktober 2026 | Unterschied zwischen Mock (String) und Live-Daten (Objekt) verursacht Absturz",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "React",
+    "Hikari",
+    "Views.tsx",
+    "WebUI"
+   ],
+   "date": "2026-10-23T22:54:54.060000+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "c42826fd-94ca-45df-bfe2-7e2407a6ad11",
+   "text": "Live-WebUI läuft unter https://agents.thiel.digital mit Anmeldung via Forgejo (OIDC) und 2FA, getestet als `tenjin`; Hosts Hikari (Hermes 0.21.6) und Laptop (Hermes 0.22.5) sind online mit zusammen 10 Agents",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "Laptop",
+    "Hikari",
+    "agents.thiel.digital",
+    "Forgejo",
+    "hermes",
+    "@tenjin",
+    "Tenjin",
+    "OIDC",
+    "WebUI"
+   ],
+   "date": "2026-10-23T22:54:54.050000+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "002bb66a-0d4c-4f55-a77d-66e8840dac00",
+   "text": "User hat als Admin ein neues Passwort für Forgejo-Nutzer `tenjin` gesetzt und den Vault-Eintrag aktualisiert, nachdem das alte Passwort (per Benutzername und E-Mail geprüft) von Forgejo abgewiesen wurde. | When: 24. Oktober 2026, ca. 00:22 Uhr | Involving: user, tenjin | Altes Passwort war ungültig, kein Weiter-Raten durch Agent",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "User",
+    "Forgejo",
+    "@tenjin",
+    "Tenjin",
+    "Vault"
+   ],
+   "date": "2026-10-23T22:54:54.030000+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "1d56a84f-74e0-4b8b-a7b1-d6d7b3cdee19",
+   "text": "WebUI-Login läuft über Forgejo-OAuth unter `git.thiel.digital/login/oauth/authorize`. | When: 24. Oktober 2026 | Anmeldeweg für WebUI-Zugang",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "Forgejo",
+    "git.thiel.digital",
+    "OIDC",
+    "WebUI"
+   ],
+   "date": "2026-10-23T22:54:54.020000+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "33630bff-69d2-480c-9da6-39ecb8d2189a",
+   "text": "OIDC_ALLOWED_SUB-Erweiterung in webui.env wurde erst nach Container-Recreate aktiv, davor 403 not_allowed trotz korrekter Config-Datei. | When: 24. Oktober 2026 | Belegt env_file-Verhalten: Restart reicht nicht für neue Werte",
+   "context": "Docker env_file Verhalten Hikari",
+   "entities": [
+    "Docker",
+    "Hikari",
+    "webui.env",
+    "OIDC",
+    "WebUI",
+    "OIDC_ALLOWED_SUB"
+   ],
+   "date": "2026-10-23T22:22:05.010000+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "944703d5-5702-4682-9a52-fb2b374b2075",
+   "text": "Hikari WebUI Container nutzt env_file aus webui.env: ein plain docker restart liest die env-Datei nicht neu ein, Werte bleiben alt. Nach jeder webui.env-Änderung muss der Container neu erstellt werden (deploy.sh oder compose up -d). | Sonst gelten alte Werte weiter, Recreate ist erforderlich damit Config-Änderungen wirksam werden",
+   "context": "Docker env_file Verhalten Hikari",
+   "entities": [
+    "Docker",
+    "Hikari",
+    "deploy.sh",
+    "webui.env",
+    "WebUI"
+   ],
+   "date": "2026-10-23T22:22:05+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "88d1f68c-12c4-4a5b-9c3b-904e923bf9ac",
+   "text": "Hikari und privates Forgejo laufen auf main-Stand b130596, Hikari öffentlich unter https://agents.thiel.digital deployed | When: 24. Oktober 2026, 00:02 Uhr",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "b130596",
+    "Hikari",
+    "Hermes WebUI",
+    "agents.thiel.digital",
+    "Forgejo",
+    "Hermes-WebUI"
+   ],
+   "date": "2026-10-23T22:08:56.010000+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "aa1264b5-2393-4f33-a2ab-2f1baadb7151",
+   "text": "User hat PR #6 „Feat/verified agent console“ in marct3797/Hermes-WebUI von feat/verified-agent-console nach main gemerged (42 Commits, 251 geänderte Dateien, +31.136/-1) | When: 24. Oktober 2026, 00:01 Uhr | Involving: user (marct3797)",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "marct3797@",
+    "User",
+    "Hermes WebUI",
+    "feat/verified-agent-console",
+    "PR #6",
+    "main",
+    "marct3797",
+    "github.com",
+    "Hermes-WebUI"
+   ],
+   "date": "2026-10-23T22:08:56+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "89b4f3e7-ed53-45a9-a024-3e802343c56c",
+   "text": "Plan: Nach grüner CI und Merge von PR #6 den neuen `main`-Stand auf Hikari holen und den live Build erneut verifizieren. | When: nach Merge von PR #6 | Involving: user | Damit ein normaler Clone nach dem Merge den funktionierenden Stand erhält.",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "Hikari",
+    "User",
+    "Hermes WebUI",
+    "PR #6",
+    "main",
+    "Hermes-WebUI"
+   ],
+   "date": "2026-10-23T21:58:44.230000+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "5f70c31e-0500-431d-b1c1-a85ac09bfabd",
+   "text": "PR #6 wurde über den Account marct3797 erstellt, weil der User-Account vertrauenswürdig ist und der Agent-Account es nicht war, damit der PR für alle sichtbar ist. | When: 23. Oktober 2026 | Involving: marct3797 (user) | Damit der PR für alle sichtbar ist und die Anwendung nach Merge erstmals auf `main` liegt.",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "marct3797@",
+    "User",
+    "Hermes WebUI",
+    "PR #6",
+    "marct3797",
+    "GitHub",
+    "Hermes-WebUI"
+   ],
+   "date": "2026-10-23T21:58:44.220000+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "83d241e4-a1ab-4785-b79d-7f5d672adc56",
+   "text": "PR #6 'Feat/verified agent console' im Repository marct3797/Hermes-WebUI ist offen und soll 42 Commits von `feat/verified-agent-console` nach `main` mergen (251 geänderte Dateien, +31.136 / -1). | When: 23. Oktober 2026 | Involving: marct3797 (user), claude",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "marct3797@",
+    "User",
+    "Hermes WebUI",
+    "Claude",
+    "feat/verified-agent-console",
+    "PR #6",
+    "main",
+    "marct3797",
+    "GitHub",
+    "Hermes-WebUI"
+   ],
+   "date": "2026-10-23T21:58:44.210000+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "c9a11497-7284-427f-a405-ec6a80e8be59",
+   "text": "User ist im richtigen Branch feat/verified-agent-console, sieht den erwarteten Inhalt aber nicht; für den öffentlich vorhandenen Branch fehlt der PR und er soll direkt über den Compare-Link main...feat/verified-agent-console erstellt werden | When: 23. Oktober 2026 | Involving: user | Offenes Problem mit fehlendem PR als Lösungsweg",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "User",
+    "Hermes WebUI",
+    "feat/verified-agent-console",
+    "GitHub",
+    "Hermes-WebUI"
+   ],
+   "date": "2026-10-23T21:58:44.200000+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "0fffb8a7-689b-48fd-8a99-d3747c0664ff",
+   "text": "Hermes-WebUI-Repo (marct3797/Hermes-WebUI) hat 4 offene PRs, alle von marct3797: #4 „Pakete 1–7: echte Hermes-Funktionen, Gedächtnis, Gruppenchats, SOUL, Anbieter“, #3 „Design v2, Profil-Seite und Betrieb auf Hikari“, #2 „Phase 0: Fundament mit Host- und Runtime-Achse“, #1 „Initial implementation of Hermes WebUI with chat interface“ | When: 23. Oktober 2026 | Involving: marct3797 | Wichtiges Projekt-Update zum Stand der offenen PRs",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "marct3797@",
+    "Hermes WebUI",
+    "GitHub",
+    "marct3797",
+    "Hermes-WebUI"
+   ],
+   "date": "2026-10-23T21:58:44.190000+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "9db26e05-7282-47c3-9bad-72c5bd0fb0c8",
+   "text": "Neuer Lösungsweg: User erstellt selbst den PR für `feat/verified-agent-console` über den gelben Hinweis auf der Pulls-Seite, Assistent prüft CI grün gegen, User mergt. | Involving: user, Hermes Agent | PR vom vertrauenswürdigen Owner-Account ist sofort für alle sichtbar und startet CI",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "User",
+    "Hermes WebUI",
+    "feat/verified-agent-console",
+    "GitHub",
+    "Hermes-WebUI"
+   ],
+   "date": "2026-10-23T21:58:44.180000+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "51f1bd7a-6749-468e-9bd2-d70b5c0d7765",
+   "text": "Repository `marct3797/Hermes-WebUI` zeigt 4 offene / 0 geschlossene PRs, alle von marct3797 als Owner: #4 „Pakete 1–7: echte Hermes-Funktionen, Gedächtnis, Gruppenchats, SOUL, Anbieter“, #3 „Design v2, Profil-Seite und Betrieb auf Hikari“, #2 „Phase 0: Fundament mit Host- und Runtime-Achse“, #1 „Initial implementation of Hermes WebUI with chat interface“. | When: 23. Oktober 2026 | Involving: marct3797 (Owner) | Belegt, dass PR Nr. 5 selbst für den Owner unsichtbar ist",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "marct3797@",
+    "User",
+    "Hermes WebUI",
+    "marct3797",
+    "GitHub",
+    "Hermes-WebUI"
+   ],
+   "date": "2026-10-23T21:58:44.160000+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "8fd26128-96e4-4715-a6bb-adb047c7fcb6",
+   "text": "Branch `feat/verified-agent-console` mit Stand `1561154` liegt öffentlich auf GitHub, ist gepusht, live deployed und verifiziert.",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "1561154",
+    "Hermes WebUI",
+    "feat/verified-agent-console",
+    "GitHub",
+    "Hermes-WebUI"
+   ],
+   "date": "2026-10-23T21:58:44.150000+00:00",
+   "kind": "world"
+  },
+  {
+   "id": "8859d0e1-89b6-41a1-b6af-90be0c9c40fa",
+   "text": "Vereinbart: marct3797 erstellt den PR selbst aus Branch feat/verified-agent-console (Head 1561154), Agent schließt danach seine unsichtbare Nr. 5, ohne den User-Account anzufassen | When: 23. Oktober 2026 | Involving: marct3797 (user), tenjin2026 (Agent-Account) | PR von marct3797 ist sofort für alle sichtbar und umgeht den Spamfilter",
+   "context": "conversation between Hermes Agent and the User",
+   "entities": [
+    "marct3797@",
+    "User",
+    "@tenjin2026",
+    "Hermes WebUI",
+    "marct3797",
+    "tenjin2026",
+    "feat/verified-agent-console",
+    "GitHub",
+    "Hermes-WebUI"
+   ],
+   "date": "2026-10-23T21:58:44.140000+00:00",
+   "kind": "world"
+  }
+ ],
+ "total": 44272,
+ "limit": 500,
+ "returned": 25,
+ "truncated": true,
+ "edges_dropped": 0
+}

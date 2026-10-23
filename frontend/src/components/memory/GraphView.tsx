@@ -1,312 +1,207 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { api } from "../../api";
 import { fmtCount } from "../../format";
-import { analyze, type GNode } from "../../graphCluster";
-import { arrange } from "../../graphLayout";
+import { COLOR_MODES, colorNodes, LINK_NAMES, linkColor, recencyColor, type ColorMode } from "../../graphColor";
+import { analyze } from "../../graphCluster";
 import { useAsync } from "../../useAsync";
 import { Icon } from "../Icon";
+import { Constellation } from "./Constellation";
+import { dayLabel, GraphTable, GraphTimeline, type Range } from "./GraphTable";
 
-const W = 1000;
-const H = 600;
-const PALETTE = 8;
-const ZOOM_MIN = 0.6;
-const ZOOM_MAX = 8;
-/** Bis zu dieser Größe bekommt jeder Knoten eine Beschriftung (soweit der Platz reicht), darüber nur Hubs, Auswahl und Nachbarn. */
-const LABEL_ALL_UP_TO = 40;
-const NEIGHBOURS_SHOWN = 12;
-const BRIDGES_SHOWN = 10;
-
-type View = { x: number; y: number; k: number };
-const HOME: View = { x: 0, y: 0, k: 1 };
-
+export const FACT_TYPES = [{ id: "world", label: "Weltfakten" }, { id: "experience", label: "Erfahrung" }, { id: "observation", label: "Beobachtungen" }] as const;
+export const LIMIT_STEPS = [500, 1000, 2000];
+const VIEWS = [{ id: "map", label: "Konstellation" }, { id: "table", label: "Tabelle" }, { id: "timeline", label: "Zeitleiste" }] as const;
+type ViewId = (typeof VIEWS)[number]["id"];
 const cut = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
-/** Toggle-Chip: ein Klick blendet Arten und Verbindungstypen aus oder wieder ein. */
-function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
-  return <button type="button" className={`chip chip-s${on ? " on" : ""}`} aria-pressed={on} onClick={onClick}>{children}</button>;
+export type GraphInit = { type?: string; limit?: number; q?: string; tags?: string[]; tags_match?: string };
+/** Liest die Teilen-Adresse (`?tab=graph&type=…`); Unsinn fällt auf die Vorgaben zurück. */
+export function readGraphQuery(search: string): GraphInit & { tab?: string } {
+  const p = new URLSearchParams(search), limit = Number(p.get("limit"));
+  const tags = p.getAll("tags").filter(Boolean).slice(0, 10);
+  return {
+    tab: p.get("tab") ?? undefined, type: FACT_TYPES.find((t) => t.id === p.get("type"))?.id,
+    limit: Number.isInteger(limit) && limit >= 1 && limit <= 2000 ? limit : undefined, q: p.get("q")?.slice(0, 200) || undefined,
+    tags: tags.length ? tags : undefined, tags_match: p.get("tags_match") === "all" ? "all" : undefined,
+  };
 }
 
-type Box = { x: number; y: number; w: number; h: number };
-const hits = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-
 /**
- * Wissensgraph des Gedächtnisses als Landkarte: Fakten, die zusammengehören, bilden eine Gruppe (Blase in einer eigenen Farbe,
- * betitelt mit ihrem wichtigsten Fakt). Gezeichnet werden nur die stärksten Verbindungen je Knoten und die Brücken zwischen Gruppen;
- * wählt man einen Knoten, kommen alle seine Verbindungen dazu. Beschriftungen überlappen nicht: was nicht passt, erscheint beim
- * Hineinzoomen oder bei Auswahl. Zoomen mit Mausrad oder Tasten, Ziehen verschiebt.
+ * Gedächtnis-Graph nach dem Vorbild der Hindsight-Control-Plane: Reiter je Faktenart, Filter, „Weitere laden“ (mehr Knoten, bis 2000),
+ * Darstellung als Konstellation, Tabelle oder Zeitleiste. Hindsight kennt kein `offset`: mehr laden heißt, `limit` zu erhöhen.
  */
-export function GraphView({ provider }: { provider: string }) {
-  const [draft, setDraft] = useState("");
-  const [q, setQ] = useState("");
-  const [selected, setSelected] = useState<string>();
-  const [focus, setFocus] = useState<number>();
-  const [hiddenKinds, setHiddenKinds] = useState<Set<string>>(new Set());
+export function GraphView({ provider, initial = {} }: { provider: string; initial?: GraphInit }) {
+  const [type, setType] = useState(initial.type ?? "world");
+  const [limit, setLimit] = useState(initial.limit ?? LIMIT_STEPS[0]);
+  const [q, setQ] = useState(initial.q ?? "");
+  const [draft, setDraft] = useState(initial.q ?? "");
+  const [tags, setTags] = useState<string[]>(initial.tags ?? []);
+  const [tagDraft, setTagDraft] = useState((initial.tags ?? []).join(", "));
+  const [tagsMatch, setTagsMatch] = useState(initial.tags_match ?? "any");
+  const [view, setView] = useState<ViewId>("map");
+  const [mode, setMode] = useState<ColorMode>("recency");
   const [hiddenLinks, setHiddenLinks] = useState<Set<string>>(new Set());
-  const [hideLoose, setHideLoose] = useState(false);
-  const [view, setView] = useState<View>(HOME);
-  const svg = useRef<SVGSVGElement>(null);
-  const drag = useRef<{ x: number; y: number; moved: boolean }>();
-  const state = useAsync(() => api.memoryGraph(provider, { q }), [provider, q]);
+  const [selectedId, setSelectedId] = useState<string>();
+  const [highlight, setHighlight] = useState(false);
+  const [range, setRange] = useState<Range>();
+  const [attempt, setAttempt] = useState(0);
+  const [shareNote, setShareNote] = useState<string>();
+
+  const state = useAsync(() => api.memoryGraph(provider, { type, limit, q, tags, tags_match: tags.length > 1 ? tagsMatch : undefined, refresh: attempt > 0 }), [provider, type, limit, q, tags, tagsMatch, attempt]);
+  const stats = useAsync(() => api.memoryStats(provider).catch(() => undefined), [provider]);
   const graph = state.data;
+  const countOf = (t: string) => stats.data?.counts.find((c) => c.key === `nodes_by_fact_type.${t}`)?.value;
 
-  // Arten gibt es nur, wenn die Quelle sie liefert; sonst wären alle Knoten „—“ und die Chips nutzlos.
-  const allKinds = useMemo(() => [...new Set((graph?.nodes ?? []).flatMap((n) => (n.kind ? [n.kind] : [])))].sort(), [graph]);
-  const allLinks = useMemo(() => [...new Set((graph?.edges ?? []).map((e) => e.label ?? "—"))].sort(), [graph]);
-
-  // Was gezeigt wird: Arten und Verbindungstypen, die nicht ausgeblendet sind, auf Wunsch ohne Einzelgänger.
-  const shown = useMemo(() => {
-    if (!graph) return { nodes: [] as GNode[], edges: [], loose: 0 };
-    let nodes = graph.nodes.filter((n) => !n.kind || !hiddenKinds.has(n.kind));
-    const ids = new Set(nodes.map((n) => n.id));
-    const edges = graph.edges.filter((e) => ids.has(e.source) && ids.has(e.target) && !hiddenLinks.has(e.label ?? "—"));
-    const linked = new Set(edges.flatMap((e) => [e.source, e.target]));
-    const loose = nodes.filter((n) => !linked.has(n.id)).length;
-    if (hideLoose) nodes = nodes.filter((n) => linked.has(n.id));
-    return { nodes, edges, loose };
-  }, [graph, hiddenKinds, hiddenLinks, hideLoose]);
-
-  const analysis = useMemo(() => analyze(shown.nodes, shown.edges), [shown]);
-  const arranged = useMemo(() => arrange(analysis, shown.nodes.length, W, H), [analysis, shown.nodes.length]);
-  const at = useMemo(() => new Map(arranged.nodes.map((p) => [p.index, p])), [arranged]);
-  const indexOf = useMemo(() => new Map(shown.nodes.map((n, i) => [n.id, i])), [shown.nodes]);
-  const selIndex = selected !== undefined ? indexOf.get(selected) : undefined;
-  const sel = selIndex !== undefined ? shown.nodes[selIndex] : undefined;
-  const bdeg = useMemo(() => {
-    const d = new Array<number>(shown.nodes.length).fill(0);
-    for (const l of analysis.backbone) { d[l.a]++; d[l.b]++; }
-    return d;
-  }, [analysis, shown.nodes.length]);
-  /** Wichtige Knoten (viele starke Verbindungen im Gerüst) sind größer. */
-  const radius = (i: number) => 4 + Math.min(bdeg[i], 12) * 0.55;
-  const groupOf = (i: number) => analysis.group[i];
-  const titleOf = (g: number) => shown.nodes[analysis.groups[g].hub].label;
-
-  // Verbindungen des gewählten Knotens (alle, nach Stärke) und die Menge „nah dran“.
-  const neighbours = useMemo(() => {
-    if (selIndex === undefined) return [];
-    return analysis.links.filter((l) => l.a === selIndex || l.b === selIndex).map((l) => ({ index: l.a === selIndex ? l.b : l.a, label: l.label, score: l.score }));
-  }, [analysis, selIndex]);
-  const near = useMemo(() => new Set(selIndex === undefined ? [] : [selIndex, ...neighbours.map((n) => n.index)]), [selIndex, neighbours]);
-
-  // Brücken: die stärksten Verbindungen zwischen verschiedenen Gruppen, als eine Linie je Gruppenpaar zwischen den Hubs.
-  const bridges = useMemo(() => {
-    const sum = new Map<string, { a: number; b: number; w: number }>();
-    for (const l of analysis.links) {
-      const ga = analysis.group[l.a], gb = analysis.group[l.b];
-      if (ga < 0 || gb < 0 || ga === gb) continue;
-      const key = `${Math.min(ga, gb)}-${Math.max(ga, gb)}`;
-      const had = sum.get(key);
-      if (had) had.w += l.score; else sum.set(key, { a: Math.min(ga, gb), b: Math.max(ga, gb), w: l.score });
-    }
-    return [...sum.values()].sort((x, y) => y.w - x.w).slice(0, BRIDGES_SHOWN);
-  }, [analysis]);
-  const maxBridge = bridges[0]?.w ?? 1;
-
-  // Beschriftungen ohne Überlappung. Reihenfolge der Wichtigkeit: Auswahl, Nachbarn, Hubs, dann nach Gewicht.
-  const labelled = useMemo(() => {
-    const k = view.k, font = 11 / k, charW = font * 0.6;
-    const taken: Box[] = [];
-    const out = new Map<number, string>();
-    const strength = new Array<number>(shown.nodes.length).fill(0);
-    for (const l of analysis.links) { strength[l.a] += l.score; strength[l.b] += l.score; }
-    const everyone = shown.nodes.length <= LABEL_ALL_UP_TO || k >= 2.2;
-    const rank = (i: number) => (i === selIndex ? 1e9 : 0) + (near.has(i) ? 1e6 : 0) + strength[i];
-    const order = shown.nodes.map((_, i) => i).filter((i) => at.has(i)).sort((x, y) => rank(y) - rank(x) || x - y);
-    for (const g of analysis.groups) { // Gruppentitel stehen fest über der Blase und blockieren ihren Platz
-      const b = arranged.groups[g.id], t = cut(titleOf(g.id), 30), w = (t.length + 5) * (13 / k) * 0.6;
-      taken.push({ x: b.x - w / 2, y: b.y - b.r - 18 / k, w, h: 15 / k });
-    }
-    for (const i of order) {
-      const must = i === selIndex; // der Hub einer Gruppe heißt ohnehin wie ihr Titel; Nachbarn nur, soweit Platz ist
-      if (!must && !everyone) continue;
-      const p = at.get(i)!, text = cut(shown.nodes[i].label, 26), w = text.length * charW, r = radius(i) / Math.sqrt(k);
-      const box = { x: p.x - w / 2, y: p.y - r - 4 / k - font, w, h: font * 1.15 };
-      if (!must && taken.some((t) => hits(t, box))) continue;
-      taken.push(box); out.set(i, text);
-    }
-    return out;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [analysis, arranged, at, near, selIndex, shown.nodes, view.k, bdeg]);
-
-  const pick = (id: string) => { setFocus(undefined); setSelected((cur) => (cur === id ? undefined : id)); };
-  const toggle = (set: Set<string>, put: (s: Set<string>) => void, key: string) => { const next = new Set(set); if (!next.delete(key)) next.add(key); put(next); setSelected(undefined); setFocus(undefined); };
-
-  const zoomAt = (factor: number, px = W / 2, py = H / 2) => setView((v) => {
-    const k = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, v.k * factor));
-    const f = k / v.k;
-    return { k, x: px - (px - v.x) * f, y: py - (py - v.y) * f };
-  });
-
-  /** Eine Gruppe in den Rahmen holen. */
-  const showGroup = (g: number) => {
-    const b = arranged.groups[g];
-    const k = Math.min(ZOOM_MAX, Math.max(1, 0.85 * Math.min(W / (2 * b.r), H / (2 * b.r))));
-    setSelected(undefined); setFocus(g);
-    setView({ k, x: W / 2 - b.x * k, y: H / 2 - b.y * k });
-  };
-  const home = () => { setView(HOME); setFocus(undefined); };
-
-  // Mausrad: um den Zeiger zoomen. Muss ein nicht-passiver Listener sein, sonst scrollt die Seite mit.
-  useEffect(() => {
-    const el = svg.current;
-    if (!el) return;
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      const r = el.getBoundingClientRect();
-      zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, ((e.clientX - r.left) / r.width) * W, ((e.clientY - r.top) / r.height) * H);
-    };
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
+  const edges = useMemo(() => (graph?.edges ?? []).filter((e) => !hiddenLinks.has(e.type ?? "?")), [graph, hiddenLinks]);
+  const linkTypes = useMemo(() => {
+    const n = new Map<string, number>();
+    for (const e of graph?.edges ?? []) n.set(e.type ?? "?", (n.get(e.type ?? "?") ?? 0) + 1);
+    return [...n].sort((a, b) => b[1] - a[1]);
   }, [graph]);
+  const grouping = useMemo(() => {
+    if (mode !== "group" || !graph) return undefined;
+    const a = analyze(graph.nodes, edges.map((e) => ({ source: e.source, target: e.target, label: e.type, weight: e.weight })));
+    return { of: a.group, titles: a.groups.map((g) => cut(graph.nodes[g.hub].label, 40)) }; // Gruppen-ID = Position
+  }, [mode, graph, edges]);
+  const coloring = useMemo(() => colorNodes(mode, graph?.nodes ?? [], grouping), [mode, graph, grouping]);
+  const rows = useMemo(() => (graph?.table_rows.length ? graph.table_rows : (graph?.nodes ?? []).map((n) => ({ id: n.id, text: n.text ?? n.label, context: n.context, entities: n.entities, date: n.date, kind: n.kind }))), [graph]);
+  const selIndex = selectedId !== undefined && graph ? graph.nodes.findIndex((n) => n.id === selectedId) : -1;
+  const sel = selIndex >= 0 ? graph!.nodes[selIndex] : undefined;
+  const connections = useMemo(() => {
+    if (!sel || !graph) return { byType: [] as Array<[string, number]>, list: [] as Array<{ id: string; label: string; type: string | null }> };
+    const label = new Map(graph.nodes.map((n) => [n.id, n.label]));
+    const mine = graph.edges.filter((e) => e.source === sel.id || e.target === sel.id);
+    const n = new Map<string, number>();
+    for (const e of mine) n.set(e.type ?? "?", (n.get(e.type ?? "?") ?? 0) + 1);
+    return { byType: [...n].sort((a, b) => b[1] - a[1]), list: mine.slice(0, 12).map((e) => { const id = e.source === sel.id ? e.target : e.source; return { id, label: label.get(id) ?? id, type: e.type }; }) };
+  }, [sel, graph]);
 
-  const onPointerDown = (e: React.PointerEvent<SVGSVGElement>) => { drag.current = { x: e.clientX, y: e.clientY, moved: false }; };
-  const onPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
-    const d = drag.current, el = svg.current;
-    if (!d || !el || e.buttons === 0) return;
-    const r = el.getBoundingClientRect();
-    const dx = ((e.clientX - d.x) / r.width) * W, dy = ((e.clientY - d.y) / r.height) * H;
-    if (Math.abs(dx) + Math.abs(dy) > 3) d.moved = true;
-    if (d.moved) { drag.current = { x: e.clientX, y: e.clientY, moved: true }; setView((v) => ({ ...v, x: v.x + dx, y: v.y + dy })); }
+  const reset = () => { setSelectedId(undefined); setRange(undefined); setHighlight(false); };
+  const apply = (e: React.FormEvent) => {
+    e.preventDefault();
+    reset();
+    setQ(draft.trim());
+    setTags(tagDraft.split(",").map((t) => t.trim()).filter(Boolean).slice(0, 10));
   };
-  const onPointerUp = () => { setTimeout(() => { drag.current = undefined; }, 0); };
+  const nextLimit = LIMIT_STEPS.find((s) => s > limit);
+  const moreExist = !!graph && graph.returned < graph.total && graph.returned >= graph.limit;
+  const toggleLink = (t: string) => { const next = new Set(hiddenLinks); if (!next.delete(t)) next.add(t); setHiddenLinks(next); };
 
-  const colour = (g: number) => (g < 0 ? "gg-none" : `gg${analysis.groups[g].rank % PALETTE}`);
-  const dimmed = (i: number) => (selIndex !== undefined ? !near.has(i) : focus !== undefined ? groupOf(i) !== focus : false);
-  const atHome = view.k === 1 && view.x === 0 && view.y === 0;
+  const share = async () => {
+    const p = new URLSearchParams({ tab: "graph", type, limit: String(limit) });
+    if (q) p.set("q", q);
+    for (const t of tags) p.append("tags", t);
+    if (tags.length > 1 && tagsMatch === "all") p.set("tags_match", "all");
+    const url = `${location.origin}${location.pathname}?${p}`;
+    try { await navigator.clipboard.writeText(url); setShareNote("Link kopiert"); } catch { setShareNote(`Kopieren nicht möglich. Adresse: ${url}`); }
+  };
+
+  const label = graph ? `Gedächtnis-Graph, ${fmtCount(graph.nodes.length)} Erinnerungen und ${fmtCount(edges.length)} Verbindungen, gefärbt nach ${COLOR_MODES.find((m) => m.id === mode)!.label}. Pfeiltasten verschieben, Plus und Minus zoomen, 0 zeigt alles. Dieselben Erinnerungen stehen in der Ansicht Tabelle.` : "";
 
   return (
     <div className="mem-graph">
-      <form className="row mem-bar" role="search" onSubmit={(e) => { e.preventDefault(); setSelected(undefined); setFocus(undefined); setQ(draft.trim()); }}>
-        <label className="search grow">
-          <Icon name="search" size={14} />
-          <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Knoten eingrenzen, z. B. ein Name oder Thema" aria-label="Graph eingrenzen" />
+      <div className="tabs" role="tablist" aria-label="Faktenart">
+        {FACT_TYPES.map((t) => (
+          <button key={t.id} type="button" role="tab" className={`tab${t.id === type ? " on" : ""}`} aria-selected={t.id === type}
+            onClick={() => { if (t.id !== type) { reset(); setType(t.id); setLimit(LIMIT_STEPS[0]); } }}>
+            {t.label}{countOf(t.id) !== undefined && <span className="n">{fmtCount(countOf(t.id)!)}</span>}
+          </button>
+        ))}
+      </div>
+
+      <form className="row mem-bar" role="search" onSubmit={apply}>
+        <label className="search grow"><Icon name="search" size={14} />
+          <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Nach Text oder Kontext filtern" aria-label="Nach Text oder Kontext filtern" />
         </label>
-        <button type="submit" className="btn btn-s">Anzeigen</button>
-        {q && <button type="button" className="btn btn-s btn-g" onClick={() => { setDraft(""); setQ(""); setSelected(undefined); setFocus(undefined); }}>Zurücksetzen</button>}
+        <label className="search"><input value={tagDraft} onChange={(e) => setTagDraft(e.target.value)} placeholder="Tags, mit Komma getrennt" aria-label="Nach Tags filtern" /></label>
+        {tags.length > 1 && (
+          <select className="field field-line" value={tagsMatch} onChange={(e) => setTagsMatch(e.target.value)} aria-label="Tags kombinieren">
+            <option value="any">mindestens ein Tag</option><option value="all">alle Tags</option>
+          </select>
+        )}
+        <button type="submit" className="btn btn-s">Filtern</button>
+        {(q || tags.length > 0) && <button type="button" className="btn btn-s btn-g" onClick={() => { setDraft(""); setQ(""); setTagDraft(""); setTags([]); reset(); }}>Zurücksetzen</button>}
       </form>
 
-      {state.error && <p className="error small" role="alert">{state.error}</p>}
-      {state.loading && <p className="muted small">Lade Graph…</p>}
-      {graph && graph.nodes.length === 0 && !state.loading && <p className="panel-empty">Der Graph ist leer{q ? " für diese Eingrenzung" : ""}.</p>}
-
-      {graph && graph.nodes.length > 0 && (
+      {state.error && (
+        <p className="error small" role="alert">Graph nicht ladbar: {state.error} <button type="button" className="btn btn-s" onClick={() => setAttempt((a) => a + 1)}>Erneut versuchen</button></p>
+      )}
+      {state.loading && <div className="graph-skeleton" role="status" aria-label="Lade Graph" />}
+      {graph && !state.loading && (
         <>
-          <p className="muted small mono">
-            <span>{fmtCount(shown.nodes.length)} Knoten · {fmtCount(shown.edges.length)} Kanten</span>
-            {analysis.groups.length > 0 && <span> · {analysis.groups.length} Gruppen; gezeichnet sind je Knoten die stärksten Verbindungen</span>}
-            {graph.truncated && <span> · gekürzt, insgesamt {fmtCount(graph.total)} Knoten (oben eingrenzen)</span>}
-          </p>
-          {allKinds.length > 0 && (
-            <div className="row mem-chips" role="group" aria-label="Arten">
-              <span className="lbl">Arten</span>
-              {allKinds.map((k) => <Chip key={k} on={!hiddenKinds.has(k)} onClick={() => toggle(hiddenKinds, setHiddenKinds, k)}>{k}</Chip>)}
+          <div className="row graph-count">
+            <p className="muted small mono" role="status">{fmtCount(graph.returned)} von {fmtCount(graph.total)} Erinnerungen werden angezeigt{graph.edges_dropped > 0 ? ` · ${fmtCount(graph.edges_dropped)} schwächere Verbindungen nicht gezeichnet` : ""}</p>
+            {moreExist && nextLimit && <button type="button" className="btn btn-s" onClick={() => { reset(); setLimit(nextLimit); }}>Weitere laden</button>}
+            {moreExist && !nextLimit && (
+              <>
+                <button type="button" className="btn btn-s" disabled>Weitere laden</button>
+                <span className="muted small">Mehr als 2.000 zeigt die Hindsight-Control-Plane unter Daten.</span>
+              </>
+            )}
+            <div className="seg" role="group" aria-label="Darstellung" style={{ marginLeft: "auto" }}>
+              {VIEWS.map((v) => <button key={v.id} type="button" className={view === v.id ? "on" : undefined} aria-pressed={view === v.id} onClick={() => setView(v.id)}>{v.label}</button>)}
             </div>
-          )}
-          {allLinks.length > 1 && (
-            <div className="row mem-chips" role="group" aria-label="Verbindungen">
-              <span className="lbl">Verbindungen</span>
-              {allLinks.map((l) => <Chip key={l} on={!hiddenLinks.has(l)} onClick={() => toggle(hiddenLinks, setHiddenLinks, l)}>{l}</Chip>)}
-            </div>
-          )}
-          <div className="row graph-tools">
-            <button type="button" className="btn btn-s btn-i" aria-label="Vergrößern" onClick={() => zoomAt(1.3)}><Icon name="plus" size={14} /></button>
-            <button type="button" className="btn btn-s btn-i" aria-label="Verkleinern" onClick={() => zoomAt(1 / 1.3)}><span aria-hidden>−</span></button>
-            <button type="button" className="btn btn-s btn-g" onClick={home} disabled={atHome && focus === undefined}>Ansicht zurücksetzen</button>
-            <label className="row" style={{ gap: 6, marginLeft: "auto" }}>
-              <input type="checkbox" checked={hideLoose} onChange={(e) => setHideLoose(e.target.checked)} />
-              <span className="small">Einzelne ohne Verbindung ausblenden{shown.loose > 0 ? ` (${shown.loose})` : ""}</span>
-            </label>
           </div>
-          <div className="two">
-            <div className="l">
-              <div className="graph-wrap">
-                <svg ref={svg} className="graph" viewBox={`0 0 ${W} ${H}`} role="group" aria-label="Wissensgraph" preserveAspectRatio="xMidYMid meet"
-                  onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={onPointerUp}
-                  onClick={(e) => { if (e.target === e.currentTarget && !drag.current?.moved) { setSelected(undefined); setFocus(undefined); } }}>
-                  <g transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
-                    {analysis.groups.map((g) => {
-                      const b = arranged.groups[g.id];
-                      return (
-                        <g key={`b${g.id}`} className={`gb ${colour(g.id)}${focus !== undefined && focus !== g.id ? " dim" : ""}`}>
-                          <circle cx={b.x} cy={b.y} r={b.r} className="bubble" onClick={(e) => { e.stopPropagation(); if (!drag.current?.moved) showGroup(g.id); }} />
-                          <text x={b.x} y={b.y - b.r - 6 / view.k} textAnchor="middle" style={{ fontSize: 13 / view.k, strokeWidth: 3 / view.k }} className="gt">{cut(titleOf(g.id), 30)} · {g.members.length}</text>
-                        </g>
-                      );
-                    })}
-                    {bridges.map((b) => {
-                      const a = at.get(analysis.groups[b.a].hub), c = at.get(analysis.groups[b.b].hub);
-                      if (!a || !c) return null;
-                      return <line key={`br${b.a}-${b.b}`} className={`ge bridge${selIndex !== undefined || focus !== undefined ? " dim" : ""}`} x1={a.x} y1={a.y} x2={c.x} y2={c.y} vectorEffect="non-scaling-stroke" strokeWidth={0.8 + 2.2 * (b.w / maxBridge)} />;
-                    })}
-                    {analysis.backbone.map((l, i) => {
-                      const a = at.get(l.a), b = at.get(l.b);
-                      if (!a || !b) return null;
-                      if (groupOf(l.a) !== groupOf(l.b)) return null; // Verbindungen zwischen Gruppen zeichnen die Brücken
-                      const hot = selIndex !== undefined && (l.a === selIndex || l.b === selIndex);
-                      return <line key={`bb${i}`} className={`ge bb ${colour(groupOf(l.a))}${hot ? " hot" : dimmed(l.a) && dimmed(l.b) ? " dim" : ""}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} vectorEffect="non-scaling-stroke" />;
-                    })}
-                    {selIndex !== undefined && neighbours.slice(0, 40).map((nb) => {
-                      const a = at.get(selIndex), b = at.get(nb.index);
-                      if (!a || !b) return null;
-                      return <line key={`hot${nb.index}`} className="ge hot" x1={a.x} y1={a.y} x2={b.x} y2={b.y} vectorEffect="non-scaling-stroke">{nb.label && <title>{nb.label}</title>}</line>;
-                    })}
-                    {shown.nodes.map((n, i) => {
-                      const p = at.get(i);
-                      if (!p) return null;
-                      const on = i === selIndex;
-                      const r = radius(i) / Math.sqrt(view.k);
-                      const text = labelled.get(i);
-                      return (
-                        <g key={n.id} className={`gn ${colour(groupOf(i))}${on ? " on" : ""}${dimmed(i) ? " dim" : ""}`} transform={`translate(${p.x} ${p.y})`}
-                          role="button" tabIndex={0} aria-pressed={on} aria-label={`${n.label}${n.kind ? ` (${n.kind})` : ""}, ${analysis.degree[i]} Verbindungen`}
-                          onClick={(e) => { e.stopPropagation(); if (!drag.current?.moved) pick(n.id); }} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(n.id); } }}>
-                          <title>{n.label}</title>
-                          <circle r={r} />
-                          {text && <text y={-(r + 4 / view.k)} textAnchor="middle" style={{ fontSize: 11 / view.k, strokeWidth: 3 / view.k }}>{text}</text>}
-                        </g>
-                      );
-                    })}
-                  </g>
-                </svg>
+
+          {graph.nodes.length === 0 ? <p className="panel-empty">Keine Erinnerungen für diesen Filter</p> : (
+            <div className="two">
+              <div className="l">
+                {view === "map" && (
+                  <Constellation nodes={graph.nodes} edges={edges} colors={coloring.colors} selected={selIndex >= 0 ? selIndex : undefined} highlight={highlight}
+                    onSelect={(i) => setSelectedId(i === undefined ? undefined : graph.nodes[i].id)} label={label} onShare={() => void share()} shareNote={shareNote}>
+                    <div className="graph-panel graph-colors">
+                      <label className="row small" style={{ gap: 6 }}><span className="lbl">Einfärben nach</span>
+                        <select className="field field-line" value={mode} onChange={(e) => setMode(e.target.value as ColorMode)} aria-label="Einfärben nach">
+                          {COLOR_MODES.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+                        </select></label>
+                      {coloring.scale ? (
+                        <div className="graph-scale" aria-label={`Aktualität von ${dayLabel(coloring.scale.min)} bis ${dayLabel(coloring.scale.max)}`}>
+                          <i style={{ background: `linear-gradient(90deg, ${[0, 0.25, 0.5, 0.75, 1].map(recencyColor).join(",")})` }} />
+                          <span className="small mono">{dayLabel(coloring.scale.min)} (alt)</span><span className="small mono">(neu) {dayLabel(coloring.scale.max)}</span>
+                        </div>
+                      ) : (
+                        <ul className="legend">{coloring.legend.map((l) => <li key={l.label}><i className="swatch" style={{ background: l.color }} />{cut(l.label, 28)} <span className="muted">{fmtCount(l.count)}</span></li>)}</ul>
+                      )}
+                    </div>
+                    {linkTypes.length > 0 && (
+                      <fieldset className="graph-panel graph-links"><legend className="lbl">Verknüpfungstypen</legend>
+                        {linkTypes.map(([t, n]) => (
+                          <label key={t} className="row small" style={{ gap: 6 }}>
+                            <input type="checkbox" checked={!hiddenLinks.has(t)} onChange={() => toggleLink(t)} />
+                            <i className="swatch" style={{ background: linkColor(t === "?" ? null : t) }} />{LINK_NAMES[t] ?? (t === "?" ? "Ohne Typ" : t)} <span className="muted">{fmtCount(n)}</span>
+                          </label>
+                        ))}
+                      </fieldset>
+                    )}
+                  </Constellation>
+                )}
+                {view === "table" && <GraphTable rows={rows} selectedId={selectedId} onSelect={setSelectedId} range={range} onClearRange={() => setRange(undefined)} />}
+                {view === "timeline" && (
+                  <>
+                    <GraphTimeline provider={provider} type={type} rows={rows} range={range} onRange={setRange} />
+                    <GraphTable rows={rows} selectedId={selectedId} onSelect={setSelectedId} range={range} onClearRange={() => setRange(undefined)} />
+                  </>
+                )}
               </div>
+              <aside className="r card" aria-label="Auswahl">
+                {sel ? (
+                  <div className="wrow">
+                    <p className="mem-text">{sel.text ?? sel.label}</p>
+                    <p className="muted small mono">{[sel.date ? new Date(sel.date).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" }) : null, sel.context].filter(Boolean).join(" · ") || "Ohne Datum und Kontext"}</p>
+                    {sel.entities.length > 0 && <div className="row mem-meta" aria-label="Entitäten">{sel.entities.map((e) => <span key={e} className="tag">{e}</span>)}</div>}
+                    <p className="lbl">Verbindungen ({connections.byType.reduce((s, [, n]) => s + n, 0)})</p>
+                    {connections.byType.length === 0 ? <p className="muted small">Keine Verbindungen in diesem Ausschnitt.</p> : (
+                      <ul className="legend">{connections.byType.map(([t, n]) => <li key={t}><i className="swatch" style={{ background: linkColor(t === "?" ? null : t) }} />{LINK_NAMES[t] ?? t} {n}</li>)}</ul>
+                    )}
+                    <button type="button" className="btn btn-s" aria-pressed={highlight} onClick={() => setHighlight((h) => !h)} disabled={connections.list.length === 0}>Nachbarn hervorheben</button>
+                    <ul className="mem-plain">
+                      {connections.list.map((c, i) => <li key={`${c.id}${i}`}><button type="button" className="linkish" onClick={() => setSelectedId(c.id)}>{cut(c.label, 60)}</button>{c.type && <span className="muted small"> · {LINK_NAMES[c.type] ?? c.type}</span>}</li>)}
+                    </ul>
+                  </div>
+                ) : <p className="panel-empty">Einen Punkt oder eine Zeile anklicken, um Text, Entitäten und Verbindungen zu sehen.</p>}
+              </aside>
             </div>
-            <aside className="r card" aria-label="Auswahl">
-              {sel && selIndex !== undefined ? (
-                <div className="wrow">
-                  <b>{sel.label}</b>
-                  {sel.kind && <span className="tag">{sel.kind}</span>}
-                  {groupOf(selIndex) >= 0 && (
-                    <p className="small"><i className={`swatch ${colour(groupOf(selIndex))}`} /> Gruppe <button type="button" className="linkish" onClick={() => showGroup(groupOf(selIndex))}>{cut(titleOf(groupOf(selIndex)), 40)}</button></p>
-                  )}
-                  <p className="lbl">Verbunden mit ({neighbours.length})</p>
-                  {neighbours.length === 0 && <p className="muted small">Keine Kanten in diesem Ausschnitt.</p>}
-                  <ul className="mem-plain">
-                    {neighbours.slice(0, NEIGHBOURS_SHOWN).map((nb) => (
-                      <li key={nb.index}>
-                        <button type="button" className="linkish" onClick={() => setSelected(shown.nodes[nb.index].id)}>{shown.nodes[nb.index].label}</button>
-                        {nb.label && <span className="muted small"> · {nb.label}</span>}
-                      </li>
-                    ))}
-                  </ul>
-                  {neighbours.length > NEIGHBOURS_SHOWN && <p className="muted small">… und {neighbours.length - NEIGHBOURS_SHOWN} weitere, schwächere.</p>}
-                </div>
-              ) : analysis.groups.length > 0 ? (
-                <div className="wrow">
-                  <p className="lbl">Gruppen</p>
-                  <ul className="mem-plain graph-groups">
-                    {analysis.groups.map((g) => (
-                      <li key={g.id}>
-                        <button type="button" className={`linkish${focus === g.id ? " on" : ""}`} aria-pressed={focus === g.id} onClick={() => showGroup(g.id)}>
-                          <i className={`swatch ${colour(g.id)}`} /> {cut(titleOf(g.id), 44)} <span className="muted small">· {g.members.length}</span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="muted small">Eine Gruppe oder einen Knoten anklicken. Mausrad oder Tasten zoomen, Ziehen verschiebt.</p>
-                </div>
-              ) : <p className="panel-empty">Einen Knoten anklicken, um seine Verbindungen zu sehen. Mausrad oder Tasten zoomen, Ziehen verschiebt.</p>}
-            </aside>
-          </div>
+          )}
         </>
       )}
     </div>

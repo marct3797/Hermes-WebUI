@@ -1,4 +1,4 @@
-import type { AgentRef, AgentStatus, Decision, DiagReport, HostsResponse, MemEntity, MemGraph, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import type { AgentRef, AgentStatus, Decision, DiagReport, HostsResponse, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string, public data?: Record<string, unknown>) {
@@ -50,9 +50,9 @@ export async function call<T>(method: string, path: string, body?: unknown): Pro
 }
 
 const mem = (p: string) => `/bff/memory/${encodeURIComponent(p)}`;
-const qs = (o: Record<string, string | number | undefined>) => {
-  const e = Object.entries(o).filter(([, v]) => v !== undefined && v !== "");
-  return e.length ? `?${e.map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join("&")}` : "";
+const qs = (o: Record<string, string | number | boolean | string[] | undefined>) => {
+  const e = Object.entries(o).flatMap(([k, v]) => (v === undefined || v === "" || v === false ? [] : (Array.isArray(v) ? v : [v]).map((x) => `${k}=${encodeURIComponent(String(x === true ? 1 : x))}`)));
+  return e.length ? `?${e.join("&")}` : "";
 };
 
 const base = (a: AgentRef) => `/bff/h/${encodeURIComponent(a.host)}/${encodeURIComponent(a.runtime)}/${encodeURIComponent(a.agent)}`;
@@ -108,7 +108,8 @@ export const api = {
   memoryStats: (p: string) => call<{ counts: Array<{ key: string; value: number }> }>("GET", `${mem(p)}/stats`),
   memoryItems: (p: string, o: { q?: string; kind?: string; limit?: number; offset?: number }) => call<MemPage>("GET", `${mem(p)}/items${qs(o)}`),
   memorySearch: (p: string, q: string, kind?: string) => call<{ items: MemItem[] }>("GET", `${mem(p)}/search${qs({ q, kind })}`),
-  memoryGraph: (p: string, o: { q?: string; limit?: number } = {}) => call<MemGraph>("GET", `${mem(p)}/graph${qs(o)}`),
+  memoryGraph: (p: string, o: { type?: string; q?: string; limit?: number; tags?: string[]; tags_match?: string; refresh?: boolean } = {}) => call<MemGraph>("GET", `${mem(p)}/graph${qs(o)}`),
+  memoryTimeseries: (p: string, o: { type?: string; period?: string } = {}) => call<MemSeries>("GET", `${mem(p)}/timeseries${qs(o)}`),
   memoryEntities: (p: string, o: { limit?: number; offset?: number } = {}) => call<{ items: MemEntity[]; total: number | null }>("GET", `${mem(p)}/entities${qs(o)}`),
   memoryEntity: (p: string, id: string) => call<MemEntity & { observations: MemItem[] }>("GET", `${mem(p)}/entities/${encodeURIComponent(id)}`),
   memoryModels: (p: string) => call<{ items: MemModel[] }>("GET", `${mem(p)}/models`),
