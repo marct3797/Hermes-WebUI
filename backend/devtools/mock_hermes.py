@@ -29,6 +29,7 @@ VERSION = "0.20.4-mock"
 def create_mock(
     wait_for_user: bool = True, delay: float = 0.03, require_key: bool = True,
     profiles: tuple[str, ...] = ("default", "omoikane"), multiplex: bool = True, with_steer: bool = True,
+    broken_lists: bool = False,
 ) -> FastAPI:
     app = FastAPI()
     # Zustand je Profil: Sessions und Runs sind getrennt, wie bei echten Profilen.
@@ -79,9 +80,15 @@ def create_mock(
             "model": "mock-large", "provider": "mock",
         }
 
+    def broken(what: str) -> JSONResponse:
+        # So antwortet Hermes 0.21.6, wenn die Gateway-Seite die Liste nicht lesen kann.
+        return JSONResponse({"error": {"message": f"Failed to enumerate {what}", "type": "server_error"}}, status_code=500)
+
     @router.get("/v1/skills")
     async def skills(request: Request):
         store(request)
+        if broken_lists:
+            return broken("skills")
         return {"object": "list", "data": [
             {"name": "github-pr-review", "description": "Prüft Pull Requests und kommentiert.", "category": "github"},
             {"name": "plan", "description": "Zerlegt Aufgaben in Schritte.", "category": "software-development"},
@@ -91,6 +98,8 @@ def create_mock(
     @router.get("/v1/toolsets")
     async def toolsets(request: Request):
         store(request)
+        if broken_lists:
+            return broken("toolsets")
         return {"object": "list", "data": [
             {"name": "terminal", "label": "Terminal", "description": "Befehle ausführen.", "enabled": True, "configured": True, "tools": ["terminal", "process"]},
             {"name": "web", "label": "Web", "description": "Suchen und Seiten lesen.", "enabled": True, "configured": False, "tools": ["web_search", "web_extract"]},

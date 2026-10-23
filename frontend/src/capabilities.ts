@@ -10,10 +10,13 @@ function rowsOf(payload: unknown, ...keys: string[]): Rec[] {
   return Array.isArray(list) ? list.flatMap((r) => { const o = obj(r); return o ? [o] : []; }) : [];
 }
 
+/** Hinweis des BFF, falls die Liste nicht von der Agent-API kommt (z. B. Ersatz über das Dashboard). */
+export const noteOf = (payload: unknown): string | undefined => str(obj(payload)?.note);
+
 export function parseSkills(payload: unknown): SkillInfo[] {
   return rowsOf(payload, "skills").flatMap((r): SkillInfo[] => {
     const name = str(r.name) ?? str(r.id);
-    return name ? [{ name, description: str(r.description) ?? str(r.summary), category: str(r.category) }] : [];
+    return name ? [{ name, description: str(r.description) ?? str(r.summary), category: str(r.category), enabled: typeof r.enabled === "boolean" ? r.enabled : undefined, provenance: str(r.provenance) }] : [];
   }).sort((a, b) => Number(!a.category) - Number(!b.category) || (a.category ?? "").localeCompare(b.category ?? "") || a.name.localeCompare(b.name)); // ohne Kategorie ans Ende
 }
 

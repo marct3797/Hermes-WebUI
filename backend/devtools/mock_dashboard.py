@@ -149,6 +149,24 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
         profile_or_default(profile)
         return {"models": USAGE, "totals": {}, "period_days": days}
 
+    @app.get("/api/skills")
+    async def skills(profile: str | None = None):
+        profile_or_default(profile)
+        return [
+            {"name": "plan", "description": "Zerlegt Aufgaben in Schritte.", "category": "software-development", "enabled": True, "usage": 4, "provenance": "bundled"},
+            {"name": "mein-skill", "description": "Selbst geschrieben.", "category": None, "enabled": True, "usage": 0, "provenance": "agent"},
+        ]
+
+    @app.get("/api/tools/toolsets")
+    async def toolsets(profile: str | None = None):
+        profile_or_default(profile)
+        return [
+            {"name": "terminal", "label": "Terminal", "description": "Befehle ausführen.", "platform": "cli", "platform_label": "CLI", "enabled": True,
+             "available": True, "configured": True, "tools": ["terminal", "process"]},
+            {"name": "web", "label": "Web", "description": "Suchen.", "platform": "cli", "platform_label": "CLI", "enabled": False,
+             "available": False, "configured": False, "tools": ["web_search"]},
+        ]
+
     @app.post("/api/providers/validate")
     async def validate(body: EnvBody):
         if body.value == "bad":

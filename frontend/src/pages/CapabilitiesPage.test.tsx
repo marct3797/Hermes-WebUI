@@ -24,6 +24,21 @@ describe("Skills und Werkzeuge", () => {
     expect(screen.getByText("plan")).toBeInTheDocument();
   });
 
+  it("says where the list comes from when Hermes could not list the skills and the dashboard stepped in", async () => {
+    installBackend();
+    const backend = globalThis.fetch;
+    const rows = [{ name: "plan", description: "Zerlegt Aufgaben.", category: "software-development", enabled: true, provenance: "bundled" }, { name: "mein-skill", enabled: true, provenance: "agent" }];
+    vi.stubGlobal("fetch", (url: RequestInfo | URL, init?: RequestInit) => String(url).endsWith("/raiden/skills")
+      ? Promise.resolve(new Response(JSON.stringify({ object: "list", data: rows, source: "dashboard", note: "Die Agent-API konnte die Liste nicht liefern (Failed to enumerate skills); sie kommt aus dem Dashboard." }), { headers: { "content-type": "application/json" } }))
+      : backend(url, init));
+    history.pushState(null, "", "/h/hikari/hermes/raiden/skills");
+    render(<App />);
+    expect(await screen.findByText(/Failed to enumerate skills\); sie kommt aus dem Dashboard/)).toBeInTheDocument();
+    expect(screen.getByText("mitgeliefert")).toBeInTheDocument();
+    expect(screen.getByText("selbst erstellt")).toBeInTheDocument();
+    expect(screen.queryByText(/Skills nicht ladbar/)).not.toBeInTheDocument();
+  });
+
   it("shows toolsets with their state, and flags those that are not set up", async () => {
     installBackend();
     history.pushState(null, "", "/h/hikari/hermes/raiden/tools");

@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 
 from ..adapters import RunInput, UpstreamError
 from ..auth import User, current_user, fresh_user
+from ..dashboard import DashboardClient
 from ..diagnose import inspect, run_test, summarize
 from ..events import TERMINAL_TYPES, Event
 from ..hosts import Target
@@ -43,13 +44,17 @@ def resolve_target(request: Request, host: HostId, runtime: RuntimeId, agent: Ag
 Tgt = Annotated[Target, Depends(resolve_target)]
 
 
+def to_http(e: UpstreamError) -> HTTPException:
+    """Upstream-Details nur gekürzt weitergeben; 401/403 der Runtime ist für den Browser ein 502."""
+    status = 502 if e.status in (401, 403) else e.status
+    return HTTPException(status if 400 <= status < 600 else 502, e.detail)
+
+
 async def upstream(coro):
     try:
         return await coro
     except UpstreamError as e:
-        # Upstream-Details nur gekürzt weitergeben; 401/403 der Runtime ist für den Browser ein 502.
-        status = 502 if e.status in (401, 403) else e.status
-        raise HTTPException(status if 400 <= status < 600 else 502, e.detail) from e
+        raise to_http(e) from e
 
 
 def audit(request: Request, user: User, action: str, target: Target, **detail: Any) -> None:
@@ -88,14 +93,32 @@ async def models(target: Tgt):
     return await upstream(target.adapter.models(target.agent.id))
 
 
+async def _listing(request: Request, target: Target, primary, fallback: str):
+    """Liste von der Agent-API; kann sie das nicht (Hermes meldet z. B. „Failed to enumerate skills“), springt das Dashboard
+    derselben Runtime ein, falls eines eingerichtet ist. Der Hinweis sagt, woher die Liste kommt und was die Agent-API meldete."""
+    try:
+        return await primary
+    except UpstreamError as first:
+        cfg = target.runtime.dashboard
+        if cfg is not None:
+            try:
+                rows = await getattr(DashboardClient(cfg, request.app.state.http), fallback)(target.agent.id)
+            except UpstreamError:
+                rows = None
+            if rows is not None:
+                return {"object": "list", "data": rows, "source": "dashboard",
+                        "note": f"Die Agent-API konnte die Liste nicht liefern ({first.detail}); sie kommt aus dem Dashboard."}
+        raise to_http(first) from first
+
+
 @router.get("/skills")
-async def skills(target: Tgt):
-    return await upstream(target.adapter.skills(target.agent.id))
+async def skills(request: Request, target: Tgt):
+    return await _listing(request, target, target.adapter.skills(target.agent.id), "skills")
 
 
 @router.get("/toolsets")
-async def toolsets(target: Tgt):
-    return await upstream(target.adapter.toolsets(target.agent.id))
+async def toolsets(request: Request, target: Tgt):
+    return await _listing(request, target, target.adapter.toolsets(target.agent.id), "toolsets")
 
 
 @router.get("/sessions")

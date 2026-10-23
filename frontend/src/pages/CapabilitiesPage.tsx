@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { api } from "../api";
-import { parseSkills, parseToolsets } from "../capabilities";
+import { noteOf, parseSkills, parseToolsets } from "../capabilities";
 import { Icon } from "../components/Icon";
 import { PageHead } from "../components/PageHead";
 import type { AgentRef } from "../types";
@@ -13,11 +13,13 @@ export function CapabilitiesPage({ agent, label, module }: Props) {
   return module === "skills" ? <Skills agent={agent} label={label} /> : <Toolsets agent={agent} label={label} />;
 }
 
+const PROVENANCE: Record<string, string> = { hub: "aus dem Hub", bundled: "mitgeliefert", agent: "selbst erstellt" };
+
 function Skills({ agent, label }: { agent: AgentRef; label: string }) {
-  const state = useAsync(async () => parseSkills(await api.skills(agent)), [agent.host, agent.runtime, agent.agent]);
+  const state = useAsync(async () => { const raw = await api.skills(agent); return { skills: parseSkills(raw), note: noteOf(raw) }; }, [agent.host, agent.runtime, agent.agent]);
   const [q, setQ] = useState("");
   const [category, setCategory] = useState<string>();
-  const skills = state.data ?? [];
+  const skills = state.data?.skills ?? [];
   const categories = useMemo(() => [...new Set(skills.flatMap((s) => (s.category ? [s.category] : [])))].sort(), [skills]);
   const shown = skills.filter((s) => (!category || s.category === category) && (!q || `${s.name} ${s.description ?? ""}`.toLowerCase().includes(q.toLowerCase())));
 
@@ -25,6 +27,7 @@ function Skills({ agent, label }: { agent: AgentRef; label: string }) {
     <main className="page">
       <PageHead title="Skills" sub={state.data ? `${label} · ${skills.length} installiert` : label} />
       {state.error && <p className="banner" role="alert"><Icon name="alert" />Skills nicht ladbar: {state.error}</p>}
+      {state.data?.note && <p className="banner" role="status"><Icon name="alert" />{state.data.note}</p>}
       {state.loading && <p className="muted">Lade…</p>}
       {state.data && (
         <>
@@ -46,6 +49,8 @@ function Skills({ agent, label }: { agent: AgentRef; label: string }) {
                 <li key={s.name} className="card cap-card">
                   <b>{s.name}</b>
                   {s.category && <span className="tag tag-m">{s.category}</span>}
+                  {s.provenance && <span className="tag">{PROVENANCE[s.provenance] ?? s.provenance}</span>}
+                  {s.enabled === false && <span className="tag tag-e">aus</span>}
                   {s.description && <p className="muted small">{s.description}</p>}
                 </li>
               ))}
@@ -58,13 +63,14 @@ function Skills({ agent, label }: { agent: AgentRef; label: string }) {
 }
 
 function Toolsets({ agent, label }: { agent: AgentRef; label: string }) {
-  const state = useAsync(async () => parseToolsets(await api.toolsets(agent)), [agent.host, agent.runtime, agent.agent]);
-  const sets = state.data ?? [];
+  const state = useAsync(async () => { const raw = await api.toolsets(agent); return { sets: parseToolsets(raw), note: noteOf(raw) }; }, [agent.host, agent.runtime, agent.agent]);
+  const sets = state.data?.sets ?? [];
   const on = sets.filter((t) => t.enabled).length;
   return (
     <main className="page">
       <PageHead title="Werkzeuge" sub={state.data ? `${label} · ${on} von ${sets.length} aktiv` : label} />
       {state.error && <p className="banner" role="alert"><Icon name="alert" />Werkzeuge nicht ladbar: {state.error}</p>}
+      {state.data?.note && <p className="banner" role="status"><Icon name="alert" />{state.data.note}</p>}
       {state.loading && <p className="muted">Lade…</p>}
       {state.data && sets.length === 0 && <p className="panel-empty">Der Agent meldet keine Toolsets.</p>}
       <ul className="cap-grid">

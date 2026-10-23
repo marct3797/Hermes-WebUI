@@ -115,7 +115,7 @@ export type MemPage = { items: MemItem[]; total: number | null; limit: number; o
 export type MemGraph = { nodes: Array<{ id: string; label: string; kind: string | null }>; edges: Array<{ source: string; target: string; label: string | null }>; total: number; truncated: boolean };
 export type MemEntity = { id: string; name: string; mentions: number; first_seen: number | null; last_seen: number | null };
 export type MemModel = { id: string; name: string; content: string | null; query: string | null; updated: number | null; tags: string[] };
-export type SkillInfo = { name: string; description?: string; category?: string };
+export type SkillInfo = { name: string; description?: string; category?: string; enabled?: boolean; provenance?: string };
 export type ToolsetInfo = { name: string; label?: string; description?: string; enabled?: boolean; configured?: boolean; tools?: string[] };
 
 export type DashboardProfile = {

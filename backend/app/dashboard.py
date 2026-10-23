@@ -91,6 +91,20 @@ class DashboardClient:
     async def model_analytics(self, name: str, days: int) -> Any:
         return await self._call("GET", "/api/analytics/models", params={"profile": name, "days": str(days)})
 
+    # Skills und Werkzeuge eines Profils: Ersatzquelle, wenn die Agent-API sie nicht auflisten kann.
+    async def skills(self, name: str) -> list[dict[str, Any]]:
+        return self._rows(await self._call("GET", "/api/skills", params={"profile": name}), "Skills")
+
+    async def toolsets(self, name: str) -> list[dict[str, Any]]:
+        return self._rows(await self._call("GET", "/api/tools/toolsets", params={"profile": name}), "Werkzeuge")
+
+    @staticmethod
+    def _rows(body: Any, what: str) -> list[dict[str, Any]]:
+        rows = body.get("data") if isinstance(body, dict) else body
+        if not isinstance(rows, list):
+            raise UpstreamError(502, f"Das Dashboard liefert {what} in unbekannter Form")
+        return [r for r in rows if isinstance(r, dict)]
+
     async def validate_key(self, var: str, value: str) -> Any:
         return await self._call("POST", "/api/providers/validate", json_body={"key": var, "value": value})
 

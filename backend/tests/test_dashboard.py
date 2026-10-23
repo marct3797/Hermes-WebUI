@@ -27,8 +27,8 @@ def dash():
 def build(make_settings, dash):
     clients = []
 
-    def make(dashboard=None, running=True, **kw):
-        routes = {"hermes.test": httpx.ASGITransport(app=create_mock(delay=0))}
+    def make(dashboard=None, running=True, broken_lists=False, **kw):
+        routes = {"hermes.test": httpx.ASGITransport(app=create_mock(delay=0, broken_lists=broken_lists))}
         if running:
             routes["dashboard.test"] = httpx.ASGITransport(app=dashboard or dash)
         transport = RouterTransport(routes)
@@ -270,3 +270,30 @@ def test_history_dedupes_sorts_and_survives_damaged_files(tmp_path):
     assert h.get("hikari", "hermes", "default", "../x") is None
     assert h.entries("hikari", "hermes", "anderer") == []  # je Agent getrennt
     assert stat.S_IMODE(folder.stat().st_mode) == 0o700 and stat.S_IMODE((folder / f"{first}.json").stat().st_mode) == 0o600
+
+
+# --- Skills und Werkzeuge: Ersatzquelle, wenn die Agent-API die Liste nicht liefern kann ------------------
+def test_skills_come_from_the_agent_api_when_it_works(client):
+    body = client.get(f"{BASE}/skills").json()
+    assert body.get("source") is None and "github-pr-review" in {s["name"] for s in body["data"]}
+
+
+def test_skills_fall_back_to_the_dashboard_when_hermes_cannot_list_them(build):
+    body = build(broken_lists=True).get(f"{BASE}/skills").json()
+    assert body["source"] == "dashboard" and [s["name"] for s in body["data"]] == ["plan", "mein-skill"]
+    assert "Failed to enumerate skills" in body["note"] and "Dashboard" in body["note"]
+
+
+def test_toolsets_fall_back_the_same_way(build):
+    body = build(broken_lists=True).get(f"{BASE}/toolsets").json()
+    assert body["source"] == "dashboard" and {t["name"]: t["enabled"] for t in body["data"]} == {"terminal": True, "web": False}
+
+
+def test_without_a_dashboard_the_original_error_stays_visible(build):
+    r = build(broken_lists=True, running=False).get(f"{BASE}/skills")
+    assert r.status_code == 500 and "Failed to enumerate skills" in r.json()["detail"]
+
+
+def test_a_dashboard_that_cannot_help_does_not_hide_the_original_error(build):
+    r = build(broken_lists=True, dashboard=create_dashboard(token="anderer")).get(f"{BASE}/skills")
+    assert r.status_code == 500 and "Failed to enumerate skills" in r.json()["detail"]
