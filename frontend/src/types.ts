@@ -28,7 +28,7 @@ export type SendMode = "steer" | "queue";
 
 export type Item =
   | { kind: "message"; id: string; role: "user" | "assistant"; text: string; reasoning: string; streaming: boolean; images: string[]; mode?: SendMode; at?: number }
-  | { kind: "tool"; id: string; name: string; preview?: string; output?: string; status: "running" | "ok" | "error"; durationMs?: number; at?: number }
+  | { kind: "tool"; id: string; name: string; preview?: string; /** Vollständige Argumente (JSON-Text), sobald der Verlauf sie kennt. */ args?: string; output?: string; status: "running" | "ok" | "error"; durationMs?: number; at?: number; /** Argumente und Ausgabe stammen aus dem Verlauf. */ enriched?: boolean }
   | { kind: "approval"; id: string; command: string; reason: string; timeoutS: number; choices: Decision[]; smartDenied: boolean; decision?: Decision; at: number; decidedAt?: number }
   | { kind: "clarify"; id: string; clarifyId?: string; question: string; choices: string[]; answer?: string; at?: number }
   | { kind: "subagent"; id: string; title: string; status: "running" | "ok" | "error"; meta: string[]; note?: string; at?: number };
@@ -104,3 +104,7 @@ export type UiConfig = {
 /** Was die Profil-Seite zum Speichern schickt. `svg` nur bei einer neuen Datei; der Server bereinigt sie. */
 export type SigilInput = { type: SigilConfig["type"]; glyph?: string; text?: string; hue: number | "auto" | null; svg?: string };
 export type ProfileInput = { label: string | null; sigil: SigilInput | null };
+
+export type DiagStatus = "ok" | "warn" | "fail";
+export type DiagCheck = { id: string; label: string; status: DiagStatus; detail: string; ms: number | null };
+export type DiagReport = { agent: string; status: DiagStatus; checks: DiagCheck[]; at: number };

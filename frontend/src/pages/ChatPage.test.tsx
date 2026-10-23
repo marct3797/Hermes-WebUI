@@ -44,6 +44,18 @@ describe("Chat", () => {
     expect(screen.getByRole("button", { name: "Senden" })).toBeDisabled();
   });
 
+  it("fills a tool card with arguments and output from the session history, because Hermes' stream carries neither", async () => {
+    await startRun("Was liegt im Ordner?");
+    emit({ type: "tool.started", id: "t1", name: "terminal", preview: "ls" });
+    emit({ type: "tool.completed", id: "t1", name: "terminal", ok: true, duration_ms: 41 });
+    const insp = screen.getByRole("complementary", { name: "Inspector" });
+    expect(within(insp).queryByText("notes.txt")).not.toBeInTheDocument();
+    // Kurz nach dem Tool holt die WebUI den Verlauf der Session und ergänzt die Karte.
+    expect(await within(insp).findByText("notes.txt", {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(within(insp).getByText("Argumente")).toBeInTheDocument();
+    expect(within(insp).getByText("command")).toBeInTheDocument();
+  });
+
   it("answers an approval with the keyboard and collapses the card", async () => {
     await startRun();
     emit({ type: "approval.requested", command: "rm -r build", reason: "räumt auf", choices: ["once", "session", "always", "deny"], timeout_s: 300 });

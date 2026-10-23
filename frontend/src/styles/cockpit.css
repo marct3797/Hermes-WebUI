@@ -64,3 +64,14 @@
 @media (max-width:800px){.two>.r{max-width:none;flex-basis:100%}}
 
 .filters{gap:8px;margin-left:auto;flex-wrap:wrap}
+
+/* System: Diagnose-Ring */
+.diag-list{display:flex;flex-direction:column;gap:10px;margin-top:12px;max-width:900px}
+.diag-checks{list-style:none;margin:0;padding:0 14px 10px;display:flex;flex-direction:column;gap:6px}
+.diag-checks li{display:grid;grid-template-columns:20px minmax(150px,230px) 1fr auto;align-items:baseline;gap:8px;font-size:13px}
+.diag-mark{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;border:1px solid var(--line)}
+.diag-ok .diag-mark{color:var(--t1)}
+.diag-warn .diag-mark{border-style:dashed;color:var(--t1)}
+.diag-fail .diag-mark{background:var(--crim);border-color:var(--crim);color:#fff}
+.diag-fail .diag-detail{color:var(--crim-hi)}
+@media (max-width:640px){.diag-checks li{grid-template-columns:20px 1fr}.diag-checks .diag-detail,.diag-checks .mono{grid-column:2}}

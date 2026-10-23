@@ -10,6 +10,7 @@ import { TERMINAL_EVENTS, type AgentRef, type ChatState, type Decision, type Str
  */
 
 export const NEW = "new";
+const idempotencyKey = () => (globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`);
 export const convKey = (a: AgentRef, sessionId?: string) => `${agentKey(a)}#${sessionId ?? NEW}`;
 
 export type Conv = {
@@ -47,6 +48,8 @@ export function createRunStore(deps: Deps = { api: realApi, eventSource: (u) => 
   const endListeners = new Set<(agent: AgentRef) => void>();
   const sources = new Map<string, Source>();
   const loading = new Set<string>();
+  const detailTimers = new Map<string, ReturnType<typeof setTimeout>[]>();
+  const detailBusy = new Set<string>();
 
   const commit = (next: Partial<Snapshot>) => {
     snap = { ...snap, ...next };
@@ -115,6 +118,26 @@ export function createRunStore(deps: Deps = { api: realApi, eventSource: (u) => 
 
   const runEnded = (agent: AgentRef) => endListeners.forEach((l) => l(agent));
 
+  /**
+   * Hermes' Ereignisstrom nennt weder Argumente noch Ausgabe eines Tools. Beides steht im Verlauf der Session:
+   * Er wird nachgeladen und ergänzt die Tool-Karten (nach jedem beendeten Tool und noch einmal nach dem Run).
+   */
+  async function loadDetails(key: string) {
+    const conv = snap.convs.get(key);
+    if (!conv?.sessionId || detailBusy.has(key)) return;
+    detailBusy.add(key);
+    try {
+      const items = historyItems(await api.messages(conv.agent, conv.sessionId));
+      if (snap.convs.has(key)) dispatch(key, { type: "enrich", items });
+    } catch { /* Verlauf nicht lesbar: die Karten bleiben, wie der Strom sie lieferte */ }
+    finally { detailBusy.delete(key); }
+  }
+
+  function refreshDetails(key: string, ...delays: number[]) {
+    for (const t of detailTimers.get(key) ?? []) clearTimeout(t);
+    detailTimers.set(key, delays.map((ms) => setTimeout(() => { void loadDetails(key); }, ms)));
+  }
+
   function attach(key: string, runId: string) {
     closeSource(key);
     const conv = snap.convs.get(key);
@@ -127,7 +150,9 @@ export function createRunStore(deps: Deps = { api: realApi, eventSource: (u) => 
       let data: StreamEvent;
       try { data = JSON.parse(ev.data); } catch { return; }
       dispatch(holder.key, { type: "event", event: data });
+      if (data.type === "tool.completed") refreshDetails(holder.key, 600);
       if (!TERMINAL_EVENTS.has(data.type)) return;
+      refreshDetails(holder.key, 300, 2500);
       src.finished = true;
       es.close();
       sources.delete(holder.key);
@@ -160,7 +185,8 @@ export function createRunStore(deps: Deps = { api: realApi, eventSource: (u) => 
     patch(key, { model: opts.model });
     dispatch(key, { type: "user-sent", text, images });
     try {
-      const run = await api.startRun(agent, { text, session_id: sessionId, model: opts.model, images: images.length ? images : undefined });
+      // Der Schlüssel macht ein doppeltes Absenden (zweimal getippt, Wiederholung bei schlechtem Netz) zu einem einzigen Run.
+      const run = await api.startRun(agent, { text, session_id: sessionId, model: opts.model, images: images.length ? images : undefined, idempotency_key: idempotencyKey() });
       if (run.session_id && run.session_id !== sessionId) {
         key = rekey(key, run.session_id);
         opts.onSession?.(run.session_id);
@@ -168,7 +194,11 @@ export function createRunStore(deps: Deps = { api: realApi, eventSource: (u) => 
       dispatch(key, { type: "run-accepted", runId: run.run_id });
       attach(key, run.run_id);
     } catch (e) {
-      dispatch(key, { type: "run-error", error: (e as Error).message });
+      // Sessions aus Discord, CLI oder Cron lassen sich über die API nicht fortsetzen (409): die Ansicht bietet einen Fork an.
+      const locked = sessionId !== undefined && e instanceof ApiError && e.status === 409;
+      dispatch(key, locked
+        ? { type: "run-error", error: "Diese Session gehört zu einer anderen Quelle (z. B. Discord) und lässt sich hier nicht fortsetzen.", code: "session_locked" }
+        : { type: "run-error", error: (e as Error).message });
     }
   }
 
@@ -188,7 +218,7 @@ export function createRunStore(deps: Deps = { api: realApi, eventSource: (u) => 
 
     /**
      * Die Ansicht einer Unterhaltung wird geöffnet. Bekannte Unterhaltungen (auch beendete) bleiben, wie sie sind:
-     * Der Verlauf vom Server kennt keine Tool-Zeilen oder Denkschritte. Unbekannte Sessions laden ihren Verlauf.
+     * Ihre Karten haben den Strom gesehen und tragen bereits die nachgeladenen Details. Unbekannte Sessions laden ihren Verlauf.
      */
     open(agent: AgentRef, sessionId?: string) {
       const key = convKey(agent, sessionId);
@@ -258,6 +288,22 @@ export function createRunStore(deps: Deps = { api: realApi, eventSource: (u) => 
       }
     },
 
+    /** Eine nicht fortsetzbare Session (Discord, CLI, Cron) als Fork weiterführen: Verlauf kopieren, die letzte Nachricht dort senden. */
+    async continueInFork(key: string, onSession: (sessionId: string) => void) {
+      const conv = snap.convs.get(key);
+      const last = conv && [...conv.state.items].reverse().find((i) => i.kind === "message" && i.role === "user");
+      if (!conv?.sessionId || last?.kind !== "message") return;
+      try {
+        const { session_id } = await api.fork(conv.agent, conv.sessionId);
+        const forkKey = convKey(conv.agent, session_id);
+        putConv({ key: forkKey, agent: conv.agent, sessionId: session_id, state: { ...initialState, items: historyItems(await api.messages(conv.agent, session_id)) }, model: conv.model, touched: Date.now() });
+        onSession(session_id);
+        await send(conv.agent, session_id, last.text, last.images, { model: conv.model, onSession });
+      } catch (e) {
+        dispatch(key, { type: "notice", error: `Fork nicht möglich: ${(e as Error).message}`, code: "session_locked" });
+      }
+    },
+
     reconnect(key: string) {
       const runId = snap.convs.get(key)?.state.runId;
       if (runId) attach(key, runId);
@@ -267,7 +313,11 @@ export function createRunStore(deps: Deps = { api: realApi, eventSource: (u) => 
     dismiss(id: string) { commit({ dismissed: new Set(snap.dismissed).add(id) }); },
 
     /** Alles schließen (Abmelden, Tests). */
-    dispose() { [...sources.keys()].forEach(closeSource); },
+    dispose() {
+      [...sources.keys()].forEach(closeSource);
+      detailTimers.forEach((ts) => ts.forEach(clearTimeout));
+      detailTimers.clear();
+    },
   };
 }
 

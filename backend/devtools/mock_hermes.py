@@ -1,9 +1,10 @@
 """Minimaler Hermes-API-Server-Ersatz für Entwicklung und Tests.
 
-Spricht das Format, das die Quelltext-Lesung von Hermes 0.20.4 ergibt (Fakten-Datei im Projekt):
-reine `data:`-Frames ohne `event:`-Zeile, Eventname im JSON-Feld `event`, `approval.request` mit
-`choices`, Freigabe-Antwort `{"choice": …}`, `/health` ohne Key, Profile unter `/p/<profil>/…`.
-Der Strom ist wie bei Hermes nur einmal abonnierbar. Noch nicht gegen eine laufende Instanz geprüft.
+Spricht die Formen, die Hermes 0.21.6 auf Hikari tatsächlich liefert (Memory `hermes-api-real-0-21-6`): reine
+`data:`-Frames ohne `event:`-Zeile, Eventname im JSON-Feld `event`, `POST /v1/runs` ohne `session_id` (steht im
+Lauf-Status), Listen als `{object, data[], has_more}`, Verlauf mit `tool_calls` und Rolle `tool`, Fähigkeiten
+als `features`-Flags, Modelle als `providers[]`. `tool.completed` trägt keine Ausgabe: die steht erst im Verlauf.
+Der Strom ist wie bei Hermes nur einmal abonnierbar.
 
 Prompt-Stichworte steuern das Szenario: "tool" -> Tool-Aufruf, "approval" -> Freigabe-Anfrage,
 "smart" -> Freigabe mit smart_denied, "fail" -> Fehler, "steer" -> wartet auf Steer.
@@ -27,11 +28,11 @@ VERSION = "0.20.4-mock"
 
 def create_mock(
     wait_for_user: bool = True, delay: float = 0.03, require_key: bool = True,
-    profiles: tuple[str, ...] = ("default", "omoikane"), multiplex: bool = True,
+    profiles: tuple[str, ...] = ("default", "omoikane"), multiplex: bool = True, with_steer: bool = True,
 ) -> FastAPI:
     app = FastAPI()
     # Zustand je Profil: Sessions und Runs sind getrennt, wie bei echten Profilen.
-    state: dict[str, dict[str, Any]] = {p: {"sessions": {}, "runs": {}} for p in profiles}
+    state: dict[str, dict[str, Any]] = {p: {"sessions": {}, "runs": {}, "keys": {}} for p in profiles}
 
     @app.middleware("http")
     async def auth(request: Request, call_next):
@@ -54,30 +55,67 @@ def create_mock(
     @router.get("/v1/capabilities")
     async def caps(request: Request):
         store(request)  # unbekanntes Profil -> 404
-        return {"memory_write_api": False, "admin_config_rw": False, "jobs_admin": False, "runs": True}
+        flags = {
+            "chat_completions": True, "responses_api": True, "run_submission": True,
+            "runs_idempotency": {"supported": True, "durable": True, "retention_seconds": 86400},
+            "run_status": True, "run_events_sse": True, "run_stop": True, "run_steer": with_steer,
+            "run_approval_response": True, "tool_progress_events": True, "approval_events": True,
+            "session_resources": True, "model_options": True, "session_chat": True, "session_fork": True,
+            "session_model_lock": True, "reasoning_streaming": True, "skills_api": True,
+            "admin_config_rw": False, "jobs_admin": False, "memory_write_api": False,
+            "audio_api": False, "realtime_voice": False,
+        }
+        return {"object": "hermes.api_server.capabilities", "platform": "hermes-agent", "model": "hermes-agent",
+                "auth": {"type": "bearer", "required": True}, "features": flags, "endpoints": {}}
 
     @router.get("/api/model/options")
     async def model_options():
-        return {"models": [{"id": "mock-large", "provider": "mock"}, {"id": "mock-small", "provider": "mock"}],
-                "current": "mock-large"}
+        return {
+            "providers": [
+                {"slug": "mock", "name": "Mock", "is_current": True, "authenticated": True,
+                 "models": ["mock-large", "mock-small"], "featured_models": ["mock-large"]},
+                {"slug": "nous", "name": "Nous", "is_current": False, "authenticated": False, "models": []},
+            ],
+            "model": "mock-large", "provider": "mock",
+        }
 
     @router.get("/api/sessions")
     async def list_sessions(request: Request, limit: int = 30, offset: int = 0, source: str | None = None):
         sessions = store(request)["sessions"]
         items = [
-            {"id": sid, "title": s["title"], "source": s.get("source", "chat"), "updated_at": s["updated_at"],
-             "message_count": len(s["messages"])}
+            {"id": sid, "source": s.get("source", "chat"), "user_id": None, "model": "mock-large", "title": s["title"],
+             "started_at": s["started_at"], "last_active": s["updated_at"], "preview": s["title"],
+             "message_count": len(s["messages"]), "pinned": False, "archived": False, "hidden": False}
             for sid, s in sessions.items() if source in (None, s.get("source", "chat"))
         ]
-        items.sort(key=lambda x: x["updated_at"], reverse=True)
-        return {"sessions": items[offset:offset + limit], "total": len(items)}
+        items.sort(key=lambda x: x["last_active"], reverse=True)
+        page = items[offset:offset + limit]
+        return {"object": "list", "data": page, "limit": limit, "offset": offset, "has_more": offset + limit < len(items)}
+
+    def message_page(sid: str, session: dict[str, Any], limit: int | None, offset: int) -> dict[str, Any]:
+        everything = [{"id": i + 1, **m} for i, m in enumerate(session["messages"])]
+        page = everything[offset:] if limit is None else everything[offset:offset + limit]
+        return {"object": "list", "session_id": sid, "data": page,
+                "pagination": {"limit": limit, "offset": offset, "total": len(everything),
+                               "has_more": limit is not None and offset + limit < len(everything)}}
 
     @router.get("/api/sessions/{sid}/messages")
-    async def messages(request: Request, sid: str):
+    async def messages(request: Request, sid: str, limit: int | None = None, offset: int = 0):
         sessions = store(request)["sessions"]
         if sid not in sessions:
             raise HTTPException(404, "session not found")
-        return {"messages": sessions[sid]["messages"]}
+        return message_page(sid, sessions[sid], limit, offset)
+
+    @router.post("/api/sessions/{sid}/fork")
+    async def fork(request: Request, sid: str):
+        sessions = store(request)["sessions"]
+        if sid not in sessions:
+            raise HTTPException(404, "session not found")
+        new = f"run_{uuid.uuid4().hex[:32]}"
+        now = time.time()
+        sessions[new] = {**sessions[sid], "messages": [dict(m) for m in sessions[sid]["messages"]],
+                         "title": f"{sessions[sid]['title']} (Zweig)", "started_at": now, "updated_at": now}
+        return {"object": "hermes.session", "session": {"id": new}}
 
     @router.post("/v1/runs", status_code=202)
     async def start(request: Request):
@@ -85,18 +123,24 @@ def create_mock(
         body = await request.json()
         if "input" not in body:
             raise HTTPException(400, "input required")
+        key = request.headers.get("idempotency-key")
+        if key and key in st["keys"]:
+            return {"run_id": st["keys"][key], "status": "started", "replayed": True}
         text = body["input"] if isinstance(body["input"], str) else next(
             p["text"] for p in body["input"][0]["content"] if p["type"] == "text")
-        sid = body.get("session_id") or f"sess_{uuid.uuid4().hex[:8]}"
-        s = st["sessions"].setdefault(sid, {"title": text[:40], "messages": [], "updated_at": 0})
-        s["messages"].append({"role": "user", "content": text})
-        s["updated_at"] = time.time()  # Sekunden wie bei Hermes
+        sid = body.get("session_id") or f"run_{uuid.uuid4().hex[:32]}"
+        now = time.time()
+        s = st["sessions"].setdefault(sid, {"title": text[:40], "messages": [], "started_at": now, "updated_at": 0})
+        s["messages"].append({"role": "user", "content": text, "timestamp": now})
+        s["updated_at"] = now  # Sekunden wie bei Hermes
         rid = f"run_{uuid.uuid4().hex[:8]}"
         st["runs"][rid] = {
             "status": "running", "text": text, "session_id": sid, "subscribed": False, "answer": None,
             "approval": asyncio.Event(), "steer": asyncio.Event(), "steer_text": None, "stop": asyncio.Event(),
         }
-        return {"run_id": rid, "session_id": sid, "status": "running"}
+        if key:
+            st["keys"][key] = rid
+        return {"run_id": rid, "status": "started", "replayed": False}  # ohne session_id, wie Hermes 0.21.6
 
     def run_of(request: Request, rid: str) -> dict[str, Any]:
         r = store(request)["runs"].get(rid)
@@ -157,6 +201,15 @@ def create_mock(
                 yield ev("tool.started", run_id=run_id, tool="terminal", preview="ls -la")
                 await asyncio.sleep(delay)
                 yield ev("tool.completed", run_id=run_id, tool="terminal", duration=0.041, error=False)
+                # Wie bei Hermes: Argumente und Ausgabe stehen erst im Verlauf, nicht im Ereignisstrom.
+                call = f"call_{uuid.uuid4().hex[:8]}"
+                now = time.time()
+                sessions[r["session_id"]]["messages"] += [
+                    {"role": "assistant", "content": "", "timestamp": now, "finish_reason": "tool_calls",
+                     "tool_calls": [{"id": call, "type": "function", "function": {"name": "terminal", "arguments": '{"command": "ls -la"}'}}]},
+                    {"role": "tool", "tool_call_id": call, "tool_name": "terminal", "timestamp": now,
+                     "content": json.dumps({"output": "total 8\ndrwxr-xr-x 2 mock mock 4096 .\n-rw-r--r-- 1 mock mock   12 notes.txt", "exit_code": 0})},
+                ]
             if "approval" in text or "smart" in text:
                 smart = "smart" in text
                 r["status"] = "waiting_for_approval"
@@ -183,7 +236,8 @@ def create_mock(
                     return
                 yield ev("message.delta", run_id=run_id, delta=chunk)
                 await asyncio.sleep(delay)
-            sessions[r["session_id"]]["messages"].append({"role": "assistant", "content": reply})
+            sessions[r["session_id"]]["messages"].append(
+                {"role": "assistant", "content": reply, "reasoning": "Ich überlege kurz. ", "timestamp": time.time()})
             r["status"] = "completed"
             yield ev("run.completed", run_id=run_id, output=reply,
                      usage={"input_tokens": 12, "output_tokens": 34, "total_tokens": 46})

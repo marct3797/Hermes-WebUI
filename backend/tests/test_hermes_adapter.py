@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 from app.adapters import RunInput, UpstreamError
-from app.adapters.hermes import HermesAdapter, HermesEventTranslator, features_from_capabilities, parse_sse
+from app.adapters.hermes import HermesAdapter, HermesEventTranslator, features_from_capabilities, fork_session_id, parse_sse
 from app.events import REQUIRED_FIELDS, TERMINAL_TYPES, validate_event
 from app.registry import AgentCfg, RuntimeCfg, parse_config
 
@@ -145,6 +145,28 @@ def test_features_from_capabilities():
     assert features_from_capabilities("seltsam") == base
 
 
+def test_features_from_real_hermes_flags():
+    caps = {"features": {
+        "run_submission": True, "run_events_sse": True, "run_stop": True, "run_steer": False, "run_approval_response": True,
+        "runs_idempotency": {"supported": True, "durable": True, "retention_seconds": 86400},
+        "session_fork": True, "session_model_lock": True, "reasoning_streaming": True, "skills_api": True,
+        "admin_config_rw": False, "jobs_admin": False, "memory_write_api": False, "audio_api": False,
+    }, "endpoints": {}}
+    f = features_from_capabilities(caps)
+    assert {"runs", "stream", "stop", "approval", "fork", "model_lock", "reasoning", "skills", "idempotency"} <= f
+    assert "steer" not in f and "run_steer" not in f  # ausdrücklich abgeschaltet
+    assert not {"config_write", "jobs", "memory_write", "memory_write_api"} & f
+    assert "idempotency" not in features_from_capabilities({"features": {"runs_idempotency": {"supported": False}}})
+
+
+def test_fork_session_id_accepts_flat_and_wrapped_answers():
+    assert fork_session_id({"session_id": "a"}) == "a"
+    assert fork_session_id({"id": "b"}) == "b"
+    assert fork_session_id({"session": {"id": "c"}}) == "c"
+    assert fork_session_id({"data": {"id": "d"}}) == "d"
+    assert fork_session_id({"ok": True}) is None and fork_session_id("x") is None
+
+
 # --- HTTP ---------------------------------------------------------------------------------------
 async def test_requests_use_profile_prefix_and_key():
     seen = []
@@ -161,6 +183,43 @@ async def test_requests_use_profile_prefix_and_key():
     body = json.loads(req.content)
     assert body["session_id"] == "s0" and body["model"] == "m"
     assert body["input"][0]["content"][1] == {"type": "image_url", "image_url": {"url": "data:image/png;base64,AA=="}}
+
+
+async def test_idempotency_key_is_sent_as_header():
+    seen = []
+
+    def handler(req: httpx.Request):
+        seen.append(req)
+        return httpx.Response(202, json={"run_id": "run_7", "session_id": "s1"})
+
+    a = adapter(handler)
+    await a.start_run("raiden", RunInput("hi", idempotency_key="abc-1"))
+    await a.start_run("raiden", RunInput("hi"))
+    assert seen[0].headers["idempotency-key"] == "abc-1" and "idempotency-key" not in seen[1].headers
+
+
+async def test_fork_and_paged_messages_use_session_routes():
+    seen = []
+
+    def handler(req: httpx.Request):
+        seen.append(req)
+        if req.url.path.endswith("/fork"):
+            return httpx.Response(200, json={"session": {"id": "run_new"}})
+        return httpx.Response(200, json={"data": [], "pagination": {}})
+
+    a = adapter(handler)
+    assert await a.fork_session("raiden", "run_old") == {"session_id": "run_new"}
+    await a.session_messages("raiden", "run_old", limit=50, offset=100)
+    await a.session_messages("raiden", "run_old")
+    assert (seen[0].method, seen[0].url.path) == ("POST", "/p/raiden/api/sessions/run_old/fork")
+    assert dict(seen[1].url.params) == {"limit": "50", "offset": "100"} and not seen[2].url.params
+
+
+async def test_fork_without_new_id_is_an_error():
+    a = adapter(lambda req: httpx.Response(200, json={"ok": True}))
+    with pytest.raises(UpstreamError) as e:
+        await a.fork_session("raiden", "run_old")
+    assert e.value.status == 502
 
 
 async def test_agent_key_overrides_runtime_key():

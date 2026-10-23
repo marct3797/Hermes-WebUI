@@ -1,4 +1,4 @@
-import type { AgentRef, AgentStatus, Decision, HostsResponse, Me, ProfileInput, ShaderConfig, UiConfig } from "./types";
+import type { AgentRef, AgentStatus, Decision, DiagReport, HostsResponse, Me, ProfileInput, ShaderConfig, UiConfig } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string) {
@@ -59,11 +59,14 @@ export const api = {
     call<UiConfig>("PUT", `/bff/ui/profiles/${key.split("/").map(encodeURIComponent).join("/")}`, body),
   saveShader: (body: ShaderConfig) => call<UiConfig>("PUT", "/bff/ui/shader", body),
   status: (a: AgentRef) => call<AgentStatus>("GET", `${base(a)}/status`),
+  diagnose: (a: AgentRef) => call<DiagReport>("GET", `${base(a)}/diagnose`),
+  diagnoseRun: (a: AgentRef) => call<DiagReport>("POST", `${base(a)}/diagnose/run`, {}),
   models: (a: AgentRef) => call<unknown>("GET", `${base(a)}/models`),
   sessions: (a: AgentRef) => call<unknown>("GET", `${base(a)}/sessions`),
   messages: (a: AgentRef, sid: string) => call<unknown>("GET", `${base(a)}/sessions/${id(sid)}/messages`),
-  startRun: (a: AgentRef, body: { text: string; session_id?: string; model?: string; images?: string[] }) =>
+  startRun: (a: AgentRef, body: { text: string; session_id?: string; model?: string; images?: string[]; idempotency_key?: string }) =>
     call<{ run_id: string; session_id?: string | null }>("POST", `${base(a)}/runs`, body),
+  fork: (a: AgentRef, sid: string) => call<{ session_id: string }>("POST", `${base(a)}/sessions/${id(sid)}/fork`, {}),
   runStatus: (a: AgentRef, rid: string) => call<{ status?: string }>("GET", `${base(a)}/runs/${id(rid)}`),
   stop: (a: AgentRef, rid: string) => call<unknown>("POST", `${base(a)}/runs/${id(rid)}/stop`, {}),
   approve: (a: AgentRef, rid: string, decision: Decision) =>

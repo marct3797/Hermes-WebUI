@@ -34,6 +34,7 @@ export function useChat({ agent, sessionId, model, onSession }: Opts) {
   const decide = useCallback(async (itemId: string, d: Decision) => { if (key) await store.decide(key, itemId, d); }, [store, key]);
   const answer = useCallback(async (itemId: string, text: string, clarifyId?: string) => { if (key) await store.answer(key, itemId, text, clarifyId); }, [store, key]);
   const reconnect = useCallback(() => { if (key) store.reconnect(key); }, [store, key]);
+  const continueInFork = useCallback(() => { if (key) void store.continueInFork(key, onSession); }, [store, key, onSession]);
 
-  return { state, send, steer, enqueue, dropQueued, sendQueued, stop, decide, answer, reconnect };
+  return { state, send, steer, enqueue, dropQueued, sendQueued, stop, decide, answer, reconnect, continueInFork };
 }

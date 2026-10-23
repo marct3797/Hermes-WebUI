@@ -35,6 +35,23 @@ export const baseUi = (): UiConfig => ({
   writable: false, write_error: "Die ui.json ist für die WebUI schreibgeschützt.", warnings: [], error: null,
 });
 
+/** Verlauf einer Session in Hermes' Form: Tool-Aufruf als `tool_calls`, Ergebnis als Nachricht mit Rolle `tool`. */
+export function sessionMessages(_path: string) {
+  return [
+    { id: 1, role: "user", content: "Was liegt im Ordner?", timestamp: 1_792_000_000 },
+    { id: 2, role: "assistant", content: "", reasoning: "Ich sehe nach.", tool_calls: [{ id: "call_1", type: "function", function: { name: "terminal", arguments: "{\"command\":\"ls\"}" } }] },
+    { id: 3, role: "tool", tool_call_id: "call_1", tool_name: "terminal", content: JSON.stringify({ output: "notes.txt", exit_code: 0 }) },
+    { id: 4, role: "assistant", content: "Dort liegt notes.txt." },
+  ];
+}
+
+const diag = (agent: string, withRun = false) => ({
+  agent: `hikari/hermes/${agent}`, status: withRun ? "warn" : "ok", at: 1_792_000_000,
+  checks: withRun
+    ? [{ id: "run.start", label: "Run starten", status: "ok", detail: "Run run_1", ms: 12 }, { id: "run.stream", label: "Ereignisstrom bis zum Abschluss", status: "warn", detail: "Antwort kam ohne Zeichenstrom", ms: 80 }]
+    : [{ id: "health", label: "Erreichbar und angemeldet", status: "ok", detail: "Version 0.21.6", ms: 5 }, { id: "models", label: "Modelle und Anbieter", status: "ok", detail: "1 Anbieter, 2 Modelle", ms: 9 }],
+});
+
 export function installBackend(agents: string[] = ["raiden"], features = ["runs", "steer"], uiOverride: Partial<UiConfig> = {}) {
   FakeEventSource.all = [];
   // Wie das BFF: Speichern ändert die Config, die Antwort ist die ganze Config.
@@ -71,7 +88,11 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
     if (m && agents.includes(m[1])) {
       const rest = m[2];
       if (rest === "/status") return json({ state: "online", online: true, version: "0.21.6", features, error: null });
-      if (rest === "/models") return json({ models: [{ id: "mock-large" }] });
+      if (rest === "/models") return json({ providers: [{ slug: "mock", name: "Mock", authenticated: true, is_current: true, models: ["mock-large", "mock-small"] }], model: "mock-large", provider: "mock" });
+      if (rest === "/diagnose") return json(diag(m[1]));
+      if (method === "POST" && rest === "/diagnose/run") return json(diag(m[1], true));
+      if (method === "POST" && /^\/sessions\/[^/]+\/fork$/.test(rest)) return json({ session_id: `fork-${m[1]}` });
+      if (/^\/sessions\/[^/]+\/messages$/.test(rest)) return json({ object: "list", data: sessionMessages(rest) });
       if (rest === "/sessions") return json({ data: [{ id: `alt-${m[1]}`, title: `Alter Chat von ${m[1]}`, last_active_at: Math.floor(Date.now() / 1000) - 7260 }] });
       if (method === "POST" && rest === "/runs") { runs += 1; return json({ run_id: `run_${runs}`, session_id: `s${runs}` }); }
       if (method === "POST" && /^\/runs\/run_\d+\/(approval|steer|stop|clarify)$/.test(rest)) return json({});

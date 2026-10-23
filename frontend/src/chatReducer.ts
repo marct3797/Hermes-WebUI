@@ -1,16 +1,20 @@
+import { enrichTools, historyItems } from "./history";
 import type { ChatState, Decision, Item, SessionSummary, StreamEvent } from "./types";
+
+export { historyItems };
 
 export const initialState: ChatState = { items: [], runStatus: "idle", queued: [] };
 
 export type Action =
   | { type: "reset" }
   | { type: "history"; items: Item[] }
+  | { type: "enrich"; items: Item[] }
   | { type: "user-sent"; text: string; images: string[] }
   | { type: "steered"; text: string }
   | { type: "queue-add"; text: string; images: string[] }
   | { type: "queue-remove"; id: string }
   | { type: "run-accepted"; runId: string }
-  | { type: "run-error"; error: string }
+  | { type: "run-error"; error: string; code?: string }
   | { type: "event"; event: StreamEvent }
   | { type: "decided"; id: string; decision: Decision }
   | { type: "decision-failed"; id: string }
@@ -52,6 +56,10 @@ export function chatReducer(state: ChatState, a: Action): ChatState {
       return initialState;
     case "history":
       return { ...initialState, items: a.items };
+    case "enrich": {
+      const items = enrichTools(state.items, a.items);
+      return items === state.items ? state : { ...state, items };
+    }
     case "user-sent":
       return {
         ...state, error: undefined, errorCode: undefined, usage: undefined, runStatus: "starting", startedAt: Date.now(),
@@ -70,7 +78,8 @@ export function chatReducer(state: ChatState, a: Action): ChatState {
     case "run-accepted":
       return { ...state, runId: a.runId, runStatus: "running" };
     case "run-error":
-      return { ...state, runStatus: "failed", error: a.error, errorCode: undefined };
+      // Eine nicht fortsetzbare Session ist kein gescheiterter Run: sie landet nicht in der Inbox, die Ansicht bietet einen Fork an.
+      return { ...state, runStatus: a.code === "session_locked" ? "idle" : "failed", error: a.error, errorCode: a.code };
     case "connection-lost":
       return state.runStatus === "running" ? { ...state, runStatus: "lost", error: "Verbindung zu Hermes unterbrochen" } : state;
     case "decided":
@@ -192,27 +201,6 @@ function subagentMeta(data: Record<string, unknown>): string[] {
 
 const settleMessages = (items: Item[]): Item[] =>
   items.map((i) => (i.kind === "message" && i.streaming ? { ...i, streaming: false } : i));
-
-/** Verlauf aus /api/sessions/{id}/messages. Nur Nutzer- und Assistententext; Tool-Rollen entfallen. */
-export function historyItems(payload: unknown): Item[] {
-  // Mock und ältere Formen: `messages`; Hermes' Listen heißen sonst `data` (wie bei den Sessions).
-  const p = payload as { messages?: unknown[]; data?: unknown[]; items?: unknown[] } | null;
-  const list = Array.isArray(payload) ? payload : p?.messages ?? p?.data ?? p?.items ?? [];
-  const items: Item[] = [];
-  for (const raw of list as Array<Record<string, unknown>>) {
-    const role = raw.role;
-    if (role !== "user" && role !== "assistant") continue;
-    const content = raw.content;
-    const body = typeof content === "string"
-      ? content
-      : Array.isArray(content)
-        ? content.map((p) => (p && typeof p === "object" && "text" in p ? String((p as { text: unknown }).text) : "")).join("")
-        : "";
-    if (!body.trim()) continue;
-    items.push({ kind: "message", id: uid("h"), role, text: body, reasoning: "", streaming: false, images: [] });
-  }
-  return items;
-}
 
 /** Hermes liefert `{ object, data[], limit, offset, has_more }`; der Mock und ältere Formen `sessions` oder `items`. */
 export function sessionList(payload: unknown): SessionSummary[] {

@@ -38,6 +38,7 @@ class RunInput:
     session_id: str | None = None
     model: str | None = None
     images: tuple[str, ...] = ()  # Data-URLs, vom BFF bereits geprüft
+    idempotency_key: str | None = None  # gleicher Schlüssel = derselbe Run, auch bei doppeltem Absenden
 
 
 @dataclass(frozen=True)
@@ -95,8 +96,11 @@ class RuntimeAdapter:
     async def sessions(self, agent: str, *, limit: int, offset: int, source: str | None) -> Any:
         raise Unsupported("Sessions")
 
-    async def session_messages(self, agent: str, session_id: str) -> Any:
+    async def session_messages(self, agent: str, session_id: str, *, limit: int | None = None, offset: int | None = None) -> Any:
         raise Unsupported("Session-Verlauf")
+
+    async def fork_session(self, agent: str, session_id: str) -> Any:
+        raise Unsupported("Session abzweigen")
 
     async def start_run(self, agent: str, req: RunInput) -> RunInfo:
         raise Unsupported("Runs")

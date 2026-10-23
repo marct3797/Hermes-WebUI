@@ -65,6 +65,24 @@ Runs aus CLI, Cron oder anderen Fenstern kennt die WebUI noch nicht, weil Hermes
 (die Runs laufen in Hermes weiter). Was Hermes nicht bestätigt hat, steht nicht in der Oberfläche: Kosten, Kontext-Füllstand, TTFT, Auswertung je Profil.
 Die Karten zeigen Zustand, Tätigkeit und den letzten Chat aus `/api/sessions`.
 
+### Tool-Aufrufe: woher Argumente und Ausgabe kommen
+
+Hermes' Ereignisstrom meldet einen Tool-Aufruf nur mit Name, Vorschau und Dauer (`tool.started`/`tool.completed`), **ohne Argumente und ohne Ausgabe**.
+Beides steht erst im Verlauf der Session (`/api/sessions/{id}/messages`: `tool_calls` in der Assistenten-Nachricht, das Ergebnis als Nachricht mit Rolle `tool`).
+Die WebUI lädt den Verlauf deshalb kurz nach jedem Tool und nach dem Ende des Runs nach und ergänzt die Karten (`history.ts`, `enrichTools`).
+Alte Chats zeigen dieselben Karten, ebenso den Denkprozess (`reasoning`).
+
+### Prüfen, ohne alles von Hand anzuklicken
+
+Drei Schichten, jede fängt etwas anderes:
+
+1. **Automatische Tests** (`pytest`, `npm test`, `tsc`, Build; laufen in der CI bei jedem Push). Der Hermes-Mock (`devtools/mock_hermes.py`) spricht
+   die Formen, die Hermes 0.21.6 tatsächlich liefert, nicht erfundene.
+2. **Diagnose-Ring** (Seite **System**, `GET …/diagnose`): liest je Agent Erreichbarkeit, Fähigkeiten, Modelle, Sessions und den Verlauf und meldet jede Abweichung
+   von dem, was die WebUI erwartet (`ok`, `warn`, `fail`). Er läuft gegen die echten Agents, schreibt nichts und zeigt, wenn Hermes nach einem Update anders antwortet.
+3. **Lauftest** (Knopf auf der Seite System, `POST …/diagnose/run`): ein kurzer echter Lauf je Agent (Start, Ereignisstrom, Abschluss, Antwort im Verlauf).
+   Er legt eine Session an, die bestehen bleibt (Löschen ist in diesem Projekt bewusst nicht vorgesehen).
+
 ## Entwicklung
 
 ```bash
@@ -178,7 +196,8 @@ Abweichungen zeigen sich als `unknown`-Events oder Probe-Fehler und werden im He
 
 - Antwortet `/p/<profil>/…` am Container-Gateway wie erwartet? Passen Payloads und Events (ein Test-Run mit Key, Marc gibt frei)?
   Dafür gibt es `backend/devtools/probe_hermes.py`: schickt einen harmlosen Prompt und gibt nur die **Form** der Antworten aus (Texte als Länge, nie den Key).
-- Liefert `POST /v1/runs` eine `session_id`, und wie setzt der Client eine neue Session fort (`session_id` im Body oder vorher `POST /api/sessions`)?
-- Form von `/v1/capabilities` (Flags für die Fähigkeiten) und Name/Route der Rückfrage (Clarify): im Quelltext nicht belegt.
+- `POST /v1/runs` liefert **keine** `session_id` (sie steht in `GET /v1/runs/{id}`); `session_id` im Body setzt eine Session fort. Geklärt am 2026-10-23.
+- `/v1/capabilities`: `features` mit Flags (`run_steer`, `run_approval_response`, `session_fork` …), `endpoints` mit den Routen. Eine Clarify-Route nennt Hermes dort nicht.
+  Geklärt am 2026-10-23; offen bleibt nur, wie die Rückfrage-Karte antwortet, sobald es den ersten echten Fall gibt.
 - Forgejo: OIDC-Discovery, `sub`-Kennung, ob `prompt=login` und `max_age=0` eine neue Anmeldung erzwingen (Step-up).
 - Laptop (Phase 2): Hermes-API-Server dort läuft inzwischen auf `127.0.0.1:8642`; der Host-Dienst bringt den Transport.

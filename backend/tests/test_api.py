@@ -85,8 +85,8 @@ def test_multiplex_off_allows_one_agent_only(client, hosts_file):
 def test_agent_status_online_with_features(client):
     st = client.get(f"{BASE}/status").json()
     assert st["state"] == "online" and st["online"] is True and st["version"] == "0.20.4-mock"
-    assert {"runs", "approval", "steer", "stop"} <= set(st["features"])
-    assert "memory_write_api" not in st["features"]  # Flag war false
+    assert {"runs", "approval", "steer", "stop", "fork", "model_lock", "reasoning", "skills", "idempotency"} <= set(st["features"])
+    assert "memory_write_api" not in st["features"] and "memory_write" not in st["features"]  # Flag war false
 
 
 @pytest.mark.parametrize("path,state", [
@@ -124,8 +124,8 @@ def test_upstream_auth_failure_is_502_for_browser(client):
 
 def test_profiles_are_isolated(client):
     run(client, "nur default")
-    assert len(client.get(f"{BASE}/sessions").json()["sessions"]) == 1
-    assert client.get("/bff/h/hikari/hermes/omoikane/sessions").json()["sessions"] == []
+    assert len(client.get(f"{BASE}/sessions").json()["data"]) == 1
+    assert client.get("/bff/h/hikari/hermes/omoikane/sessions").json()["data"] == []
 
 
 # --- Runs und Ereignisse -------------------------------------------------------------------------
@@ -175,14 +175,52 @@ def test_stream_is_single_subscription(client):
 def test_session_listing_and_messages(client):
     info = run(client, "erste Nachricht")
     events_of(client, info)
-    sessions = client.get(f"{BASE}/sessions").json()["sessions"]
+    sessions = client.get(f"{BASE}/sessions").json()["data"]
     assert sessions[0]["id"] == info["session_id"]
-    msgs = client.get(f"{BASE}/sessions/{info['session_id']}/messages").json()["messages"]
+    msgs = client.get(f"{BASE}/sessions/{info['session_id']}/messages").json()["data"]
     assert [m["role"] for m in msgs] == ["user", "assistant"]
+    assert msgs[1]["reasoning"]
+
+
+def test_tool_arguments_and_output_live_in_the_history(client):
+    """Der Ereignisstrom meldet nur Name und Vorschau; Argumente und Ausgabe stehen erst im Verlauf."""
+    info = run(client, "bitte tool nutzen")
+    assert all("output" not in e for e in events_of(client, info) if e["type"].startswith("tool."))
+    msgs = client.get(f"{BASE}/sessions/{info['session_id']}/messages").json()["data"]
+    assert [m["role"] for m in msgs] == ["user", "assistant", "tool", "assistant"]
+    call = msgs[1]["tool_calls"][0]
+    assert call["function"]["name"] == "terminal" and msgs[2]["tool_call_id"] == call["id"]
+    assert "notes.txt" in json.loads(msgs[2]["content"])["output"]
+
+
+def test_messages_are_paginated(client):
+    info = run(client, "erste Nachricht")
+    events_of(client, info)
+    page = client.get(f"{BASE}/sessions/{info['session_id']}/messages", params={"limit": 1, "offset": 1}).json()
+    assert [m["role"] for m in page["data"]] == ["assistant"]
+    assert page["pagination"]["total"] == 2 and page["pagination"]["has_more"] is False
+
+
+def test_fork_session(client):
+    info = run(client, "erste Nachricht")
+    events_of(client, info)
+    fork = client.post(f"{BASE}/sessions/{info['session_id']}/fork")
+    assert fork.status_code == 200 and fork.json()["session_id"] != info["session_id"]
+    copied = client.get(f"{BASE}/sessions/{fork.json()['session_id']}/messages").json()["data"]
+    assert [m["role"] for m in copied] == ["user", "assistant"]
+    assert client.post(f"{BASE}/sessions/nope/fork").status_code == 404
+
+
+def test_idempotency_key_replays_the_same_run(client):
+    a = run(client, "hallo", idempotency_key="key-1")
+    b = run(client, "hallo", idempotency_key="key-1")
+    assert a["run_id"] == b["run_id"]
+    assert client.post(f"{BASE}/runs", json={"text": "x", "idempotency_key": "../x"}).status_code == 422
 
 
 def test_models(client):
-    assert client.get(f"{BASE}/models").json()["models"][0]["id"] == "mock-large"
+    opts = client.get(f"{BASE}/models").json()
+    assert opts["model"] == "mock-large" and opts["providers"][0]["models"] == ["mock-large", "mock-small"]
 
 
 def test_steer_only_while_running(client):
@@ -241,3 +279,35 @@ def test_legacy_profile_links_redirect(client):
     assert r.status_code == 308 and r.headers["location"] == "/h/hikari/hermes/raiden/chat/abc"
     assert client.get("/p/raiden", follow_redirects=False).headers["location"] == "/h/hikari/hermes/raiden/chat"
     assert client.get("/p/..%2Fx", follow_redirects=False).status_code in (404, 422)
+
+
+# --- Diagnose-Ring --------------------------------------------------------------------------------
+def by_id(report):
+    return {c["id"]: c for c in report["checks"]}
+
+
+def test_diagnose_reads_a_healthy_agent(client):
+    report = client.get(f"{BASE}/diagnose").json()
+    c = by_id(report)
+    assert c["health"]["status"] == c["features"]["status"] == c["models"]["status"] == c["sessions"]["status"] == "ok"
+    assert c["history"]["status"] == "warn" and report["status"] == "warn"  # noch keine Session zum Prüfen
+
+
+def test_diagnose_checks_history_with_tool_results(client):
+    events_of(client, run(client, "bitte tool nutzen"))
+    c = by_id(client.get(f"{BASE}/diagnose").json())
+    assert c["history"]["status"] == "ok" and "1 Tool-Aufrufe, 1 Ergebnisse" in c["history"]["detail"]
+
+
+def test_diagnose_reports_an_unreachable_agent_without_failing(client):
+    report = client.get("/bff/h/down/hermes/default/diagnose").json()
+    assert report["status"] == "fail" and [c["id"] for c in report["checks"]] == ["health"]
+    assert client.get("/bff/h/hikari/hermes/ghost/diagnose").json()["status"] == "fail"
+
+
+def test_diagnose_run_test_completes_a_real_run(client):
+    report = client.post(f"{BASE}/diagnose/run").json()
+    c = by_id(report)
+    assert report["status"] == "ok", report
+    assert list(c) == ["run.start", "run.stream", "run.history"]
+    assert client.get(f"{BASE}/sessions").json()["data"], "der Lauftest legt eine Session an"

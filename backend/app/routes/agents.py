@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+import time
 from collections.abc import AsyncIterator
 from typing import Annotated, Any, Literal
 
@@ -13,6 +14,7 @@ from pydantic import BaseModel, Field
 
 from ..adapters import RunInput, UpstreamError
 from ..auth import User, current_user, fresh_user
+from ..diagnose import inspect, run_test, summarize
 from ..events import TERMINAL_TYPES, Event
 from ..hosts import Target
 from ..registry import AGENT_RE, ID_RE
@@ -65,6 +67,22 @@ async def agent_status(target: Tgt):
         return {"state": "unreachable", "online": False, "version": None, "features": [], "error": e.detail}
 
 
+@router.get("/diagnose")
+async def diagnose(target: Tgt):
+    """Diagnose-Ring: liest nur und prüft, ob die Antworten dieses Agents die Form haben, die die WebUI erwartet."""
+    checks = await inspect(target.adapter, target.agent.id)
+    return {"agent": target.label, "status": summarize(checks), "checks": checks, "at": time.time()}
+
+
+@router.post("/diagnose/run")
+async def diagnose_run(request: Request, target: Tgt, user: User = Depends(current_user)):
+    """Lauftest: ein kurzer echter Lauf (legt eine Session an). Nur auf Knopfdruck."""
+    request.app.state.limiter.check(f"{user.id}:{target.label}")
+    checks = await run_test(target.adapter, target.agent.id)
+    audit(request, user, "diagnose.run", target, status=summarize(checks))
+    return {"agent": target.label, "status": summarize(checks), "checks": checks, "at": time.time()}
+
+
 @router.get("/models")
 async def models(target: Tgt):
     return await upstream(target.adapter.models(target.agent.id))
@@ -81,8 +99,19 @@ async def sessions(
 
 
 @router.get("/sessions/{session_id}/messages")
-async def session_messages(target: Tgt, session_id: ObjId):
-    return await upstream(target.adapter.session_messages(target.agent.id, session_id))
+async def session_messages(
+    target: Tgt, session_id: ObjId,
+    limit: int | None = Query(None, ge=1, le=500), offset: int | None = Query(None, ge=0),
+):
+    return await upstream(target.adapter.session_messages(target.agent.id, session_id, limit=limit, offset=offset))
+
+
+@router.post("/sessions/{session_id}/fork")
+async def fork_session(request: Request, target: Tgt, session_id: ObjId, user: User = Depends(current_user)):
+    """Zweig einer Session: weiterschreiben, wenn die Quelle gesperrt ist (z. B. eine Chat-Plattform-Session)."""
+    result = await upstream(target.adapter.fork_session(target.agent.id, session_id))
+    audit(request, user, "session.fork", target, session=session_id, fork=result.get("session_id"))
+    return result
 
 
 # --- Runs -------------------------------------------------------------------------------
@@ -91,6 +120,7 @@ class RunRequest(BaseModel):
     session_id: str | None = Field(default=None, pattern=OBJ_ID_RE.pattern)
     model: str | None = Field(default=None, max_length=200)
     images: list[str] = Field(default_factory=list, max_length=4)
+    idempotency_key: str | None = Field(default=None, pattern=OBJ_ID_RE.pattern)
 
 
 @router.post("/runs", status_code=202)
@@ -100,7 +130,7 @@ async def start_run(request: Request, target: Tgt, req: RunRequest, user: User =
             raise HTTPException(422, "Bild muss PNG, JPEG, WebP oder GIF (Data-URL, max. ca. 1 MB) sein")
     request.app.state.limiter.check(f"{user.id}:{target.label}")
     info = await upstream(target.adapter.start_run(target.agent.id, RunInput(
-        text=req.text, session_id=req.session_id, model=req.model, images=tuple(req.images),
+        text=req.text, session_id=req.session_id, model=req.model, images=tuple(req.images), idempotency_key=req.idempotency_key,
     )))
     # Nie den Inhalt loggen, nur Umfang und Ziel.
     audit(request, user, "run.start", target, session=info.session_id or req.session_id, run=info.run_id,

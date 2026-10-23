@@ -9,6 +9,7 @@ export type Page =
   | { name: "inbox" }
   | { name: "hosts" }
   | { name: "settings" }
+  | { name: "system" }
   | { name: "agent"; ref: AgentRef; module: string; sessionId?: string }
   | { name: "redirect"; to: string }
   | { name: "notfound" };
@@ -16,7 +17,7 @@ export type Page =
 const dec = (s: string) => decodeURIComponent(s);
 const enc = encodeURIComponent;
 
-/** URL-Schema: / · /inbox · /hosts · /settings · /h/<host>/<runtime>/<agent>[/<modul>[/<id>]] (Modul `profil` bearbeitet das Profil) */
+/** URL-Schema: / · /inbox · /hosts · /system · /settings · /h/<host>/<runtime>/<agent>[/<modul>[/<id>]] (Modul `profil` bearbeitet das Profil) */
 export function parsePath(pathname: string): Page {
   const parts = pathname.split("/").filter(Boolean);
   try {
@@ -25,6 +26,7 @@ export function parsePath(pathname: string): Page {
     if (head === "inbox" && rest.length === 0) return { name: "inbox" };
     if (head === "hosts" && rest.length === 0) return { name: "hosts" };
     if (head === "settings" && rest.length === 0) return { name: "settings" };
+    if (head === "system" && rest.length === 0) return { name: "system" };
     if (head === "h" && rest.length >= 3) {
       const [host, runtime, agent, module = "chat", sessionId] = rest.map(dec);
       return { name: "agent", ref: { host, runtime, agent }, module, sessionId };
