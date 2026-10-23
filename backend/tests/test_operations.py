@@ -314,3 +314,21 @@ def test_missing_short_or_header_injection_token_rejected():
             parse_config({"hosts": [{"id": "box", "hostd": {
                 "base_url": "http://localhost", "token_env": "KEY",
             }}]}, {"KEY": token})
+
+
+def test_cli_auth_routes(operations_client):
+    c, daemon, app, session = operations_client
+    got = c.get(BASE + "/_cli-auth").json()
+    assert got["available"] is True and got["clis"][0] == {
+        "id": "codex", "state": "signed_in", "method": "ChatGPT", "checked_at": "2026-01-01T00:00:00+00:00", "reason": None}
+    assert not any("refresh" in x["query"] for x in daemon.state.calls if x["path"] == "/v1/auth")
+    assert c.post(BASE + "/_cli-auth/refresh").json()["available"] is True
+    assert any(x["query"] == "refresh=1" for x in daemon.state.calls if x["path"] == "/v1/auth")
+    assert c.get("/bff/h/unconfigured/_cli-auth").json() == {"available": False, "reason": "Host-Dienst nicht eingerichtet"}
+    assert c.get("/bff/h/offline/_cli-auth").json()["available"] is False
+    assert c.get("/bff/h/unknown/_cli-auth").status_code == 404
+    assert TOKEN not in json.dumps(got)
+    assert c.post(BASE + "/_cli-auth/refresh", headers={"X-Requested-With": ""}).status_code in (400, 403)
+    c.cookies.clear()
+    assert c.get(BASE + "/_cli-auth").status_code == 401
+    assert c.post(BASE + "/_cli-auth/refresh").status_code in (401, 403)

@@ -85,6 +85,8 @@ print('Installed user unit:', unit_dir / 'hermes-hostd.service')
 print('Review CLI/workspace allowlists:', config)
 print('Daemon environment file (not printed):', env_file)
 PY
+# Hermes-Profile erkennen und ergaenzen (bestehende Eintraege bleiben unveraendert).
+"$venv/bin/python" -m hostd.discover --config "$config" --hermes-home "$HOME/.hermes"
 if [[ "$start" == yes ]]; then
   systemctl --user daemon-reload
   systemctl --user enable --now hermes-hostd.service

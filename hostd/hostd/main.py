@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, StrictInt
 
 from . import __version__
+from .auth import AuthChecker
 from .config import Settings
 from .operations import router as operations_router
 from .terminals import TerminalManager
@@ -34,6 +35,7 @@ def create_app(settings):
         raise ValueError('hostd refuses root runtime')
     token = settings.token()
     manager = TerminalManager(settings)
+    checker = AuthChecker(settings)
 
     @asynccontextmanager
     async def lifespan(app):
@@ -75,9 +77,13 @@ def create_app(settings):
     @app.get('/v1/info')
     async def info():
         return dict(version=__version__, clis=[dict(id=cli['id'], label=cli['label'],
-                    available=shutil.which(cli['command'][0]) is not None, authenticated=None,
-                    auth_note='Authentication is not probed; the CLI uses this OS user account.') for cli in settings.clis],
+                    available=shutil.which(cli['command'][0]) is not None, authenticated=checker.cached_state(cli['id']),
+                    auth_note='Status durch CLI-Befehl geprueft (GET /v1/auth); null = noch nicht geprueft oder unklar.') for cli in settings.clis],
                     workspaces=[dict(id=w['id'], label=w['label']) for w in settings.workspaces])
+
+    @app.get('/v1/auth')
+    async def auth(refresh: int = 0):
+        return {'clis': await checker.all(bool(refresh))}
 
     @app.get('/v1/terminals')
     async def terminals():
