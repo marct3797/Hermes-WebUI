@@ -5,7 +5,7 @@
  "profiles": [
   {
    "name": "default",
-   "path": "/home/marct/.hermes",
+   "path": "/home/user/.hermes",
    "is_default": true,
    "is_server": true,
    "gateway_running": true

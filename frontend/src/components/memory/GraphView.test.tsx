@@ -48,7 +48,7 @@ describe("GraphView", () => {
     open();
     await canvas();
     fireEvent.change(screen.getByLabelText("Einfärben nach"), { target: { value: "context" } });
-    expect(await screen.findByText(/^Docker env_file/)).toBeInTheDocument();
+    expect(await screen.findByText(/^Beispielkontext A/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Einfärben nach"), { target: { value: "entity" } });
     const freq = new Map<string, number>();
     for (const n of world.nodes) for (const e of n.entities) freq.set(e, (freq.get(e) ?? 0) + 1);

@@ -2,276 +2,276 @@
  "nodes": [
   {
    "data": {
-    "id": "19006409-15d4-497d-a0b4-04e8b8c9e151",
-    "label": "Noch ungeprüft und nur mit Fre...",
-    "text": "Noch ungeprüft und nur mit Freigabe: Schreiben von SOUL/Keys/Uploads, Anlegen von Räumen, Codex-Gerätecode-Anmeldung, Plugin-Install | Verändern Zustand oder lösen Modellläufe aus, daher Freigabe erforderlich",
+    "id": "3b18c24e-2409-5884-ab06-8b9ae5333ecf",
+    "label": "Beispiel-Erinnerung 1",
+    "text": "Beispiel-Erinnerung 1: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T22:54:54.140000+00:00",
-    "context": "conversation between Hermes Agent and the User",
-    "entities": "SERVICE:Codex, Codex, WebUI, PROJECT:WebUI, Soul",
+    "context": "Beispielkontext A",
+    "entities": "SERVICE:Beispiel-Entität 1, Beispiel-Entität 1, Beispiel-Entität 5",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "ca394c01-f5f9-4269-b947-b9d9ae6f1bd3",
-    "label": "Für 'ultimative' WebUI geplant...",
-    "text": "Für 'ultimative' WebUI geplant: Key-Gesundheitscheck mit Ablauf/Limit/Reset in Anbieter-Tabelle und System-Seite, 'Anmeldung prüfen'-Knopf je CLI ohne Modelllauf, Live-Übersicht aller Terminals/Runs mit Benachrichtigung, Fallback-Anbieter je Profil, Kanban gegen Forgejo-Issues, Tests gegen echte Antwortformen | Wichtige Projekt-Updates und Ziele für WebUI-Ausbau",
+    "id": "f5c81e1f-58c8-5864-98ae-fe72f6b3bc3a",
+    "label": "Beispiel-Erinnerung 2",
+    "text": "Beispiel-Erinnerung 2: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T22:54:54.130000+00:00",
-    "context": "conversation between Hermes Agent and the User",
-    "entities": "SERVICE:Forgejo, Forgejo, WebUI, PROJECT:WebUI",
+    "context": "Beispielkontext B",
+    "entities": "Beispiel-Entität 2, Beispiel-Entität 6",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "7329701e-e21c-4fa3-a1a9-9dc677ca9a40",
-    "label": "WebUI zeigt Key-Anfang und -En...",
-    "text": "WebUI zeigt Key-Anfang und -Ende (oc_s...87r9) obwohl Text sagt Werte erschienen nie, und HTTP-Header 'Server: uvicorn' ist sichtbar | Sicherheits- und datenschutzrelevante Anzeigeabweichung",
+    "id": "3d1ceb6d-048a-514e-8118-b70db81b9cd1",
+    "label": "Beispiel-Erinnerung 3",
+    "text": "Beispiel-Erinnerung 3: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T22:54:54.120000+00:00",
-    "context": "conversation between Hermes Agent and the User",
-    "entities": "SERVICE:Uvicorn, uvicorn, WebUI, PROJECT:WebUI",
+    "context": "Beispielkontext C",
+    "entities": "Beispiel-Entität 3, Beispiel-Entität 7",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "35ad01d6-9ed3-4764-b507-c81b10dd458e",
-    "label": "Gedächtnis-Graph enthält 84.23...",
-    "text": "Gedächtnis-Graph enthält 84.231 Knoten, Anzeige zeigt nur 150 | Infrastruktur-Fakt zur Graph-Größe und Anzeige-Limitierung",
+    "id": "772e0f15-2c47-5206-a824-09850a2f49a2",
+    "label": "Beispiel-Erinnerung 4",
+    "text": "Beispiel-Erinnerung 4: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T22:54:54.110000+00:00",
-    "context": "conversation between Hermes Agent and the User",
-    "entities": "Gedächtnis-Graph, WebUI, PROJECT:WebUI",
+    "context": "Beispielkontext A",
+    "entities": "Beispiel-Entität 4, Beispiel-Entität 5",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "1f129ac4-ff50-40bd-a9e2-8aaef2e3e3fe",
-    "label": "Anbieter-Seite der WebUI ist v...",
-    "text": "Anbieter-Seite der WebUI ist veraltet ('Terminal-Dienst nicht angebunden', 'Claude Code NOCH NICHT ANGEBUNDEN'), tatsächlich laufen die CLIs | Dokumentiert Diskrepanz zwischen Anzeige und Infrastruktur-Status",
+    "id": "2a7abb69-bcaf-59a0-80f9-44f9e617e6ff",
+    "label": "Beispiel-Erinnerung 5",
+    "text": "Beispiel-Erinnerung 5: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T22:54:54.100000+00:00",
-    "context": "conversation between Hermes Agent and the User",
-    "entities": "Terminal-Dienst, Claude Code, WebUI, PROJECT:WebUI, SERVICE:Claude Code",
+    "context": "Beispielkontext B",
+    "entities": "Beispiel-Entität 1, Beispiel-Entität 6",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "30794659-403e-473d-87e0-bac726da3423",
-    "label": "User will ultimative WebUI err...",
-    "text": "User will ultimative WebUI erreichen und hat Live-Test aller Funktionen mit Report zu Funktion, Nacharbeit und Erweiterungen beauftragt; voller Livetest-Bericht liegt unter `/home/marct/.hermes/attachments/Hermes-WebUI-Livetest-2026-10-24.md` | When: 24. Oktober 2026 | Involving: user | Grundlage für Nacharbeit und Ausbau zur ultimativen Web UI",
+    "id": "8873a80c-d509-52b2-8e55-222d0c1804e9",
+    "label": "Beispiel-Erinnerung 6",
+    "text": "Beispiel-Erinnerung 6: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T22:54:54.090000+00:00",
-    "context": "conversation between Hermes Agent and the User",
-    "entities": "User, WebUI, PROJECT:WebUI, /home/marct/.hermes/attachments/Hermes-WebUI-Livetest-2026-10-24.md",
+    "context": "Beispielkontext C",
+    "entities": "Beispiel-Entität 2, Beispiel-Entität 7",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "948a13e0-65c7-4a05-b8f7-92d90ab1b744",
-    "label": "Suche, Kanban, Logs und Erweit...",
-    "text": "Suche, Kanban, Logs und Erweiterungen in WebUI sind leer (\"Keine Profile verfügbar\"), weil hostd-Config auf beiden Hosts \"profiles\": {} hat und der Installer sie nicht füllt | Fehlende Profile-Konfiguration und Installer-Lücke",
+    "id": "22c5557f-4847-5738-9c3f-13d0bcf50f36",
+    "label": "Beispiel-Erinnerung 7",
+    "text": "Beispiel-Erinnerung 7: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T22:54:54.080000+00:00",
-    "context": "conversation between Hermes Agent and the User",
-    "entities": "Laptop, Hikari, SERVICE:hostd, hostd, WebUI, PROJECT:WebUI, LOCATION:Hikari, Laptop",
+    "context": "Beispielkontext A",
+    "entities": "Beispiel-Entität 3, Beispiel-Entität 5",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "50010389-c856-4e0c-8a9a-af6ceaa7f098",
-    "label": "Hikari-Profil `default` hat ab...",
-    "text": "Hikari-Profil `default` hat abgelaufenen OpenCode-Key (Lauf endet mit HTTP 401: This API key has expired), Anbieter-Tabelle und System-Seite zeigen trotzdem \"in Ordnung\"; Key muss getauscht werden, WebUI soll Keys künftig auf Gültigkeit prüfen | When: 24. Oktober 2026 | Falsche Statusanzeige verdeckt ungültigen Key",
+    "id": "69393b5c-2069-5de6-b9be-4b37edf7c9c5",
+    "label": "Beispiel-Erinnerung 8",
+    "text": "Beispiel-Erinnerung 8: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T22:54:54.070000+00:00",
-    "context": "conversation between Hermes Agent and the User",
-    "entities": "SERVICE:OPENCODE, OpenCode, Hikari, LOCATION:Hikari, WebUI, PROJECT:WebUI",
+    "context": "Beispielkontext B",
+    "entities": "Beispiel-Entität 4, Beispiel-Entität 6",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "d8befc93-81d9-4ff6-b0d4-e1e01620eac5",
-    "label": "Zeitpläne (/jobs) stürzen bei ...",
-    "text": "Zeitpläne (/jobs) stürzen bei 8 von 9 Hikari-Profilen mit React-Fehler #31 ab, weil Hermes den Zeitplan als Objekt {kind, expr, display} liefert und Views.tsx:29 es als Text rendert (Mock lieferte String); Fix ist eine Zeile plus Test | When: 24. Oktober 2026 | Unterschied zwischen Mock (String) und Live-Daten (Objekt) verursacht Absturz",
+    "id": "8f6c6ecc-7725-5372-abe3-c42b23c751f2",
+    "label": "Beispiel-Erinnerung 9",
+    "text": "Beispiel-Erinnerung 9: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T22:54:54.060000+00:00",
-    "context": "conversation between Hermes Agent and the User",
-    "entities": "TECHNOLOGY:React, React, Hikari, LOCATION:Hikari, Views.tsx, WebUI, PROJECT:WebUI",
+    "context": "Beispielkontext C",
+    "entities": "Beispiel-Entität 1, Beispiel-Entität 7",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "c42826fd-94ca-45df-bfe2-7e2407a6ad11",
-    "label": "Live-WebUI läuft unter https:/...",
-    "text": "Live-WebUI läuft unter https://agents.thiel.digital mit Anmeldung via Forgejo (OIDC) und 2FA, getestet als `tenjin`; Hosts Hikari (Hermes 0.21.6) und Laptop (Hermes 0.22.5) sind online mit zusammen 10 Agents",
+    "id": "3a1ebf77-8645-5244-8a57-7633e9e534be",
+    "label": "Beispiel-Erinnerung 10",
+    "text": "Beispiel-Erinnerung 10: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T22:54:54.050000+00:00",
-    "context": "conversation between Hermes Agent and the User",
-    "entities": "Laptop, Hikari, LOCATION:agents.thiel.digital, SERVICE:Forgejo, hermes, @tenjin, PERSON:Tenjin, TECHNOLOGY:OIDC, Forgejo, WebUI, PROJECT:WebUI, agents.thiel.digital, OIDC",
+    "context": "Beispielkontext A",
+    "entities": "Beispiel-Entität 2, Beispiel-Entität 5",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "002bb66a-0d4c-4f55-a77d-66e8840dac00",
-    "label": "User hat als Admin ein neues P...",
-    "text": "User hat als Admin ein neues Passwort für Forgejo-Nutzer `tenjin` gesetzt und den Vault-Eintrag aktualisiert, nachdem das alte Passwort (per Benutzername und E-Mail geprüft) von Forgejo abgewiesen wurde. | When: 24. Oktober 2026, ca. 00:22 Uhr | Involving: user, tenjin | Altes Passwort war ungültig, kein Weiter-Raten durch Agent",
+    "id": "d242afc9-fbef-507a-8ca5-57a95e28a8c1",
+    "label": "Beispiel-Erinnerung 11",
+    "text": "Beispiel-Erinnerung 11: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T22:22:33.030000+00:00",
-    "context": "conversation between Hermes Agent and the User",
-    "entities": "User, SERVICE:Forgejo, @tenjin, PERSON:Tenjin, Forgejo, Vault",
+    "context": "Beispielkontext B",
+    "entities": "Beispiel-Entität 3, Beispiel-Entität 6",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "1d56a84f-74e0-4b8b-a7b1-d6d7b3cdee19",
-    "label": "WebUI-Login läuft über Forgejo...",
-    "text": "WebUI-Login läuft über Forgejo-OAuth unter `git.thiel.digital/login/oauth/authorize`. | When: 24. Oktober 2026 | Anmeldeweg für WebUI-Zugang",
+    "id": "d9106676-bc4f-5014-b72e-3de6c5dfc6ce",
+    "label": "Beispiel-Erinnerung 12",
+    "text": "Beispiel-Erinnerung 12: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T22:54:54.020000+00:00",
-    "context": "conversation between Hermes Agent and the User",
-    "entities": "SERVICE:Forgejo, git.thiel.digital, TECHNOLOGY:OIDC, Forgejo, WebUI, LOCATION:git.thiel.digital, PROJECT:WebUI",
+    "context": "Beispielkontext C",
+    "entities": "Beispiel-Entität 4, Beispiel-Entität 7",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "33630bff-69d2-480c-9da6-39ecb8d2189a",
-    "label": "OIDC_ALLOWED_SUB-Erweiterung i...",
-    "text": "OIDC_ALLOWED_SUB-Erweiterung in webui.env wurde erst nach Container-Recreate aktiv, davor 403 not_allowed trotz korrekter Config-Datei. | When: 24. Oktober 2026 | Belegt env_file-Verhalten: Restart reicht nicht für neue Werte",
+    "id": "98fd5cef-d099-519d-8be1-e112c0101908",
+    "label": "Beispiel-Erinnerung 13",
+    "text": "Beispiel-Erinnerung 13: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T22:22:05.010000+00:00",
-    "context": "Docker env_file Verhalten Hikari",
-    "entities": "SERVICE:Docker, Hikari, webui.env, TECHNOLOGY:OIDC, WebUI, OIDC_ALLOWED_SUB, PROJECT:Hikari",
+    "context": "Beispielkontext A",
+    "entities": "Beispiel-Entität 1, Beispiel-Entität 5",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "944703d5-5702-4682-9a52-fb2b374b2075",
-    "label": "Hikari WebUI Container nutzt e...",
-    "text": "Hikari WebUI Container nutzt env_file aus webui.env: ein plain docker restart liest die env-Datei nicht neu ein, Werte bleiben alt. Nach jeder webui.env-Änderung muss der Container neu erstellt werden (deploy.sh oder compose up -d). | Sonst gelten alte Werte weiter, Recreate ist erforderlich damit Config-Änderungen wirksam werden",
+    "id": "825561fa-339f-5e84-8b83-502498a42ca8",
+    "label": "Beispiel-Erinnerung 14",
+    "text": "Beispiel-Erinnerung 14: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T22:22:05+00:00",
-    "context": "Docker env_file Verhalten Hikari",
-    "entities": "SERVICE:Docker, Hikari, deploy.sh, Docker, webui.env, WebUI, PROJECT:Hikari",
+    "context": "Beispielkontext B",
+    "entities": "Beispiel-Entität 2, Beispiel-Entität 6",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "88d1f68c-12c4-4a5b-9c3b-904e923bf9ac",
-    "label": "Hikari und privates Forgejo la...",
-    "text": "Hikari und privates Forgejo laufen auf main-Stand b130596, Hikari öffentlich unter https://agents.thiel.digital deployed | When: 24. Oktober 2026, 00:02 Uhr",
+    "id": "bdf0c9c9-dc2f-5eef-9212-c8957fe6933e",
+    "label": "Beispiel-Erinnerung 15",
+    "text": "Beispiel-Erinnerung 15: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T22:02:25.010000+00:00",
-    "context": "conversation between Hermes Agent and the User",
-    "entities": "b130596, Hikari, Hermes WebUI, LOCATION:Hikari, agents.thiel.digital, Forgejo, agents.thiel.digital, PROJECT:Hermes-WebUI",
+    "context": "Beispielkontext C",
+    "entities": "Beispiel-Entität 3, Beispiel-Entität 7",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "aa1264b5-2393-4f33-a2ab-2f1baadb7151",
-    "label": "User hat PR #6 „Feat/verified ...",
-    "text": "User hat PR #6 „Feat/verified agent console“ in marct3797/Hermes-WebUI von feat/verified-agent-console nach main gemerged (42 Commits, 251 geänderte Dateien, +31.136/-1) | When: 24. Oktober 2026, 00:01 Uhr | Involving: user (marct3797)",
+    "id": "55f15173-eb4c-5d94-9e83-195636b92b2e",
+    "label": "Beispiel-Erinnerung 16",
+    "text": "Beispiel-Erinnerung 16: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T22:01:52+00:00",
-    "context": "conversation between Hermes Agent and the User",
-    "entities": "marct3797@, User, Hermes WebUI, feat/verified-agent-console, PR #6, main, PERSON:marct3797, LOCATION:github.com, PROJECT:Hermes-WebUI",
+    "context": "Beispielkontext A",
+    "entities": "Beispiel-Entität 4, Beispiel-Entität 5",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "89b4f3e7-ed53-45a9-a024-3e802343c56c",
-    "label": "Plan: Nach grüner CI und Merge...",
-    "text": "Plan: Nach grüner CI und Merge von PR #6 den neuen `main`-Stand auf Hikari holen und den live Build erneut verifizieren. | When: nach Merge von PR #6 | Involving: user | Damit ein normaler Clone nach dem Merge den funktionierenden Stand erhält.",
+    "id": "cdc692d2-0164-5ca8-b865-e9c754ef88a1",
+    "label": "Beispiel-Erinnerung 17",
+    "text": "Beispiel-Erinnerung 17: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T21:58:44.230000+00:00",
-    "context": "conversation between Hermes Agent and the User",
-    "entities": "Hikari, User, LOCATION:Hikari, Hermes WebUI, PR #6, main, PROJECT:Hermes-WebUI",
+    "context": "Beispielkontext B",
+    "entities": "Beispiel-Entität 1, Beispiel-Entität 6",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "5f70c31e-0500-431d-b1c1-a85ac09bfabd",
-    "label": "PR #6 wurde über den Account m...",
-    "text": "PR #6 wurde über den Account marct3797 erstellt, weil der User-Account vertrauenswürdig ist und der Agent-Account es nicht war, damit der PR für alle sichtbar ist. | When: 23. Oktober 2026 | Involving: marct3797 (user) | Damit der PR für alle sichtbar ist und die Anwendung nach Merge erstmals auf `main` liegt.",
+    "id": "78b30b27-005c-5530-ac73-890661a25e97",
+    "label": "Beispiel-Erinnerung 18",
+    "text": "Beispiel-Erinnerung 18: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T21:58:44.220000+00:00",
-    "context": "conversation between Hermes Agent and the User",
-    "entities": "marct3797@, User, Hermes WebUI, PR #6, PERSON:marct3797, SERVICE:GitHub, PROJECT:Hermes-WebUI",
+    "context": "Beispielkontext C",
+    "entities": "Beispiel-Entität 2, Beispiel-Entität 7",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "83d241e4-a1ab-4785-b79d-7f5d672adc56",
-    "label": "PR #6 'Feat/verified agent con...",
-    "text": "PR #6 'Feat/verified agent console' im Repository marct3797/Hermes-WebUI ist offen und soll 42 Commits von `feat/verified-agent-console` nach `main` mergen (251 geänderte Dateien, +31.136 / -1). | When: 23. Oktober 2026 | Involving: marct3797 (user), claude",
+    "id": "8d670f7a-6b52-59ba-a174-2ddc50236ffc",
+    "label": "Beispiel-Erinnerung 19",
+    "text": "Beispiel-Erinnerung 19: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T21:58:44.210000+00:00",
-    "context": "conversation between Hermes Agent and the User",
-    "entities": "marct3797@, User, Hermes WebUI, Claude, feat/verified-agent-console, PR #6, main, PERSON:marct3797, SERVICE:GitHub, PROJECT:Hermes-WebUI",
+    "context": "Beispielkontext A",
+    "entities": "Beispiel-Entität 3, Beispiel-Entität 5",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "c9a11497-7284-427f-a405-ec6a80e8be59",
-    "label": "User ist im richtigen Branch f...",
-    "text": "User ist im richtigen Branch feat/verified-agent-console, sieht den erwarteten Inhalt aber nicht; für den öffentlich vorhandenen Branch fehlt der PR und er soll direkt über den Compare-Link main...feat/verified-agent-console erstellt werden | When: 23. Oktober 2026 | Involving: user | Offenes Problem mit fehlendem PR als Lösungsweg",
+    "id": "21be5746-b26b-5ac2-936e-10331c8fb97e",
+    "label": "Beispiel-Erinnerung 20",
+    "text": "Beispiel-Erinnerung 20: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T21:58:44.200000+00:00",
-    "context": "conversation between Hermes Agent and the User",
-    "entities": "User, Hermes WebUI, feat/verified-agent-console, GitHub, SERVICE:GitHub, PROJECT:Hermes-WebUI",
+    "context": "Beispielkontext B",
+    "entities": "Beispiel-Entität 4, Beispiel-Entität 6",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "0fffb8a7-689b-48fd-8a99-d3747c0664ff",
-    "label": "Hermes-WebUI-Repo (marct3797/H...",
-    "text": "Hermes-WebUI-Repo (marct3797/Hermes-WebUI) hat 4 offene PRs, alle von marct3797: #4 „Pakete 1–7: echte Hermes-Funktionen, Gedächtnis, Gruppenchats, SOUL, Anbieter“, #3 „Design v2, Profil-Seite und Betrieb auf Hikari“, #2 „Phase 0: Fundament mit Host- und Runtime-Achse“, #1 „Initial implementation of Hermes WebUI with chat interface“ | When: 23. Oktober 2026 | Involving: marct3797 | Wichtiges Projekt-Update zum Stand der offenen PRs",
+    "id": "c4a1c9ca-3328-5094-b50e-502d96c3fdc9",
+    "label": "Beispiel-Erinnerung 21",
+    "text": "Beispiel-Erinnerung 21: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T21:58:44.190000+00:00",
-    "context": "conversation between Hermes Agent and the User",
-    "entities": "marct3797@, Hermes WebUI, GitHub, PERSON:marct3797, SERVICE:GitHub, PROJECT:Hermes-WebUI",
+    "context": "Beispielkontext C",
+    "entities": "Beispiel-Entität 1, Beispiel-Entität 7",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "9db26e05-7282-47c3-9bad-72c5bd0fb0c8",
-    "label": "Neuer Lösungsweg: User erstell...",
-    "text": "Neuer Lösungsweg: User erstellt selbst den PR für `feat/verified-agent-console` über den gelben Hinweis auf der Pulls-Seite, Assistent prüft CI grün gegen, User mergt. | Involving: user, Hermes Agent | PR vom vertrauenswürdigen Owner-Account ist sofort für alle sichtbar und startet CI",
+    "id": "02819c24-8a14-5853-a598-6e8a046a7fee",
+    "label": "Beispiel-Erinnerung 22",
+    "text": "Beispiel-Erinnerung 22: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T21:58:44.180000+00:00",
-    "context": "conversation between Hermes Agent and the User",
-    "entities": "User, Hermes WebUI, feat/verified-agent-console, SERVICE:GitHub, PROJECT:Hermes-WebUI",
+    "context": "Beispielkontext A",
+    "entities": "Beispiel-Entität 2, Beispiel-Entität 5",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "51f1bd7a-6749-468e-9bd2-d70b5c0d7765",
-    "label": "Repository `marct3797/Hermes-W...",
-    "text": "Repository `marct3797/Hermes-WebUI` zeigt 4 offene / 0 geschlossene PRs, alle von marct3797 als Owner: #4 „Pakete 1–7: echte Hermes-Funktionen, Gedächtnis, Gruppenchats, SOUL, Anbieter“, #3 „Design v2, Profil-Seite und Betrieb auf Hikari“, #2 „Phase 0: Fundament mit Host- und Runtime-Achse“, #1 „Initial implementation of Hermes WebUI with chat interface“. | When: 23. Oktober 2026 | Involving: marct3797 (Owner) | Belegt, dass PR Nr. 5 selbst für den Owner unsichtbar ist",
+    "id": "8df8d249-6b3a-5c77-a0d2-401f4a28bd6b",
+    "label": "Beispiel-Erinnerung 23",
+    "text": "Beispiel-Erinnerung 23: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T21:58:44.160000+00:00",
-    "context": "conversation between Hermes Agent and the User",
-    "entities": "marct3797@, User, Hermes WebUI, PERSON:marct3797, SERVICE:GitHub, PROJECT:Hermes-WebUI",
+    "context": "Beispielkontext B",
+    "entities": "Beispiel-Entität 3, Beispiel-Entität 6",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "8fd26128-96e4-4715-a6bb-adb047c7fcb6",
-    "label": "Branch `feat/verified-agent-co...",
-    "text": "Branch `feat/verified-agent-console` mit Stand `1561154` liegt öffentlich auf GitHub, ist gepusht, live deployed und verifiziert.",
+    "id": "0a9b4376-a06e-5efa-95f2-a9bb0aea06b9",
+    "label": "Beispiel-Erinnerung 24",
+    "text": "Beispiel-Erinnerung 24: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T21:58:44.150000+00:00",
-    "context": "conversation between Hermes Agent and the User",
-    "entities": "1561154, Hermes WebUI, feat/verified-agent-console, SERVICE:GitHub, PROJECT:Hermes-WebUI",
+    "context": "Beispielkontext C",
+    "entities": "Beispiel-Entität 4, Beispiel-Entität 7",
     "color": "#42a5f5"
    }
   },
   {
    "data": {
-    "id": "8859d0e1-89b6-41a1-b6af-90be0c9c40fa",
-    "label": "Vereinbart: marct3797 erstellt...",
-    "text": "Vereinbart: marct3797 erstellt den PR selbst aus Branch feat/verified-agent-console (Head 1561154), Agent schließt danach seine unsichtbare Nr. 5, ohne den User-Account anzufassen | When: 23. Oktober 2026 | Involving: marct3797 (user), tenjin2026 (Agent-Account) | PR von marct3797 ist sofort für alle sichtbar und umgeht den Spamfilter",
+    "id": "321d9932-6fba-5d4c-8efb-3a5e10b525bb",
+    "label": "Beispiel-Erinnerung 25",
+    "text": "Beispiel-Erinnerung 25: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
     "date": "2026-10-23T21:58:44.140000+00:00",
-    "context": "conversation between Hermes Agent and the User",
-    "entities": "marct3797@, User, @tenjin2026, Hermes WebUI, PERSON:marct3797, tenjin2026, feat/verified-agent-console, SERVICE:GitHub, PROJECT:Hermes-WebUI",
+    "context": "Beispielkontext A",
+    "entities": "Beispiel-Entität 1, Beispiel-Entität 5",
     "color": "#42a5f5"
    }
   }
@@ -279,9 +279,9 @@
  "edges": [
   {
    "data": {
-    "id": "88d1f68c-12c4-4a5b-9c3b-904e923bf9ac-aa1264b5-2393-4f33-a2ab-2f1baadb7151-caused_by",
-    "source": "88d1f68c-12c4-4a5b-9c3b-904e923bf9ac",
-    "target": "aa1264b5-2393-4f33-a2ab-2f1baadb7151",
+    "id": "4f8d840c-6a4c-5850-bf3e-42cc44e60b2b",
+    "source": "bdf0c9c9-dc2f-5eef-9212-c8957fe6933e",
+    "target": "55f15173-eb4c-5d94-9e83-195636b92b2e",
     "linkType": "caused_by",
     "weight": 1.0,
     "entityName": "",
@@ -291,9 +291,9 @@
   },
   {
    "data": {
-    "id": "944703d5-5702-4682-9a52-fb2b374b2075-944703d5-5702-4682-9a52-fb2b374b2075-semantic",
-    "source": "944703d5-5702-4682-9a52-fb2b374b2075",
-    "target": "944703d5-5702-4682-9a52-fb2b374b2075",
+    "id": "82bb1692-def6-5c9d-8b7b-a7aadc60fdb5",
+    "source": "825561fa-339f-5e84-8b83-502498a42ca8",
+    "target": "825561fa-339f-5e84-8b83-502498a42ca8",
     "linkType": "semantic",
     "weight": 1.0,
     "entityName": "",
@@ -303,9 +303,9 @@
   },
   {
    "data": {
-    "id": "33630bff-69d2-480c-9da6-39ecb8d2189a-944703d5-5702-4682-9a52-fb2b374b2075-caused_by",
-    "source": "33630bff-69d2-480c-9da6-39ecb8d2189a",
-    "target": "944703d5-5702-4682-9a52-fb2b374b2075",
+    "id": "508c4bac-ab36-5315-8dc7-b5a8551ee85a",
+    "source": "98fd5cef-d099-519d-8be1-e112c0101908",
+    "target": "825561fa-339f-5e84-8b83-502498a42ca8",
     "linkType": "caused_by",
     "weight": 1.0,
     "entityName": "",
@@ -315,9 +315,9 @@
   },
   {
    "data": {
-    "id": "8859d0e1-89b6-41a1-b6af-90be0c9c40fa-253d63c1-a75e-4912-9557-8b5d41ce7087-caused_by",
-    "source": "8859d0e1-89b6-41a1-b6af-90be0c9c40fa",
-    "target": "253d63c1-a75e-4912-9557-8b5d41ce7087",
+    "id": "a295d9da-df82-5512-9da9-c1e56ed0efe9",
+    "source": "321d9932-6fba-5d4c-8efb-3a5e10b525bb",
+    "target": "c770908e-58e2-5059-8d2a-9f01c2fb2826",
     "linkType": "caused_by",
     "weight": 1.0,
     "entityName": "",
@@ -327,9 +327,9 @@
   },
   {
    "data": {
-    "id": "33630bff-69d2-480c-9da6-39ecb8d2189a-33630bff-69d2-480c-9da6-39ecb8d2189a-semantic",
-    "source": "33630bff-69d2-480c-9da6-39ecb8d2189a",
-    "target": "33630bff-69d2-480c-9da6-39ecb8d2189a",
+    "id": "83fa8284-c80c-532e-96f7-93d1802d9cd4",
+    "source": "98fd5cef-d099-519d-8be1-e112c0101908",
+    "target": "98fd5cef-d099-519d-8be1-e112c0101908",
     "linkType": "semantic",
     "weight": 1.0,
     "entityName": "",
@@ -339,9 +339,9 @@
   },
   {
    "data": {
-    "id": "2f8b2e07-0883-4620-8b4d-443a28809ded-18758ab8-774e-4d49-ba06-2a050712f2c1-temporal",
-    "source": "2f8b2e07-0883-4620-8b4d-443a28809ded",
-    "target": "18758ab8-774e-4d49-ba06-2a050712f2c1",
+    "id": "8b57f7ef-0d8d-52e3-8de7-d03eadfeaad5",
+    "source": "effb6326-1ae4-5354-80f9-977c68199b28",
+    "target": "1feadb39-d6e0-5088-be7e-53b00b5d067a",
     "linkType": "temporal",
     "weight": 0.9999998842592592,
     "entityName": "",
@@ -351,9 +351,9 @@
   },
   {
    "data": {
-    "id": "18758ab8-774e-4d49-ba06-2a050712f2c1-2f8b2e07-0883-4620-8b4d-443a28809ded-temporal",
-    "source": "18758ab8-774e-4d49-ba06-2a050712f2c1",
-    "target": "2f8b2e07-0883-4620-8b4d-443a28809ded",
+    "id": "9511daa1-7428-5749-8413-fa9a97dda435",
+    "source": "1feadb39-d6e0-5088-be7e-53b00b5d067a",
+    "target": "effb6326-1ae4-5354-80f9-977c68199b28",
     "linkType": "temporal",
     "weight": 0.9999998842592592,
     "entityName": "",
@@ -363,9 +363,9 @@
   },
   {
    "data": {
-    "id": "944703d5-5702-4682-9a52-fb2b374b2075-33630bff-69d2-480c-9da6-39ecb8d2189a-temporal",
-    "source": "944703d5-5702-4682-9a52-fb2b374b2075",
-    "target": "33630bff-69d2-480c-9da6-39ecb8d2189a",
+    "id": "b091c0e6-424f-5687-b039-0c85ed7d2b3c",
+    "source": "825561fa-339f-5e84-8b83-502498a42ca8",
+    "target": "98fd5cef-d099-519d-8be1-e112c0101908",
     "linkType": "temporal",
     "weight": 0.9999998842592592,
     "entityName": "",
@@ -375,9 +375,9 @@
   },
   {
    "data": {
-    "id": "19006409-15d4-497d-a0b4-04e8b8c9e151-ca394c01-f5f9-4269-b947-b9d9ae6f1bd3-temporal",
-    "source": "19006409-15d4-497d-a0b4-04e8b8c9e151",
-    "target": "ca394c01-f5f9-4269-b947-b9d9ae6f1bd3",
+    "id": "4b64ef0a-b8dd-53f0-be63-942171fef7ee",
+    "source": "3b18c24e-2409-5884-ab06-8b9ae5333ecf",
+    "target": "f5c81e1f-58c8-5864-98ae-fe72f6b3bc3a",
     "linkType": "temporal",
     "weight": 0.9999998842592592,
     "entityName": "",
@@ -387,9 +387,9 @@
   },
   {
    "data": {
-    "id": "ca394c01-f5f9-4269-b947-b9d9ae6f1bd3-19006409-15d4-497d-a0b4-04e8b8c9e151-temporal",
-    "source": "ca394c01-f5f9-4269-b947-b9d9ae6f1bd3",
-    "target": "19006409-15d4-497d-a0b4-04e8b8c9e151",
+    "id": "61bde54e-63e9-5baf-b8ea-e71d6e0909f0",
+    "source": "f5c81e1f-58c8-5864-98ae-fe72f6b3bc3a",
+    "target": "3b18c24e-2409-5884-ab06-8b9ae5333ecf",
     "linkType": "temporal",
     "weight": 0.9999998842592592,
     "entityName": "",
@@ -399,9 +399,9 @@
   },
   {
    "data": {
-    "id": "d8befc93-81d9-4ff6-b0d4-e1e01620eac5-c42826fd-94ca-45df-bfe2-7e2407a6ad11-temporal",
-    "source": "d8befc93-81d9-4ff6-b0d4-e1e01620eac5",
-    "target": "c42826fd-94ca-45df-bfe2-7e2407a6ad11",
+    "id": "6ae2eff8-4d95-5b81-a53c-78c11027680f",
+    "source": "8f6c6ecc-7725-5372-abe3-c42b23c751f2",
+    "target": "3a1ebf77-8645-5244-8a57-7633e9e534be",
     "linkType": "temporal",
     "weight": 0.9999998842592592,
     "entityName": "",
@@ -411,9 +411,9 @@
   },
   {
    "data": {
-    "id": "1f129ac4-ff50-40bd-a9e2-8aaef2e3e3fe-30794659-403e-473d-87e0-bac726da3423-temporal",
-    "source": "1f129ac4-ff50-40bd-a9e2-8aaef2e3e3fe",
-    "target": "30794659-403e-473d-87e0-bac726da3423",
+    "id": "3ea64cfd-8349-5ac0-a477-ef5c07d3e36e",
+    "source": "2a7abb69-bcaf-59a0-80f9-44f9e617e6ff",
+    "target": "8873a80c-d509-52b2-8e55-222d0c1804e9",
     "linkType": "temporal",
     "weight": 0.9999998842592592,
     "entityName": "",
@@ -423,9 +423,9 @@
   },
   {
    "data": {
-    "id": "c42826fd-94ca-45df-bfe2-7e2407a6ad11-d8befc93-81d9-4ff6-b0d4-e1e01620eac5-temporal",
-    "source": "c42826fd-94ca-45df-bfe2-7e2407a6ad11",
-    "target": "d8befc93-81d9-4ff6-b0d4-e1e01620eac5",
+    "id": "510b7f42-9b9f-513e-b035-dd23496774a3",
+    "source": "3a1ebf77-8645-5244-8a57-7633e9e534be",
+    "target": "8f6c6ecc-7725-5372-abe3-c42b23c751f2",
     "linkType": "temporal",
     "weight": 0.9999998842592592,
     "entityName": "",
@@ -435,9 +435,9 @@
   },
   {
    "data": {
-    "id": "30794659-403e-473d-87e0-bac726da3423-1f129ac4-ff50-40bd-a9e2-8aaef2e3e3fe-temporal",
-    "source": "30794659-403e-473d-87e0-bac726da3423",
-    "target": "1f129ac4-ff50-40bd-a9e2-8aaef2e3e3fe",
+    "id": "1f94aaad-2b60-58fa-a8a3-aa567cda0a1e",
+    "source": "8873a80c-d509-52b2-8e55-222d0c1804e9",
+    "target": "2a7abb69-bcaf-59a0-80f9-44f9e617e6ff",
     "linkType": "temporal",
     "weight": 0.9999998842592592,
     "entityName": "",
@@ -447,9 +447,9 @@
   },
   {
    "data": {
-    "id": "1f129ac4-ff50-40bd-a9e2-8aaef2e3e3fe-35ad01d6-9ed3-4764-b507-c81b10dd458e-temporal",
-    "source": "1f129ac4-ff50-40bd-a9e2-8aaef2e3e3fe",
-    "target": "35ad01d6-9ed3-4764-b507-c81b10dd458e",
+    "id": "aedc0698-431d-54ad-8dc0-6cda324fac74",
+    "source": "2a7abb69-bcaf-59a0-80f9-44f9e617e6ff",
+    "target": "772e0f15-2c47-5206-a824-09850a2f49a2",
     "linkType": "temporal",
     "weight": 0.9999998842592592,
     "entityName": "",
@@ -459,9 +459,9 @@
   },
   {
    "data": {
-    "id": "35ad01d6-9ed3-4764-b507-c81b10dd458e-1f129ac4-ff50-40bd-a9e2-8aaef2e3e3fe-temporal",
-    "source": "35ad01d6-9ed3-4764-b507-c81b10dd458e",
-    "target": "1f129ac4-ff50-40bd-a9e2-8aaef2e3e3fe",
+    "id": "823b0de9-51f5-59d2-b7c8-c8897ca3fc99",
+    "source": "772e0f15-2c47-5206-a824-09850a2f49a2",
+    "target": "2a7abb69-bcaf-59a0-80f9-44f9e617e6ff",
     "linkType": "temporal",
     "weight": 0.9999998842592592,
     "entityName": "",
@@ -471,9 +471,9 @@
   },
   {
    "data": {
-    "id": "30794659-403e-473d-87e0-bac726da3423-948a13e0-65c7-4a05-b8f7-92d90ab1b744-temporal",
-    "source": "30794659-403e-473d-87e0-bac726da3423",
-    "target": "948a13e0-65c7-4a05-b8f7-92d90ab1b744",
+    "id": "8dafe0a8-c8c3-521c-bd53-e30446c79372",
+    "source": "8873a80c-d509-52b2-8e55-222d0c1804e9",
+    "target": "22c5557f-4847-5738-9c3f-13d0bcf50f36",
     "linkType": "temporal",
     "weight": 0.9999998842592592,
     "entityName": "",
@@ -483,9 +483,9 @@
   },
   {
    "data": {
-    "id": "948a13e0-65c7-4a05-b8f7-92d90ab1b744-30794659-403e-473d-87e0-bac726da3423-temporal",
-    "source": "948a13e0-65c7-4a05-b8f7-92d90ab1b744",
-    "target": "30794659-403e-473d-87e0-bac726da3423",
+    "id": "5897dfcb-5396-5c54-97e9-42f0d993920b",
+    "source": "22c5557f-4847-5738-9c3f-13d0bcf50f36",
+    "target": "8873a80c-d509-52b2-8e55-222d0c1804e9",
     "linkType": "temporal",
     "weight": 0.9999998842592592,
     "entityName": "",
@@ -495,9 +495,9 @@
   },
   {
    "data": {
-    "id": "35ad01d6-9ed3-4764-b507-c81b10dd458e-7329701e-e21c-4fa3-a1a9-9dc677ca9a40-temporal",
-    "source": "35ad01d6-9ed3-4764-b507-c81b10dd458e",
-    "target": "7329701e-e21c-4fa3-a1a9-9dc677ca9a40",
+    "id": "1c53396f-7fdb-57bf-92d9-4f35ca1cc47a",
+    "source": "772e0f15-2c47-5206-a824-09850a2f49a2",
+    "target": "3d1ceb6d-048a-514e-8118-b70db81b9cd1",
     "linkType": "temporal",
     "weight": 0.9999998842592592,
     "entityName": "",
@@ -507,9 +507,9 @@
   },
   {
    "data": {
-    "id": "05b382ac-c529-44df-86ba-c1ed16c1a880-9da20439-ff35-413e-883c-0424fe92260b-temporal",
-    "source": "05b382ac-c529-44df-86ba-c1ed16c1a880",
-    "target": "9da20439-ff35-413e-883c-0424fe92260b",
+    "id": "34291318-4d33-5c2c-a704-2e8e23375f9b",
+    "source": "7c3bbdc0-7c91-54ca-bb7e-e5beb8156dde",
+    "target": "12470355-d06c-5540-9097-325a7d3ca8ff",
     "linkType": "temporal",
     "weight": 0.9999998842592592,
     "entityName": "",
@@ -519,9 +519,9 @@
   },
   {
    "data": {
-    "id": "7329701e-e21c-4fa3-a1a9-9dc677ca9a40-35ad01d6-9ed3-4764-b507-c81b10dd458e-temporal",
-    "source": "7329701e-e21c-4fa3-a1a9-9dc677ca9a40",
-    "target": "35ad01d6-9ed3-4764-b507-c81b10dd458e",
+    "id": "030f75a2-0235-5a29-836b-5c0f231ff924",
+    "source": "3d1ceb6d-048a-514e-8118-b70db81b9cd1",
+    "target": "772e0f15-2c47-5206-a824-09850a2f49a2",
     "linkType": "temporal",
     "weight": 0.9999998842592592,
     "entityName": "",
@@ -531,9 +531,9 @@
   },
   {
    "data": {
-    "id": "50010389-c856-4e0c-8a9a-af6ceaa7f098-948a13e0-65c7-4a05-b8f7-92d90ab1b744-temporal",
-    "source": "50010389-c856-4e0c-8a9a-af6ceaa7f098",
-    "target": "948a13e0-65c7-4a05-b8f7-92d90ab1b744",
+    "id": "21daaefb-2b92-5e4a-8fab-8c1c8517ad4d",
+    "source": "69393b5c-2069-5de6-b9be-4b37edf7c9c5",
+    "target": "22c5557f-4847-5738-9c3f-13d0bcf50f36",
     "linkType": "temporal",
     "weight": 0.9999998842592592,
     "entityName": "",
@@ -543,9 +543,9 @@
   },
   {
    "data": {
-    "id": "948a13e0-65c7-4a05-b8f7-92d90ab1b744-50010389-c856-4e0c-8a9a-af6ceaa7f098-temporal",
-    "source": "948a13e0-65c7-4a05-b8f7-92d90ab1b744",
-    "target": "50010389-c856-4e0c-8a9a-af6ceaa7f098",
+    "id": "ccd38e92-5ac4-5b5b-947a-298259e23167",
+    "source": "22c5557f-4847-5738-9c3f-13d0bcf50f36",
+    "target": "69393b5c-2069-5de6-b9be-4b37edf7c9c5",
     "linkType": "temporal",
     "weight": 0.9999998842592592,
     "entityName": "",
@@ -555,9 +555,9 @@
   },
   {
    "data": {
-    "id": "8fd26128-96e4-4715-a6bb-adb047c7fcb6-8859d0e1-89b6-41a1-b6af-90be0c9c40fa-temporal",
-    "source": "8fd26128-96e4-4715-a6bb-adb047c7fcb6",
-    "target": "8859d0e1-89b6-41a1-b6af-90be0c9c40fa",
+    "id": "9220222f-04e6-5e49-a684-502be1fab90f",
+    "source": "0a9b4376-a06e-5efa-95f2-a9bb0aea06b9",
+    "target": "321d9932-6fba-5d4c-8efb-3a5e10b525bb",
     "linkType": "temporal",
     "weight": 0.9999998842592592,
     "entityName": "",
@@ -567,9 +567,9 @@
   },
   {
    "data": {
-    "id": "8859d0e1-89b6-41a1-b6af-90be0c9c40fa-8fd26128-96e4-4715-a6bb-adb047c7fcb6-temporal",
-    "source": "8859d0e1-89b6-41a1-b6af-90be0c9c40fa",
-    "target": "8fd26128-96e4-4715-a6bb-adb047c7fcb6",
+    "id": "626d9fff-3cea-5fb9-b865-61917a0c63d4",
+    "source": "321d9932-6fba-5d4c-8efb-3a5e10b525bb",
+    "target": "0a9b4376-a06e-5efa-95f2-a9bb0aea06b9",
     "linkType": "temporal",
     "weight": 0.9999998842592592,
     "entityName": "",
@@ -580,456 +580,402 @@
  ],
  "table_rows": [
   {
-   "id": "19006409-15d4-497d-a0b4-04e8b8c9e151",
-   "text": "Noch ungeprüft und nur mit Freigabe: Schreiben von SOUL/Keys/Uploads, Anlegen von Räumen, Codex-Gerätecode-Anmeldung, Plugin-Install | Verändern Zustand oder lösen Modellläufe aus, daher Freigabe erforderlich",
-   "context": "conversation between Hermes Agent and the User",
+   "id": "3b18c24e-2409-5884-ab06-8b9ae5333ecf",
+   "text": "Beispiel-Erinnerung 1: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext A",
    "occurred_start": null,
    "occurred_end": null,
    "mentioned_at": "2026-10-23T22:54:54.140000+00:00",
    "date": "2026-10-23 22:54",
-   "entities": "SERVICE:Codex, Codex, WebUI, PROJECT:WebUI, Soul",
-   "document_id": "local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35",
-   "chunk_id": "hermes_local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35_26",
+   "entities": "Beispiel-Entität 1, Beispiel-Entität 5",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "007ae4aa-24ba-50f5-9be8-ac42a4b11c83",
    "fact_type": "world",
-   "tags": [
-    "session:local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:55:47.776052+00:00",
    "proof_count": 1
   },
   {
-   "id": "ca394c01-f5f9-4269-b947-b9d9ae6f1bd3",
-   "text": "Für 'ultimative' WebUI geplant: Key-Gesundheitscheck mit Ablauf/Limit/Reset in Anbieter-Tabelle und System-Seite, 'Anmeldung prüfen'-Knopf je CLI ohne Modelllauf, Live-Übersicht aller Terminals/Runs mit Benachrichtigung, Fallback-Anbieter je Profil, Kanban gegen Forgejo-Issues, Tests gegen echte Antwortformen | Wichtige Projekt-Updates und Ziele für WebUI-Ausbau",
-   "context": "conversation between Hermes Agent and the User",
+   "id": "f5c81e1f-58c8-5864-98ae-fe72f6b3bc3a",
+   "text": "Beispiel-Erinnerung 2: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext B",
    "occurred_start": null,
    "occurred_end": null,
    "mentioned_at": "2026-10-23T22:54:54.130000+00:00",
    "date": "2026-10-23 22:54",
-   "entities": "SERVICE:Forgejo, Forgejo, WebUI, PROJECT:WebUI",
-   "document_id": "local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35",
-   "chunk_id": "hermes_local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35_26",
+   "entities": "Beispiel-Entität 2, Beispiel-Entität 6",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "007ae4aa-24ba-50f5-9be8-ac42a4b11c83",
    "fact_type": "world",
-   "tags": [
-    "session:local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:55:47.776052+00:00",
    "proof_count": 1
   },
   {
-   "id": "7329701e-e21c-4fa3-a1a9-9dc677ca9a40",
-   "text": "WebUI zeigt Key-Anfang und -Ende (oc_s...87r9) obwohl Text sagt Werte erschienen nie, und HTTP-Header 'Server: uvicorn' ist sichtbar | Sicherheits- und datenschutzrelevante Anzeigeabweichung",
-   "context": "conversation between Hermes Agent and the User",
+   "id": "3d1ceb6d-048a-514e-8118-b70db81b9cd1",
+   "text": "Beispiel-Erinnerung 3: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext C",
    "occurred_start": null,
    "occurred_end": null,
    "mentioned_at": "2026-10-23T22:54:54.120000+00:00",
    "date": "2026-10-23 22:54",
-   "entities": "SERVICE:Uvicorn, uvicorn, WebUI, PROJECT:WebUI",
-   "document_id": "local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35",
-   "chunk_id": "hermes_local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35_26",
+   "entities": "Beispiel-Entität 3, Beispiel-Entität 7",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "007ae4aa-24ba-50f5-9be8-ac42a4b11c83",
    "fact_type": "world",
-   "tags": [
-    "session:local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:55:47.776052+00:00",
    "proof_count": 1
   },
   {
-   "id": "35ad01d6-9ed3-4764-b507-c81b10dd458e",
-   "text": "Gedächtnis-Graph enthält 84.231 Knoten, Anzeige zeigt nur 150 | Infrastruktur-Fakt zur Graph-Größe und Anzeige-Limitierung",
-   "context": "conversation between Hermes Agent and the User",
+   "id": "772e0f15-2c47-5206-a824-09850a2f49a2",
+   "text": "Beispiel-Erinnerung 4: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext A",
    "occurred_start": null,
    "occurred_end": null,
    "mentioned_at": "2026-10-23T22:54:54.110000+00:00",
    "date": "2026-10-23 22:54",
-   "entities": "Gedächtnis-Graph, WebUI, PROJECT:WebUI",
-   "document_id": "local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35",
-   "chunk_id": "hermes_local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35_26",
+   "entities": "Beispiel-Entität 4, Beispiel-Entität 5",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "007ae4aa-24ba-50f5-9be8-ac42a4b11c83",
    "fact_type": "world",
-   "tags": [
-    "session:local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:55:47.776052+00:00",
    "proof_count": 1
   },
   {
-   "id": "1f129ac4-ff50-40bd-a9e2-8aaef2e3e3fe",
-   "text": "Anbieter-Seite der WebUI ist veraltet ('Terminal-Dienst nicht angebunden', 'Claude Code NOCH NICHT ANGEBUNDEN'), tatsächlich laufen die CLIs | Dokumentiert Diskrepanz zwischen Anzeige und Infrastruktur-Status",
-   "context": "conversation between Hermes Agent and the User",
+   "id": "2a7abb69-bcaf-59a0-80f9-44f9e617e6ff",
+   "text": "Beispiel-Erinnerung 5: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext B",
    "occurred_start": null,
    "occurred_end": null,
    "mentioned_at": "2026-10-23T22:54:54.100000+00:00",
    "date": "2026-10-23 22:54",
-   "entities": "Terminal-Dienst, Claude Code, WebUI, PROJECT:WebUI, SERVICE:Claude Code",
-   "document_id": "local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35",
-   "chunk_id": "hermes_local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35_26",
+   "entities": "Beispiel-Entität 1, Beispiel-Entität 6",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "007ae4aa-24ba-50f5-9be8-ac42a4b11c83",
    "fact_type": "world",
-   "tags": [
-    "session:local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:55:47.776052+00:00",
    "proof_count": 1
   },
   {
-   "id": "30794659-403e-473d-87e0-bac726da3423",
-   "text": "User will ultimative WebUI erreichen und hat Live-Test aller Funktionen mit Report zu Funktion, Nacharbeit und Erweiterungen beauftragt; voller Livetest-Bericht liegt unter `/home/marct/.hermes/attachments/Hermes-WebUI-Livetest-2026-10-24.md` | When: 24. Oktober 2026 | Involving: user | Grundlage für Nacharbeit und Ausbau zur ultimativen Web UI",
-   "context": "conversation between Hermes Agent and the User",
+   "id": "8873a80c-d509-52b2-8e55-222d0c1804e9",
+   "text": "Beispiel-Erinnerung 6: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext C",
    "occurred_start": "2026-10-23T22:54:54.090000+00:00",
    "occurred_end": "2026-10-23T22:54:54.090000+00:00",
    "mentioned_at": "2026-10-23T22:54:54.090000+00:00",
    "date": "2026-10-23 22:54",
-   "entities": "User, WebUI, PROJECT:WebUI, /home/marct/.hermes/attachments/Hermes-WebUI-Livetest-2026-10-24.md",
-   "document_id": "local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35",
-   "chunk_id": "hermes_local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35_25",
+   "entities": "Beispiel-Entität 2, Beispiel-Entität 7",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "a77954ed-6518-51e1-a3f2-fc7e653d3312",
    "fact_type": "world",
-   "tags": [
-    "session:local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:55:47.776052+00:00",
    "proof_count": 1
   },
   {
-   "id": "948a13e0-65c7-4a05-b8f7-92d90ab1b744",
-   "text": "Suche, Kanban, Logs und Erweiterungen in WebUI sind leer (\"Keine Profile verfügbar\"), weil hostd-Config auf beiden Hosts \"profiles\": {} hat und der Installer sie nicht füllt | Fehlende Profile-Konfiguration und Installer-Lücke",
-   "context": "conversation between Hermes Agent and the User",
+   "id": "22c5557f-4847-5738-9c3f-13d0bcf50f36",
+   "text": "Beispiel-Erinnerung 7: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext A",
    "occurred_start": null,
    "occurred_end": null,
    "mentioned_at": "2026-10-23T22:54:54.080000+00:00",
    "date": "2026-10-23 22:54",
-   "entities": "Laptop, Hikari, SERVICE:hostd, hostd, WebUI, PROJECT:WebUI, LOCATION:Hikari, Laptop",
-   "document_id": "local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35",
-   "chunk_id": "hermes_local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35_25",
+   "entities": "Beispiel-Entität 3, Beispiel-Entität 5",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "a77954ed-6518-51e1-a3f2-fc7e653d3312",
    "fact_type": "world",
-   "tags": [
-    "session:local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:55:47.776052+00:00",
    "proof_count": 1
   },
   {
-   "id": "50010389-c856-4e0c-8a9a-af6ceaa7f098",
-   "text": "Hikari-Profil `default` hat abgelaufenen OpenCode-Key (Lauf endet mit HTTP 401: This API key has expired), Anbieter-Tabelle und System-Seite zeigen trotzdem \"in Ordnung\"; Key muss getauscht werden, WebUI soll Keys künftig auf Gültigkeit prüfen | When: 24. Oktober 2026 | Falsche Statusanzeige verdeckt ungültigen Key",
-   "context": "conversation between Hermes Agent and the User",
+   "id": "69393b5c-2069-5de6-b9be-4b37edf7c9c5",
+   "text": "Beispiel-Erinnerung 8: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext B",
    "occurred_start": "2026-10-23T22:54:54.070000+00:00",
    "occurred_end": "2026-10-23T22:54:54.070000+00:00",
    "mentioned_at": "2026-10-23T22:54:54.070000+00:00",
    "date": "2026-10-23 22:54",
-   "entities": "SERVICE:OPENCODE, OpenCode, Hikari, LOCATION:Hikari, WebUI, PROJECT:WebUI",
-   "document_id": "local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35",
-   "chunk_id": "hermes_local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35_25",
+   "entities": "Beispiel-Entität 4, Beispiel-Entität 6",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "a77954ed-6518-51e1-a3f2-fc7e653d3312",
    "fact_type": "world",
-   "tags": [
-    "session:local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:55:47.776052+00:00",
    "proof_count": 1
   },
   {
-   "id": "d8befc93-81d9-4ff6-b0d4-e1e01620eac5",
-   "text": "Zeitpläne (/jobs) stürzen bei 8 von 9 Hikari-Profilen mit React-Fehler #31 ab, weil Hermes den Zeitplan als Objekt {kind, expr, display} liefert und Views.tsx:29 es als Text rendert (Mock lieferte String); Fix ist eine Zeile plus Test | When: 24. Oktober 2026 | Unterschied zwischen Mock (String) und Live-Daten (Objekt) verursacht Absturz",
-   "context": "conversation between Hermes Agent and the User",
+   "id": "8f6c6ecc-7725-5372-abe3-c42b23c751f2",
+   "text": "Beispiel-Erinnerung 9: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext C",
    "occurred_start": "2026-10-23T22:54:54.060000+00:00",
    "occurred_end": "2026-10-23T22:54:54.060000+00:00",
    "mentioned_at": "2026-10-23T22:54:54.060000+00:00",
    "date": "2026-10-23 22:54",
-   "entities": "TECHNOLOGY:React, React, Hikari, LOCATION:Hikari, Views.tsx, WebUI, PROJECT:WebUI",
-   "document_id": "local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35",
-   "chunk_id": "hermes_local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35_25",
+   "entities": "Beispiel-Entität 1, Beispiel-Entität 7",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "a77954ed-6518-51e1-a3f2-fc7e653d3312",
    "fact_type": "world",
-   "tags": [
-    "session:local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:55:47.776052+00:00",
    "proof_count": 1
   },
   {
-   "id": "c42826fd-94ca-45df-bfe2-7e2407a6ad11",
-   "text": "Live-WebUI läuft unter https://agents.thiel.digital mit Anmeldung via Forgejo (OIDC) und 2FA, getestet als `tenjin`; Hosts Hikari (Hermes 0.21.6) und Laptop (Hermes 0.22.5) sind online mit zusammen 10 Agents",
-   "context": "conversation between Hermes Agent and the User",
+   "id": "3a1ebf77-8645-5244-8a57-7633e9e534be",
+   "text": "Beispiel-Erinnerung 10: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext A",
    "occurred_start": null,
    "occurred_end": null,
    "mentioned_at": "2026-10-23T22:54:54.050000+00:00",
    "date": "2026-10-23 22:54",
-   "entities": "Laptop, Hikari, LOCATION:agents.thiel.digital, SERVICE:Forgejo, hermes, @tenjin, PERSON:Tenjin, TECHNOLOGY:OIDC, Forgejo, WebUI, PROJECT:WebUI, agents.thiel.digital, OIDC",
-   "document_id": "local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35",
-   "chunk_id": "hermes_local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35_25",
+   "entities": "Beispiel-Entität 2, Beispiel-Entität 5",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "a77954ed-6518-51e1-a3f2-fc7e653d3312",
    "fact_type": "world",
-   "tags": [
-    "session:local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:55:47.776052+00:00",
    "proof_count": 1
   },
   {
-   "id": "002bb66a-0d4c-4f55-a77d-66e8840dac00",
-   "text": "User hat als Admin ein neues Passwort für Forgejo-Nutzer `tenjin` gesetzt und den Vault-Eintrag aktualisiert, nachdem das alte Passwort (per Benutzername und E-Mail geprüft) von Forgejo abgewiesen wurde. | When: 24. Oktober 2026, ca. 00:22 Uhr | Involving: user, tenjin | Altes Passwort war ungültig, kein Weiter-Raten durch Agent",
-   "context": "conversation between Hermes Agent and the User",
+   "id": "d242afc9-fbef-507a-8ca5-57a95e28a8c1",
+   "text": "Beispiel-Erinnerung 11: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext B",
    "occurred_start": "2026-10-23T22:22:33.030000+00:00",
    "occurred_end": "2026-10-23T22:22:33.030000+00:00",
    "mentioned_at": "2026-10-23T22:54:54.030000+00:00",
    "date": "2026-10-23 22:22",
-   "entities": "User, SERVICE:Forgejo, @tenjin, PERSON:Tenjin, Forgejo, Vault",
-   "document_id": "local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35",
-   "chunk_id": "hermes_local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35_24",
+   "entities": "Beispiel-Entität 3, Beispiel-Entität 6",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "76d9c5e9-b488-5d6c-b494-0767b096f734",
    "fact_type": "world",
-   "tags": [
-    "session:local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:55:47.776052+00:00",
    "proof_count": 1
   },
   {
-   "id": "1d56a84f-74e0-4b8b-a7b1-d6d7b3cdee19",
-   "text": "WebUI-Login läuft über Forgejo-OAuth unter `git.thiel.digital/login/oauth/authorize`. | When: 24. Oktober 2026 | Anmeldeweg für WebUI-Zugang",
-   "context": "conversation between Hermes Agent and the User",
+   "id": "d9106676-bc4f-5014-b72e-3de6c5dfc6ce",
+   "text": "Beispiel-Erinnerung 12: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext C",
    "occurred_start": null,
    "occurred_end": null,
    "mentioned_at": "2026-10-23T22:54:54.020000+00:00",
    "date": "2026-10-23 22:54",
-   "entities": "SERVICE:Forgejo, git.thiel.digital, TECHNOLOGY:OIDC, Forgejo, WebUI, LOCATION:git.thiel.digital, PROJECT:WebUI",
-   "document_id": "local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35",
-   "chunk_id": "hermes_local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35_24",
+   "entities": "Beispiel-Entität 4, Beispiel-Entität 7",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "76d9c5e9-b488-5d6c-b494-0767b096f734",
    "fact_type": "world",
-   "tags": [
-    "session:local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:55:47.776052+00:00",
    "proof_count": 1
   },
   {
-   "id": "33630bff-69d2-480c-9da6-39ecb8d2189a",
-   "text": "OIDC_ALLOWED_SUB-Erweiterung in webui.env wurde erst nach Container-Recreate aktiv, davor 403 not_allowed trotz korrekter Config-Datei. | When: 24. Oktober 2026 | Belegt env_file-Verhalten: Restart reicht nicht für neue Werte",
-   "context": "Docker env_file Verhalten Hikari",
+   "id": "98fd5cef-d099-519d-8be1-e112c0101908",
+   "text": "Beispiel-Erinnerung 13: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext A",
    "occurred_start": "2026-10-23T22:22:05.010000+00:00",
    "occurred_end": "2026-10-23T22:22:05.010000+00:00",
    "mentioned_at": "2026-10-23T22:22:05.010000+00:00",
    "date": "2026-10-23 22:22",
-   "entities": "SERVICE:Docker, Hikari, webui.env, TECHNOLOGY:OIDC, WebUI, OIDC_ALLOWED_SUB, PROJECT:Hikari",
-   "document_id": "56a69b8c-2ccc-4e63-84fc-4b39933484ec",
-   "chunk_id": "hermes_56a69b8c-2ccc-4e63-84fc-4b39933484ec_0",
+   "entities": "Beispiel-Entität 1, Beispiel-Entität 5",
+   "document_id": "16ff1154-b70d-52cc-9d63-d8ad32b44759",
+   "chunk_id": "622c39be-11e2-508b-ae94-ee596bbd9570",
    "fact_type": "world",
-   "tags": [
-    "hikari",
-    "lesson",
-    "docker"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:22:28.395186+00:00",
    "proof_count": 1
   },
   {
-   "id": "944703d5-5702-4682-9a52-fb2b374b2075",
-   "text": "Hikari WebUI Container nutzt env_file aus webui.env: ein plain docker restart liest die env-Datei nicht neu ein, Werte bleiben alt. Nach jeder webui.env-Änderung muss der Container neu erstellt werden (deploy.sh oder compose up -d). | Sonst gelten alte Werte weiter, Recreate ist erforderlich damit Config-Änderungen wirksam werden",
-   "context": "Docker env_file Verhalten Hikari",
+   "id": "825561fa-339f-5e84-8b83-502498a42ca8",
+   "text": "Beispiel-Erinnerung 14: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext B",
    "occurred_start": null,
    "occurred_end": null,
    "mentioned_at": "2026-10-23T22:22:05+00:00",
    "date": "2026-10-23 22:22",
-   "entities": "SERVICE:Docker, Hikari, deploy.sh, Docker, webui.env, WebUI, PROJECT:Hikari",
-   "document_id": "56a69b8c-2ccc-4e63-84fc-4b39933484ec",
-   "chunk_id": "hermes_56a69b8c-2ccc-4e63-84fc-4b39933484ec_0",
+   "entities": "Beispiel-Entität 2, Beispiel-Entität 6",
+   "document_id": "16ff1154-b70d-52cc-9d63-d8ad32b44759",
+   "chunk_id": "622c39be-11e2-508b-ae94-ee596bbd9570",
    "fact_type": "world",
-   "tags": [
-    "hikari",
-    "lesson",
-    "docker"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:22:28.395186+00:00",
    "proof_count": 1
   },
   {
-   "id": "88d1f68c-12c4-4a5b-9c3b-904e923bf9ac",
-   "text": "Hikari und privates Forgejo laufen auf main-Stand b130596, Hikari öffentlich unter https://agents.thiel.digital deployed | When: 24. Oktober 2026, 00:02 Uhr",
-   "context": "conversation between Hermes Agent and the User",
+   "id": "bdf0c9c9-dc2f-5eef-9212-c8957fe6933e",
+   "text": "Beispiel-Erinnerung 15: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext C",
    "occurred_start": "2026-10-23T22:02:25.010000+00:00",
    "occurred_end": "2026-10-23T22:02:25.010000+00:00",
    "mentioned_at": "2026-10-23T22:08:56.010000+00:00",
    "date": "2026-10-23 22:02",
-   "entities": "b130596, Hikari, Hermes WebUI, LOCATION:Hikari, agents.thiel.digital, Forgejo, agents.thiel.digital, PROJECT:Hermes-WebUI",
-   "document_id": "local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35",
-   "chunk_id": "hermes_local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35_23",
+   "entities": "Beispiel-Entität 3, Beispiel-Entität 7",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "04914b9a-eda9-5d2b-aa95-248332540298",
    "fact_type": "world",
-   "tags": [
-    "session:local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:09:38.566627+00:00",
    "proof_count": 1
   },
   {
-   "id": "aa1264b5-2393-4f33-a2ab-2f1baadb7151",
-   "text": "User hat PR #6 „Feat/verified agent console“ in marct3797/Hermes-WebUI von feat/verified-agent-console nach main gemerged (42 Commits, 251 geänderte Dateien, +31.136/-1) | When: 24. Oktober 2026, 00:01 Uhr | Involving: user (marct3797)",
-   "context": "conversation between Hermes Agent and the User",
+   "id": "55f15173-eb4c-5d94-9e83-195636b92b2e",
+   "text": "Beispiel-Erinnerung 16: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext A",
    "occurred_start": "2026-10-23T22:01:52+00:00",
    "occurred_end": "2026-10-23T22:01:52+00:00",
    "mentioned_at": "2026-10-23T22:08:56+00:00",
    "date": "2026-10-23 22:01",
-   "entities": "marct3797@, User, Hermes WebUI, feat/verified-agent-console, PR #6, main, PERSON:marct3797, LOCATION:github.com, PROJECT:Hermes-WebUI",
-   "document_id": "local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35",
-   "chunk_id": "hermes_local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35_23",
+   "entities": "Beispiel-Entität 4, Beispiel-Entität 5",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "04914b9a-eda9-5d2b-aa95-248332540298",
    "fact_type": "world",
-   "tags": [
-    "session:local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:09:38.566627+00:00",
    "proof_count": 1
   },
   {
-   "id": "89b4f3e7-ed53-45a9-a024-3e802343c56c",
-   "text": "Plan: Nach grüner CI und Merge von PR #6 den neuen `main`-Stand auf Hikari holen und den live Build erneut verifizieren. | When: nach Merge von PR #6 | Involving: user | Damit ein normaler Clone nach dem Merge den funktionierenden Stand erhält.",
-   "context": "conversation between Hermes Agent and the User",
+   "id": "cdc692d2-0164-5ca8-b865-e9c754ef88a1",
+   "text": "Beispiel-Erinnerung 17: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext B",
    "occurred_start": null,
    "occurred_end": null,
    "mentioned_at": "2026-10-23T21:58:44.230000+00:00",
    "date": "2026-10-23 21:58",
-   "entities": "Hikari, User, LOCATION:Hikari, Hermes WebUI, PR #6, main, PROJECT:Hermes-WebUI",
-   "document_id": "local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35",
-   "chunk_id": "hermes_local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35_22",
+   "entities": "Beispiel-Entität 1, Beispiel-Entität 6",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "499df0ce-4944-5321-b90a-9b169fb19600",
    "fact_type": "world",
-   "tags": [
-    "session:local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:00:45.380407+00:00",
    "proof_count": 1
   },
   {
-   "id": "5f70c31e-0500-431d-b1c1-a85ac09bfabd",
-   "text": "PR #6 wurde über den Account marct3797 erstellt, weil der User-Account vertrauenswürdig ist und der Agent-Account es nicht war, damit der PR für alle sichtbar ist. | When: 23. Oktober 2026 | Involving: marct3797 (user) | Damit der PR für alle sichtbar ist und die Anwendung nach Merge erstmals auf `main` liegt.",
-   "context": "conversation between Hermes Agent and the User",
+   "id": "78b30b27-005c-5530-ac73-890661a25e97",
+   "text": "Beispiel-Erinnerung 18: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext C",
    "occurred_start": null,
    "occurred_end": null,
    "mentioned_at": "2026-10-23T21:58:44.220000+00:00",
    "date": "2026-10-23 21:58",
-   "entities": "marct3797@, User, Hermes WebUI, PR #6, PERSON:marct3797, SERVICE:GitHub, PROJECT:Hermes-WebUI",
-   "document_id": "local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35",
-   "chunk_id": "hermes_local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35_22",
+   "entities": "Beispiel-Entität 2, Beispiel-Entität 7",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "499df0ce-4944-5321-b90a-9b169fb19600",
    "fact_type": "world",
-   "tags": [
-    "session:local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:00:45.380407+00:00",
    "proof_count": 1
   },
   {
-   "id": "83d241e4-a1ab-4785-b79d-7f5d672adc56",
-   "text": "PR #6 'Feat/verified agent console' im Repository marct3797/Hermes-WebUI ist offen und soll 42 Commits von `feat/verified-agent-console` nach `main` mergen (251 geänderte Dateien, +31.136 / -1). | When: 23. Oktober 2026 | Involving: marct3797 (user), claude",
-   "context": "conversation between Hermes Agent and the User",
+   "id": "8d670f7a-6b52-59ba-a174-2ddc50236ffc",
+   "text": "Beispiel-Erinnerung 19: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext A",
    "occurred_start": null,
    "occurred_end": null,
    "mentioned_at": "2026-10-23T21:58:44.210000+00:00",
    "date": "2026-10-23 21:58",
-   "entities": "marct3797@, User, Hermes WebUI, Claude, feat/verified-agent-console, PR #6, main, PERSON:marct3797, SERVICE:GitHub, PROJECT:Hermes-WebUI",
-   "document_id": "local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35",
-   "chunk_id": "hermes_local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35_22",
+   "entities": "Beispiel-Entität 3, Beispiel-Entität 5",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "499df0ce-4944-5321-b90a-9b169fb19600",
    "fact_type": "world",
-   "tags": [
-    "session:local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:00:45.380407+00:00",
    "proof_count": 1
   },
   {
-   "id": "c9a11497-7284-427f-a405-ec6a80e8be59",
-   "text": "User ist im richtigen Branch feat/verified-agent-console, sieht den erwarteten Inhalt aber nicht; für den öffentlich vorhandenen Branch fehlt der PR und er soll direkt über den Compare-Link main...feat/verified-agent-console erstellt werden | When: 23. Oktober 2026 | Involving: user | Offenes Problem mit fehlendem PR als Lösungsweg",
-   "context": "conversation between Hermes Agent and the User",
+   "id": "21be5746-b26b-5ac2-936e-10331c8fb97e",
+   "text": "Beispiel-Erinnerung 20: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext B",
    "occurred_start": null,
    "occurred_end": null,
    "mentioned_at": "2026-10-23T21:58:44.200000+00:00",
    "date": "2026-10-23 21:58",
-   "entities": "User, Hermes WebUI, feat/verified-agent-console, GitHub, SERVICE:GitHub, PROJECT:Hermes-WebUI",
-   "document_id": "local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35",
-   "chunk_id": "hermes_local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35_21",
+   "entities": "Beispiel-Entität 4, Beispiel-Entität 6",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "da1b33a2-7735-5d22-9f34-58ab406f75be",
    "fact_type": "world",
-   "tags": [
-    "session:local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:00:45.380407+00:00",
    "proof_count": 1
   },
   {
-   "id": "0fffb8a7-689b-48fd-8a99-d3747c0664ff",
-   "text": "Hermes-WebUI-Repo (marct3797/Hermes-WebUI) hat 4 offene PRs, alle von marct3797: #4 „Pakete 1–7: echte Hermes-Funktionen, Gedächtnis, Gruppenchats, SOUL, Anbieter“, #3 „Design v2, Profil-Seite und Betrieb auf Hikari“, #2 „Phase 0: Fundament mit Host- und Runtime-Achse“, #1 „Initial implementation of Hermes WebUI with chat interface“ | When: 23. Oktober 2026 | Involving: marct3797 | Wichtiges Projekt-Update zum Stand der offenen PRs",
-   "context": "conversation between Hermes Agent and the User",
+   "id": "c4a1c9ca-3328-5094-b50e-502d96c3fdc9",
+   "text": "Beispiel-Erinnerung 21: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext C",
    "occurred_start": null,
    "occurred_end": null,
    "mentioned_at": "2026-10-23T21:58:44.190000+00:00",
    "date": "2026-10-23 21:58",
-   "entities": "marct3797@, Hermes WebUI, GitHub, PERSON:marct3797, SERVICE:GitHub, PROJECT:Hermes-WebUI",
-   "document_id": "local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35",
-   "chunk_id": "hermes_local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35_21",
+   "entities": "Beispiel-Entität 1, Beispiel-Entität 7",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "da1b33a2-7735-5d22-9f34-58ab406f75be",
    "fact_type": "world",
-   "tags": [
-    "session:local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:00:45.380407+00:00",
    "proof_count": 1
   },
   {
-   "id": "9db26e05-7282-47c3-9bad-72c5bd0fb0c8",
-   "text": "Neuer Lösungsweg: User erstellt selbst den PR für `feat/verified-agent-console` über den gelben Hinweis auf der Pulls-Seite, Assistent prüft CI grün gegen, User mergt. | Involving: user, Hermes Agent | PR vom vertrauenswürdigen Owner-Account ist sofort für alle sichtbar und startet CI",
-   "context": "conversation between Hermes Agent and the User",
+   "id": "02819c24-8a14-5853-a598-6e8a046a7fee",
+   "text": "Beispiel-Erinnerung 22: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext A",
    "occurred_start": null,
    "occurred_end": null,
    "mentioned_at": "2026-10-23T21:58:44.180000+00:00",
    "date": "2026-10-23 21:58",
-   "entities": "User, Hermes WebUI, feat/verified-agent-console, SERVICE:GitHub, PROJECT:Hermes-WebUI",
-   "document_id": "local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35",
-   "chunk_id": "hermes_local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35_20",
+   "entities": "Beispiel-Entität 2, Beispiel-Entität 5",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "4b9200b7-eeb3-574b-8bc7-3fca7fed59d9",
    "fact_type": "world",
-   "tags": [
-    "session:local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:00:45.380407+00:00",
    "proof_count": 1
   },
   {
-   "id": "51f1bd7a-6749-468e-9bd2-d70b5c0d7765",
-   "text": "Repository `marct3797/Hermes-WebUI` zeigt 4 offene / 0 geschlossene PRs, alle von marct3797 als Owner: #4 „Pakete 1–7: echte Hermes-Funktionen, Gedächtnis, Gruppenchats, SOUL, Anbieter“, #3 „Design v2, Profil-Seite und Betrieb auf Hikari“, #2 „Phase 0: Fundament mit Host- und Runtime-Achse“, #1 „Initial implementation of Hermes WebUI with chat interface“. | When: 23. Oktober 2026 | Involving: marct3797 (Owner) | Belegt, dass PR Nr. 5 selbst für den Owner unsichtbar ist",
-   "context": "conversation between Hermes Agent and the User",
+   "id": "8df8d249-6b3a-5c77-a0d2-401f4a28bd6b",
+   "text": "Beispiel-Erinnerung 23: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext B",
    "occurred_start": null,
    "occurred_end": null,
    "mentioned_at": "2026-10-23T21:58:44.160000+00:00",
    "date": "2026-10-23 21:58",
-   "entities": "marct3797@, User, Hermes WebUI, PERSON:marct3797, SERVICE:GitHub, PROJECT:Hermes-WebUI",
-   "document_id": "local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35",
-   "chunk_id": "hermes_local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35_20",
+   "entities": "Beispiel-Entität 3, Beispiel-Entität 6",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "4b9200b7-eeb3-574b-8bc7-3fca7fed59d9",
    "fact_type": "world",
-   "tags": [
-    "session:local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:00:45.380407+00:00",
    "proof_count": 1
   },
   {
-   "id": "8fd26128-96e4-4715-a6bb-adb047c7fcb6",
-   "text": "Branch `feat/verified-agent-console` mit Stand `1561154` liegt öffentlich auf GitHub, ist gepusht, live deployed und verifiziert.",
-   "context": "conversation between Hermes Agent and the User",
+   "id": "0a9b4376-a06e-5efa-95f2-a9bb0aea06b9",
+   "text": "Beispiel-Erinnerung 24: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext C",
    "occurred_start": null,
    "occurred_end": null,
    "mentioned_at": "2026-10-23T21:58:44.150000+00:00",
    "date": "2026-10-23 21:58",
-   "entities": "1561154, Hermes WebUI, feat/verified-agent-console, SERVICE:GitHub, PROJECT:Hermes-WebUI",
-   "document_id": "local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35",
-   "chunk_id": "hermes_local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35_20",
+   "entities": "Beispiel-Entität 4, Beispiel-Entität 7",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "4b9200b7-eeb3-574b-8bc7-3fca7fed59d9",
    "fact_type": "world",
-   "tags": [
-    "session:local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:00:45.380407+00:00",
    "proof_count": 1
   },
   {
-   "id": "8859d0e1-89b6-41a1-b6af-90be0c9c40fa",
-   "text": "Vereinbart: marct3797 erstellt den PR selbst aus Branch feat/verified-agent-console (Head 1561154), Agent schließt danach seine unsichtbare Nr. 5, ohne den User-Account anzufassen | When: 23. Oktober 2026 | Involving: marct3797 (user), tenjin2026 (Agent-Account) | PR von marct3797 ist sofort für alle sichtbar und umgeht den Spamfilter",
-   "context": "conversation between Hermes Agent and the User",
+   "id": "321d9932-6fba-5d4c-8efb-3a5e10b525bb",
+   "text": "Beispiel-Erinnerung 25: Platzhaltertext für einen Test, enthält keine echten Inhalte.",
+   "context": "Beispielkontext A",
    "occurred_start": null,
    "occurred_end": null,
    "mentioned_at": "2026-10-23T21:58:44.140000+00:00",
    "date": "2026-10-23 21:58",
-   "entities": "marct3797@, User, @tenjin2026, Hermes WebUI, PERSON:marct3797, tenjin2026, feat/verified-agent-console, SERVICE:GitHub, PROJECT:Hermes-WebUI",
-   "document_id": "local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35",
-   "chunk_id": "hermes_local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35_19",
+   "entities": "Beispiel-Entität 1, Beispiel-Entität 5",
+   "document_id": "15d2c06c-0327-5d69-b90c-d4425e02b58a",
+   "chunk_id": "530b40b5-47d4-5b7d-ae23-e522ebf50a7e",
    "fact_type": "world",
-   "tags": [
-    "session:local-f382c2d56d035e351138347d8156aac02a33ad472bf6bc9c5eccc693fc90dd35"
-   ],
+   "tags": [],
    "created_at": "2026-10-23T22:00:45.380407+00:00",
    "proof_count": 1
   }

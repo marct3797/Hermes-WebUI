@@ -208,9 +208,9 @@ def test_real_graph_keeps_date_context_entities_and_text():
     g = norm_graph(REAL, 40, "world")
     first = g["nodes"][0]
     assert first["date"] == "2026-10-23T22:54:54.140000+00:00" and first["kind"] == "world"
-    assert first["context"] == "conversation between Hermes Agent and the User"
-    assert first["entities"] == ["Codex", "WebUI", "Soul"]  # Typ-Präfixe und Doppelte weg
-    assert first["text"].startswith("Noch ungeprüft") and len(first["text"]) <= 600
+    assert first["context"] == "Beispielkontext A"
+    assert first["entities"] == ["Beispiel-Entität 1", "Beispiel-Entität 5"]  # Typ-Präfixe und Doppelte weg
+    assert first["text"].startswith("Beispiel-Erinnerung 1") and len(first["text"]) <= 600
     assert all("color" not in n for n in g["nodes"]) and all(len(n["entities"]) <= 12 for n in g["nodes"])
     assert (g["total"], g["limit"], g["returned"], g["truncated"]) == (44272, 40, 25, True)
     assert len(g["table_rows"]) == 25 and g["table_rows"][0]["date"] == first["date"] and g["table_rows"][0]["kind"] == "world"

@@ -34,7 +34,7 @@ describe("colorNodes mit den echten Daten", () => {
   it("colours by context, most frequent first, and by the most common entity of each node", () => {
     const ctx = colorNodes("context", nodes);
     expect(ctx.legend[0].count).toBeGreaterThanOrEqual(ctx.legend[1].count);
-    expect(ctx.legend.map((l) => l.label)).toContain("Docker env_file Verhalten Hikari");
+    expect(ctx.legend.map((l) => l.label)).toContain("Beispielkontext A");
     expect(ctx.legend.reduce((s, l) => s + l.count, 0)).toBe(nodes.length);
     const ent = colorNodes("entity", [at("a", { entities: ["Marc", "Hikari"] }), at("b", { entities: ["Hikari"] }), at("c", { entities: ["Hikari"] }), at("d", { entities: [] })]);
     expect(ent.legend[0]).toMatchObject({ label: "Hikari", count: 3 });
