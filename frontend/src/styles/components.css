@@ -1,0 +1,72 @@
+/* Quelle: Design-Entwurf v2 (hermes.css), 1:1 übernommen; Änderungen sind im Kopf der jeweiligen Datei vermerkt. */
+
+/* Sigil: Farbe (--id) und Symbol (--g) setzt die Komponente aus der Config; feste Profilklassen gibt es nicht. */
+/* ── Sigils: Profil-Identität ────────────────────────── */
+.sg{--id:oklch(.92 0 0);--g:none;position:relative;flex:none;width:36px;height:36px;border-radius:6px;
+  background:color-mix(in oklch,var(--id) 11%,var(--void));
+  box-shadow:inset 0 0 0 1px color-mix(in oklch,var(--id) 36%,transparent)}
+.sg::before{content:"";position:absolute;inset:21%;background:var(--id);-webkit-mask:var(--g) center/contain no-repeat;mask:var(--g) center/contain no-repeat}
+.sg-xs{width:22px;height:22px;border-radius:4px}.sg-s{width:28px;height:28px;border-radius:5px}
+.sg-l{width:48px;height:48px;border-radius:8px}.sg-xl{width:72px;height:72px;border-radius:10px}.sg-xl::before{inset:20%}
+.sg.live::after{content:"";position:absolute;right:-3px;bottom:-3px;width:9px;height:9px;border-radius:50%;background:var(--crim);box-shadow:0 0 0 2px var(--void);animation:blink 1.4s infinite}
+.sg.wait::after{content:"";position:absolute;right:-3px;bottom:-3px;width:9px;height:9px;border-radius:50%;background:var(--crim);box-shadow:0 0 0 2px var(--void)}
+.sg.err::after{content:"";position:absolute;right:-2px;bottom:-2px;width:8px;height:8px;border-radius:1px;transform:rotate(45deg);background:var(--ruby);box-shadow:0 0 0 2px var(--void)}
+.rt{--id:var(--t2);--g:none}
+.rt::before{background:var(--t2);-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
+
+/* ── Buttons, Tags, Chips ────────────────────────────── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:32px;padding:0 12px;border-radius:4px;border:1px solid var(--line);background:transparent;color:var(--t1);font:500 13px var(--sans);white-space:nowrap;transition:border-color .12s,background .12s,box-shadow .12s}
+.btn:hover{border-color:var(--crim);background:var(--s1)}
+.btn:focus-visible{outline:none;box-shadow:var(--glow)}
+.btn-p{background:var(--crim);border-color:var(--crim);color:#fff}
+.btn-p:hover{background:#f43f5e;border-color:#f43f5e}
+.btn-p:active{background:var(--crim-lo);border-color:var(--crim-lo)}
+.btn-d{background:rgba(153,27,27,.22);border-color:var(--ruby);color:var(--ruby-t)}
+.btn-d:hover{background:rgba(153,27,27,.4);border-color:var(--ruby)}
+.btn-s{height:26px;padding:0 9px;font-size:12px;gap:6px}
+.btn-l{height:44px;padding:0 16px;font-size:14px}
+.btn-i{width:32px;padding:0}.btn-i.btn-s{width:26px}
+.btn-g{border-color:transparent;color:var(--t2)}
+.btn-g:hover{border-color:var(--line);color:var(--t1)}
+.kbd{white-space:nowrap;display:inline-flex;align-items:center;height:18px;padding:0 5px;border:1px solid var(--line2);border-radius:3px;font:500 10px var(--mono);color:var(--t3);background:var(--void)}
+.btn-p .kbd{border-color:rgba(255,255,255,.4);color:rgba(255,255,255,.9);background:transparent}
+
+.tag{display:inline-flex;align-items:center;gap:6px;height:20px;padding:0 7px;border-radius:4px;border:1px solid var(--line);background:var(--s2);color:var(--t2);font:600 10px/1 var(--mono);letter-spacing:.06em;white-space:nowrap}
+.tag-c{border-color:var(--crim-line);color:var(--crim-hi);background:var(--crim-tint)}
+.tag-s{background:var(--crim);border-color:var(--crim);color:#fff}
+.tag-e{border-color:rgba(239,68,68,.5);color:var(--ruby-t);background:rgba(153,27,27,.2)}
+.tag-m{font-weight:500;letter-spacing:.02em}
+.tag-act{border-color:var(--crim);color:var(--t1)}
+.tag-act::before{content:"";width:4px;height:4px;border-radius:50%;background:var(--crim);animation:blink 1.6s infinite}
+.chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:14px;border:1px solid var(--line);background:transparent;color:var(--t2);font:500 12px var(--sans);white-space:nowrap}
+.chip:hover{border-color:var(--line2);color:var(--t1)}
+.chip.on{background:var(--s2);border-color:var(--t4);color:var(--t1)}
+.chip .n{font:600 10px var(--mono);color:var(--t3)}
+.chip.on .n{color:var(--crim-hi)}
+
+.card{position:relative;background:var(--s1);border:1px solid var(--line);border-radius:4px}
+.card.live::before,.stream::before{content:"";position:absolute;left:-1px;top:-1px;bottom:-1px;width:2px;border-radius:2px 0 0 2px;background:linear-gradient(180deg,var(--crim-lo) 0%,#fb7185 45%,var(--crim-lo) 100%);background-size:100% 260%;animation:scan 2.2s linear infinite}
+.card.need{border-color:var(--crim-line);box-shadow:0 0 0 1px rgba(225,29,72,.35),0 10px 28px -8px rgba(225,29,72,.28)}
+.card.err{border-color:rgba(239,68,68,.45)}
+.card-h{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.card-h h2{margin:0;font:600 12px/16px var(--sans);letter-spacing:.01em}
+
+.bars{display:flex;align-items:flex-end;gap:2px;height:20px}
+.bars i{flex:1;min-width:2px;background:var(--t4);border-radius:1px 1px 0 0;min-height:2px}
+.bars i.h{background:var(--crim)}
+.bars.on i{background:#6b6b75}
+.bars.on i.h{background:var(--crim)}
+.gauge{height:4px;border-radius:2px;background:var(--s3);overflow:hidden}
+.gauge b{display:block;height:100%;background:var(--t2);border-radius:2px}
+.gauge.hot b{background:var(--crim)}
+
+.prog{height:3px;border-radius:2px;background:var(--s3);position:relative;overflow:hidden}
+.prog b{display:block;height:100%;background:var(--crim);border-radius:2px}
+.prog.go b::after{content:"";position:absolute;top:0;bottom:0;width:30%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);animation:shimmer 1.6s infinite}
+
+.banner{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid rgba(239,68,68,.5);border-radius:4px;background:rgba(153,27,27,.18);color:var(--t1)}
+.banner .ic{color:var(--ruby-t);margin-top:1px}
+
+/* Sigil: Initialen als Ersatz-Glyph */
+.sg.ini::before{inset:0;-webkit-mask:none;mask:none;background:none;content:attr(data-i);display:flex;align-items:center;justify-content:center;font:600 13px/1 var(--mono);letter-spacing:-.03em;color:var(--id)}
+.sg-xs.ini::before{font-size:9px}.sg-s.ini::before{font-size:11px}.sg-l.ini::before{font-size:17px}.sg-xl.ini::before{font-size:26px}

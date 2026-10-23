@@ -1,0 +1,37 @@
+# WebUI (BFF + Frontend) auf Hikari. Aufruf aus diesem Ordner:  docker compose up -d --build
+# network_mode: host, weil das Container-Gateway nur auf 127.0.0.1:9121 lauscht. Das BFF selbst bindet ebenfalls nur Loopback.
+services:
+  webui:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        BUILD_ID: ${BUILD_ID:-}
+    image: hermes-webui:local
+    container_name: hermes-webui
+    network_mode: host
+    # Der Docker-Daemon auf Hikari setzt öffentliche DNS-Server; git.thiel.digital (Forgejo, OIDC) löst nur im Tailnet auf.
+    extra_hosts:
+      - "git.thiel.digital:100.100.1.1"
+    restart: unless-stopped
+    user: "${WEBUI_UID:-1000}:${WEBUI_GID:-1000}"
+    env_file: ${WEBUI_HOME:-.}/webui.env
+    environment:
+      HERMES_WEBUI_HOSTS_FILE: /config/hosts.json
+      HERMES_WEBUI_UI_FILE: /config/ui.json
+      HERMES_WEBUI_MEMORY_FILE: /config/memory.json
+      HERMES_WEBUI_AUDIT_FILE: /data/audit.log
+      HERMES_WEBUI_ROOMS_DB: /data/rooms.db
+      HERMES_WEBUI_SOUL_DIR: /data/soul-history
+    volumes:
+      - ${WEBUI_HOME:-.}/config:/config   # beschreibbar: die Profil-Seite speichert in die ui.json
+      - ${WEBUI_HOME:-.}/data:/data
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os,urllib.request as u; u.urlopen(f'http://127.0.0.1:{os.environ.get(\"WEBUI_PORT\",\"8420\")}/healthz', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

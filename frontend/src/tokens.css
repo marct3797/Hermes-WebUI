@@ -1,0 +1,16 @@
+/* Look A "Obsidian Crimson": alle Farben, Schriften und Radien der App stehen nur hier.
+   Quelle: Design-Entwurf v2 (hermes.css, abgenommen von Marc). Die Stylesheets in styles/ nutzen nur diese Tokens.
+   Kein Glas-Blur, keine CDN-Dateien. Crimson heißt Aktion oder Aufmerksamkeit, nie Dekoration. */
+:root{
+  /* Flächen */
+  --void:#09090b; --s0:#0c0c0f; --s1:#111114; --s2:#18181b; --s3:#202024;
+  --line:#27272a; --line2:#3a3a41;
+  /* Text (t3 gegenüber DESIGN.md #52525b angehoben, damit 11px-Labels 4.5:1 halten) */
+  --t1:#f4f4f5; --t2:#a1a1aa; --t3:#868690; --t4:#52525b;
+  /* Akzent: Crimson als einziger Aktionsakzent */
+  --crim:#e11d48; --crim-hi:#fb7185; --crim-lo:#991b1b; --ruby:#ef4444; --ruby-t:#f87171;
+  --crim-tint:rgba(225,29,72,.10); --crim-line:rgba(225,29,72,.46);
+  --glow:0 0 0 1px #e11d48,0 8px 24px -4px rgba(225,29,72,.18);
+  --sans:"Inter Variable",Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono Variable","JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}

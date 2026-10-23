@@ -1,0 +1,22 @@
+import "@fontsource-variable/inter";
+import "@fontsource-variable/jetbrains-mono";
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { App } from "./App";
+import "./tokens.css";
+import "./styles/icons.css";
+import "./styles/base.css";
+import "./styles/components.css";
+import "./styles/shell.css";
+import "./styles/cockpit.css";
+import "./styles/inbox.css";
+import "./styles/chat.css";
+import "./styles/profile.css";
+import "./styles/rooms.css";
+import "./styles/soul.css";
+import "./styles/providers.css";
+import "./styles/operations.css";
+import "./styles/workspace.css";
+import "./styles/mobile.css";
+
+createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);

@@ -1,0 +1,105 @@
+/* Handy (bis 800 px). Quelle: Design-Entwurf v2 (Mobil-Cockpit/Inbox/Chat). Tab-Leiste, Touch-Ziele ab 44 px, kompakte Karten.
+   Der Shader ist hier aus (components/BgFx.tsx). Diese Datei kommt zuletzt und überschreibt die Desktop-Regeln. */
+.m-only,.tabbar,.sheet{display:none}
+
+@media (max-width:800px){
+  .m-only{display:flex}
+  .d-only{display:none!important}
+
+  /* Gerüst: keine Brotkrumen-Leiste, dafür die Tab-Leiste unten */
+  .shell .top{display:none}
+  .shell .main{padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+  .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:15;height:calc(60px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:rgba(9,9,11,.95);border-top:1px solid var(--line)}
+  .tabbar>*{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;min-height:44px;border:0;background:none;color:var(--t3);font:500 11px var(--sans)}
+  .tabbar .on{color:var(--t1)}
+  .tabbar .on .ic{color:var(--crim-hi)}
+  .tabbar .ti{position:relative;display:flex}
+  .tabbar .ct{position:absolute;top:-6px;left:calc(100% - 6px);margin:0;min-width:16px;height:16px;padding:0 4px;font-size:10px;line-height:16px;box-shadow:0 0 0 2px var(--s0)}
+  .more-scrim{display:block;z-index:14}
+  .sheet{display:flex;flex-direction:column;position:fixed;left:12px;right:12px;bottom:calc(68px + env(safe-area-inset-bottom));z-index:16;padding:6px;background:var(--s1);border:1px solid var(--line2);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,.6)}
+  .sheet>*{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border:0;border-radius:6px;background:none;color:var(--t1);font:500 14px var(--sans);text-align:left}
+  .sheet>a:hover,.sheet>button:hover{background:var(--s2)}
+  .sheet .soon{color:var(--t3)}
+  .sheet .tag{margin-left:auto}
+
+  /* Touch-Ziele: mindestens 44 px; Tastenkürzel sind auf dem Handy Lärm */
+  .btn,.btn-s,.btn-l{min-height:44px;height:44px}
+  .btn-i,.btn-s.btn-i{width:44px;min-width:44px}
+  .chip,.chip-s,.tab,.opt,.model-sel{min-height:44px}
+  .chip,.chip-s{height:44px}
+  .model-sel select{height:44px}
+  .seg button{height:44px;min-width:44px}
+  .nav a,.nav .soon,.agent{height:44px}
+  .side-sessions a{min-height:44px}
+  .tool{min-height:44px}
+  .kbd{display:none}
+  input,textarea,select{font-size:16px}   /* unter 16 px zoomt iOS beim Fokussieren */
+
+  .page{padding:16px 16px 24px}
+  .ph h1{font-size:22px;line-height:28px}
+
+  /* Cockpit */
+  .filters{flex:1 1 100%;flex-wrap:nowrap!important;overflow-x:auto;margin:0 -16px!important;padding:0 16px;width:calc(100% + 32px);scrollbar-width:none}
+  .filters::-webkit-scrollbar{display:none}
+  .filters .chip{flex:none}
+  .kpis{grid-template-columns:1fr 1fr}
+  .kpi{padding:10px 12px}
+  .kpi:nth-child(2n){border-right:0}
+  .kpi:nth-child(-n+2){border-bottom:1px solid var(--line)}
+  .kpi-note{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .two{flex-direction:column;flex-wrap:nowrap;gap:14px}
+  .two>.l{flex:none;width:100%}
+  .two>.r{order:-1;flex:none;width:100%;max-width:none;min-width:0}
+  .run-panel,.sys-panel,.needs-panel.none{display:none}
+  .card-h a{display:inline-flex;align-items:center;min-height:44px}
+  .pgrid{grid-template-columns:minmax(0,1fr);gap:8px}
+  .pcard{padding:12px;gap:6px}
+  .pcard .quote,.pcard .pfoot{display:none}
+  .pcard .livebox{margin-left:60px;padding:0;min-height:0;border:0;background:none}
+
+  /* Inbox: die gewählte Meldung steht oben, darunter die Liste */
+  .ph .keys{display:none}
+  .split{flex-direction:column;flex-wrap:nowrap;min-height:0}
+  .ilist{display:contents}
+  .ilist>.tabs{order:-2}
+  .detail{order:-1;flex:none;width:100%;padding:16px 16px 20px;border-bottom:1px solid var(--line)}
+  .nothing{min-height:160px}
+  .tabs{overflow-x:auto;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tabs .tab{white-space:nowrap}
+
+  /* Freigabe: erlauben und ablehnen über die volle Breite, Session und Immer nebeneinander */
+  .ways{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .ways>.btn{width:100%;margin:0!important;justify-content:center}
+  .ways>:first-child,.ways>:last-child,.ways>:nth-child(2):nth-last-child(2){grid-column:1/-1}
+
+  /* Chat */
+  .ch{height:100dvh}
+  .chead{min-height:60px;gap:6px;padding:8px 10px}
+  .chead .back-btn{flex:none}
+  .chead .chead-open{align-items:center;gap:10px;flex:1;min-width:0;min-height:44px;padding:0;border:0;background:none;color:inherit}
+  .chead .chead-open b{font:600 16px/20px var(--sans);letter-spacing:-.015em}
+  .chead .chead-open .mono{font-size:11px}
+  .chead .tag{flex:none}
+  .dockw{padding:0 12px calc(12px + env(safe-area-inset-bottom))}
+  .dock .bar{flex-wrap:nowrap}
+  .dock.busy .model-sel{display:none}
+  .dock .bar .model-sel{flex:1 1 0;min-width:0;margin-left:0}
+  .dock .bar .model-sel select{width:100%;max-width:none}
+  .dock .bar .seg{flex:none}
+  .dock .bar .btn-p{margin-left:auto}
+
+  /* Profil und Darstellung */
+  .pf-head .hint{display:none}
+  .pf-head>.btn-p{flex:1 1 100%}
+  .pf-s{padding:14px}
+  .pf-grid{gap:12px}
+  .pf-gg{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .pf-gb{height:56px}
+  .pf-hb{width:44px;height:44px}
+  .pf-range{height:44px}
+  .pf-in{height:44px}
+  .pf-tabs button{height:44px}
+  .sh-bar{padding:12px}
+  .sh-ctl{max-width:none;flex-basis:100%}
+}

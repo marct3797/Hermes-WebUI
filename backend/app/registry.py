@@ -1,0 +1,182 @@
+"""Host- und Agent-Registry aus der Config-Datei (`hosts.json`).
+
+Begriffe: Ein Host ist ein Rechner, eine Runtime ein Agent-System darauf (z. B. Hermes), ein Agent
+ein Profil oder Projekt dieser Runtime. Die Datei wird bei jeder Abfrage per mtime geprüft, so
+erscheinen neue Agents ohne Neustart und gelöschte verschwinden. Ist die Datei kaputt, bleibt die
+letzte gültige Fassung aktiv und der Fehler wird gemeldet.
+
+Keys stehen in einer Umgebungsvariablen (`api_key_env`) oder, nur für Entwicklung, in der Datei
+(`api_key`), je Runtime und optional je Agent (der Agent-Key hat Vorrang). Sie verlassen den BFF nie.
+"""
+from __future__ import annotations
+
+import json
+import os
+import re
+from collections.abc import Mapping
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Literal
+from urllib.parse import urlsplit
+
+ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,31}$")  # Host- und Runtime-Kennung (landet in URLs)
+AGENT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")  # Profilordner heißen so
+
+
+class ConfigError(Exception):
+    pass
+
+
+@dataclass(frozen=True)
+class AgentCfg:
+    id: str
+    label: str
+    # Eigener Key dieses Agents (Hermes-Profile im Multiplex-Gateway haben je ein eigenes API_SERVER_KEY).
+    # Leer = der Key der Runtime gilt.
+    api_key: str = field(repr=False, default="")
+
+
+@dataclass(frozen=True)
+class DashboardCfg:
+    """`hermes dashboard` derselben Maschine: kann, was die Agent-API nicht kann (SOUL, Profil-Einstellungen, Config)."""
+    base_url: str
+    token: str = field(repr=False, default="")  # nur nötig, wenn das Dashboard nicht auf Loopback lauscht
+
+
+@dataclass(frozen=True)
+class RuntimeCfg:
+    id: str
+    base_url: str
+    api_key: str = field(repr=False, default="")
+    multiplex: bool = False  # Hermes: Profile unter /p/<profil>/ statt eigenem Port
+    agents: tuple[AgentCfg, ...] = ()
+    dashboard: DashboardCfg | None = None
+
+
+@dataclass(frozen=True)
+class HostdCfg:
+    base_url: str
+    token: str = field(repr=False)
+
+
+def _hostd(where: str, raw: Any, env: Mapping[str, str]) -> HostdCfg:
+    # Fixed server origin only: credentials and paths never belong in connection URLs.
+    message = f"{where}: hostd braucht base_url (HTTP-Origin) und token_env (mindestens 32 Zeichen)"
+    if not isinstance(raw, dict) or set(raw) != {"base_url", "token_env"}:
+        raise ConfigError(message)
+    url, key = raw["base_url"], raw["token_env"]
+    if not isinstance(url, str) or not isinstance(key, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+        raise ConfigError(message)
+    try:
+        u = urlsplit(url)
+        valid = (u.scheme in ("http", "https") and u.hostname and u.port != 0
+                 and not u.username and not u.password and not u.query and not u.fragment
+                 and u.path in ("", "/") and not any(c.isspace() or ord(c) < 32 for c in url)
+                 and "?" not in url and "#" not in url and "@" not in u.netloc)
+    except ValueError:
+        valid = False
+    token = env.get(key, "")
+    if not valid or len(token) < 32 or any(ord(c) < 33 or ord(c) > 126 for c in token):
+        raise ConfigError(message)
+    return HostdCfg(url.rstrip("/"), token)
+
+
+@dataclass(frozen=True)
+class HostCfg:
+    id: str
+    label: str
+    kind: Literal["local", "remote"]
+    address: str | None = None
+    runtimes: tuple[RuntimeCfg, ...] = ()
+    hostd: HostdCfg | None = None
+
+    def runtime(self, runtime_id: str) -> RuntimeCfg | None:
+        return next((r for r in self.runtimes if r.id == runtime_id), None)
+
+
+def _dashboard(where: str, raw: Any, env: dict[str, str]) -> DashboardCfg | None:
+    if raw is None:
+        return None
+    url = str(raw.get("base_url", "")) if isinstance(raw, dict) else ""
+    if not url.startswith(("http://", "https://")):
+        raise ConfigError(f"{where}: dashboard braucht base_url mit http:// oder https://")
+    token = raw.get("token") or env.get(str(raw.get("token_env", "")), "")
+    return DashboardCfg(base_url=url.rstrip("/"), token=token)
+
+
+def parse_config(raw: Any, environ: dict[str, str] | None = None) -> dict[str, HostCfg]:
+    env = os.environ if environ is None else environ
+    if not isinstance(raw, dict) or not isinstance(raw.get("hosts"), list):
+        raise ConfigError('Erwartet {"hosts": [...]}')
+    hosts: dict[str, HostCfg] = {}
+    for h in raw["hosts"]:
+        host_id = str(h.get("id", ""))
+        if not ID_RE.match(host_id):
+            raise ConfigError(f"Ungültige Host-Kennung: {host_id!r}")
+        if host_id in hosts:
+            raise ConfigError(f"Host doppelt: {host_id}")
+        kind = h.get("kind", "local")
+        if kind not in ("local", "remote"):
+            raise ConfigError(f"{host_id}: kind muss local oder remote sein")
+        runtimes: list[RuntimeCfg] = []
+        for r in h.get("runtimes", []):
+            runtime_id = str(r.get("id", ""))
+            if not ID_RE.match(runtime_id):
+                raise ConfigError(f"{host_id}: ungültige Runtime-Kennung {runtime_id!r}")
+            if "base_url" not in r:
+                raise ConfigError(f"{host_id}/{runtime_id}: base_url fehlt")
+            agents = []
+            for a in r.get("agents", []):
+                entry = {"id": a} if isinstance(a, str) else a
+                agent_id = str(entry.get("id", ""))
+                if not AGENT_RE.match(agent_id):
+                    continue  # ungültige Namen nie in Upstream-URLs übernehmen
+                agent_key = entry.get("api_key") or env.get(str(entry.get("api_key_env", "")), "")
+                agents.append(AgentCfg(agent_id, str(entry.get("label") or agent_id), api_key=agent_key))
+            multiplex = bool(r.get("multiplex", False))
+            if not multiplex and len(agents) > 1:
+                # Ohne Multiplex ignoriert Hermes das Profil-Präfix: alle Agents landeten im Default.
+                raise ConfigError(f"{host_id}/{runtime_id}: ohne multiplex ist genau ein Agent möglich")
+            key = r.get("api_key") or env.get(str(r.get("api_key_env", "")), "")
+            runtimes.append(RuntimeCfg(
+                id=runtime_id, base_url=str(r["base_url"]).rstrip("/"), api_key=key,
+                multiplex=multiplex, agents=tuple(agents), dashboard=_dashboard(f"{host_id}/{runtime_id}", r.get("dashboard"), env),
+            ))
+        hosts[host_id] = HostCfg(
+            id=host_id, label=str(h.get("label") or host_id), kind=kind,
+            address=h.get("address"), runtimes=tuple(runtimes),
+            hostd=_hostd(host_id, h["hostd"], env) if "hostd" in h else None,
+        )
+    return hosts
+
+
+class Registry:
+    def __init__(self, path: Path):
+        self._path = path
+        self._mtime: float | None = None
+        self._hosts: dict[str, HostCfg] = {}
+        self.error: str | None = None
+
+    def _load(self) -> None:
+        try:
+            mtime = self._path.stat().st_mtime
+        except FileNotFoundError:
+            self._mtime, self._hosts = None, {}
+            self.error = f"{self._path.name} fehlt"
+            return
+        if mtime == self._mtime:
+            return
+        self._mtime = mtime  # auch bei Fehlern, damit eine kaputte Datei nicht bei jeder Abfrage neu geparst wird
+        try:
+            self._hosts = parse_config(json.loads(self._path.read_text(encoding="utf-8")))
+            self.error = None
+        except (ValueError, ConfigError, AttributeError, TypeError) as e:
+            self.error = f"{self._path.name} ist ungültig: {e}"
+
+    def hosts(self) -> list[HostCfg]:
+        self._load()
+        return list(self._hosts.values())
+
+    def host(self, host_id: str) -> HostCfg | None:
+        self._load()
+        return self._hosts.get(host_id)
