@@ -83,6 +83,25 @@ Drei Schichten, jede fängt etwas anderes:
 3. **Lauftest** (Knopf auf der Seite System, `POST …/diagnose/run`): ein kurzer echter Lauf je Agent (Start, Ereignisstrom, Abschluss, Antwort im Verlauf).
    Er legt eine Session an, die bestehen bleibt (Löschen ist in diesem Projekt bewusst nicht vorgesehen).
 
+### Gedächtnis (`memory.json`)
+
+Die Seite **Gedächtnis** liest, was ein Gedächtnis-Anbieter über die Agents weiß. Anbieter stehen in der Datei, auf die `HERMES_WEBUI_MEMORY_FILE` zeigt
+(Vorlage `backend/memory.example.json`; Schlüssel nur per `api_key_env`). Jeder Anbieter meldet seine Fähigkeiten (`stats`, `items`, `search`, `graph`,
+`entities`, `models`, `reflect`), und die Seite zeigt nur die Ansichten, die er kann. Hindsight ist der erste Typ (`app/memory.py`); ein weiterer Typ ist
+eine Klasse mit denselben Methoden. Die Seite schreibt nichts. Die Antwortformen sind nach Hindsights OpenAPI normalisiert, noch nicht gegen die
+laufende Instanz geprüft: **Verbindung prüfen** auf der Seite zeigt Abweichungen. `reflect` ruft beim Anbieter ein Sprachmodell auf, ist darum begrenzt und im Audit.
+
+### Räume (Gruppenchats)
+
+Hermes' Räume gibt es nur in der Desktop-App (Gateway-Schnittstelle `groups.*`), nicht in der HTTP-API. Die WebUI baut sie mit normalen Runs nach
+(`app/rooms.py`): Jedes Mitglied hat eine eigene Session in seinem Agent (Titel „Gruppe: <Raum> · <Agent>“), das BFF führt das Gespräch.
+
+- 2 bis 6 Mitglieder, Namen eindeutig (`@Name` muss genau eins treffen). Raumliste, Nachrichten und Session je Mitglied liegen in SQLite (`HERMES_WEBUI_ROOMS_DB`, auf Hikari `/data/rooms.db`).
+- Ein Absenden löst höchstens 3 Runden und 10 Agent-Nachrichten aus. Erste Runde: die @-Erwähnten, ohne Erwähnung alle (`@all` ebenso). Danach antworten die, die jemand in der Runde davor erwähnt hat. `[PASS]` heißt: nichts beizutragen. Eine stille Runde beendet das Absenden.
+- `@user` in einer Agent-Nachricht hält den Raum an und markiert ihn als „braucht dich“. Freigaben und Rückfragen der Mitglieder erscheinen im Raum und gehen über den Run des jeweiligen Mitglieds.
+- Je Zug sieht ein Mitglied nur die Raumnachrichten seit seinem letzten Zug (seine Session kennt den Rest). Gelöscht wird nichts, ein Raum lässt sich nur archivieren.
+- Abweichung von Hermes' Desktop: eine neue Nachricht während eines laufenden Zugs wird abgelehnt (Stopp oder abwarten), sie wird nicht eingereiht.
+
 ## Entwicklung
 
 ```bash
@@ -199,5 +218,6 @@ Abweichungen zeigen sich als `unknown`-Events oder Probe-Fehler und werden im He
 - `POST /v1/runs` liefert **keine** `session_id` (sie steht in `GET /v1/runs/{id}`); `session_id` im Body setzt eine Session fort. Geklärt am 2026-10-23.
 - `/v1/capabilities`: `features` mit Flags (`run_steer`, `run_approval_response`, `session_fork` …), `endpoints` mit den Routen. Eine Clarify-Route nennt Hermes dort nicht.
   Geklärt am 2026-10-23; offen bleibt nur, wie die Rückfrage-Karte antwortet, sobald es den ersten echten Fall gibt.
+- Räume: ob echte Agents `@Name` und `[PASS]` so befolgen, wie der Prompt es verlangt (steht in `build_prompt`), zeigt erst ein Raum mit echten Profilen; der Mock antwortet immer gleich.
 - Forgejo: OIDC-Discovery, `sub`-Kennung, ob `prompt=login` und `max_age=0` eine neue Anmeldung erzwingen (Step-up).
 - Laptop (Phase 2): Hermes-API-Server dort läuft inzwischen auf `127.0.0.1:8642`; der Host-Dienst bringt den Transport.

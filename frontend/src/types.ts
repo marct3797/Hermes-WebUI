@@ -117,3 +117,18 @@ export type MemEntity = { id: string; name: string; mentions: number; first_seen
 export type MemModel = { id: string; name: string; content: string | null; query: string | null; updated: number | null; tags: string[] };
 export type SkillInfo = { name: string; description?: string; category?: string };
 export type ToolsetInfo = { name: string; label?: string; description?: string; enabled?: boolean; configured?: boolean; tools?: string[] };
+
+export type RoomMember = AgentRef & { label: string; key: string };
+export type RoomMessage = { seq: number; author: string; kind: "message" | "system"; text: string; mentions: string[]; at: number };
+export type Room = {
+  id: string; name: string; archived: boolean; needs_user: boolean; created_at: number;
+  running: boolean; speaker: string | null; members: RoomMember[]; last_message?: RoomMessage | null; messages?: RoomMessage[];
+};
+export type RoomEvent =
+  | { type: "state"; running: boolean; speaker: string | null }
+  | { type: "message"; message: RoomMessage }
+  | { type: "turn.started"; turn: string }
+  | { type: "member.started"; member: string; round: number }
+  | { type: "member.passed"; member: string }
+  | { type: "member.event"; member: string; run_id: string; event: StreamEvent }
+  | { type: "turn.finished"; turn: string; reason: "idle" | "max_rounds" | "max_messages" | "needs_user" | "stopped" | "error" };

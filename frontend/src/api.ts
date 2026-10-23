@@ -1,4 +1,4 @@
-import type { AgentRef, AgentStatus, Decision, DiagReport, HostsResponse, MemEntity, MemGraph, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, ShaderConfig, UiConfig } from "./types";
+import type { AgentRef, AgentStatus, Decision, DiagReport, HostsResponse, MemEntity, MemGraph, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string) {
@@ -97,5 +97,12 @@ export const api = {
   memoryModels: (p: string) => call<{ items: MemModel[] }>("GET", `${mem(p)}/models`),
   memoryReflect: (p: string, query: string) => call<{ text: string; based_on: MemItem[] }>("POST", `${mem(p)}/reflect`, { query }),
   memoryDiagnose: (p: string) => call<DiagReport>("GET", `${mem(p)}/diagnose`),
+  rooms: (archived = false) => call<{ rooms: Room[] }>("GET", `/bff/rooms${archived ? "?archived=true" : ""}`),
+  createRoom: (name: string, members: AgentRef[]) => call<Room>("POST", "/bff/rooms", { name, members }),
+  room: (rid: string) => call<Room>("GET", `/bff/rooms/${id(rid)}`),
+  patchRoom: (rid: string, patch: { name?: string; archived?: boolean }) => call<Room>("PATCH", `/bff/rooms/${id(rid)}`, patch),
+  sendRoomMessage: (rid: string, text: string) => call<{ message: RoomMessage }>("POST", `/bff/rooms/${id(rid)}/messages`, { text }),
+  stopRoom: (rid: string) => call<{ stopped: boolean }>("POST", `/bff/rooms/${id(rid)}/stop`, {}),
+  roomEventsUrl: (rid: string) => `/bff/rooms/${id(rid)}/events`,
   eventsUrl: (a: AgentRef, rid: string) => `${base(a)}/runs/${id(rid)}/events`,
 };

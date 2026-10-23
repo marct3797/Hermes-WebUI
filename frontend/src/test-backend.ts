@@ -1,6 +1,6 @@
 import { act } from "@testing-library/react";
 import { vi } from "vitest";
-import type { HostInfo, ProfileInput, SigilConfig, StreamEvent, UiConfig } from "./types";
+import type { HostInfo, ProfileInput, Room, RoomEvent, SigilConfig, StreamEvent, UiConfig } from "./types";
 
 /** Gemeinsame Test-Attrappen: BFF-Antworten und EventSource für die Seiten-Tests. */
 
@@ -26,6 +26,17 @@ export function emit(ev: StreamEvent, agent?: string) {
   const es = agent ? [...list].reverse().find((s) => s.url.includes(`/${agent}/runs/`)) : list[list.length - 1];
   act(() => { es?.onmessage?.(new MessageEvent("message", { data: JSON.stringify(ev) })); });
 }
+
+/** Raum-Ereignis auf dem Strom des Raums auslösen. */
+export function emitRoom(ev: RoomEvent) {
+  const es = [...FakeEventSource.all].reverse().find((s) => s.url.includes("/bff/rooms/"));
+  act(() => { es?.onmessage?.(new MessageEvent("message", { data: JSON.stringify(ev) })); });
+}
+
+export const roomOf = (id: string, name: string, agents: string[], extra: Partial<Room> = {}): Room => ({
+  id, name, archived: false, needs_user: false, created_at: 1_792_000_000, running: false, speaker: null,
+  members: agents.map((a) => ({ host: "hikari", runtime: "hermes", agent: a, label: a, key: `hikari/hermes/${a}` })), ...extra,
+});
 
 export type Call = { method: string; url: string; body?: Record<string, unknown> };
 
@@ -94,6 +105,7 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
   // Wie das BFF: Speichern ändert die Config, die Antwort ist die ganze Config.
   const uiState: UiConfig = { ...baseUi(), ...uiOverride };
   const calls: Call[] = [];
+  const rooms: Room[] = [];
   let runs = 0;
   const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
   vi.stubGlobal("EventSource", FakeEventSource);
@@ -103,6 +115,28 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
     if (url === "/bff/me") return json({ user: { id: "42", name: "marc" }, auth_mode: "none", fresh: true });
     if (url === "/bff/hosts") return json({ hosts: hostsFor(agents), config_error: null });
     if (url === "/bff/ui") return json(uiState);
+    if (url.startsWith("/bff/rooms")) {
+      const u = new URL(url, "http://bff");
+      const m = /^\/bff\/rooms(?:\/([0-9a-f]{12}))?(?:\/(messages|stop|events))?$/.exec(u.pathname);
+      const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+      if (m && !m[1]) {
+        if (method === "POST") {
+          const room = roomOf("abcabcabcabc", body.name, (body.members as Array<{ agent: string }>).map((x) => x.agent), { messages: [] });
+          rooms.push(room);
+          return json(room, 201);
+        }
+        const archived = u.searchParams.get("archived") === "true";
+        return json({ rooms: rooms.filter((r) => r.archived === archived) });
+      }
+      const room = m && rooms.find((r) => r.id === m[1]);
+      if (room && !m![2]) {
+        if (method === "PATCH") { Object.assign(room, body); return json(room); }
+        return json(room);
+      }
+      if (room && m![2] === "messages" && method === "POST") return json({ message: { seq: (room.messages?.length ?? 0) + 1, author: "user", kind: "message", text: body.text, mentions: [], at: 1_792_000_100 } }, 202);
+      if (room && m![2] === "stop" && method === "POST") return json({ stopped: true });
+      return json({ detail: "nicht da" }, 404);
+    }
     if (url.startsWith("/bff/memory")) {
       const r = memoryRoute(url, method, memoryCapabilities, json, init?.body ? JSON.parse(String(init.body)) : undefined);
       if (r) return r;
@@ -143,5 +177,5 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
     return json({ detail: "nicht da" }, 404);
   }));
   const posted = (suffix: string) => calls.filter((c) => c.method === "POST" && c.url.endsWith(suffix));
-  return { calls, posted };
+  return { calls, posted, rooms };
 }

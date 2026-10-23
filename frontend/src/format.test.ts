@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayGroup, fmtClock, fmtDuration, toMs, toolIcon } from "./format";
+import { dayGroup, fmtClock, fmtDuration, plainPreview, toMs, toolIcon } from "./format";
 
 describe("format", () => {
   it("formats durations and clocks the German way", () => {
@@ -31,5 +31,11 @@ describe("format", () => {
     expect(toolIcon("web_search")).toBe("globe");
     expect(toolIcon("delegate_task")).toBe("cpu");
     expect(toolIcon("mystery")).toBe("wrench");
+  });
+});
+
+describe("plainPreview", () => {
+  it("drops markdown marks, folds code blocks and collapses whitespace", () => {
+    expect(plainPreview("# Titel\n\nHallo **Welt** mit `x`\n\n```py\nprint(1)\n```\n- eins")).toBe("Titel Hallo Welt mit x [Code] - eins");
   });
 });

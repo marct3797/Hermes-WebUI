@@ -12,6 +12,7 @@ import "./styles/cockpit.css";
 import "./styles/inbox.css";
 import "./styles/chat.css";
 import "./styles/profile.css";
+import "./styles/rooms.css";
 import "./styles/mobile.css";
 
 createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);

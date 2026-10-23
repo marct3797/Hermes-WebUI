@@ -17,6 +17,10 @@ export function fmtClock(totalSeconds: number): string {
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
 }
 
+/** Markdown als einzeiliger Klartext für Vorschauen: Codeblöcke werden zu „[Code]“, Auszeichnungen fallen weg. */
+export const plainPreview = (md: string) =>
+  md.replace(/```[\s\S]*?```/g, " [Code] ").replace(/[*_`#>~]/g, "").replace(/\s+/g, " ").trim();
+
 export const fmtCount = (n: number) => n.toLocaleString("de-DE");
 
 export const fmtTime = (ms: number) => new Date(ms).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });

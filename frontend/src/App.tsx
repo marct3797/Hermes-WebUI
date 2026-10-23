@@ -9,6 +9,8 @@ import { HostsPage } from "./pages/HostsPage";
 import { CockpitPage } from "./pages/CockpitPage";
 import { InboxPage } from "./pages/InboxPage";
 import { MemoryPage } from "./pages/MemoryPage";
+import { RoomPage } from "./pages/RoomPage";
+import { RoomsPage } from "./pages/RoomsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { SystemPage } from "./pages/SystemPage";
 import { NotFoundPage } from "./pages/Placeholders";
@@ -57,6 +59,8 @@ export function App() {
             case "settings": return <SettingsPage />;
             case "system": return <SystemPage />;
             case "memory": return <MemoryPage />;
+            case "rooms": return <RoomsPage />;
+            case "room": return <RoomPage key={page.id} roomId={page.id} />;
             case "agent": return <AgentPage page={page} />;
             case "redirect": return null;
             case "notfound": return <NotFoundPage />;

@@ -24,6 +24,7 @@ export function Rail({ me, active, onLogout }: Props) {
       </Link>
       <Link to={agentPath(active)} className="ib on" aria-label="Chats" aria-current="page"><Icon name="chat" size={20} /></Link>
       <span className="ib soon" aria-label="Kanban (folgt)" title="Kanban (folgt)"><Icon name="kanban" size={20} /></span>
+      <Link to="/rooms" className="ib" aria-label="Räume" title="Räume"><Icon name="orbit" size={20} /></Link>
       <Link to="/memory" className="ib" aria-label="Gedächtnis" title="Gedächtnis"><Icon name="memory" size={20} /></Link>
       {hosts?.map((h) => (
         <div key={h.id} className="rail-group" role="group" aria-label={h.label}>

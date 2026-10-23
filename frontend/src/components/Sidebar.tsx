@@ -24,6 +24,7 @@ const NAV = [
   { to: "/", label: "Cockpit", icon: "grid" },
   { to: "/inbox", label: "Inbox", icon: "inbox" },
   { to: "/hosts", label: "Hosts", icon: "server" },
+  { to: "/rooms", label: "Räume", icon: "orbit" },
   { to: "/memory", label: "Gedächtnis", icon: "memory" },
   { to: "/system", label: "System", icon: "shield" },
 ];

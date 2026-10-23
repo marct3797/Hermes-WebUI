@@ -31,6 +31,7 @@ export function BottomNav({ me, path, onChats, onLogout }: Props) {
       {more && (
         <div className="sheet" role="dialog" aria-label="Mehr">
           <Link to="/hosts"><Icon name="server" size={18} />Hosts</Link>
+          <Link to="/rooms"><Icon name="orbit" size={18} />Räume</Link>
           <Link to="/memory"><Icon name="memory" size={18} />Gedächtnis</Link>
           <Link to="/system"><Icon name="shield" size={18} />System</Link>
           <Link to="/settings"><Icon name="sliders" size={18} />Darstellung</Link>

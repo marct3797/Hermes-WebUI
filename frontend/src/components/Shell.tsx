@@ -21,6 +21,8 @@ function crumbs(page: Page): string[] {
     case "settings": return ["darstellung"];
     case "system": return ["system"];
     case "memory": return ["gedächtnis"];
+    case "rooms": return ["räume"];
+    case "room": return ["räume", page.id];
     case "agent": return [page.ref.host, page.ref.runtime, page.ref.agent, page.sessionId ? `${page.module}/${page.sessionId}` : page.module];
     default: return [];
   }
