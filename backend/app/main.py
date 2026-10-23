@@ -22,6 +22,7 @@ from .memory import MemoryRegistry
 from .rooms import RoomService
 from .routes import agents, auth, cli_auth, dashboard as dashboard_routes, hosts, memory as memory_routes, operations as operations_routes, rooms as rooms_routes, ui as ui_routes
 from .redaction import RedactionMiddleware
+from .quota import RefreshGate
 from .security import RateLimiter, SecurityMiddleware
 from .ui import UiConfig
 from .static import FingerprintedFiles
@@ -89,6 +90,7 @@ def create_app(
     app.state.ui = UiConfig(settings.ui_file)
     app.state.memory = MemoryRegistry(settings.memory_file)
     app.state.limiter = RateLimiter(settings.runs_per_minute)
+    app.state.quota_gate = RefreshGate()
     app.state.login_limiter = RateLimiter(settings.logins_per_minute)
     app.state.sessions = SessionStore(settings.session_idle_s, settings.session_max_s)
     app.state.pending_logins = {}
@@ -106,6 +108,7 @@ def create_app(
     app.include_router(agents.router)
     app.include_router(dashboard_routes.router)
     app.include_router(dashboard_routes.host_router)
+    app.include_router(dashboard_routes.quota_router)
     app.include_router(memory_routes.router)
     app.include_router(rooms_routes.router)
     app.include_router(ui_routes.router)
