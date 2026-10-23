@@ -1,12 +1,8 @@
 import { useRef, useState } from "react";
 import { api } from "../../api";
 import { agentPath } from "../../router";
-<<<<<<< HEAD
-import type { AccountState, CliAuthEntry, AgentRef, HostAccount, HostInfo, ProviderMatrix, RuntimeInfo } from "../../types";
-=======
-import type { AccountState, AgentRef, HostAccount, HostInfo, ProviderMatrix, Quota, QuotaProvider, RuntimeInfo } from "../../types";
+import type { AccountState, AgentRef, CliAuthEntry, HostAccount, HostInfo, ProviderMatrix, Quota, QuotaProvider, RuntimeInfo } from "../../types";
 import { useQuota } from "../../useQuota";
->>>>>>> feat/v2-quota
 import { sigilFor, useUi } from "../../ui";
 import { useAsync } from "../../useAsync";
 import { Icon } from "../Icon";
@@ -101,11 +97,7 @@ export function HostProviders({ host, runtime }: Props) {
                     </td>
                     {matrix.accounts.map((a) => (
                       <td key={a.id} data-label={a.label}>
-<<<<<<< HEAD
-                        <AccountCell cli={cliAuth.data?.clis?.find((c) => c.id === a.cli || (a.cli === "claude" && c.id === "claude-code"))} account={a} state={a.profiles[p.name]} profile={labelOf(p.name)} disabled={!usable || !!p.error}
-=======
-                        <AccountCell account={a} state={a.profiles[p.name]} quota={quotaOf(p.name, a.provider)} quotaLoading={!quota.data && !quota.error} profile={labelOf(p.name)} disabled={!usable || !!p.error}
->>>>>>> feat/v2-quota
+                        <AccountCell cli={cliAuth.data?.clis?.find((c) => c.id === a.cli || (a.cli === "claude" && c.id === "claude-code"))} account={a} state={a.profiles[p.name]} quota={quotaOf(p.name, a.provider)} quotaLoading={!quota.data && !quota.error} profile={labelOf(p.name)} disabled={!usable || !!p.error}
                           on={pick?.profile === p.name && pick.what === a.id} onClick={() => toggle(p.name, a.id)} />
                       </td>
                     ))}
@@ -138,9 +130,6 @@ export function HostProviders({ host, runtime }: Props) {
   );
 }
 
-<<<<<<< HEAD
-function AccountCell({ cli, account, state, profile, on, disabled, onClick }: { account: HostAccount; state: AccountState | undefined; cli?: CliAuthEntry; profile: string; on: boolean; disabled: boolean; onClick: () => void }) {
-=======
 /** Kontingente aller Profile eines Hosts. Gleiche Lage in allen Profilen (etwa „Plugin fehlt“) steht nur einmal da. */
 function HostQuota({ profiles, error, loading, onReload, labelOf }: { profiles?: Record<string, Quota>; error?: string; loading: boolean; onReload: () => void; labelOf: (n: string) => string }) {
   const entries = Object.entries(profiles ?? {});
@@ -158,19 +147,15 @@ function HostQuota({ profiles, error, loading, onReload, labelOf }: { profiles?:
   );
 }
 
-function AccountCell({ account, state, quota, quotaLoading, profile, on, disabled, onClick }: { account: HostAccount; state: AccountState | undefined; quota: QuotaProvider | undefined; quotaLoading: boolean; profile: string; on: boolean; disabled: boolean; onClick: () => void }) {
->>>>>>> feat/v2-quota
+function AccountCell({ cli, account, state, quota, quotaLoading, profile, on, disabled, onClick }: { account: HostAccount; state: AccountState | undefined; cli?: CliAuthEntry; quota: QuotaProvider | undefined; quotaLoading: boolean; profile: string; on: boolean; disabled: boolean; onClick: () => void }) {
   const set = !!state?.configured;
   return (
     <button type="button" className={`hub-cell${on ? " on" : ""}${set ? "" : " off"}`} disabled={disabled} aria-pressed={on}
       aria-label={`${account.label} für ${profile}: ${set ? (state?.via === "login" ? "angemeldet" : "Key hinterlegt") : "nicht eingerichtet"}${quota?.state === "auth_failed" ? ", Zugang prüfen" : ""}`} title={quota?.state === "auth_failed" ? quota.reason ?? undefined : undefined} onClick={onClick}>
       {set ? <span className="tag tag-m">{state?.via === "login" ? "ANGEMELDET" : "KEY"}</span> : <span className="muted small">einrichten</span>}
-<<<<<<< HEAD
       {!set && cli && <CliDot entry={cli} />}
-=======
       {set && quotaLoading && <span className="q-skel-s" aria-hidden="true" />}
       {set && quota?.state === "auth_failed" && <><span className="q-dot" aria-hidden="true" /><span className="q-warn small">Zugang prüfen</span></>}
->>>>>>> feat/v2-quota
       {set && state?.detail && <span className="mono t3 small trunc hub-detail">{state.detail}</span>}
     </button>
   );
