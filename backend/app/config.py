@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     memory_file: Path | None = None
     # Gruppenchats (Räume): SQLite-Datei mit Raumliste, Nachrichten und der Session je Mitglied.
     rooms_db: Path = Path("rooms.db")
+    # Verlauf der SOUL.md-Änderungen (ein Ordner je Agent). Wird nie gekürzt.
+    soul_dir: Path = Path("soul-history")
     # Host, auf den alte /p/<profil>-Links zeigen.
     legacy_host: str = "hikari"
 

@@ -121,6 +121,23 @@ npm test && npm run build
 Für den Mock in `hosts.json`: `"base_url": "http://127.0.0.1:8642", "api_key": "dev-key"` und die Agents
 `default`, `omoikane` (die der Mock kennt).
 
+### Dashboard (SOUL und Profil-Einstellungen)
+
+Die Agent-API kennt weder `SOUL.md` noch Profil-Einstellungen. Dafür gibt es `hermes dashboard`: ein eigener Prozess je Maschine, der alle Profile verwaltet
+(`GET /api/profiles`, `GET|PUT /api/profiles/<name>/soul`, `PUT …/description`, `PUT …/model`). Das BFF ist sein einziger Client (`app/dashboard.py`); der Browser sieht
+das Dashboard und seinen Token nie. Eingetragen wird es je Runtime in der `hosts.json`:
+
+```json
+{ "id": "hermes", "base_url": "http://127.0.0.1:9121", …,
+  "dashboard": { "base_url": "http://127.0.0.1:9122", "token_env": "HERMES_DASHBOARD_TOKEN" } }
+```
+
+- **Token:** Das Dashboard verlangt für jede `/api/`-Route den Header `X-Hermes-Session-Token`. Ohne festen Wert würfelt es bei jedem Start einen neuen; darum startet `deploy/dashboard.sh` es mit `HERMES_DASHBOARD_SESSION_TOKEN` und legt denselben Wert als `HERMES_DASHBOARD_TOKEN` in `webui.env` ab.
+- **Start auf Hikari:** `bash deploy/dashboard.sh`, danach `bash deploy/deploy.sh`. Das Skript startet das Dashboard im Container `hermes-agents` auf `127.0.0.1:9122` (9119 gehört dem Host-Dashboard), ergänzt den Eintrag in der `hosts.json` und gibt nie einen Wert aus. Das Dashboard endet mit dem Container, dann das Skript erneut starten.
+- **Ohne Dashboard** zeigt die Seite „SOUL & Profil“ einen Hinweis mit dem Eintrag; alles andere in der WebUI läuft unverändert.
+- **SOUL.md ändern** verlangt eine frische Anmeldung (Step-up, wie „immer erlauben“). Vor jedem Speichern legt das BFF den bisherigen Text unter `HERMES_WEBUI_SOUL_DIR` ab (je Agent ein Ordner, auf Hikari `/data/soul-history`), der Verlauf wird nie gekürzt. Das Speichern prüft den Fingerabdruck des geladenen Texts (409, falls sich die Datei inzwischen geändert hat), liest zur Kontrolle zurück und schreibt ins Audit-Log nur Längen, nie Text.
+- Nicht geprüft gegen das echte Dashboard im Container (Hermes 0.21.6): die Formen folgen dem Quelltext von Hermes 0.19 und dem Mock (`backend/devtools/mock_dashboard.py`). Weicht die Antwort ab, meldet die Seite es als Fehler, ohne etwas zu verändern.
+
 ### hosts.json
 
 ```json

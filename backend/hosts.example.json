@@ -10,6 +10,7 @@
           "base_url": "http://127.0.0.1:9121",
           "api_key_env": "HERMES_KEY_HIKARI",
           "multiplex": true,
+          "dashboard": { "base_url": "http://127.0.0.1:9122", "token_env": "HERMES_DASHBOARD_TOKEN" },
           "agents": ["benzai", "default", "inari", "kaze", "omoikane", "raiden", "ryujin", "sora", "yume"]
         }
       ]

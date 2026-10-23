@@ -1,7 +1,7 @@
-import type { AgentRef, AgentStatus, Decision, DiagReport, HostsResponse, MemEntity, MemGraph, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import type { AgentRef, AgentStatus, Decision, DiagReport, HostsResponse, MemEntity, MemGraph, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string, public code?: string) {
+  constructor(public status: number, message: string, public code?: string, public data?: Record<string, unknown>) {
     super(message);
   }
 }
@@ -32,17 +32,19 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
   if (!res.ok) {
     let detail = res.statusText;
     let code: string | undefined;
+    let data: Record<string, unknown> | undefined;
     try {
       const j = await res.json();
       if (j.detail && typeof j.detail === "object") {
         code = j.detail.code;
+        data = j.detail;
         detail = j.detail.message ?? JSON.stringify(j.detail);
       } else {
         detail = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail ?? j);
       }
     } catch { /* kein JSON */ }
     if (res.status === 401 && !code) toLogin();
-    throw new ApiError(res.status, detail, code);
+    throw new ApiError(res.status, detail, code, data);
   }
   return (res.status === 204 ? undefined : await res.json()) as T;
 }
@@ -85,6 +87,13 @@ export const api = {
     call<unknown>("POST", `${base(a)}/runs/${id(rid)}/steer`, { text }),
   clarify: (a: AgentRef, rid: string, answer: string, clarifyId?: string) =>
     call<unknown>("POST", `${base(a)}/runs/${id(rid)}/clarify`, { answer, clarify_id: clarifyId }),
+  dashboard: (a: AgentRef) => call<DashboardStatus>("GET", `${base(a)}/dashboard`),
+  soul: (a: AgentRef) => call<SoulState>("GET", `${base(a)}/soul`),
+  saveSoul: (a: AgentRef, content: string, baseHash: string) => call<SoulSaved>("PUT", `${base(a)}/soul`, { content, base: baseHash }),
+  soulVersion: (a: AgentRef, vid: string) => call<SoulVersion>("GET", `${base(a)}/soul/history/${id(vid)}`),
+  restoreSoul: (a: AgentRef, vid: string) => call<SoulSaved & { content: string }>("POST", `${base(a)}/soul/restore`, { id: vid }),
+  saveDescription: (a: AgentRef, description: string) => call<{ ok: boolean; description: string }>("PUT", `${base(a)}/profile/description`, { description }),
+  saveModel: (a: AgentRef, provider: string, model: string) => call<{ ok: boolean }>("PUT", `${base(a)}/profile/model`, { provider, model }),
   skills: (a: AgentRef) => call<unknown>("GET", `${base(a)}/skills`),
   toolsets: (a: AgentRef) => call<unknown>("GET", `${base(a)}/toolsets`),
   memoryProviders: () => call<{ providers: MemProvider[]; config_error: string | null }>("GET", "/bff/memory"),

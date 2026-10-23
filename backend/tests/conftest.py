@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.config import Settings
 from app.main import create_app
+from devtools.mock_dashboard import create_mock as create_dashboard
 from devtools.mock_hermes import API_KEY, create_mock
 
 HDR = {"X-Requested-With": "hermes-webui"}
@@ -28,7 +29,7 @@ class RouterTransport(httpx.AsyncBaseTransport):
 def hosts_config(key: str = API_KEY) -> dict:
     return {"hosts": [
         {"id": "hikari", "label": "Hikari", "kind": "local", "runtimes": [
-            {"id": "hermes", "base_url": "http://hermes.test", "api_key": key, "multiplex": True,
+            {"id": "hermes", "base_url": "http://hermes.test", "api_key": key, "multiplex": True, "dashboard": {"base_url": "http://dashboard.test"},
              "agents": ["default", "omoikane", "ghost", "../evil", {"id": "sora", "label": "Sora"}]}]},
         {"id": "keyless", "label": "Falscher Key", "kind": "local", "runtimes": [
             {"id": "hermes", "base_url": "http://hermes.test", "api_key": "wrong", "multiplex": True, "agents": ["default"]}]},
@@ -49,7 +50,8 @@ def hosts_file(tmp_path):
 @pytest.fixture
 def make_settings(hosts_file, tmp_path):
     def make(**kw):
-        base = dict(env="dev", hosts_file=hosts_file, audit_file=tmp_path / "audit.log", runs_per_minute=1000, health_ttl_s=0)
+        base = dict(env="dev", hosts_file=hosts_file, audit_file=tmp_path / "audit.log", runs_per_minute=1000, health_ttl_s=0,
+                    soul_dir=tmp_path / "soul-history")
         return Settings(**{**base, **kw})
     return make
 

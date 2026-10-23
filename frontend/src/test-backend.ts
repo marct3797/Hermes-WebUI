@@ -100,12 +100,60 @@ function memoryRoute(url: string, method: string, capabilities: string[], json: 
   return json({ detail: "nicht da" }, 404);
 }
 
+/** Das Dashboard hinter dem BFF: SOUL mit Verlauf. Tests ändern den Zustand direkt (z. B. `dash.soul` für einen Konflikt). */
+export type DashState = {
+  available: boolean; reason: string | null; soul: string; description: string; model: { provider: string; model: string };
+  history: Array<{ id: string; at: string; reason: string; chars: number }>; versions: Record<string, string>; stepUp: boolean;
+};
+const hashOf = (text: string) => `h${text.length}:${text.slice(0, 12)}`;
+
+function dashboardRoute(rest: string, method: string, agent: string, dash: DashState, json: (b: unknown, s?: number) => Response, body?: Record<string, unknown>): Response | undefined {
+  if (rest === "/dashboard") {
+    return json(dash.available
+      ? { available: true, reason: null, profile: { name: agent, ...dash.model, description: dash.description, description_auto: false, skill_count: 12, gateway_running: false, has_env: true } }
+      : { available: false, reason: dash.reason, profile: null });
+  }
+  const snapshot = (reason: string) => {
+    const id = `20261023T1700${String(dash.history.length).padStart(2, "0")}000000`;
+    dash.versions[id] = dash.soul;
+    dash.history = [{ id, at: "2026-10-23T17:00:00Z", reason, chars: dash.soul.length }, ...dash.history];
+  };
+  if (rest === "/soul" && method === "GET") return json({ content: dash.soul, exists: true, hash: hashOf(dash.soul), max_chars: 100, history: dash.history });
+  if (rest === "/soul" && method === "PUT") {
+    if (dash.stepUp) return json({ detail: { code: "step_up_required", message: "Bitte erneut anmelden" } }, 401);
+    if (body?.base !== hashOf(dash.soul)) return json({ detail: { code: "soul_changed", message: "SOUL.md wurde inzwischen geändert", current: dash.soul, hash: hashOf(dash.soul) } }, 409);
+    const changed = body.content !== dash.soul;
+    if (changed) { snapshot("vor Änderung"); dash.soul = String(body.content); }
+    return json({ changed, hash: hashOf(dash.soul), history: dash.history });
+  }
+  const version = /^\/soul\/history\/(.+)$/.exec(rest);
+  if (version && method === "GET") {
+    const entry = dash.history.find((h) => h.id === version[1]);
+    return entry ? json({ ...entry, content: dash.versions[entry.id] }) : json({ detail: "Dieser Stand existiert nicht" }, 404);
+  }
+  if (rest === "/soul/restore" && method === "POST") {
+    if (dash.stepUp) return json({ detail: { code: "step_up_required", message: "Bitte erneut anmelden" } }, 401);
+    const content = dash.versions[String(body?.id)];
+    if (content === undefined) return json({ detail: "Dieser Stand existiert nicht" }, 404);
+    snapshot("vor Wiederherstellung");
+    dash.soul = content;
+    return json({ changed: true, hash: hashOf(content), content, history: dash.history });
+  }
+  if (rest === "/profile/description" && method === "PUT") { dash.description = String(body?.description).trim(); return json({ ok: true, description: dash.description }); }
+  if (rest === "/profile/model" && method === "PUT") { dash.model = { provider: String(body?.provider), model: String(body?.model) }; return json({ ok: true, ...dash.model }); }
+  return undefined;
+}
+
 export function installBackend(agents: string[] = ["raiden"], features = ["runs", "steer"], uiOverride: Partial<UiConfig> = {}, memoryCapabilities = ["stats", "items", "search", "graph", "entities", "models", "reflect"]) {
   FakeEventSource.all = [];
   // Wie das BFF: Speichern ändert die Config, die Antwort ist die ganze Config.
   const uiState: UiConfig = { ...baseUi(), ...uiOverride };
   const calls: Call[] = [];
   const rooms: Room[] = [];
+  const dash: DashState = {
+    available: true, reason: null, soul: "Du bist Raiden.\nDu antwortest knapp.\n", description: "", model: { provider: "mock", model: "mock-large" },
+    history: [], versions: {}, stepUp: false,
+  };
   let runs = 0;
   const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
   vi.stubGlobal("EventSource", FakeEventSource);
@@ -162,6 +210,8 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
     const m = /^\/bff\/h\/hikari\/hermes\/([^/]+)(\/.*)$/.exec(url);
     if (m && agents.includes(m[1])) {
       const rest = m[2];
+      const d = dashboardRoute(rest, method, m[1], dash, json, init?.body ? JSON.parse(String(init.body)) : undefined);
+      if (d) return d;
       if (rest === "/status") return json({ state: "online", online: true, version: "0.21.6", features, error: null });
       if (rest === "/models") return json({ providers: [{ slug: "mock", name: "Mock", authenticated: true, is_current: true, models: ["mock-large", "mock-small"] }], model: "mock-large", provider: "mock" });
       if (rest === "/skills") return json({ object: "list", data: [{ name: "plan", description: "Zerlegt Aufgaben in Schritte.", category: "software-development" }, { name: "himalaya", description: "E-Mail über IMAP.", category: "email" }] });
@@ -177,5 +227,5 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
     return json({ detail: "nicht da" }, 404);
   }));
   const posted = (suffix: string) => calls.filter((c) => c.method === "POST" && c.url.endsWith(suffix));
-  return { calls, posted, rooms };
+  return { calls, posted, rooms, dash };
 }

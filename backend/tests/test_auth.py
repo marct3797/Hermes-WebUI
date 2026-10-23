@@ -8,6 +8,7 @@ from app.auth import SESSION_COOKIE, SessionStore, User
 from app.config import Settings
 from app.main import create_app
 from app.routes.auth import safe_next
+from devtools.mock_dashboard import create_mock as create_dashboard
 from devtools.mock_hermes import create_mock
 from tests.conftest import BASE, HDR, RouterTransport
 from tests.fake_idp import CLIENT_ID, CLIENT_SECRET, ISSUER, FakeIdp
@@ -39,7 +40,7 @@ def oidc_app(make_settings, idp, clock):
     )
     mock = create_mock(wait_for_user=False, delay=0)
     app = create_app(
-        settings, transport=RouterTransport({"hermes.test": httpx.ASGITransport(app=mock)}),
+        settings, transport=RouterTransport({"hermes.test": httpx.ASGITransport(app=mock), "dashboard.test": httpx.ASGITransport(app=create_dashboard())}),
         oidc_transport=RouterTransport({"idp.test": idp.transport}),
     )
     app.state.sessions = SessionStore(settings.session_idle_s, settings.session_max_s, clock=clock)
@@ -231,6 +232,18 @@ def test_always_approval_requires_fresh_login(web, idp, clock):
     do_login(web, idp, step_up="true")
     assert web.get("/bff/me").json()["fresh"] is True
     assert web.post(f"{BASE}/runs/{info['run_id']}/approval", json={"decision": "always"}).status_code == 409
+
+
+def test_soul_changes_require_fresh_login(web, idp, clock):
+    soul = f"{BASE}/soul"
+    do_login(web, idp)
+    clock.t += 3600  # Sitzung lebt, Anmeldung ist älter als 10 Minuten
+    assert web.get(soul).status_code == 200  # Lesen braucht kein Step-up
+    for r in (web.put(soul, json={"content": "neu"}), web.post(f"{soul}/restore", json={"id": "20261023T170000123456"})):
+        assert r.status_code == 401 and r.json()["detail"]["code"] == "step_up_required"
+    assert web.get(soul).json()["content"] == "Du bist ein hilfsbereiter Assistent.\n"  # nichts geschrieben
+    do_login(web, idp, step_up="true")
+    assert web.put(soul, json={"content": "neu"}).json()["changed"] is True
 
 
 def test_session_store_unit():

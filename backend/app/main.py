@@ -12,12 +12,13 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from .audit import AuditLog
 from .auth import SessionStore, assert_auth_configured
 from .config import Settings, get_settings
+from .dashboard import SoulHistory
 from .hosts import HostService
 from .oidc import OidcClient
 from .registry import AGENT_RE, Registry
 from .memory import MemoryRegistry
 from .rooms import RoomService
-from .routes import agents, auth, hosts, memory as memory_routes, rooms as rooms_routes, ui as ui_routes
+from .routes import agents, auth, dashboard as dashboard_routes, hosts, memory as memory_routes, rooms as rooms_routes, ui as ui_routes
 from .security import RateLimiter, SecurityMiddleware
 from .ui import UiConfig
 
@@ -77,12 +78,14 @@ def create_app(
     app.state.sessions = SessionStore(settings.session_idle_s, settings.session_max_s)
     app.state.pending_logins = {}
     app.state.audit = AuditLog(settings.audit_file)
+    app.state.souls = SoulHistory(settings.soul_dir)
 
     app.add_middleware(SecurityMiddleware, settings=settings)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.host_list())
     app.include_router(auth.router)
     app.include_router(hosts.router)
     app.include_router(agents.router)
+    app.include_router(dashboard_routes.router)
     app.include_router(memory_routes.router)
     app.include_router(rooms_routes.router)
     app.include_router(ui_routes.router)

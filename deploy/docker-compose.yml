@@ -20,6 +20,7 @@ services:
       HERMES_WEBUI_MEMORY_FILE: /config/memory.json
       HERMES_WEBUI_AUDIT_FILE: /data/audit.log
       HERMES_WEBUI_ROOMS_DB: /data/rooms.db
+      HERMES_WEBUI_SOUL_DIR: /data/soul-history
     volumes:
       - ${WEBUI_HOME:-.}/config:/config   # beschreibbar: die Profil-Seite speichert in die ui.json
       - ${WEBUI_HOME:-.}/data:/data

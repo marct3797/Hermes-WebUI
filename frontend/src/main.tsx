@@ -13,6 +13,7 @@ import "./styles/inbox.css";
 import "./styles/chat.css";
 import "./styles/profile.css";
 import "./styles/rooms.css";
+import "./styles/soul.css";
 import "./styles/mobile.css";
 
 createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);

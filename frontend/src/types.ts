@@ -118,6 +118,16 @@ export type MemModel = { id: string; name: string; content: string | null; query
 export type SkillInfo = { name: string; description?: string; category?: string };
 export type ToolsetInfo = { name: string; label?: string; description?: string; enabled?: boolean; configured?: boolean; tools?: string[] };
 
+export type DashboardProfile = {
+  name: string; model: string | null; provider: string | null; description: string; description_auto: boolean;
+  skill_count: number; gateway_running: boolean; has_env: boolean;
+};
+export type DashboardStatus = { available: boolean; reason: string | null; profile: DashboardProfile | null };
+export type SoulEntry = { id: string; at: string; reason: string; chars: number };
+export type SoulState = { content: string; exists: boolean; hash: string; max_chars: number; history: SoulEntry[] };
+export type SoulSaved = { changed: boolean; hash: string; history: SoulEntry[] };
+export type SoulVersion = { id: string; at: string; reason: string; content: string };
+
 export type RoomMember = AgentRef & { label: string; key: string };
 export type RoomMessage = { seq: number; author: string; kind: "message" | "system"; text: string; mentions: string[]; at: number };
 export type Room = {

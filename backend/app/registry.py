@@ -35,12 +35,20 @@ class AgentCfg:
 
 
 @dataclass(frozen=True)
+class DashboardCfg:
+    """`hermes dashboard` derselben Maschine: kann, was die Agent-API nicht kann (SOUL, Profil-Einstellungen, Config)."""
+    base_url: str
+    token: str = field(repr=False, default="")  # nur nötig, wenn das Dashboard nicht auf Loopback lauscht
+
+
+@dataclass(frozen=True)
 class RuntimeCfg:
     id: str
     base_url: str
     api_key: str = field(repr=False, default="")
     multiplex: bool = False  # Hermes: Profile unter /p/<profil>/ statt eigenem Port
     agents: tuple[AgentCfg, ...] = ()
+    dashboard: DashboardCfg | None = None
 
 
 @dataclass(frozen=True)
@@ -53,6 +61,16 @@ class HostCfg:
 
     def runtime(self, runtime_id: str) -> RuntimeCfg | None:
         return next((r for r in self.runtimes if r.id == runtime_id), None)
+
+
+def _dashboard(where: str, raw: Any, env: dict[str, str]) -> DashboardCfg | None:
+    if raw is None:
+        return None
+    url = str(raw.get("base_url", "")) if isinstance(raw, dict) else ""
+    if not url.startswith(("http://", "https://")):
+        raise ConfigError(f"{where}: dashboard braucht base_url mit http:// oder https://")
+    token = raw.get("token") or env.get(str(raw.get("token_env", "")), "")
+    return DashboardCfg(base_url=url.rstrip("/"), token=token)
 
 
 def parse_config(raw: Any, environ: dict[str, str] | None = None) -> dict[str, HostCfg]:
@@ -91,7 +109,7 @@ def parse_config(raw: Any, environ: dict[str, str] | None = None) -> dict[str, H
             key = r.get("api_key") or env.get(str(r.get("api_key_env", "")), "")
             runtimes.append(RuntimeCfg(
                 id=runtime_id, base_url=str(r["base_url"]).rstrip("/"), api_key=key,
-                multiplex=multiplex, agents=tuple(agents),
+                multiplex=multiplex, agents=tuple(agents), dashboard=_dashboard(f"{host_id}/{runtime_id}", r.get("dashboard"), env),
             ))
         hosts[host_id] = HostCfg(
             id=host_id, label=str(h.get("label") or host_id), kind=kind,
