@@ -41,11 +41,14 @@
 .q-grid{--q-ok:#4ade80;--q-mid:#facc15}
 .q-prov{display:flex;flex-direction:column;gap:8px;padding:12px}
 .q-wins{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
-.q-win{display:grid;grid-template-columns:minmax(90px,1fr) minmax(80px,2fr) auto auto;gap:4px 10px;align-items:center;font-size:12px}
-.q-track{height:6px;border-radius:3px;background:var(--s3);overflow:hidden}
+.q-win{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name rest" "track track" "reset reset" "detail detail";gap:3px 10px;align-items:baseline;font-size:12px}
+.q-wl{grid-area:name;min-width:0;overflow-wrap:anywhere}
+.q-rest{grid-area:rest;white-space:nowrap;text-align:right}
+.q-reset{grid-area:reset;white-space:nowrap}
+.q-track{grid-area:track;height:6px;border-radius:3px;background:var(--s3);overflow:hidden}
 .q-track i{display:block;height:100%;border-radius:3px;background:var(--t4)}
 .q-track i.q-ok{background:var(--q-ok,#4ade80)}.q-track i.q-mid{background:var(--q-mid,#facc15)}.q-track i.q-bad{background:var(--ruby)}.q-track i.q-unk{background:var(--t4)}
-.q-detail{grid-column:1/-1}
+.q-detail{grid-area:detail}
 .q-tag.q-bad{border-color:var(--crim-line);color:var(--crim-hi)}.q-tag.q-mid{color:#facc15}
 .q-skel{height:56px;border-radius:4px;background:linear-gradient(90deg,var(--s1),var(--s2),var(--s1));background-size:200% 100%;animation:q-pulse 1.4s ease-in-out infinite}
 .q-skel-s{display:inline-block;width:70px;height:12px;border-radius:3px;background:var(--s3)}

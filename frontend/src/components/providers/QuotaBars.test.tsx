@@ -56,7 +56,7 @@ describe("QuotaBars mit der echten Plugin-Antwort", () => {
 
   it("shows Nous as expired access with the plugin's reason, never as a plain empty block", () => {
     const n = block("Nous Portal");
-    expect(n.getByText("Zugang abgelaufen")).toBeInTheDocument();
+    expect(n.getByText("Zugang prüfen")).toBeInTheDocument();
     expect(n.getByText(/Not signed in to Nous Portal/)).toBeInTheDocument();
   });
 

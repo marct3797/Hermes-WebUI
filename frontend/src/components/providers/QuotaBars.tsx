@@ -9,7 +9,7 @@ const WINDOW_DE: Record<string, string> = {
   "Current session": "Aktuelle Sitzung", "Current week": "Aktuelle Woche", Session: "Sitzung", Weekly: "Woche", Monthly: "Monat", "Rolling (5h)": "Rollierend (5 Std)",
   Chat: "Chat", Completions: "Vervollständigungen",
 };
-const BADGE: Record<string, [text: string, cls: string]> = { exhausted: ["Erschöpft", "q-bad"], low: ["Knapp", "q-mid"], auth_failed: ["Zugang abgelaufen", "q-bad"], unavailable: ["Nicht abfragbar", ""] };
+const BADGE: Record<string, [text: string, cls: string]> = { exhausted: ["Erschöpft", "q-bad"], low: ["Knapp", "q-mid"], auth_failed: ["Zugang prüfen", "q-bad"], unavailable: ["Nicht abfragbar", ""] };
 
 /** „in 1 Std 35 Min“, „in 4 Tagen 3 Std“; unter einer Minute „in weniger als 1 Min“. */
 export function fmtIn(s: number): string {
@@ -111,7 +111,7 @@ export function QuotaSection({ title = "Restkontingente", quota, error, loading,
         <button type="button" className="btn btn-s btn-g" aria-label={`${title} neu laden`} disabled={loading} onClick={onReload}><Icon name="refresh" size={14} />Neu laden</button>
       </div>
       {error && !quota && <p className="banner" role="alert"><Icon name="alert" /><span>Kontingente nicht ladbar: {error}</span></p>}
-      {!quota && !error && <div className="q-skel" aria-busy="true" aria-label="Lade Kontingente" />}
+      {!quota && !error && !children && <div className="q-skel" aria-busy="true" aria-label="Lade Kontingente" />}
       {children ?? (quota && <QuotaBars quota={quota} />)}
     </section>
   );
