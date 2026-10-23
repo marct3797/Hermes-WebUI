@@ -1,3 +1,4 @@
+import { invalidate } from "./dataCache";
 import type { AgentRef, AgentStatus, CliAuth, Decision, DiagReport, HostsResponse, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 
 export class ApiError extends Error {
@@ -22,12 +23,13 @@ export function toLogin(stepUp = false) {
 /** Nur für Tests: erlaubt einen weiteren Redirect. */
 export const resetRedirect = () => { redirecting = false; };
 
-export async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
+export async function call<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   const res = await fetch(path, {
     method,
     headers: { "X-Requested-With": "hermes-webui", ...(body ? { "Content-Type": "application/json" } : {}) },
     body: body ? JSON.stringify(body) : undefined,
     credentials: "same-origin",
+    signal,
   });
   if (!res.ok) {
     let detail = res.statusText;
@@ -57,12 +59,14 @@ const qs = (o: Record<string, string | number | boolean | string[] | undefined>)
 
 const base = (a: AgentRef) => `/bff/h/${encodeURIComponent(a.host)}/${encodeURIComponent(a.runtime)}/${encodeURIComponent(a.agent)}`;
 const id = encodeURIComponent;
+/** Nach Schreibzugriffen auf Sessions sind die zwischengespeicherten Listen (Cockpit) veraltet. */
+const dropSessions = () => invalidate("sessions:");
 
 export const api = {
   me: () => call<Me>("GET", "/bff/me"),
   logout: () => call<void>("POST", "/auth/logout"),
-  hosts: () => call<HostsResponse>("GET", "/bff/hosts"),
-  ui: () => call<UiConfig>("GET", "/bff/ui"),
+  hosts: (signal?: AbortSignal) => call<HostsResponse>("GET", "/bff/hosts", undefined, signal),
+  ui: (signal?: AbortSignal) => call<UiConfig>("GET", "/bff/ui", undefined, signal),
   saveProfile: (key: string, body: ProfileInput) =>
     call<UiConfig>("PUT", `/bff/ui/profiles/${key.split("/").map(encodeURIComponent).join("/")}`, body),
   saveShader: (body: ShaderConfig) => call<UiConfig>("PUT", "/bff/ui/shader", body),
@@ -71,13 +75,13 @@ export const api = {
   diagnoseRun: (a: AgentRef) => call<DiagReport>("POST", `${base(a)}/diagnose/run`, {}),
   models: (a: AgentRef) => call<unknown>("GET", `${base(a)}/models`),
   // Die erste Seite in Standardgröße braucht keine Parameter (das BFF nimmt 30).
-  sessions: (a: AgentRef, offset = 0, limit = 30) =>
-    call<unknown>("GET", `${base(a)}/sessions${offset || limit !== 30 ? `?limit=${limit}&offset=${offset}` : ""}`),
-  renameSession: (a: AgentRef, sid: string, title: string) => call<unknown>("PATCH", `${base(a)}/sessions/${id(sid)}`, { title }),
-  deleteSession: (a: AgentRef, sid: string) => call<unknown>("DELETE", `${base(a)}/sessions/${id(sid)}`),
+  sessions: (a: AgentRef, offset = 0, limit = 30, signal?: AbortSignal) =>
+    call<unknown>("GET", `${base(a)}/sessions${offset || limit !== 30 ? `?limit=${limit}&offset=${offset}` : ""}`, undefined, signal),
+  renameSession: (a: AgentRef, sid: string, title: string) => call<unknown>("PATCH", `${base(a)}/sessions/${id(sid)}`, { title }).finally(dropSessions),
+  deleteSession: (a: AgentRef, sid: string) => call<unknown>("DELETE", `${base(a)}/sessions/${id(sid)}`).finally(dropSessions),
   messages: (a: AgentRef, sid: string) => call<unknown>("GET", `${base(a)}/sessions/${id(sid)}/messages`),
   startRun: (a: AgentRef, body: { text: string; session_id?: string; model?: string; images?: string[]; idempotency_key?: string }) =>
-    call<{ run_id: string; session_id?: string | null }>("POST", `${base(a)}/runs`, body),
+    call<{ run_id: string; session_id?: string | null }>("POST", `${base(a)}/runs`, body).finally(dropSessions),
   fork: (a: AgentRef, sid: string) => call<{ session_id: string }>("POST", `${base(a)}/sessions/${id(sid)}/fork`, {}),
   runStatus: (a: AgentRef, rid: string) => call<{ status?: string }>("GET", `${base(a)}/runs/${id(rid)}`),
   stop: (a: AgentRef, rid: string) => call<unknown>("POST", `${base(a)}/runs/${id(rid)}/stop`, {}),

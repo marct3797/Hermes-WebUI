@@ -73,9 +73,11 @@ async def agent_status(target: Tgt):
 
 
 @router.get("/diagnose")
-async def diagnose(target: Tgt):
+async def diagnose(request: Request, target: Tgt):
     """Diagnose-Ring: liest nur und prüft, ob die Antworten dieses Agents die Form haben, die die WebUI erwartet."""
-    checks = await inspect(target.adapter, target.agent.id)
+    st = request.app.state.settings
+    checks = await inspect(target.adapter, target.agent.id, cache=request.app.state.diag_cache,
+                           models_ttl=st.diag_models_ttl_s, models_timeout=st.diag_models_timeout_s)
     return {"agent": target.label, "status": summarize(checks), "checks": checks, "at": time.time()}
 
 

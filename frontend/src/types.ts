@@ -106,7 +106,8 @@ export type SigilInput = { type: SigilConfig["type"]; glyph?: string; text?: str
 export type ProfileInput = { label: string | null; sigil: SigilInput | null };
 
 export type DiagStatus = "ok" | "warn" | "fail";
-export type DiagCheck = { id: string; label: string; status: DiagStatus; detail: string; ms: number | null };
+export type DiagCheck = { id: string; label: string; status: DiagStatus | "slow"; // "slow": Zeitlimit der Prüfung überschritten
+  detail: string; ms: number | null };
 export type DiagReport = { agent: string; status: DiagStatus; checks: DiagCheck[]; at: number };
 
 export type MemProvider = { id: string; type: string; label: string; bank: string; capabilities: string[] };

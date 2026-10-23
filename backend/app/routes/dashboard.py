@@ -35,7 +35,7 @@ def dashboard_of(target: Tgt, request: Request) -> DashboardClient:
     cfg = target.runtime.dashboard
     if cfg is None:
         raise HTTPException(501, NOT_CONFIGURED)
-    return DashboardClient(cfg, request.app.state.http)
+    return DashboardClient(cfg, request.app.state.http, request.app.state.dash_cache)
 
 
 Dash = Annotated[DashboardClient, Depends(dashboard_of)]
@@ -59,7 +59,7 @@ async def dashboard_status(target: Tgt, request: Request):
     if cfg is None:
         return {"available": False, "reason": NOT_CONFIGURED, "profile": None}
     try:
-        found = await DashboardClient(cfg, request.app.state.http).profile(target.agent.id)
+        found = await DashboardClient(cfg, request.app.state.http, request.app.state.dash_cache).profile(target.agent.id)
     except UpstreamError as e:
         return {"available": False, "reason": e.detail, "profile": None}
     profile = {k: found.get(k) for k in PROFILE_FIELDS} if found else None
@@ -166,7 +166,7 @@ async def providers_overview(target: Tgt, dash: Dash, days: int = Query(30, ge=1
     (oauth, oauth_err), (usage, usage_err) = await asyncio.gather(_tolerated(dash.oauth_providers(name)), _tolerated(dash.model_analytics(name, days)))
     env = await upstream(env_task)
     warnings = [f"{what} nicht ladbar: {err}" for what, err in (("Anmeldestatus", oauth_err), ("Nutzung", usage_err)) if err]
-    return {**build_overview(env, oauth, usage, days), "warnings": warnings}
+    return {**build_overview(env, oauth, usage, days), "warnings": warnings, **({"stale": True} if dash.stale else {})}
 
 
 class KeyIn(BaseModel):
@@ -217,7 +217,8 @@ SessionId = Annotated[str, Path(pattern=r"^[A-Za-z0-9_-]{8,128}$")]
 @router.get("/providers/models")
 async def provider_models(target: Tgt, dash: Dash):
     """Anbieter und Modelle, aus denen dieses Profil wählen kann (angemeldete zuerst, der aktuelle ganz oben)."""
-    return {"providers": normalize_models(await upstream(dash.model_options(target.agent.id)))}
+    providers = normalize_models(await upstream(dash.model_options(target.agent.id)))
+    return {"providers": providers, **({"stale": True} if dash.stale else {})}
 
 
 @router.post("/providers/oauth/{provider}/start")
@@ -270,7 +271,7 @@ async def provider_matrix(request: Request, host: HostId, runtime: RuntimeId):
     empty = {"profiles": fallback, "accounts": [{"id": a["id"], "label": a["label"], "cli": a["cli"], "login": a["login"], "provider": a["provider"], "hint": a["hint"], "profiles": {}} for a in ACCOUNTS]}
     if rt.dashboard is None:
         return {"available": False, "reason": NOT_CONFIGURED, **empty}
-    dash = DashboardClient(rt.dashboard, request.app.state.http)
+    dash = DashboardClient(rt.dashboard, request.app.state.http, request.app.state.dash_cache)
     try:
         profiles = await dash.profiles()
     except UpstreamError as e:
@@ -282,10 +283,16 @@ async def provider_matrix(request: Request, host: HostId, runtime: RuntimeId):
         (env, env_err), (oauth, _) = await asyncio.gather(_tolerated(dash.env(name)), _tolerated(dash.oauth_providers(name)))
         return name, (build_overview(env, oauth, None, 0) if env is not None else None), env_err
 
-    rows = await asyncio.gather(*(one(str(p["name"])) for p in profiles if p.get("name")))
+    gate = asyncio.Semaphore(4)  # die Abfragen je Profil laufen parallel, aber nicht alle auf einmal
+
+    async def limited(name: str):
+        async with gate:
+            return await one(name)
+
+    rows = await asyncio.gather(*(limited(str(p["name"])) for p in profiles if p.get("name")))
     overviews = {name: ov for name, ov, _ in rows}
     errors = {name: err for name, _, err in rows if err}
-    return {"available": True, "reason": None, **build_matrix(profiles, overviews, errors)}
+    return {"available": True, "reason": None, **build_matrix(profiles, overviews, errors), **({"stale": True} if dash.stale else {})}
 
 
 # --- Restkontingente (Dashboard-Plugin ai-usage-tracker) ---------------------------------------------------

@@ -33,7 +33,13 @@ export function SystemPage() {
     }
   }, []);
 
-  const checkAll = () => { for (const a of agents) if (a.online) void run(a.ref, false); };
+  // Höchstens 4 Agents gleichzeitig: schnell genug, ohne Hermes und den Browser (6 Verbindungen je Host) zu überfahren. Jedes Ergebnis erscheint, sobald es da ist.
+  const checkAll = () => {
+    const queue = agents.filter((a) => a.online);
+    const worker = async () => { for (let a = queue.shift(); a; a = queue.shift()) await run(a.ref, false); };
+    const workers = Math.min(4, queue.length); // vorher festhalten: die Warteschlange schrumpft schon beim Start
+    for (let i = 0; i < workers; i++) void worker();
+  };
   const all = Object.values(results).flatMap((r) => (r.report ? [r.report.status] : []));
   const sub = all.length ? `${all.filter((s) => s === "ok").length} in Ordnung · ${all.filter((s) => s === "warn").length} Abweichungen · ${all.filter((s) => s === "fail").length} Fehler` : "noch nicht geprüft";
 
