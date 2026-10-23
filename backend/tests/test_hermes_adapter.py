@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 from app.adapters import RunInput, UpstreamError
-from app.adapters.hermes import HermesAdapter, HermesEventTranslator, features_from_capabilities, fork_session_id, parse_sse
+from app.adapters.hermes import HermesAdapter, HermesEventTranslator, control_ids, features_from_capabilities, fork_session_id, parse_sse
 from app.events import REQUIRED_FIELDS, TERMINAL_TYPES, validate_event
 from app.registry import AgentCfg, RuntimeCfg, parse_config
 
@@ -305,11 +305,12 @@ async def test_actions_use_hermes_field_names():
     await a.steer("raiden", "r1", "anders")
     await a.stop("raiden", "r1")
     await a.clarify("raiden", "r1", "build", "c1")
-    assert seen == [
+    posts = [s for s in seen if s[0] == "POST"]  # vor Freigabe und Rückfrage liest der Adapter den Lauf-Status
+    assert posts == [
         ("POST", "/p/raiden/v1/runs/r1/approval", {"choice": "session"}),
         ("POST", "/p/raiden/v1/runs/r1/steer", {"input": "anders"}),
         ("POST", "/p/raiden/v1/runs/r1/stop", {}),
-        ("POST", "/p/raiden/v1/runs/r1/clarify", {"answer": "build", "clarify_id": "c1"}),
+        ("POST", "/p/raiden/v1/runs/r1/clarify", {"answer": "build", "request_id": "c1"}),  # Doku: request_id
     ]
 
 
@@ -372,3 +373,53 @@ async def test_connection_errors_become_unreachable():
     with pytest.raises(UpstreamError) as e:
         await adapter(handler).models("raiden")
     assert e.value.status == 502
+
+
+# --- Freigabe und Rückfrage im kanonischen Modus ----------------------------------------------------------
+def test_control_ids_from_pending_controls():
+    status = {"pending_controls": [
+        {"kind": "clarify", "prompt_id": "p9", "execution_generation": 4},
+        {"kind": "approval", "request_id": "r1", "execution_generation": 3},
+    ]}
+    assert control_ids(status, "approval") == {"request_id": "r1", "execution_generation": 3}
+    assert control_ids(status, "clarify") == {"request_id": "p9", "execution_generation": 4}
+    assert control_ids(status, "approval", "known") == {"request_id": "known", "execution_generation": 3}
+    assert control_ids({"pending_controls": {"a": {"id": "x", "execution_generation": 0}}}, "approval") == {"request_id": "x", "execution_generation": 0}
+    assert control_ids({"status": "running"}, "approval") == {} and control_ids("seltsam", "approval") == {}
+
+
+async def test_approval_sends_ids_from_the_run_status_when_present():
+    seen = []
+
+    def handler(req: httpx.Request):
+        seen.append(req)
+        if req.method == "GET":
+            return httpx.Response(200, json={"status": "waiting_for_approval", "pending_controls": [
+                {"kind": "approval", "request_id": "r1", "execution_generation": 2}]})
+        return httpx.Response(200, json={"ok": True})
+
+    a = adapter(handler)
+    await a.approve("raiden", "run_1", "once")
+    assert json.loads(seen[-1].content) == {"choice": "once", "request_id": "r1", "execution_generation": 2}
+
+
+async def test_approval_without_pending_controls_keeps_the_plain_body():
+    seen = []
+
+    def handler(req: httpx.Request):
+        seen.append(req)
+        return httpx.Response(200, json={"status": "waiting_for_approval"} if req.method == "GET" else {"ok": True})
+
+    await adapter(handler).approve("raiden", "run_1", "deny")
+    assert json.loads(seen[-1].content) == {"choice": "deny"}
+
+
+async def test_approval_still_goes_out_when_the_status_cannot_be_read():
+    seen = []
+
+    def handler(req: httpx.Request):
+        seen.append(req)
+        return httpx.Response(500, json={"error": "x"}) if req.method == "GET" else httpx.Response(200, json={"ok": True})
+
+    await adapter(handler).approve("raiden", "run_1", "once")
+    assert json.loads(seen[-1].content) == {"choice": "once"}

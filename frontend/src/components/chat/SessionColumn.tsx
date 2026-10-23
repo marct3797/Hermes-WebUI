@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { api } from "../../api";
 import { DAY_LABEL, dayGroup, fmtDay, fmtTime, toMs, type DayGroup } from "../../format";
 import { isEditable } from "../../keys";
 import { agentKey, agentPath, navigate } from "../../router";
@@ -18,7 +19,7 @@ type Filter = "chats" | "automation";
 
 /** Sessions des Agents nach Tag gruppiert, mit Suche, Filter und Tastenkürzeln (N = neuer Chat, / = Suche). */
 export function SessionColumn({ agent, label, runtimeLabel, sessionId }: Props) {
-  const { sessions, sessionsLoading } = useShell();
+  const { sessions, sessionsLoading, hasMoreSessions, loadingMoreSessions, loadMoreSessions, renameSession, deleteSession, refreshSessions } = useShell();
   const snap = useRunSnapshot();
   const { byAgent } = useActivity();
   const { sigils } = useUi();
@@ -26,6 +27,17 @@ export function SessionColumn({ agent, label, runtimeLabel, sessionId }: Props) 
   const [filter, setFilter] = useState<Filter>("chats");
   const [pinnedOnly, setPinnedOnly] = useState(false);
   const search = useRef<HTMLInputElement>(null);
+  // Aktion an einer Session: Menü offen, Umbenennen, Löschen bestätigen (immer nur eine Zeile zugleich).
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [mode, setMode] = useState<"rename" | "delete" | null>(null);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const closeAction = () => { setMenuFor(null); setMode(null); setActionError(null); };
+  const run = async (fn: () => Promise<unknown>) => {
+    setBusy(true); setActionError(null);
+    try { await fn(); closeAction(); } catch (e) { setActionError((e as Error).message); } finally { setBusy(false); }
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -102,26 +114,70 @@ export function SessionColumn({ agent, label, runtimeLabel, sessionId }: Props) 
               const on = s.id === sessionId;
               const state = stateOf(s.id);
               const at = toMs(s.updatedAt);
+              const editing = menuFor === s.id && mode === "rename";
+              const deleting = menuFor === s.id && mode === "delete";
               return (
-                <Link key={s.id} to={agentPath(agent, "chat", s.id)} className={`srow${on ? " on" : ""}${state ? " live" : ""}`} aria-current={on ? "page" : undefined}>
-                  <span className="t">
-                    {state && <i className={`dot ${state === "wait" ? "dot-wait" : "dot-run"}`} />}
-                    {s.pinned && <Icon name="pin" size={12} className="t3" />}
-                    {isAuto(s) && <Icon name="clock" size={12} className="t3" />}
-                    <span className="trunc">{s.title}</span>
-                  </span>
-                  <span className="m">
-                    {s.messageCount != null && <span>{s.messageCount} Nachr.</span>}
-                    {at !== undefined && <span>{g === "older" ? fmtDay(at) : fmtTime(at)}</span>}
-                    {state && <span className="crimt">{state === "wait" ? "wartet" : "läuft"}</span>}
-                  </span>
-                </Link>
+                <div key={s.id} className="srow-wrap">
+                  {editing ? (
+                    <form className="srow-edit" onSubmit={(e) => { e.preventDefault(); if (draft.trim() && renameSession) void run(() => renameSession(s.id, draft.trim())); }}>
+                      <input autoFocus value={draft} maxLength={100} onChange={(e) => setDraft(e.target.value)} aria-label="Neuer Titel" onKeyDown={(e) => { if (e.key === "Escape") closeAction(); }} />
+                      <button type="submit" className="btn btn-s btn-p" disabled={busy || !draft.trim()}>Speichern</button>
+                      <button type="button" className="btn btn-s btn-g" onClick={closeAction}>Abbrechen</button>
+                      {actionError && <p className="error small" role="alert" style={{ flexBasis: "100%" }}>{actionError}</p>}
+                    </form>
+                  ) : (
+                    <Link to={agentPath(agent, "chat", s.id)} className={`srow${on ? " on" : ""}${state ? " live" : ""}`} aria-current={on ? "page" : undefined}>
+                      <span className="t">
+                        {state && <i className={`dot ${state === "wait" ? "dot-wait" : "dot-run"}`} />}
+                        {s.pinned && <Icon name="pin" size={12} className="t3" />}
+                        {isAuto(s) && <Icon name="clock" size={12} className="t3" />}
+                        <span className="trunc">{s.title}</span>
+                      </span>
+                      <span className="m">
+                        {s.messageCount != null && <span>{s.messageCount} Nachr.</span>}
+                        {at !== undefined && <span>{g === "older" ? fmtDay(at) : fmtTime(at)}</span>}
+                        {state && <span className="crimt">{state === "wait" ? "wartet" : "läuft"}</span>}
+                      </span>
+                    </Link>
+                  )}
+                  {!editing && renameSession && (
+                    <button type="button" className="srow-act btn btn-i btn-g btn-s" aria-label={`Aktionen für ${s.title}`} aria-expanded={menuFor === s.id} onClick={() => { if (menuFor === s.id) closeAction(); else { setMenuFor(s.id); setMode(null); setActionError(null); } }}>
+                      <Icon name="dots" size={14} />
+                    </button>
+                  )}
+                  {menuFor === s.id && !editing && (
+                    <div className="srow-menu" role="menu" aria-label={`Aktionen für ${s.title}`}>
+                      {!deleting && (
+                        <>
+                          <button type="button" role="menuitem" onClick={() => { setDraft(s.title); setMode("rename"); }}><Icon name="edit" size={14} />Umbenennen</button>
+                          <button type="button" role="menuitem" disabled={busy} onClick={() => void run(async () => { const r = await api.fork(agent, s.id); refreshSessions(); navigate(agentPath(agent, "chat", r.session_id)); })}><Icon name="fork" size={14} />Als Kopie abzweigen</button>
+                          <button type="button" role="menuitem" className="danger" onClick={() => setMode("delete")}><Icon name="x" size={14} />Löschen…</button>
+                        </>
+                      )}
+                      {deleting && (
+                        <div className="srow-confirm">
+                          <p className="small">„{s.title}“ wird endgültig gelöscht. Das lässt sich nicht rückgängig machen.</p>
+                          <div className="row" style={{ gap: 6 }}>
+                            <button type="button" className="btn btn-s btn-danger" disabled={busy} onClick={() => deleteSession && void run(async () => { await deleteSession(s.id); if (on) navigate(agentPath(agent)); })}>Endgültig löschen</button>
+                            <button type="button" className="btn btn-s btn-g" onClick={closeAction}>Abbrechen</button>
+                          </div>
+                        </div>
+                      )}
+                      {actionError && <p className="error small" role="alert">{actionError}</p>}
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
         ))}
       </div>
 
+      {hasMoreSessions && !query && (
+        <button type="button" className="btn btn-s btn-g sess-more" disabled={loadingMoreSessions} onClick={loadMoreSessions}>
+          {loadingMoreSessions ? "Lade…" : `Ältere laden (${sessions.length} geladen)`}
+        </button>
+      )}
       <div className="sess-foot">
         <Icon name="globe" size={14} className="t3" />
         <span className="mono t3 trunc" style={{ fontSize: 10.5 }}>{location.host}/h/{agent.host}/{agent.runtime}/{agent.agent}</span>

@@ -40,7 +40,7 @@ class OfflineAdapter(RuntimeAdapter):
     async def _unavailable(self, *_args, **_kwargs):
         raise UpstreamError(503, self._reason)
 
-    models = sessions = session_messages = fork_session = start_run = run_status = _unavailable
+    models = sessions = session_messages = fork_session = rename_session = delete_session = start_run = run_status = _unavailable
     stop = approve = clarify = steer = _unavailable
 
     async def events(self, agent: str, run_id: str):

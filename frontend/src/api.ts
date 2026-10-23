@@ -62,7 +62,11 @@ export const api = {
   diagnose: (a: AgentRef) => call<DiagReport>("GET", `${base(a)}/diagnose`),
   diagnoseRun: (a: AgentRef) => call<DiagReport>("POST", `${base(a)}/diagnose/run`, {}),
   models: (a: AgentRef) => call<unknown>("GET", `${base(a)}/models`),
-  sessions: (a: AgentRef) => call<unknown>("GET", `${base(a)}/sessions`),
+  // Die erste Seite in Standardgröße braucht keine Parameter (das BFF nimmt 30).
+  sessions: (a: AgentRef, offset = 0, limit = 30) =>
+    call<unknown>("GET", `${base(a)}/sessions${offset || limit !== 30 ? `?limit=${limit}&offset=${offset}` : ""}`),
+  renameSession: (a: AgentRef, sid: string, title: string) => call<unknown>("PATCH", `${base(a)}/sessions/${id(sid)}`, { title }),
+  deleteSession: (a: AgentRef, sid: string) => call<unknown>("DELETE", `${base(a)}/sessions/${id(sid)}`),
   messages: (a: AgentRef, sid: string) => call<unknown>("GET", `${base(a)}/sessions/${id(sid)}/messages`),
   startRun: (a: AgentRef, body: { text: string; session_id?: string; model?: string; images?: string[]; idempotency_key?: string }) =>
     call<{ run_id: string; session_id?: string | null }>("POST", `${base(a)}/runs`, body),

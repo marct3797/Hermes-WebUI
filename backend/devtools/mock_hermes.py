@@ -106,6 +106,29 @@ def create_mock(
             raise HTTPException(404, "session not found")
         return message_page(sid, sessions[sid], limit, offset)
 
+    @router.patch("/api/sessions/{sid}")
+    async def rename(request: Request, sid: str):
+        sessions = store(request)["sessions"]
+        if sid not in sessions:
+            raise HTTPException(404, "session not found")
+        title = (await request.json()).get("title")
+        if not isinstance(title, str) or not title.strip():
+            raise HTTPException(400, "title required")
+        if any(o["title"] == title for k, o in sessions.items() if k != sid):
+            raise HTTPException(409, "title_conflict")  # Titel sind eindeutig
+        sessions[sid]["title"] = title
+        return {"object": "hermes.session", "id": sid, "title": title}
+
+    @router.delete("/api/sessions/{sid}")
+    async def remove(request: Request, sid: str):
+        st = store(request)
+        if sid not in st["sessions"]:
+            raise HTTPException(404, "session not found")
+        if any(r["session_id"] == sid and r["status"] in ("running", "waiting_for_approval") for r in st["runs"].values()):
+            raise HTTPException(409, "session_busy")
+        del st["sessions"][sid]
+        return {"deleted": True, "id": sid}
+
     @router.post("/api/sessions/{sid}/fork")
     async def fork(request: Request, sid: str):
         sessions = store(request)["sessions"]

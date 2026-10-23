@@ -30,7 +30,7 @@ export function Shell({ me, path, page, onLogout, children }: Props) {
   const active = useAgentRef(page.name === "agent" ? page.ref : undefined);
   // Sessions nur von erreichbaren Runtimes holen: Offline-Hosts würden sonst bei jedem Öffnen Fehler melden.
   const resolved = useResolvedAgent(active);
-  const { sessions, loading, refresh } = useSessions(resolved?.runtimeOnline ? active : undefined);
+  const { sessions, loading, loadingMore, hasMore, refresh, loadMore, rename, remove } = useSessions(resolved?.runtimeOnline ? active : undefined);
   // Ein Run des geöffneten Agents ist zu Ende: neue Session und neuer Titel erscheinen in der Liste.
   const store = useRunStore();
   useEffect(() => store.onRunEnd((a) => { if (sameAgent(a, active)) refresh(); }), [store, active, refresh]);
@@ -45,7 +45,10 @@ export function Shell({ me, path, page, onLogout, children }: Props) {
       sessions={sessions} sessionsLoading={loading} open={menu} onClose={() => setMenu(false)} onLogout={onLogout}
     />
   );
-  const value = { openMenu: () => setMenu(true), sessions, sessionsLoading: loading, refreshSessions: refresh };
+  const value = {
+    openMenu: () => setMenu(true), sessions, sessionsLoading: loading, refreshSessions: refresh,
+    hasMoreSessions: hasMore, loadingMoreSessions: loadingMore, loadMoreSessions: loadMore, renameSession: rename, deleteSession: remove,
+  };
 
   // Chat: schmale Leiste, Session-Spalte, Verlauf und Inspector füllen die Höhe. Auf schmalen Schirmen ersetzt die Schublade Leiste und Spalte.
   if (page.name === "agent" && page.module === "chat" && active && resolved) {

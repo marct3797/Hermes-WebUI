@@ -94,8 +94,11 @@ async def sessions(
     limit: int = Query(30, ge=1, le=100),
     offset: int = Query(0, ge=0),
     source: Literal["chat", "automation", "messaging"] | None = None,
+    include_children: bool = False,
 ):
-    return await upstream(target.adapter.sessions(target.agent.id, limit=limit, offset=offset, source=source))
+    return await upstream(target.adapter.sessions(
+        target.agent.id, limit=limit, offset=offset, source=source, include_children=include_children,
+    ))
 
 
 @router.get("/sessions/{session_id}/messages")
@@ -104,6 +107,28 @@ async def session_messages(
     limit: int | None = Query(None, ge=1, le=500), offset: int | None = Query(None, ge=0),
 ):
     return await upstream(target.adapter.session_messages(target.agent.id, session_id, limit=limit, offset=offset))
+
+
+class RenameRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=100)  # Hermes begrenzt Titel auf 100 Zeichen
+
+
+@router.patch("/sessions/{session_id}")
+async def rename_session(request: Request, target: Tgt, session_id: ObjId, req: RenameRequest, user: User = Depends(current_user)):
+    title = req.title.strip()
+    if not title:
+        raise HTTPException(422, "Titel darf nicht leer sein")
+    result = await upstream(target.adapter.rename_session(target.agent.id, session_id, title))
+    audit(request, user, "session.rename", target, session=session_id, chars=len(title))
+    return result
+
+
+@router.delete("/sessions/{session_id}")
+async def delete_session(request: Request, target: Tgt, session_id: ObjId, user: User = Depends(current_user)):
+    """Unwiderruflich. Hermes verweigert es mit 409, solange in der Session ein Run läuft."""
+    await upstream(target.adapter.delete_session(target.agent.id, session_id))
+    audit(request, user, "session.delete", target, session=session_id)
+    return {"ok": True}
 
 
 @router.post("/sessions/{session_id}/fork")

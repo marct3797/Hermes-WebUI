@@ -311,3 +311,35 @@ def test_diagnose_run_test_completes_a_real_run(client):
     assert report["status"] == "ok", report
     assert list(c) == ["run.start", "run.stream", "run.history"]
     assert client.get(f"{BASE}/sessions").json()["data"], "der Lauftest legt eine Session an"
+
+
+# --- Sessions umbenennen und löschen (nur gegen den Mock) ---------------------------------------------------
+def test_rename_session(client):
+    info = run(client, "erste Nachricht")
+    events_of(client, info)
+    r = client.patch(f"{BASE}/sessions/{info['session_id']}", json={"title": "Neuer Name"})
+    assert r.status_code == 200 and r.json()["title"] == "Neuer Name"
+    assert client.get(f"{BASE}/sessions").json()["data"][0]["title"] == "Neuer Name"
+    assert client.patch(f"{BASE}/sessions/{info['session_id']}", json={"title": "   "}).status_code == 422
+    assert client.patch(f"{BASE}/sessions/{info['session_id']}", json={"title": "x" * 101}).status_code == 422
+    assert client.patch(f"{BASE}/sessions/nope", json={"title": "x"}).status_code == 404
+
+
+def test_rename_to_an_existing_title_is_a_conflict(client):
+    a, b = run(client, "eins"), run(client, "zwei")
+    events_of(client, a), events_of(client, b)
+    r = client.patch(f"{BASE}/sessions/{b['session_id']}", json={"title": "eins"})
+    assert r.status_code == 409
+
+
+def test_delete_session_and_its_audit_entry(client):
+    info = run(client, "wegwerfen")
+    events_of(client, info)
+    assert client.delete(f"{BASE}/sessions/{info['session_id']}").json() == {"ok": True}
+    assert client.get(f"{BASE}/sessions").json()["data"] == []
+    assert client.delete(f"{BASE}/sessions/{info['session_id']}").status_code == 404
+
+
+def test_delete_is_refused_while_a_run_is_active(client):
+    info = run(client, "hallo")  # Strom nicht abonniert: der Run gilt als laufend
+    assert client.delete(f"{BASE}/sessions/{info['session_id']}").status_code == 409

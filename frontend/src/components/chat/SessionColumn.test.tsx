@@ -80,3 +80,66 @@ describe("SessionColumn", () => {
     expect(screen.getByRole("textbox", { name: "Sessions durchsuchen" })).toHaveFocus();
   });
 });
+
+describe("SessionColumn: Aktionen und Nachladen", () => {
+  function mountWith(extra: Record<string, unknown>) {
+    render(
+      <RunsProvider store={createRunStore()}>
+        <ShellContext.Provider value={{ openMenu: () => undefined, sessions: SESSIONS, sessionsLoading: false, refreshSessions: () => undefined, ...extra }}>
+          <SessionColumn agent={AGENT} label="raiden" runtimeLabel="Hermes" sessionId="a" />
+        </ShellContext.Provider>
+      </RunsProvider>,
+    );
+  }
+  const menu = (title: string) => fireEvent.click(screen.getByRole("button", { name: `Aktionen für ${title}` }));
+
+  it("renames a session in place and sends the trimmed title", async () => {
+    const renameSession = vi.fn(async () => undefined);
+    mountWith({ renameSession, deleteSession: vi.fn() });
+    menu("Adapter lesen");
+    fireEvent.click(screen.getByRole("menuitem", { name: /Umbenennen/ }));
+    const box = screen.getByRole("textbox", { name: "Neuer Titel" });
+    expect(box).toHaveValue("Adapter lesen");
+    fireEvent.change(box, { target: { value: "  Adapter prüfen  " } });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await vi.waitFor(() => expect(renameSession).toHaveBeenCalledWith("b", "Adapter prüfen"));
+    await vi.waitFor(() => expect(screen.queryByRole("textbox", { name: "Neuer Titel" })).toBeNull());
+  });
+
+  it("asks before deleting and only then calls delete", async () => {
+    const deleteSession = vi.fn(async () => undefined);
+    mountWith({ renameSession: vi.fn(), deleteSession });
+    menu("Gestern erledigt");
+    fireEvent.click(screen.getByRole("menuitem", { name: /Löschen/ }));
+    expect(deleteSession).not.toHaveBeenCalled();
+    expect(screen.getByText(/wird endgültig gelöscht/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
+    expect(deleteSession).not.toHaveBeenCalled();
+    menu("Gestern erledigt");
+    fireEvent.click(screen.getByRole("menuitem", { name: /Löschen/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Endgültig löschen" }));
+    await vi.waitFor(() => expect(deleteSession).toHaveBeenCalledWith("c"));
+  });
+
+  it("shows why an action failed and keeps the menu open", async () => {
+    mountWith({ renameSession: vi.fn(async () => { throw new Error("Titel schon vergeben"); }), deleteSession: vi.fn() });
+    menu("Adapter lesen");
+    fireEvent.click(screen.getByRole("menuitem", { name: /Umbenennen/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Titel schon vergeben");
+  });
+
+  it("offers older sessions only when there are more and hides the button while searching", () => {
+    const loadMoreSessions = vi.fn();
+    mountWith({ hasMoreSessions: true, loadMoreSessions });
+    fireEvent.click(screen.getByRole("button", { name: /Ältere laden \(4 geladen\)/ }));
+    expect(loadMoreSessions).toHaveBeenCalledTimes(1);
+    fireEvent.change(screen.getByRole("textbox", { name: "Sessions durchsuchen" }), { target: { value: "x" } });
+    expect(screen.queryByRole("button", { name: /Ältere laden/ })).toBeNull();
+  });
+
+  it("shows no action buttons when the shell cannot rename (older shells, tests)", () => {
+    mount();
+    expect(screen.queryByRole("button", { name: /Aktionen für/ })).toBeNull();
+  });
+});

@@ -99,15 +99,23 @@ class HermesAdapter(RuntimeAdapter):
     async def models(self, agent: str) -> Any:
         return await self._request("GET", agent, "/api/model/options")
 
-    async def sessions(self, agent: str, *, limit: int, offset: int, source: str | None) -> Any:
+    async def sessions(self, agent: str, *, limit: int, offset: int, source: str | None, include_children: bool = False) -> Any:
         params: dict[str, Any] = {"limit": limit, "offset": offset}
         if source:
             params["source"] = source
+        if include_children:
+            params["include_children"] = "true"
         return await self._request("GET", agent, "/api/sessions", params=params)
 
     async def session_messages(self, agent: str, session_id: str, *, limit: int | None = None, offset: int | None = None) -> Any:
         params = {k: v for k, v in (("limit", limit), ("offset", offset)) if v is not None}
         return await self._request("GET", agent, f"/api/sessions/{session_id}/messages", params=params or None)
+
+    async def rename_session(self, agent: str, session_id: str, title: str) -> Any:
+        return await self._request("PATCH", agent, f"/api/sessions/{session_id}", json={"title": title})
+
+    async def delete_session(self, agent: str, session_id: str) -> None:
+        await self._request("DELETE", agent, f"/api/sessions/{session_id}")
 
     async def fork_session(self, agent: str, session_id: str) -> Any:
         """Zweig einer Session: Hermes legt eine Kopie an, in der man weiterschreiben kann (auch bei gesperrter Quelle)."""
@@ -156,12 +164,26 @@ class HermesAdapter(RuntimeAdapter):
 
     async def approve(self, agent: str, run_id: str, decision: str) -> None:
         # Hermes erwartet `choice`; die erlaubten Werte stehen im Event unter `choices`.
-        await self._request("POST", agent, f"/v1/runs/{run_id}/approval", json={"choice": decision})
+        body = {"choice": decision, **await self._control_ids(agent, run_id, "approval")}
+        await self._request("POST", agent, f"/v1/runs/{run_id}/approval", json=body)
 
     async def clarify(self, agent: str, run_id: str, answer: str, clarify_id: str | None) -> None:
         # Laut Doku-Zusammenfassung vorhanden, im Quelltext nicht belegt: Phase 1 prüft Route und Body.
-        body = {"answer": answer, **({"clarify_id": clarify_id} if clarify_id else {})}
+        body = {"answer": answer, **await self._control_ids(agent, run_id, "clarify", clarify_id)}
         await self._request("POST", agent, f"/v1/runs/{run_id}/clarify", json=body)
+
+    async def _control_ids(self, agent: str, run_id: str, kind: str, known_id: str | None = None) -> dict[str, Any]:
+        """Kennung der offenen Anfrage für Freigabe und Rückfrage.
+
+        Im kanonischen Modus verlangt Hermes `request_id` und `execution_generation` (veraltete Werte gibt es als 409); beide
+        stehen unter `pending_controls` im Lauf-Status. Ohne diese Liste (ältere Version, Status nicht lesbar) geht die
+        Antwort ohne Kennung hinaus, wie bisher.
+        """
+        try:
+            status = await self._request("GET", agent, f"/v1/runs/{run_id}")
+        except UpstreamError:
+            return {"request_id": known_id} if known_id else {}
+        return control_ids(status, kind, known_id)
 
     async def steer(self, agent: str, run_id: str, text: str) -> None:
         await self._request("POST", agent, f"/v1/runs/{run_id}/steer", json={"input": text})
@@ -227,6 +249,24 @@ def features_from_capabilities(caps: Any) -> frozenset[str]:
                 features.discard(name)
     # Alte Form: Flag trug direkt den Namen der Fähigkeit (`steer: false`).
     return frozenset(features)
+
+
+def control_ids(status: Any, kind: str, known_id: str | None = None) -> dict[str, Any]:
+    """`request_id`/`execution_generation` der offenen Anfrage aus dem Lauf-Status; leer, wenn Hermes keine nennt."""
+    if not isinstance(status, dict):
+        return {"request_id": known_id} if known_id else {}
+    pending = status.get("pending_controls")
+    items = list(pending.values()) if isinstance(pending, dict) else pending if isinstance(pending, list) else []
+    items = [i for i in items if isinstance(i, dict)]
+    chosen = next((i for i in items if kind in str(i.get("kind") or i.get("type") or "").lower()), items[0] if items else None)
+    out: dict[str, Any] = {}
+    request_id = known_id or (chosen and (chosen.get("request_id") or chosen.get("prompt_id") or chosen.get("id")))
+    if request_id:
+        out["request_id"] = str(request_id)
+    generation = (chosen or {}).get("execution_generation", status.get("execution_generation"))
+    if generation is not None:
+        out["execution_generation"] = generation
+    return out
 
 
 def fork_session_id(data: Any) -> str | None:

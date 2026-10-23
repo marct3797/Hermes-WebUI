@@ -203,6 +203,21 @@ const settleMessages = (items: Item[]): Item[] =>
   items.map((i) => (i.kind === "message" && i.streaming ? { ...i, streaming: false } : i));
 
 /** Hermes liefert `{ object, data[], limit, offset, has_more }`; der Mock und ältere Formen `sessions` oder `items`. */
+/** Gibt es hinter dieser Seite noch weitere Sessions? Hermes meldet `has_more`; sonst entscheidet eine volle Seite. */
+export function sessionsHaveMore(payload: unknown, pageSize: number): boolean {
+  const p = payload as { has_more?: unknown } | null;
+  if (typeof p?.has_more === "boolean") return p.has_more;
+  const list = Array.isArray(payload) ? payload : ((payload as { data?: unknown[]; sessions?: unknown[] } | null)?.data ?? (payload as { sessions?: unknown[] } | null)?.sessions ?? []);
+  return Array.isArray(list) && list.length >= pageSize;
+}
+
+/** Anzahl der Zeilen in der Antwort, auch der ausgeblendeten: so weit steht der Versatz der nächsten Seite. */
+export function sessionRows(payload: unknown): number {
+  const p = payload as { data?: unknown[]; sessions?: unknown[]; items?: unknown[] } | null;
+  const list = Array.isArray(payload) ? payload : p?.data ?? p?.sessions ?? p?.items ?? [];
+  return Array.isArray(list) ? list.length : 0;
+}
+
 export function sessionList(payload: unknown): SessionSummary[] {
   const p = payload as { data?: unknown[]; sessions?: unknown[]; items?: unknown[] } | null;
   const list = Array.isArray(payload) ? payload : p?.data ?? p?.sessions ?? p?.items ?? [];
