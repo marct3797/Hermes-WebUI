@@ -16,7 +16,8 @@ from .hosts import HostService
 from .oidc import OidcClient
 from .registry import AGENT_RE, Registry
 from .memory import MemoryRegistry
-from .routes import agents, auth, hosts, memory as memory_routes, ui as ui_routes
+from .rooms import RoomService
+from .routes import agents, auth, hosts, memory as memory_routes, rooms as rooms_routes, ui as ui_routes
 from .security import RateLimiter, SecurityMiddleware
 from .ui import UiConfig
 
@@ -54,9 +55,11 @@ def create_app(
             app.state.registry, app.state.http,
             health_ttl=settings.health_ttl_s, health_timeout=settings.health_timeout_s,
         )
+        app.state.rooms = RoomService(settings.rooms_db, app.state.hosts.target)
         oidc_http = httpx.AsyncClient(timeout=10.0, transport=oidc_transport, follow_redirects=False)
         app.state.oidc = OidcClient(settings, oidc_http)
         yield
+        await app.state.rooms.shutdown()
         await app.state.http.aclose()
         await oidc_http.aclose()
 
@@ -81,6 +84,7 @@ def create_app(
     app.include_router(hosts.router)
     app.include_router(agents.router)
     app.include_router(memory_routes.router)
+    app.include_router(rooms_routes.router)
     app.include_router(ui_routes.router)
 
     @app.get("/sw.js", include_in_schema=False)

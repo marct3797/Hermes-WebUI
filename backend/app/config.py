@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     ui_file: Path | None = None
     # Gedächtnis-Anbieter (Hindsight …), siehe memory.example.json. Fehlt die Datei, ist die Seite Gedächtnis leer.
     memory_file: Path | None = None
+    # Gruppenchats (Räume): SQLite-Datei mit Raumliste, Nachrichten und der Session je Mitglied.
+    rooms_db: Path = Path("rooms.db")
     # Host, auf den alte /p/<profil>-Links zeigen.
     legacy_host: str = "hikari"
 
