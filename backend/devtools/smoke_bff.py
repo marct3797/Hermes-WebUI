@@ -25,6 +25,7 @@ async def main() -> int:
     ap.add_argument("--agent", default="inari")
     ap.add_argument("--text", default="Antworte mit genau einem Wort: ok.")
     ap.add_argument("--wait", type=float, default=90.0)
+    ap.add_argument("--twice", action="store_true", help="zweite Nachricht in derselben Session senden")
     args = ap.parse_args()
     api = f"{args.base.rstrip('/')}/bff/h/{args.host}/{args.runtime}/{args.agent}"
     ok = True
@@ -73,6 +74,26 @@ async def main() -> int:
             print("ende               ", end.get("type") if end else "kein Ende", "|", str(end.get("error", ""))[:300] if end else "")
         else:
             print("ende                run.completed")
+    if args.twice:
+        async with httpx.AsyncClient(timeout=20.0, headers=HEADERS) as http:
+            sid = run.get("session_id")
+            print(f"session_id nach Start  {'ja' if sid else 'NEIN'}")
+            ok &= bool(sid)
+            if sid:
+                r = await http.post(f"{api}/runs", json={"text": args.text, "session_id": sid})
+                second = r.json() if r.is_success else {}
+                same = second.get("session_id") == sid
+                print(f"zweiter Lauf       {r.status_code} gleiche Session={same}")
+                ok &= r.is_success and same
+                if r.is_success:
+                    try:
+                        async with http.stream("GET", f"{api}/runs/{second['run_id']}/events", timeout=args.wait) as s:
+                            async for line in s.aiter_lines():
+                                if line.startswith("data:") and json.loads(line[5:]).get("type") in ("run.completed", "run.failed", "stream.error"):
+                                    print("zweiter Lauf Ende ", json.loads(line[5:]).get("type"))
+                                    break
+                    except httpx.TimeoutException:
+                        print("zweiter Lauf       Zeitlimit")
     print("ERGEBNIS", "ok" if ok else "FEHLER")
     return 0 if ok else 1
 
