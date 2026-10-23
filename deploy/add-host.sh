@@ -8,9 +8,10 @@
 # Beispiel (Laptop im Tailnet):  bash deploy/add-host.sh laptop "Laptop" 100.100.3.4 --dashboard-port 9119
 # Ergänzt config/hosts.json um einen Eintrag (kind "remote"), fragt den API_SERVER_KEY des Hosts still ab (oder liest ihn von
 # stdin, Dashboard-Token als zweite Zeile) und legt ihn als HERMES_KEY_<KENNUNG> in webui.env ab. Danach: bash deploy/deploy.sh.
-# Bestehende Einträge bleiben unberührt, eine vorhandene Kennung wird nie überschrieben, nichts wird gelöscht.
+# Bestehende Einträge bleiben unberührt, eine vorhandene Kennung wird nie überschrieben, nichts wird gelöscht. Einzige Ausnahme:
+# steht der Host schon da und hat noch kein Dashboard, ergänzt `--dashboard-port` genau dieses (Key und Rest bleiben).
 # Sicherungen: hosts.json.bak, webui.env.bak. Werte werden weder ausgegeben noch als Argument weitergereicht.
-usage() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-2}"; }
+usage() { awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"; exit "${1:-2}"; }
 
 [ $# -ge 3 ] || usage
 id="$1"; label="$2"; addr="$3"; shift 3
@@ -41,13 +42,24 @@ key_var="HERMES_KEY_$up"; tok_var="HERMES_DASHBOARD_TOKEN_$up"
 
 # Eintrag zuerst prüfen und anlegen; die Werte kommen erst danach dran, damit eine abgelehnte Kennung nichts hinterlässt.
 export ADD_ID="$id" ADD_LABEL="$label" ADD_ADDR="$addr" ADD_PORT="$port" ADD_DASH="$dash_port" ADD_KEYVAR="$key_var" ADD_TOKVAR="$tok_var" ADD_PROFILES="${profiles[*]}"
-python3 - "$cfg" <<'PY' || exit 1
+python3 - "$cfg" <<'PY'
 import json, os, shutil, sys
 path = sys.argv[1]
 cfg = json.load(open(path))
 hosts = cfg.setdefault("hosts", [])
-if any(h.get("id") == os.environ["ADD_ID"] for h in hosts):
-    print(f"Der Host {os.environ['ADD_ID']} steht schon in {path}. Nichts geändert.")
+known = next((h for h in hosts if h.get("id") == os.environ["ADD_ID"]), None)
+if known is not None:
+    rt = next((r for r in known.get("runtimes", []) if r.get("id") == "hermes"), None)
+    if os.environ["ADD_DASH"] and rt is not None and "dashboard" not in rt:
+        rt["dashboard"] = {"base_url": f"http://{known.get('address') or os.environ['ADD_ADDR']}:{os.environ['ADD_DASH']}", "token_env": os.environ["ADD_TOKVAR"]}
+        shutil.copy2(path, path + ".bak")
+        with open(path + ".new", "w") as f:
+            json.dump(cfg, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+        os.replace(path + ".new", path)
+        print(f"hosts.json: Dashboard für {os.environ['ADD_ID']} ergänzt (Port {os.environ['ADD_DASH']}).")
+        sys.exit(3)
+    print(f"Der Host {os.environ['ADD_ID']} steht schon in {path} (ohne etwas zu ergänzen). Nichts geändert.")
     sys.exit(1)
 profiles = os.environ["ADD_PROFILES"].split()
 runtime = {
@@ -68,6 +80,8 @@ with open(tmp, "w") as f:
 os.replace(tmp, path)
 print(f"hosts.json: Host {os.environ['ADD_ID']} ergänzt (Hermes auf {os.environ['ADD_ADDR']}:{os.environ['ADD_PORT']}, Profile: {', '.join(profiles)}).")
 PY
+status=$?
+[ "$status" -eq 0 ] || [ "$status" -eq 3 ] || exit 1
 
 ask() {  # ask PROMPT  -> Wert auf stdout; am Terminal still, sonst eine Zeile von stdin
   local v
@@ -80,17 +94,22 @@ set_var() {  # set_var NAME  (Wert von stdin)
   { grep -v "^$1=" "$envf.bak"; printf '%s=%s\n' "$1" "$val"; } > "$envf.new" && chmod 600 "$envf.new" && mv "$envf.new" "$envf"
 }
 
-key="$(ask "API_SERVER_KEY von $label")"
-[ -n "$key" ] || { echo "Kein Key eingegeben. Der Eintrag steht in hosts.json, der Key fehlt noch ($key_var in $envf)."; exit 1; }
-printf '%s' "$key" | set_var "$key_var"
-echo "webui.env: $key_var gesetzt (Länge ${#key})."
-[ "${#key}" -ge 16 ] || echo "Hinweis: Hermes startet seinen API-Server nicht mit einem Key unter 16 Zeichen. Stimmt der Wert?"
+key=""
+if [ "$status" -eq 0 ]; then
+  key="$(ask "API_SERVER_KEY von $label")"
+  [ -n "$key" ] || { echo "Kein Key eingegeben. Der Eintrag steht in hosts.json, der Key fehlt noch ($key_var in $envf)."; exit 1; }
+  printf '%s' "$key" | set_var "$key_var"
+  echo "webui.env: $key_var gesetzt (Länge ${#key})."
+  [ "${#key}" -ge 16 ] || echo "Hinweis: Hermes startet seinen API-Server nicht mit einem Key unter 16 Zeichen. Stimmt der Wert?"
+fi
 if [ -n "$dash_port" ]; then
   tok="$(ask "Dashboard-Token von $label")"
   if [ -n "$tok" ]; then printf '%s' "$tok" | set_var "$tok_var"; echo "webui.env: $tok_var gesetzt (Länge ${#tok})."
   else echo "Kein Dashboard-Token eingegeben: $tok_var fehlt noch."; fi
   unset tok
 fi
+
+if [ "$status" -eq 3 ]; then echo "Jetzt die WebUI neu starten: bash deploy/deploy.sh"; exit 0; fi
 
 # Erreichbarkeit prüfen, ohne den Key als Argument zu übergeben (curl liest den Header von stdin).
 code="$(printf 'header = "Authorization: Bearer %s"\n' "$key" | curl -sS -m 6 -o /dev/null -w '%{http_code}' -K - "http://$addr:$port/v1/capabilities" 2>/dev/null)"
