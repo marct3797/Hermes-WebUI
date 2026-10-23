@@ -246,6 +246,17 @@ def test_soul_changes_require_fresh_login(web, idp, clock):
     assert web.put(soul, json={"content": "neu"}).json()["changed"] is True
 
 
+def test_provider_keys_require_fresh_login(web, idp, clock):
+    key = {"var": "OPENROUTER_API_KEY", "value": "sk-or-neu"}
+    do_login(web, idp)
+    clock.t += 3600
+    assert web.get(f"{BASE}/providers").status_code == 200  # Lesen braucht kein Step-up
+    r = web.put(f"{BASE}/providers/key", json=key)
+    assert r.status_code == 401 and r.json()["detail"]["code"] == "step_up_required"
+    do_login(web, idp, step_up="true")
+    assert web.put(f"{BASE}/providers/key", json=key).status_code == 200
+
+
 def test_session_store_unit():
     clock = Clock()
     store = SessionStore(idle_s=10, max_s=100, clock=clock)

@@ -1,4 +1,4 @@
-import type { AgentRef, AgentStatus, Decision, DiagReport, HostsResponse, MemEntity, MemGraph, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import type { AgentRef, AgentStatus, Decision, DiagReport, HostsResponse, MemEntity, MemGraph, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ProvidersOverview, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string, public data?: Record<string, unknown>) {
@@ -94,6 +94,9 @@ export const api = {
   restoreSoul: (a: AgentRef, vid: string) => call<SoulSaved & { content: string }>("POST", `${base(a)}/soul/restore`, { id: vid }),
   saveDescription: (a: AgentRef, description: string) => call<{ ok: boolean; description: string }>("PUT", `${base(a)}/profile/description`, { description }),
   saveModel: (a: AgentRef, provider: string, model: string) => call<{ ok: boolean }>("PUT", `${base(a)}/profile/model`, { provider, model }),
+  providers: (a: AgentRef, days: number) => call<ProvidersOverview>("GET", `${base(a)}/providers?days=${days}`),
+  validateKey: (a: AgentRef, varName: string, value: string) => call<KeyCheck>("POST", `${base(a)}/providers/validate`, { var: varName, value }),
+  saveKey: (a: AgentRef, varName: string, value: string) => call<{ ok: boolean }>("PUT", `${base(a)}/providers/key`, { var: varName, value }),
   skills: (a: AgentRef) => call<unknown>("GET", `${base(a)}/skills`),
   toolsets: (a: AgentRef) => call<unknown>("GET", `${base(a)}/toolsets`),
   memoryProviders: () => call<{ providers: MemProvider[]; config_error: string | null }>("GET", "/bff/memory"),

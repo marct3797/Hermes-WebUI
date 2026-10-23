@@ -4,8 +4,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import httpx
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, RedirectResponse, Response
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
@@ -70,6 +71,13 @@ def create_app(
         openapi_url=None if settings.env == "prod" else "/bff/openapi.json",
     )
     app.state.settings = settings
+
+    @app.exception_handler(RequestValidationError)
+    async def invalid_input(_request: Request, exc: RequestValidationError):
+        # FastAPIs Standardantwort wiederholt die abgelehnte Eingabe ("input"). Bei einem Key wäre das ein Klartext-Geheimnis in der Antwort.
+        errors = [{k: v for k, v in e.items() if k not in ("input", "ctx", "url")} for e in exc.errors()]
+        return JSONResponse({"detail": errors}, status_code=422)
+
     app.state.registry = Registry(settings.hosts_file)
     app.state.ui = UiConfig(settings.ui_file)
     app.state.memory = MemoryRegistry(settings.memory_file)

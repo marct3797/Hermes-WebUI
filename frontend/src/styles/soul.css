@@ -37,3 +37,16 @@
 @media (max-width:1000px){
   .soul-grid{grid-template-columns:minmax(0,1fr)}
 }
+
+/* Anbieter */
+.prov-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.prov-card{padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0;align-items:stretch}
+.prov-card.off{background:var(--s0)}
+.prov-card p{margin:0}
+.prov-head{gap:6px;align-items:center;min-width:0}
+.prov-use{color:var(--t2)}
+.prov-models{word-break:break-word}
+.prov-keys{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.prov-keys li{display:flex;justify-content:space-between;gap:10px}
+.prov-oauth code{word-break:break-all}
+.prov-form{display:flex;flex-direction:column;gap:10px;padding-top:4px}

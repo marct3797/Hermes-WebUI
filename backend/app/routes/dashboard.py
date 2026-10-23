@@ -5,10 +5,11 @@ Schreibende Aufrufe landen im Audit-Log, nie mit dem Inhalt (nur Längen).
 """
 from __future__ import annotations
 
+import asyncio
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Request
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
+from pydantic import BaseModel, Field, SecretStr, field_validator
 
 from ..adapters import UpstreamError
 from ..auth import User, current_user, fresh_user
@@ -16,6 +17,7 @@ from ..dashboard import (
     DESCRIPTION_MAX_CHARS, SOUL_MAX_CHARS, VERSION_RE, DashboardClient, SoulConflict, SoulHistory, digest, save_soul,
 )
 from ..hosts import Target
+from ..providers import build_overview, provider_keys
 from ..security import client_ip
 from .agents import Tgt, audit as audit_target, upstream
 
@@ -142,3 +144,63 @@ async def write_model(request: Request, target: Tgt, dash: Dash, req: ModelIn, u
     await upstream(dash.set_model(target.agent.id, req.provider, req.model))
     audit(request, user, "profile.model", target, provider=req.provider, model=req.model)
     return {"ok": True, "provider": req.provider, "model": req.model}
+
+
+# --- Anbieter: Keys, Anmeldung, Nutzung ------------------------------------------------------------------
+async def _tolerated(coro):
+    """Ergebnis oder die Fehlermeldung des Dashboards: eine fehlende Nebenquelle soll die Übersicht nicht kippen."""
+    try:
+        return await coro, None
+    except UpstreamError as e:
+        return None, e.detail
+
+
+@router.get("/providers")
+async def providers_overview(target: Tgt, dash: Dash, days: int = Query(30, ge=1, le=365)):
+    """Anbieter dieses Profils mit Keys (geschwärzt), Anmeldestatus und Nutzung der letzten `days` Tage."""
+    name = target.agent.id
+    env_task = asyncio.ensure_future(dash.env(name))
+    (oauth, oauth_err), (usage, usage_err) = await asyncio.gather(_tolerated(dash.oauth_providers(name)), _tolerated(dash.model_analytics(name, days)))
+    env = await upstream(env_task)
+    warnings = [f"{what} nicht ladbar: {err}" for what, err in (("Anmeldestatus", oauth_err), ("Nutzung", usage_err)) if err]
+    return {**build_overview(env, oauth, usage, days), "warnings": warnings}
+
+
+class KeyIn(BaseModel):
+    var: str = Field(pattern=r"^[A-Z][A-Z0-9_]{1,63}$")
+    value: SecretStr = Field(min_length=1, max_length=2000)
+
+    @field_validator("value")
+    @classmethod
+    def single_line(cls, v: SecretStr) -> SecretStr:
+        text = v.get_secret_value()
+        if text != text.strip() or "\n" in text or "\r" in text:
+            raise ValueError("Der Key darf keine Leerzeichen am Rand und keine Zeilenumbrüche enthalten")
+        return v
+
+
+async def _known_var(dash: DashboardClient, name: str, var: str) -> None:
+    """Nur Variablen, die das Dashboard einem Anbieter zuordnet: über diese Route lässt sich keine beliebige Umgebungsvariable setzen."""
+    if var not in provider_keys(await upstream(dash.env(name))):
+        raise HTTPException(422, "Diese Variable gehört zu keinem Anbieter")
+
+
+@router.post("/providers/validate")
+async def validate_key(request: Request, target: Tgt, dash: Dash, req: KeyIn, user: User = Depends(current_user)):
+    """Fragt beim Anbieter nach, ob der Key akzeptiert wird (ohne ihn zu speichern). `reachable: false` heißt: nicht prüfbar."""
+    request.app.state.limiter.check(f"{user.id}:dashboard")
+    await _known_var(dash, target.agent.id, req.var)
+    result = await upstream(dash.validate_key(req.var, req.value.get_secret_value()))
+    audit(request, user, "provider.validate", target, var=req.var)
+    return {"ok": bool(result.get("ok")), "reachable": bool(result.get("reachable")), "message": str(result.get("message") or "")} if isinstance(result, dict) else {"ok": False, "reachable": False, "message": ""}
+
+
+@router.put("/providers/key")
+async def write_key(request: Request, target: Tgt, dash: Dash, req: KeyIn, user: User = Depends(current_user)):
+    """Key eines Anbieters speichern oder ersetzen. Verlangt eine frische Anmeldung; im Audit-Log steht nur der Name der Variablen."""
+    user = await fresh_user(request, user)
+    request.app.state.limiter.check(f"{user.id}:dashboard")
+    await _known_var(dash, target.agent.id, req.var)
+    await upstream(dash.set_key(target.agent.id, req.var, req.value.get_secret_value()))
+    audit(request, user, "provider.key", target, var=req.var, chars=len(req.value.get_secret_value()))
+    return {"ok": True, "var": req.var}

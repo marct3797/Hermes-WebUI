@@ -3,6 +3,7 @@ import { useAgentRef, useResolvedAgent } from "../hosts";
 import { ChatPage } from "./ChatPage";
 import { CapabilitiesPage } from "./CapabilitiesPage";
 import { ProfilePage } from "./ProfilePage";
+import { ProvidersPage } from "./ProvidersPage";
 import { SoulPage } from "./SoulPage";
 import { ModulePage, NotFoundPage } from "./Placeholders";
 
@@ -16,6 +17,7 @@ export function AgentPage({ page }: { page: Extract<Page, { name: "agent" }> }) 
     return <NotFoundPage what={`Der Agent „${page.ref.agent}“ auf ${page.ref.host}`} />;
   }
   if (page.module === "profil") return <ProfilePage key={agentKey(page.ref)} agent={agent} label={resolved.label} hostLabel={resolved.host.label} runtimeLabel={resolved.runtimeLabel} />;
+  if (page.module === "providers") return <ProvidersPage key={agentKey(page.ref)} agent={agent} label={resolved.label} />;
   if (page.module === "soul") return <SoulPage key={agentKey(page.ref)} agent={agent} label={resolved.label} />;
   if (page.module === "skills" || page.module === "tools") return <CapabilitiesPage key={`${agentKey(page.ref)}/${page.module}`} agent={agent} label={resolved.label} module={page.module} />;
   if (page.module !== "chat") return <ModulePage module={page.module} />;

@@ -128,6 +128,13 @@ export type SoulState = { content: string; exists: boolean; hash: string; max_ch
 export type SoulSaved = { changed: boolean; hash: string; history: SoulEntry[] };
 export type SoulVersion = { id: string; at: string; reason: string; content: string };
 
+export type ProviderKey = { var: string; set: boolean; redacted: string | null; description: string; url: string | null; secret: boolean; advanced: boolean };
+export type ProviderOauth = { logged_in: boolean; flow: string | null; source: string | null; expires_at: string | null; cli_command: string | null; docs_url: string | null };
+export type ProviderUsage = { sessions: number; input_tokens: number; output_tokens: number; cost_usd: number; last_used_at: number | null; models: string[] };
+export type ProviderGroup = { id: string; label: string; keys: ProviderKey[]; oauth: ProviderOauth | null; usage: ProviderUsage | null; configured: boolean; used: boolean };
+export type ProvidersOverview = { providers: ProviderGroup[]; period_days: number; warnings: string[] };
+export type KeyCheck = { ok: boolean; reachable: boolean; message: string };
+
 export type RoomMember = AgentRef & { label: string; key: string };
 export type RoomMessage = { seq: number; author: string; kind: "message" | "system"; text: string; mentions: string[]; at: number };
 export type Room = {

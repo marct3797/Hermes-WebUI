@@ -104,14 +104,45 @@ function memoryRoute(url: string, method: string, capabilities: string[], json: 
 export type DashState = {
   available: boolean; reason: string | null; soul: string; description: string; model: { provider: string; model: string };
   history: Array<{ id: string; at: string; reason: string; chars: number }>; versions: Record<string, string>; stepUp: boolean;
+  keys: Record<string, string>; // gesetzte Anbieter-Keys (Variable → Wert); der Wert verlässt die Attrappe nie
 };
 const hashOf = (text: string) => `h${text.length}:${text.slice(0, 12)}`;
+
+const KEY_VARS: Array<[provider: string, label: string, varName: string]> = [
+  ["anthropic", "Anthropic", "ANTHROPIC_API_KEY"], ["openrouter", "OpenRouter", "OPENROUTER_API_KEY"], ["gemini", "Google Gemini", "GEMINI_API_KEY"],
+];
+
+function providersOverview(dash: DashState, days: number) {
+  const providers = KEY_VARS.map(([id, label, varName]) => {
+    const set = varName in dash.keys;
+    const usage = id === "anthropic" ? { sessions: 12, input_tokens: 1_200_000, output_tokens: 300_000, cost_usd: 4.5, last_used_at: 1_792_000_000, models: ["claude-test", "claude-test"] } : null;
+    // Anthropic und Gemini bieten auch eine Anmeldung an, beide sind hier nicht angemeldet.
+    const oauth = id === "openrouter" ? null : { logged_in: false, flow: "pkce", source: null, expires_at: null, cli_command: `hermes auth add ${id}`, docs_url: null };
+    return { id, label, configured: set, used: !!usage, oauth, usage,
+      keys: [{ var: varName, set, redacted: set ? "sk-a…1234" : null, description: "", url: "https://example.invalid/keys", secret: true, advanced: false }] };
+  });
+  providers.push({ id: "openai-codex", label: "OpenAI Codex", configured: true, used: false, keys: [], usage: null,
+    oauth: { logged_in: true, flow: "device_code", source: "~/.codex/auth.json", expires_at: null, cli_command: "hermes auth add openai-codex", docs_url: null } } as never);
+  providers.sort((a, b) => Number(b.configured) - Number(a.configured));
+  return { providers, period_days: days, warnings: [] as string[] };
+}
 
 function dashboardRoute(rest: string, method: string, agent: string, dash: DashState, json: (b: unknown, s?: number) => Response, body?: Record<string, unknown>): Response | undefined {
   if (rest === "/dashboard") {
     return json(dash.available
       ? { available: true, reason: null, profile: { name: agent, ...dash.model, description: dash.description, description_auto: false, skill_count: 12, gateway_running: false, has_env: true } }
       : { available: false, reason: dash.reason, profile: null });
+  }
+  const path = rest.split("?")[0];
+  if (path === "/providers" && method === "GET") return json(providersOverview(dash, Number(new URL(rest, "http://bff").searchParams.get("days") ?? 30)));
+  if (path === "/providers/validate" && method === "POST") {
+    return json(body?.value === "bad" ? { ok: false, reachable: true, message: "Der Anbieter hat den Key abgelehnt." }
+      : body?.value === "offline" ? { ok: false, reachable: false, message: "" } : { ok: true, reachable: true, message: "" });
+  }
+  if (path === "/providers/key" && method === "PUT") {
+    if (dash.stepUp) return json({ detail: { code: "step_up_required", message: "Bitte erneut anmelden" } }, 401);
+    dash.keys[String(body?.var)] = String(body?.value);
+    return json({ ok: true, var: body?.var });
   }
   const snapshot = (reason: string) => {
     const id = `20261023T1700${String(dash.history.length).padStart(2, "0")}000000`;
@@ -152,7 +183,7 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
   const rooms: Room[] = [];
   const dash: DashState = {
     available: true, reason: null, soul: "Du bist Raiden.\nDu antwortest knapp.\n", description: "", model: { provider: "mock", model: "mock-large" },
-    history: [], versions: {}, stepUp: false,
+    history: [], versions: {}, stepUp: false, keys: { ANTHROPIC_API_KEY: "sk-ant-geheim-1234" },
   };
   let runs = 0;
   const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });

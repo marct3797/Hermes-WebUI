@@ -46,6 +46,7 @@ export function HostsPage() {
                         <li key={a.id} className="row" style={{ gap: 2 }}>
                           <Link to={agentPath(ref)} className="chip"><Sigil name={a.label} config={sigilFor(sigils, ref)} size="xs" />{a.label}</Link>
                           {r.id === "hermes" && <Link to={agentPath(ref, "soul")} className="btn btn-s btn-i btn-g" aria-label={`SOUL von ${a.label}`} title="SOUL & Profil"><Icon name="spark" size={12} /></Link>}
+                          {r.id === "hermes" && <Link to={agentPath(ref, "providers")} className="btn btn-s btn-i btn-g" aria-label={`Anbieter von ${a.label}`} title="Anbieter"><Icon name="coin" size={12} /></Link>}
                           {r.id === "hermes" && <Link to={agentPath(ref, "skills")} className="btn btn-s btn-i btn-g" aria-label={`Skills von ${a.label}`} title="Skills"><Icon name="layers" size={12} /></Link>}
                           {r.id === "hermes" && <Link to={agentPath(ref, "tools")} className="btn btn-s btn-i btn-g" aria-label={`Werkzeuge von ${a.label}`} title="Werkzeuge"><Icon name="wrench" size={12} /></Link>}
                           <Link to={agentPath(ref, "profil")} className="btn btn-s btn-i btn-g" aria-label={`Profil von ${a.label} bearbeiten`} title="Profil bearbeiten"><Icon name="edit" size={12} /></Link>

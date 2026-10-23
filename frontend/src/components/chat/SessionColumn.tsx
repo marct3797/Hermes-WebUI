@@ -88,6 +88,7 @@ export function SessionColumn({ agent, label, runtimeLabel, sessionId }: Props) 
           {agent.runtime === "hermes" && (
             <>
               <Link to={agentPath(agent, "soul")} className="btn btn-s btn-i btn-g" aria-label={`SOUL von ${label}`} title="SOUL & Profil"><Icon name="spark" size={14} /></Link>
+              <Link to={agentPath(agent, "providers")} className="btn btn-s btn-i btn-g" aria-label={`Anbieter von ${label}`} title="Anbieter"><Icon name="coin" size={14} /></Link>
               <Link to={agentPath(agent, "skills")} className="btn btn-s btn-i btn-g" aria-label={`Skills von ${label}`} title="Skills"><Icon name="layers" size={14} /></Link>
               <Link to={agentPath(agent, "tools")} className="btn btn-s btn-i btn-g" aria-label={`Werkzeuge von ${label}`} title="Werkzeuge"><Icon name="wrench" size={14} /></Link>
             </>

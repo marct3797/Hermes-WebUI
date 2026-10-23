@@ -81,6 +81,22 @@ class DashboardClient:
     async def set_model(self, name: str, provider: str, model: str) -> None:
         await self._call("PUT", f"/api/profiles/{name}/model", json_body={"provider": provider, "model": model})
 
+    # Anbieter, Keys und Nutzung eines Profils: das Profil steht als Abfrageparameter (`?profile=`), nicht im Pfad.
+    async def env(self, name: str) -> Any:
+        return await self._call("GET", "/api/env", params={"profile": name})
+
+    async def oauth_providers(self, name: str) -> Any:
+        return await self._call("GET", "/api/providers/oauth", params={"profile": name})
+
+    async def model_analytics(self, name: str, days: int) -> Any:
+        return await self._call("GET", "/api/analytics/models", params={"profile": name, "days": str(days)})
+
+    async def validate_key(self, var: str, value: str) -> Any:
+        return await self._call("POST", "/api/providers/validate", json_body={"key": var, "value": value})
+
+    async def set_key(self, name: str, var: str, value: str) -> None:
+        await self._call("PUT", "/api/env", params={"profile": name}, json_body={"key": var, "value": value})
+
 
 class SoulConflict(Exception):
     """SOUL.md hat sich seit dem Laden geändert (zweiter Editor, der Agent selbst, ein Skript)."""
