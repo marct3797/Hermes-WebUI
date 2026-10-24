@@ -6,7 +6,6 @@ import {
   EFFORTS, attachmentBlock, detectTrigger, formatRefValue, hasContextRefs, joinContext, loadReasoning, parseReasoningArg,
   parseSlashInput, reasoningLabel, saveReasoning, type Reasoning, type Trigger,
 } from "../../composerLogic";
-import { useHosts } from "../../hosts";
 import { fileToDataUrl } from "../../images";
 import type { ModelGroup } from "../../models";
 import { agentKey } from "../../router";
@@ -48,7 +47,6 @@ const lower = (s: string) => s.toLowerCase();
 const wsKey = (host: string) => `hermes-webui-workspace:${host}`;
 
 export function Composer(p: Props) {
-  const { hosts } = useHosts();
   const key = agentKey(p.agent);
   const [text, setText] = useState("");
   const [caret, setCaret] = useState(0);
@@ -173,14 +171,9 @@ export function Composer(p: Props) {
     for (const [label, detail, insert, needsWs] of base.filter(([l]) => lower(l).slice(1).startsWith(q))) {
       out.push({ id: label, group: "Bezüge", label, detail, insert, keepOpen: insert.endsWith(":"), disabled: needsWs && !refsReady, note: needsWs ? gitNote : undefined });
     }
-    const runtime = hosts?.find((h) => h.id === p.agent.host)?.runtimes.find((r) => r.id === p.agent.runtime);
-    for (const a of runtime?.agents ?? []) {
-      if (lower(a.id).startsWith(q) || lower(a.label ?? "").startsWith(q)) {
-        out.push({ id: `a:${a.id}`, group: "Profile", label: `@${a.id}`, detail: "Profil, wird als Text gesendet", insert: `@${a.id} ` });
-      }
-    }
     return out;
-  }, [trigger, slash, pathMode, refsReady, refsNote, listing, hosts, p.agent.host, p.agent.runtime]);  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [trigger, slash, pathMode, refsReady, refsNote, listing]);  // eslint-disable-line react-hooks/exhaustive-deps
+  // In 1:1-Chats kennt das Backend keine @Profile (expand() nur diff/staged/file/folder/git/url) — keine wirkungslosen Vorschlaege.
 
   const menuOpen = !!trigger && triggerId !== dismissed && (items.length > 0 || (trigger.kind === "slash" && slash.state !== "ready") || trigger.kind === "at");
   const selectable = items.filter((i) => !i.disabled);

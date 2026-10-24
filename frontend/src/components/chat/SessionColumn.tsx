@@ -79,21 +79,25 @@ export function SessionColumn({ agent, label, runtimeLabel, sessionId }: Props) 
   return (
     <aside className="sess" aria-label={`Sessions von ${label}`}>
       <div className="sess-h">
-        <div className="row" style={{ gap: 12 }}>
-          <Sigil name={label} config={sigilFor(sigils, agent)} size="m" state={agentState} />
-          <div className="col grow" style={{ gap: 2, minWidth: 0 }}>
-            <span className="sess-name trunc">{label}</span>
-            <span className="mono t3 trunc" style={{ fontSize: 10.5 }}>{agent.host} · {runtimeLabel.toLowerCase()}</span>
+        <div className="col" style={{ gap: 8 }}>
+          <div className="row" style={{ gap: 12 }}>
+            <Sigil name={label} config={sigilFor(sigils, agent)} size="m" state={agentState} />
+            <div className="col grow" style={{ gap: 2, minWidth: 0 }}>
+              <span className="sess-name trunc">{label}</span>
+              <span className="mono t3 trunc" style={{ fontSize: 10.5 }}>{agent.host} · {runtimeLabel.toLowerCase()}</span>
+            </div>
           </div>
-          {agent.runtime === "hermes" && (
-            <>
-              <Link to={agentPath(agent, "soul")} className="btn btn-s btn-i btn-g" aria-label={`SOUL von ${label}`} title="SOUL & Profil"><Icon name="spark" size={14} /></Link>
-              <Link to={agentPath(agent, "providers")} className="btn btn-s btn-i btn-g" aria-label={`Keys von ${label}`} title="Keys & Nutzung"><Icon name="coin" size={14} /></Link>
-              <Link to={agentPath(agent, "skills")} className="btn btn-s btn-i btn-g" aria-label={`Skills von ${label}`} title="Skills"><Icon name="layers" size={14} /></Link>
-              <Link to={agentPath(agent, "tools")} className="btn btn-s btn-i btn-g" aria-label={`Werkzeuge von ${label}`} title="Werkzeuge"><Icon name="wrench" size={14} /></Link>
-            </>
-          )}
-          <Link to={agentPath(agent, "profil")} className="btn btn-s btn-i btn-g" aria-label={`Profil von ${label} bearbeiten`} title="Profil bearbeiten"><Icon name="edit" size={14} /></Link>
+          <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+            {agent.runtime === "hermes" && (
+              <>
+                <Link to={agentPath(agent, "soul")} className="btn btn-s btn-i btn-g" aria-label={`SOUL von ${label}`} title="SOUL & Profil"><Icon name="spark" size={14} /></Link>
+                <Link to={agentPath(agent, "providers")} className="btn btn-s btn-i btn-g" aria-label={`Keys von ${label}`} title="Keys & Nutzung"><Icon name="coin" size={14} /></Link>
+                <Link to={agentPath(agent, "skills")} className="btn btn-s btn-i btn-g" aria-label={`Skills von ${label}`} title="Skills"><Icon name="layers" size={14} /></Link>
+                <Link to={agentPath(agent, "tools")} className="btn btn-s btn-i btn-g" aria-label={`Werkzeuge von ${label}`} title="Werkzeuge"><Icon name="wrench" size={14} /></Link>
+              </>
+            )}
+            <Link to={agentPath(agent, "profil")} className="btn btn-s btn-i btn-g" aria-label={`Profil von ${label} bearbeiten`} title="Profil bearbeiten"><Icon name="edit" size={14} /></Link>
+          </div>
         </div>
         <Link to={agentPath(agent)} className="btn btn-p" style={{ width: "100%" }}><Icon name="plus" size={14} />Neuer Chat<span className="kbd">N</span></Link>
         <label className="search">
