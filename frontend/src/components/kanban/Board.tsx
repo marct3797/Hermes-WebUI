@@ -52,7 +52,7 @@ export function BoardColumns({ columns, total, filtered, selected, dragId, onOpe
           <section key={col.name} className={`kb-col${over === col.name ? " over" : ""}${dragId && !ok ? " nodrop" : ""}${!dragId && col.tasks.length === 0 ? " empty" : ""}`} aria-label={`Spalte ${columnLabel(col.name)}`}
             onDragOver={(e) => { if (dragId && ok) { e.preventDefault(); setOver(col.name); } }} onDragLeave={() => setOver((o) => (o === col.name ? undefined : o))}
             onDrop={(e) => { e.preventDefault(); setOver(undefined); const id = dragId ?? e.dataTransfer?.getData("text/plain"); onDragId(undefined); if (id && ok) onMove(id, col.name); }}>
-            <h2 className="kb-colh"><span>{columnLabel(col.name)}</span><span className="mono small t3" data-testid="count">{filtered ? `${col.tasks.length} von ${total[col.name] ?? col.tasks.length}` : col.tasks.length}</span></h2>
+            <h2 className="kb-colh" title={columnLabel(col.name)}><span>{columnLabel(col.name)}</span><span className="mono small t3" data-testid="count">{filtered ? `${col.tasks.length} von ${total[col.name] ?? col.tasks.length}` : col.tasks.length}</span></h2>
             <ul className="kb-cards">
               {shown.map((c) => <TaskCard key={c.id} card={c} columns={names} selected={selected === c.id} dragging={dragId === c.id} onOpen={() => onOpen(c.id)}
                 onMove={(to) => onMove(c.id, to)} onDragStart={() => onDragId(c.id)} onDragEnd={() => { onDragId(undefined); setOver(undefined); }} />)}

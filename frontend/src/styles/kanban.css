@@ -44,5 +44,7 @@
 }
 
 /* Leere Spalten schrumpfen, damit Blockiert und Erledigt ohne Seitwaertsrollen sichtbar bleiben (beim Ziehen werden alle wieder breit) */
-.kb-col.empty{flex:0 0 112px;min-width:0}
+.kb-col.empty{flex:0 0 128px;min-width:0}
+.kb-col.empty .kb-colh{font-size:11px;letter-spacing:.02em}
+.kb-col.empty .kb-colh span:first-child{overflow-wrap:anywhere}
 .kb-col.empty .small,.kb-col.empty .empty{font-size:11px}
