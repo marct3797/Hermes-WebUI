@@ -71,8 +71,9 @@ class ModelBody(BaseModel):
     model: str
 
 
-def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default", "beta", "eta"), drop_writes: bool = False, quota: dict[str, Any] | None = None) -> FastAPI:
+def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default", "beta", "eta"), drop_writes: bool = False, quota: dict[str, Any] | None = None, env_put_error: dict[str, Any] | None = None) -> FastAPI:
     app = FastAPI()
+    app.state.env_put_error = env_put_error  # {"var": ..., "status": 500, "detail": "..."}: PUT /api/env scheitert für diese Variable
     state: dict[str, dict[str, Any]] = {
         name: {"soul": SOULS.get(name), "description": "", "description_auto": False, "provider": "anthropic", "model": "claude-test",
               "env": {"ANTHROPIC_API_KEY": "sk-ant-geheim-1234"} if name == "default" else {}}
@@ -151,7 +152,10 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
                 for var, meta in ENV_CATALOG.items()}
 
     @app.put("/api/env")
-    async def put_env(body: EnvBody, profile: str | None = None):
+    async def put_env(body: EnvBody, profile: str | None = None, request: Request = None):  # type: ignore[assignment]
+        fail = request.app.state.env_put_error if request is not None else None
+        if fail and body.key == fail.get("var"):
+            return JSONResponse({"detail": fail.get("detail", "Dashboard-Fehler")}, status_code=int(fail.get("status", 500)))
         if body.key not in ENV_CATALOG:
             raise HTTPException(400, "unknown variable")
         profile_or_default(profile)["env"][body.key] = body.value

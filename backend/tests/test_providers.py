@@ -145,6 +145,28 @@ def test_only_provider_variables_can_be_set(client, dash, var):
     assert var not in dash.state.profiles["default"]["env"]
 
 
+def test_validate_ok_reachable_false_does_not_store(make, dash, tmp_path):
+    client = make()
+    body = client.post(f"{P}/validate", json={"var": "OPENROUTER_API_KEY", "value": "offline"}).json()
+    assert body == {"ok": False, "reachable": False, "message": "Could not reach the provider to verify the key."}
+    assert "OPENROUTER_API_KEY" not in dash.state.profiles["default"]["env"]
+
+
+def test_write_key_shows_dashboard_reason(make, dash):
+    dash.state.env_put_error = {"var": "OPENROUTER_API_KEY", "status": 500, "detail": "Speichern derzeit gesperrt"}
+    r = make().put(f"{P}/key", json={"var": "OPENROUTER_API_KEY", "value": "sk-or-x"})
+    assert r.status_code == 502 and r.json()["detail"] == "Das Dashboard meldet Fehler 500: Speichern derzeit gesperrt"
+
+
+def test_write_key_unknown_variable_422(make_settings, dash):
+    dash.state.env_put_error = {"var": "OPENROUTER_API_KEY", "status": 422, "detail": "unknown variable"}
+    routes = {"hermes.test": httpx.ASGITransport(app=create_mock(delay=0)), "dashboard.test": httpx.ASGITransport(app=dash)}
+    with TestClient(create_app(make_settings(), transport=RouterTransport(routes))) as c:
+        c.headers.update(HDR)
+        r = c.put(f"{P}/key", json={"var": "OPENROUTER_API_KEY", "value": "sk-or-x"})
+        assert r.status_code == 502 and "unknown variable" in r.json()["detail"]
+
+
 @pytest.mark.parametrize("body", [
     {"var": "anthropic_api_key", "value": "x"}, {"var": "A", "value": "x"}, {"var": "ANTHROPIC_API_KEY", "value": ""},
     {"var": "ANTHROPIC_API_KEY", "value": "zwei\nzeilen"}, {"var": "ANTHROPIC_API_KEY", "value": " rand "}, {"var": "ANTHROPIC_API_KEY"},

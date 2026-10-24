@@ -195,7 +195,7 @@ class DashboardClient:
         return await self._call("POST", "/api/providers/validate", json_body={"key": var, "value": value})
 
     async def set_key(self, name: str, var: str, value: str) -> None:
-        await self._call("PUT", "/api/env", params={"profile": name}, json_body={"key": var, "value": value})
+        await self._call("PUT", "/api/env", params={"profile": name}, json_body={"key": var, "value": value}, explain=True)
         self._changed()
 
 
