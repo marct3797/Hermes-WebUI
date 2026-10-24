@@ -1,0 +1,4 @@
+# Synthetische Testwerte (Platzhalter, keine Zugangsdaten); Fingerabdruck = Datei:Regel:Zeile
+backend/devtools/real/prov.py:generic-api-key:11
+backend/tests/test_fixes.py:generic-api-key:63
+backend/tests/test_security.py:generic-api-key:62
