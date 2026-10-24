@@ -1,1 +1,28 @@
-/* ops2: Stile des Arbeitspakets */
+/* ops2: Zeitpläne, Logs, Wissensdetail */
+.jobs-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+.jobs-grid.has-side{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)}
+@media (max-width:900px){.jobs-grid.has-side{grid-template-columns:minmax(0,1fr)}}
+.jobs-row{display:flex;flex-direction:column;gap:3px;width:100%;text-align:left;padding:10px 12px;cursor:pointer;color:inherit}
+.jobs-row.on{box-shadow:inset 2px 0 0 var(--crim)}
+.jobs-row:focus-visible{outline:2px solid var(--crim);outline-offset:2px}
+.jobs-panel{padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.jobs-fields{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;min-width:0}
+.jobs-skills{display:flex;flex-direction:column;gap:4px;max-height:160px;overflow:auto;border:1px solid var(--line);border-radius:6px;padding:6px 10px;margin:0}
+.jobs-pre{margin:6px 0 0;white-space:pre-wrap;word-break:break-word;font:400 12px/17px var(--mono);color:var(--t2)}
+.jobs-st-active{color:var(--ok,#4caf80)}.jobs-st-paused{color:var(--t3)}.jobs-st-error{color:var(--err,#e5534b)}.jobs-st-done{color:var(--t3)}
+.tag.err{color:var(--err,#e5534b)}
+
+.logs-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin:0 0 10px}
+.logs-view{margin:0;max-height:62dvh;overflow:auto;background:var(--s1);border:1px solid var(--line);border-radius:6px;padding:8px 0;font:400 12px/17px var(--mono)}
+.logs-view.wrap .logs-line{white-space:pre-wrap;word-break:break-word}
+.logs-line{display:block;padding:0 12px;white-space:pre}
+.logs-DEBUG{color:var(--t3)}.logs-WARNING{color:var(--warn,#d9a441)}.logs-ERROR,.logs-CRITICAL{color:var(--err,#e5534b)}
+.logs-live{color:var(--ok,#4caf80)}
+
+.kn-doc-text{margin:0;white-space:pre-wrap;word-break:break-word;font:400 13px/20px var(--sans);max-height:60dvh;overflow:auto;padding:12px 14px}
+.kn-part{padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.kn-part.focus{box-shadow:inset 2px 0 0 var(--crim)}
+.kn-part pre{margin:0;white-space:pre-wrap;word-break:break-word;font:400 12.5px/18px var(--sans);color:var(--t2)}
+.kn-click{cursor:pointer}.kn-click:hover td{background:var(--s1)}
+.kn-meta{display:flex;flex-direction:column;gap:2px;margin:8px 0}
+.kn-sourcehead{padding:12px 14px;margin:14px 0 0}
