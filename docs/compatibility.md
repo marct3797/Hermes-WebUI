@@ -50,7 +50,7 @@ Das Skript liest Zeichenketten aus dem Quelltext. Es beweist, dass ein Pfad exis
 | Gedächtnis | Anbieter vom Typ `hindsight` | **nur Hindsight.** Andere Gedächtnis-Plugins von Hermes sind nicht angebunden (offen) |
 | Wissen | `hermes-rag` | nur dieser Typ |
 | Räume (Gruppenchats) | Gateway je Teilnehmer | Pfad vorhanden |
-| Geführter Einrichtungs-Assistent | | **offen** |
+| Geführter Einrichtungs-Assistent | | Terminal-Skript `deploy/setup.py` (Gateway, Dashboard, Anmeldung, Step-up, ausgeblendete Anbieter, Verbindungsprüfung). Kein Browser-Assistent, mit Absicht |
 
 ## Hermes-Einstellungen: was die Seite zusichert und was nicht
 

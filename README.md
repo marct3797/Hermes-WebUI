@@ -1,5 +1,7 @@
 # Hermes-WebUI
 
+*English: see [README.en.md](README.en.md).*
+
 Eigene WebUI für Agents: erst Hermes, später weitere Agent-Systeme (OpenCode, Claude Code, Antigravity)
 auf mehreren Rechnern. Aufbau: React/Vite-Frontend (`frontend/`) und ein schlankes FastAPI-Backend
 (`backend/`, „BFF“). Der Browser spricht nur mit dem BFF; Keys bleiben serverseitig.
@@ -264,10 +266,12 @@ Secrets nie in Repo, Chat oder Frontend: Umgebung oder Datei mit Modus 0600.
 Ein Container mit `network_mode: host`, BFF und Frontend in einem Image, davor ein Reverse-Proxy.
 
 ```bash
-git clone https://github.com/marct3797/Hermes-WebUI && cd Hermes-WebUI
+git clone <URL-dieses-Repositorys> hermes-webui && cd hermes-webui
+python3 deploy/setup.py        # Einrichtungsassistent: fragt Gateway, Anmeldung und Optionen, prüft die Verbindungen, schreibt hosts.json und webui.env (Geheimnisse unsichtbar, nie ausgegeben)
 bash deploy/deploy.sh          # legt ~/hermes-webui/{config,data,webui.env} an (Vorlagen: deploy/hosts.example.json, deploy/webui.env.example), startet den Container, wartet auf /healthz
 ```
 
+- `deploy/setup.py` ersetzt das Ausfüllen der Vorlagen von Hand: Es erkennt Vorhandenes (eine bestehende `hosts.json` bleibt unverändert, die `webui.env` wird ergänzt, die alte Fassung liegt als `webui.env.bak` daneben), verlangt `https` für die öffentliche URL und den Anbieter (so prüft es auch der Server beim Start), fragt, ob die WebUI nur in einem privaten Netz erreichbar ist (dann schlägt es vor, die neue Anmeldung vor riskanten Aktionen abzuschalten) und prüft Gateway, Dashboard und Anmeldeanbieter, auch ob dieser `auth_time` meldet. Ohne Assistent geht es wie bisher von Hand.
 - `deploy/deploy.sh` ist idempotent, löscht nichts und überschreibt keine vorhandene Config. Pflicht in `webui.env` (`chmod 600`): die OIDC-Werte und alle `api_key_env` der Runtimes aus der `hosts.json`; fehlt etwas, nennt das Skript die Namen und endet vor dem Start. Steht `HERMES_CONTAINER` in `webui.env`, holt es den Key eines Multiplex-Gateways aus dem Container, ohne ihn auszugeben. `WEBUI_EXTRA_HOST=name:ip` hilft, wenn der Container den OIDC-Anbieter nicht auflösen kann. Ein Beispiel-Theme legt `WITH_EXAMPLE_THEME=1 bash deploy/deploy.sh` an.
 - OAuth-App beim Anbieter: Redirect-URI `https://webui.example.com/auth/callback`; `HERMES_WEBUI_OIDC_ALLOWED_SUB` ist das `sub` des Benutzers (bei Forgejo die numerische Benutzer-ID).
 - Reverse-Proxy: Beispiel in `deploy/Caddyfile.snippet` (SSE ohne Pufferung, bei nginx `proxy_buffering off`).
@@ -280,4 +284,6 @@ Welche Hermes-Version, welche Bausteine, welche Funktion in welchem Stand: [docs
 
 ## Lizenz
 
-GNU Affero General Public License v3.0 (`AGPL-3.0-only`), Text in [LICENSE](LICENSE). Wer eine veränderte Fassung als Netzwerkdienst anbietet, muss den Nutzern deren Quelltext anbieten (Abschnitt 13 der Lizenz). Lizenzen der Abhängigkeiten: MIT, BSD, ISC, Apache-2.0, PSF-2.0, MPL-2.0 und die Schriften unter OFL-1.1; vor einer Veröffentlichung gesondert prüfen.
+GNU Affero General Public License v3.0 (`AGPL-3.0-only`), Text in [LICENSE](LICENSE). Wer eine veränderte Fassung als Netzwerkdienst anbietet, muss den Nutzern deren Quelltext anbieten (Abschnitt 13 der Lizenz).
+
+Abhängigkeiten und Schriften mit Lizenz und Version stehen in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) (erzeugt mit `backend/devtools/third_party_notices.py`; das Image enthält die Datei). Die Laufzeit-Abhängigkeiten sind MIT, BSD, ISC, Apache-2.0, PSF-2.0, `certifi` unter MPL-2.0 und zwei Schriften unter OFL-1.1, deren Lizenztext dort mitgeliefert wird. Das ist die Auswertung der Paketmetadaten, kein Rechtsrat.

@@ -13,6 +13,7 @@ COPY backend/pyproject.toml ./
 COPY backend/app ./app
 RUN pip install . && rm -rf /build
 COPY --from=web /web/dist /srv/static
+COPY LICENSE THIRD_PARTY_NOTICES.md /srv/
 WORKDIR /srv
 ENV HERMES_WEBUI_STATIC_DIR=/srv/static
 # Git-Stand des Builds (deploy.sh setzt ihn); die WebUI zeigt ihn in der Seitenleiste.
