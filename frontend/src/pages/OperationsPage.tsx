@@ -72,7 +72,7 @@ function HostOperations({ host, section, agents }: { host: string; section: Oper
     {catalog.data && !unavailableReason && !Array.isArray(catalog.data.profiles) && <p role="alert">Antwortformat nicht unterstützt: Profil-Liste fehlt.</p>}
     {!loading && !error && !unavailableReason && profiles.length === 0 && <p className="empty">Keine Profile verfügbar. Host-Daemon und Profilfreigaben prüfen.</p>}
     {catalog.data?.warnings?.map((warning, index) => <p className="banner" key={`catalog/${index}`}>{warning}</p>)}
-    {listing.data?.note && <p className="banner">{listing.data.note}</p>}
+    {listing.data?.note && <p className={listing.data.source === "dashboard" ? "muted" : "banner"} role="status">{listing.data.note}</p>}
     {listing.data?.truncated && section !== "logs" && <p role="status">Ausgabe gekürzt. Es werden nicht alle Einträge angezeigt.</p>}
     {listing.data?.warnings?.map((warning, index) => <p className="banner" key={index}>{warning}</p>)}
     {pending && <section className="card ops-card" role="alertdialog" aria-label="Aktion bestätigen" aria-describedby="ops-confirm-description" onKeyDown={e => { if (e.key === "Escape" && !writing) { e.preventDefault(); setPending(undefined); } }}>

@@ -54,7 +54,7 @@ def test_catalog_uses_dashboard_profiles_when_daemon_is_unusable(ops):
     daemon.state.fail = 404  # veralteter Host-Dienst
     catalog = c.get("/bff/h/ct/_manage").json()
     assert [p["id"] for p in catalog["profiles"]] == ["default", "beta", "eta"]
-    assert dashboard_ops.NOTE in catalog["warnings"]
+    assert catalog["source"] == "dashboard"
     assert c.get("/bff/h/nodaemon/_manage").json()["profiles"]  # gar kein Host-Dienst konfiguriert
     daemon.state.fail = None
     assert c.get("/bff/h/plain/_manage").json()["profiles"] == [{"id": "default"}]  # Host-Dienst wie bisher, kein Umweg
@@ -130,3 +130,12 @@ def test_search_falls_back_to_dashboard_when_daemon_fails_or_finds_nothing(ops):
     hits = [r for r in found["results"] if r["host"] == "ct"]
     assert hits and hits[0]["profile"] == "beta" and hits[0]["title"] == "" and "forgejo" in hits[0]["snippet"]
     assert any(w["host"] == "plain" for w in found["warnings"])  # ohne Ersatzquelle bleibt der Fehler sichtbar
+
+
+def test_git_conflict_from_an_old_daemon_is_shown_as_no_repository(ops):
+    c, daemon = ops
+    assert c.get("/bff/h/plain/_git", params={"workspace": "repo"}).json()["branch"] == "main"
+    daemon.state.fail = 409
+    assert c.get("/bff/h/plain/_git", params={"workspace": "repo"}).json()["repository"] is False
+    daemon.state.fail = 503
+    assert c.get("/bff/h/plain/_git", params={"workspace": "repo"}).status_code == 503

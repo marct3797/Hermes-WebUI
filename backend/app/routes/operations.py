@@ -256,7 +256,12 @@ async def upload(request: Request, host: HostId, body: Upload, user: User = Depe
 
 @router.get("/h/{host}/_git")
 async def git(request: Request, host: HostId, workspace: Workspace, _user: User = Depends(current_user)):
-    return await daemon(request, host).request("GET", "/v1/git", params={"workspace": workspace})
+    try:
+        return await daemon(request, host).request("GET", "/v1/git", params={"workspace": workspace})
+    except HTTPException as exc:
+        if exc.status_code != 409:  # ältere Host-Dienste melden einen Ordner ohne Repository als 409
+            raise
+        return {"repository": False, "reason": "Kein lesbares Git-Repository in diesem Arbeitsordner"}
 
 
 @router.get("/search")
@@ -312,7 +317,7 @@ async def manage(request: Request, host: HostId, _user: User = Depends(current_u
         dash = host_dashboard(request, host)
         if dash is not None:  # Host-Dienst ohne Profile: die Profile des Dashboards verwenden, nur lesend
             try:
-                result = {**result, "profiles": await upstream(dashboard_ops.profiles(dash)), "warnings": [dashboard_ops.NOTE]}
+                result = {**result, "profiles": await upstream(dashboard_ops.profiles(dash)), "source": "dashboard"}
                 failure = None
             except HTTPException:
                 pass
