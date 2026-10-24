@@ -28,7 +28,7 @@ Von 390 Routen (Modul, Methode, Pfad) nutzt das BFF 99 pfadgenau. Nach Modul, we
 | `web_routers/actions.py` | 8 | 2 | Gateway neu starten (genutzt), Aktions-Status (genutzt); **nicht**: leeren (Drain), migrieren, Hermes-Update |
 | `web_routers/chat_ws.py` | 5 | 0 | Terminal-Chat per WebSocket (die WebUI nutzt die Gateway-API) |
 | `web_routers/delegation.py` | 4 | 0 | Delegation: Routing, Backends, Modellzuordnung |
-| `web_routers/memory_providers.py` | 3 | 0 | Einrichtung der Hermes-Gedächtnis-Anbieter |
+| `web_routers/memory_providers.py` | 3 | 2 | Felder lesen/schreiben (genutzt); **bewusst nicht**: `POST .../setup` (führt `curl \| sh` aus) |
 | `web_routers/status.py` | 20 | 2 | Status (Gateway-Zustand genutzt), Gesundheit, Systemwerte, Curator, Lerngraph |
 | `web_routers/tools.py` | 12 | 8 | Toolsets, Anbieter, Keys, Modelle; **bewusst nicht**: Terminal-Backend setzen, `post-setup`, Computer-Use-Rechte, siehe unten |
 | `web_routers/models.py` | 7 | 1 | Hilfsmodelle, Mixture of Agents, empfohlenes Standardmodell |
@@ -55,7 +55,7 @@ Pfadgenau heißt: ein Pfad zählt als genutzt, auch wenn nur eine seiner Methode
 | Modelle und Anbieter (`Providers`) | teilweise: Keys, Anmeldung, Modellwahl, Nutzung. Fehlt: eigene Endpunkte, Credential-Pools, lokale Modelle, Hilfsmodelle und Mixture of Agents als eigene Seite (einzelne Felder stehen im Einstellungs-Editor) | `config_env.py`, `local_models.py`, `models.py` |
 | Werkzeuge (`Tools`) | ja: Gruppen ein-/ausschalten, Anbieter wählen (bei `web` getrennt für Suche und Extraktion), Werkzeug-Keys setzen (nur Variablen, die die Gruppe selbst nennt, nie angezeigt), Bild-/Video-Modell wählen, Terminal-Backend anzeigen. **Bewusst nicht**: Terminal-Backend umstellen, `post-setup` starten, Computer-Use-Rechte vergeben (Hermes prüft das serverseitig nicht) | `tools.py`: 8 von 12; `routes/tools.py`, `ToolsetPanel.tsx` |
 | Skills (`Skills System`) | abgebildet. Fehlt: Curator | `skills.py`: 13 von 13 |
-| Gedächtnis (`Memory`, `Memory Providers`) | **nur Hindsight** über einen eigenen Client. Fehlt: das eingebaute `MEMORY.md`/`USER.md`, Auswahl und Einrichtung der Hermes-Anbieter | `memory_providers.py`, `ops.py` |
+| Gedächtnis (`Memory`, `Memory Providers`) | Hindsight über einen eigenen Client **und** Hermes-Gedächtnis: Dateigrößen von `MEMORY.md`/`USER.md` (Inhalt liefert das Dashboard nicht), Zurücksetzen mit Namenseingabe, Anbieter wählen und einrichten. **Nicht**: Inhalt der Dateien lesen/bearbeiten, Programme der Anbieter installieren | `routes/hermes_memory.py`, `HermesMemoryPage.tsx`; `ops.py` Gedächtnis-Routen: 3 von 3 |
 | MCP | teilweise: Liste, Katalog, Installieren. Fehlt: Testen, Aktivieren, Entfernen, OAuth | `mcp.py`: 5 von 12 |
 | Plugins | teilweise: Hub, Katalog, Installieren. Fehlt: aktivieren, deaktivieren, aktualisieren, Sichtbarkeit | `dashboard_ui.py` |
 | Zeitpläne (`Cron Jobs`) | abgebildet (12 von 13 Routen); `POST /api/cron/fire` fehlt. Ob sich Skript-Jobs ohne Agent (`no_agent`) anlegen lassen, ist nicht geprüft, sie werden nur angezeigt | `cron.py`, `app/cron.py` |
@@ -90,7 +90,7 @@ Pfadgenau heißt: ein Pfad zählt als genutzt, auch wenn nur eine seiner Methode
 **P1: ohne das ist es keine vollständige Oberfläche für Hermes**
 1. ~~Messaging-Plattformen und Gateway-Betrieb~~ umgesetzt und gegen ein echtes Dashboard geprüft (`devtools/real/contract_messaging.py`). Offen daraus: WhatsApp-Kopplung (QR), Drain.
 2. ~~Werkzeuge konfigurieren und Werkzeug-Keys setzen~~ umgesetzt und gegen ein echtes Dashboard geprüft (`devtools/real/contract_tools.py`).
-3. Hermes-Gedächtnis: eingebautes `MEMORY.md`/`USER.md` und die Anbieter-Auswahl, statt nur Hindsight.
+3. ~~Hermes-Gedächtnis~~ umgesetzt und gegen ein echtes Dashboard geprüft (`devtools/real/contract_memory.py`). Offen daraus: Inhalt von `MEMORY.md`/`USER.md` anzeigen und bearbeiten (das Dashboard liefert ihn nicht; der Host-Dienst könnte die Dateien lesen).
 4. Profil-Lebenszyklus: anlegen, löschen, umbenennen, Import/Export.
 5. Betrieb: Status/Gesundheit, Doctor, Backup, Update-Prüfung.
 6. ~~Dashboard-Anmeldeschranke für entfernte Hosts~~ geklärt und gegen ein echtes Dashboard geprüft (Punkt 1 oben): Tunnel statt Adresse.
@@ -125,3 +125,10 @@ Aus dem Hermes-Quelltext (0.22.5, `hermes_cli/web_routers/tools.py`, `config_env
 - **Zustand nur im Dashboard-Prozess.** Telegram-Kopplungen leben im Speicher des Dashboards; ein Neustart des Dashboards beendet sie (die Oberfläche zeigt dann „abgelaufen“).
 - **Drain** (`POST /api/gateway/drain`) gilt für das Heimatverzeichnis des Dashboards, nicht für ein Profil. Bei mehreren Profilen wäre unklar, welches gemeint ist; deshalb nicht angeboten.
 - **WhatsApp** braucht den QR-Code der Kopplung, installiert ggf. npm-Pakete und startet einen Node-Prozess. Das bleibt bei der Hermes-CLI (`hermes whatsapp`), bis eine QR-Darstellung ohne fremden Dienst und mit Prüfung der Abhängigkeitslizenz entschieden ist.
+
+## Hermes-Gedächtnis: bewusste Grenzen
+
+- Das Dashboard liefert von `MEMORY.md`/`USER.md` nur die Größe in Bytes. Es gibt dort keine Route zum Lesen oder Schreiben (im Quelltext gesucht). Die WebUI zeigt deshalb nur Größe und kann zurücksetzen; die Dateien selbst bleiben im Profil.
+- Zurücksetzen löscht ohne Papierkorb und ohne Sicherung. Die WebUI verlangt, den Zielnamen einzutippen, und liest danach die Größen zurück. Daten externer Anbieter bleiben unberührt (so Hermes).
+- Der Anbieter-Setup von Hermes führt Befehle der Anbieter-Manifeste mit Shell aus (z. B. `curl -fsSL https://byterover.dev/install.sh | sh`), mit der Umgebung des Dashboards. Das reicht die WebUI nicht durch; sie nennt nur, welches Programm fehlt und wie man es auf dem Rechner selbst installiert.
+- Hermes setzt beim Speichern der Anbieter-Felder den Anbieter aktiv, sobald er bereit ist. Ist er nicht bereit, sind die Werte trotzdem gespeichert, und die WebUI zeigt die Fehlermeldung von Hermes.

@@ -1,6 +1,6 @@
 import { invalidate } from "./dataCache";
 import { getPreferences } from "./preferences";
-import type { GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import type { HmField, HmOverview, GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string, public data?: Record<string, unknown>) {
@@ -118,6 +118,11 @@ export const api = {
   telegramPoll: (a: AgentRef, id: string) => call<TelegramPoll>("GET", `${base(a)}/messaging/telegram/onboarding/${encodeURIComponent(id)}`),
   telegramApply: (a: AgentRef, id: string, allowedUserIds: string[]) => call<{ ok: boolean; bot_username: string | null; needs_restart: boolean; restart_started: boolean; restart_error: string | null }>("POST", `${base(a)}/messaging/telegram/onboarding/${encodeURIComponent(id)}/apply`, { allowed_user_ids: allowedUserIds }),
   telegramCancel: (a: AgentRef, id: string) => call<{ ok: boolean }>("DELETE", `${base(a)}/messaging/telegram/onboarding/${encodeURIComponent(id)}`),
+  hmOverview: (a: AgentRef) => call<HmOverview>("GET", `${base(a)}/hermes-memory`),
+  hmSetProvider: (a: AgentRef, provider: string) => call<{ ok: boolean; active: string }>("PUT", `${base(a)}/hermes-memory/provider`, { provider }),
+  hmReset: (a: AgentRef, target: "all" | "memory" | "user", confirm: string) => call<{ ok: boolean; deleted: string[] }>("POST", `${base(a)}/hermes-memory/reset`, { target, confirm }),
+  hmFields: (a: AgentRef, name: string) => call<{ name: string; fields: HmField[] }>("GET", `${base(a)}/hermes-memory/providers/${encodeURIComponent(name)}`),
+  hmSave: (a: AgentRef, name: string, values: Record<string, string | boolean | number>) => call<{ ok: boolean; active: string | null }>("PUT", `${base(a)}/hermes-memory/providers/${encodeURIComponent(name)}`, { values }),
   saveHermesConfig: (a: AgentRef, changes: Record<string, unknown>) => call<{ ok: boolean; changed: string[] }>("PUT", `${base(a)}/config`, { changes }),
   soulVersion: (a: AgentRef, vid: string) => call<SoulVersion>("GET", `${base(a)}/soul/history/${id(vid)}`),
   restoreSoul: (a: AgentRef, vid: string) => call<SoulSaved & { content: string }>("POST", `${base(a)}/soul/restore`, { id: vid }),

@@ -207,3 +207,8 @@ export type GatewayState = { running: boolean; state: string | null; busy: boole
 export type GatewayAction = { name: string; running: boolean; exit_code: number | null; lines: string[] };
 export type TelegramPairing = { pairing_id: string; suggested_username?: string; deep_link: string; expires_at?: string };
 export type TelegramPoll = { status: "waiting" | "ready"; bot_username?: string | null; owner_user_id?: string | null; expires_at?: string };
+
+/** Eingebautes Hermes-Gedächtnis (nur Dateigrößen) und externe Anbieter. Geheimnisfelder haben nie einen Wert, nur `is_set`. */
+export type HmProvider = { name: string; description?: string; status?: string; configured: boolean; available: boolean; required_env: string[]; missing: Array<{ name: string; install: string }> };
+export type HmOverview = { active: string; providers: HmProvider[]; files: { memory: number; user: number } };
+export type HmField = { key: string; label?: string; kind: string; description?: string; placeholder?: string; required?: boolean; is_set: boolean; options: Array<{ value: string; label?: string }>; url?: string | null; value?: string };

@@ -58,6 +58,16 @@ MESSAGING: dict[str, dict[str, Any]] = {
         {"key": "WHATSAPP_ALLOWED_USERS", "required": False, "is_password": False, "is_list": True, "prompt": "Allowed numbers"}]},
 }
 
+# Gedächtnis-Anbieter in der Form von GET /api/memory (aus Hermes 0.22.5 gemessen): einer braucht nur einen Key, einer ein fehlendes Programm.
+MEMORY_PROVIDERS: dict[str, dict[str, Any]] = {
+    "retaindb": {"description": "RetainDB, Cloud-Gedächtnis.", "env": {"api_key": "RETAINDB_API_KEY"}, "deps": [], "fields": [
+        {"key": "api_key", "label": "Api Key", "kind": "secret", "description": "RetainDB API key", "required": True, "url": "https://retaindb.com", "options": []},
+        {"key": "project", "label": "Project", "kind": "text", "description": "Projekt", "required": False, "url": "", "options": [], "default": ""},
+        {"key": "mode", "label": "Mode", "kind": "select", "description": "Modus", "required": False, "url": "", "options": [{"value": "fast", "label": "fast"}, {"value": "deep", "label": "deep"}], "default": "fast"}]},
+    "byterover": {"description": "ByteRover, Wissensbaum.", "env": {}, "deps": [{"name": "brv", "install": "curl -fsSL https://byterover.dev/install.sh | sh", "check": "brv --version"}], "fields": [
+        {"key": "auto_extract", "label": "Auto Extract", "kind": "select", "description": "Automatisch", "required": False, "url": "", "options": [{"value": "true", "label": "true"}, {"value": "false", "label": "false"}], "default": "true"}]},
+}
+
 OAUTH = [
     {"id": "anthropic", "name": "Anthropic", "flow": "pkce", "cli_command": "hermes auth add anthropic", "docs_url": None,
      "status": {"logged_in": False, "source": None, "source_label": None, "expires_at": None}},
@@ -157,6 +167,18 @@ class MsgPlatformBody(BaseModel):
 class TelegramApplyBody(BaseModel):
     allowed_user_ids: list[str]
     profile: str | None = None
+
+
+class MemProviderBody(BaseModel):
+    provider: str
+
+
+class MemResetBody(BaseModel):
+    target: str = "all"
+
+
+class MemConfigBody(BaseModel):
+    values: dict[str, Any] = {}
 
 
 def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default", "beta", "eta"), drop_writes: bool = False, quota: dict[str, Any] | None = None, env_put_error: dict[str, Any] | None = None) -> FastAPI:
@@ -584,6 +606,92 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
     async def tg_cancel(pairing_id: str):
         app.state.pairings.pop(pairing_id, None)
         return {"ok": True}
+
+    app.state.memory_calls = []  # (Methode, Pfad); `setup` darf nie darin vorkommen
+
+    def mem(prof: dict[str, Any]) -> dict[str, Any]:
+        return prof.setdefault("memory", {"active": "", "files": {"memory": 120, "user": 45}, "cfg": {}, "installed": set()})
+
+    def mem_status(prof: dict[str, Any], name: str) -> str:
+        spec = MEMORY_PROVIDERS[name]
+        if spec["deps"] and name not in mem(prof)["installed"]:
+            return "unavailable"
+        return "ready" if all(v in prof["env"] for v in spec["env"].values()) else "needs_config"
+
+    @app.get("/api/memory")
+    async def memory_overview(profile: str | None = None):
+        prof = profile_or_default(profile)
+        st = mem(prof)
+        return {"active": st["active"], "builtin_files": dict(st["files"]), "providers": [
+            {"name": n, "description": s["description"], "available": mem_status(prof, n) != "unavailable", "configured": mem_status(prof, n) == "ready", "status": mem_status(prof, n),
+             "setup": {"pip_dependencies": [], "python_dependencies_declared": False, "external_dependencies": s["deps"], "required_env": list(s["env"].values()), "dependencies_installed": not s["deps"] or n in st["installed"]}}
+            for n, s in MEMORY_PROVIDERS.items()]}
+
+    @app.put("/api/memory/provider")
+    async def memory_provider(body: MemProviderBody, profile: str | None = None):
+        prof = profile_or_default(profile)
+        if body.provider and body.provider not in MEMORY_PROVIDERS:
+            raise HTTPException(400, f"Unknown memory provider '{body.provider}'")
+        if body.provider and mem_status(prof, body.provider) != "ready":
+            raise HTTPException(400, f"Memory provider '{body.provider}' is not ready ({mem_status(prof, body.provider)}). Configure it in the dashboard first.")
+        if not drop_writes:
+            mem(prof)["active"] = body.provider
+        return {"ok": True, "active": body.provider}
+
+    @app.post("/api/memory/reset")
+    async def memory_reset(body: MemResetBody, profile: str | None = None):
+        prof = profile_or_default(profile)
+        app.state.memory_calls.append(("POST", "/api/memory/reset"))
+        if body.target not in ("all", "memory", "user"):
+            raise HTTPException(400, "target must be all, memory, or user")
+        files = mem(prof)["files"]
+        gone = [{"memory": "MEMORY.md", "user": "USER.md"}[k] for k in files if body.target in ("all", k) and files[k]]
+        for k in files:
+            if body.target in ("all", k) and not drop_writes:
+                files[k] = 0
+        return {"ok": True, "deleted": gone}
+
+    @app.get("/api/memory/providers/{name}/config")
+    async def memory_cfg(name: str, profile: str | None = None):
+        prof = profile_or_default(profile)
+        if name not in MEMORY_PROVIDERS:
+            raise HTTPException(404, "Unknown memory provider")
+        spec, cfg = MEMORY_PROVIDERS[name], mem(prof)["cfg"].setdefault(name, {})
+        rows = []
+        for f in spec["fields"]:
+            secret = f["kind"] == "secret"
+            is_set = (spec["env"].get(f["key"]) in prof["env"]) if secret else f["key"] in cfg or bool(f.get("default"))
+            rows.append({**{k: f[k] for k in ("key", "label", "kind", "description", "required", "url", "options")}, "placeholder": "", "value": "" if secret else str(cfg.get(f["key"], f.get("default", ""))), "is_set": is_set,
+                         "when": None, "minimum": None, "maximum": None, "step": None})
+        return {"name": name, "label": name.title(), "fields": rows, "setup": {"pip_dependencies": [], "external_dependencies": spec["deps"], "dependencies_installed": not spec["deps"] or name in mem(prof)["installed"]}}
+
+    @app.put("/api/memory/providers/{name}/config")
+    async def memory_cfg_put(name: str, body: MemConfigBody, profile: str | None = None):
+        prof = profile_or_default(profile)
+        if name not in MEMORY_PROVIDERS:
+            raise HTTPException(404, "Unknown memory provider")
+        spec = MEMORY_PROVIDERS[name]
+        if any(str(v).startswith("echo:") for v in body.values.values()):
+            raise HTTPException(400, "Invalid value " + str(next(v for v in body.values.values() if str(v).startswith("echo:"))))
+        for key, value in body.values.items():
+            field = next((f for f in spec["fields"] if f["key"] == key), None)
+            if field is None:
+                raise HTTPException(400, f"Unknown field {key}")
+            if field["kind"] == "secret":
+                if str(value).strip() and not drop_writes:
+                    prof["env"][spec["env"][key]] = str(value).strip()
+            elif not drop_writes:
+                mem(prof)["cfg"].setdefault(name, {})[key] = str(value)
+        if mem_status(prof, name) != "ready":
+            raise HTTPException(400, f"Memory provider '{name}' is not ready ({mem_status(prof, name)}). Configure it in the dashboard first.")
+        if not drop_writes:
+            mem(prof)["active"] = name
+        return {"ok": True, "active": name}
+
+    @app.post("/api/memory/providers/{name}/setup")
+    async def memory_setup(name: str):
+        app.state.memory_calls.append(("POST", f"/api/memory/providers/{name}/setup"))
+        return {"ok": True, "provider": name, "results": [], "status": "no_declared_steps"}
 
     @app.get("/api/plugins/kanban/board")
     async def kanban_board(profile: str | None = None):

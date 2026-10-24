@@ -4,6 +4,7 @@ import { ChatPage } from "./ChatPage";
 import { CapabilitiesPage } from "./CapabilitiesPage";
 import { ConfigPage } from "./ConfigPage";
 import { MessagingPage } from "./MessagingPage";
+import { HermesMemoryPage } from "./HermesMemoryPage";
 import { ProfilePage } from "./ProfilePage";
 import { ProvidersPage } from "./ProvidersPage";
 import { SoulPage } from "./SoulPage";
@@ -21,6 +22,7 @@ export function AgentPage({ page }: { page: Extract<Page, { name: "agent" }> }) 
   if (page.module === "profil") return <ProfilePage key={agentKey(page.ref)} agent={agent} label={resolved.label} hostLabel={resolved.host.label} runtimeLabel={resolved.runtimeLabel} />;
   if (page.module === "providers") return <ProvidersPage key={agentKey(page.ref)} agent={agent} label={resolved.label} />;
   if (page.module === "config") return <ConfigPage key={agentKey(page.ref)} agent={agent} label={resolved.label} />;
+  if (page.module === "hermes-memory") return <HermesMemoryPage key={agentKey(page.ref)} agent={agent} label={resolved.label} />;
   if (page.module === "messaging") return <MessagingPage key={agentKey(page.ref)} agent={agent} label={resolved.label} />;
   if (page.module === "soul") return <SoulPage key={agentKey(page.ref)} agent={agent} label={resolved.label} />;
   if (page.module === "skills" || page.module === "tools") return <CapabilitiesPage key={`${agentKey(page.ref)}/${page.module}`} agent={agent} label={resolved.label} module={page.module} />;

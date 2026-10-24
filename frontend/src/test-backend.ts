@@ -185,6 +185,7 @@ export type DashState = {
   loginError: string | null; // lässt die Anmeldung scheitern
   config: Record<string, unknown>; // Werte der Hermes-Einstellungen (Punkt-Pfad → Wert)
   msg: { available: boolean; enabled: Record<string, boolean>; env: Record<string, string>; gateway: { running: boolean; busy: boolean; sessions: number }; polls: number; applied: string[] }; // Messaging und Gateway
+  hm: { available: boolean; active: string; files: { memory: number; user: number }; keySet: boolean; project: string; mode: string }; // Hermes-Gedächtnis
   tools: { available: boolean; enabled: Record<string, boolean>; keys: Record<string, string>; provider: Record<string, string>; model: string; installed: boolean }; // Werkzeug-Gruppen
 };
 
@@ -412,6 +413,37 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
     }
     if (tg && method === "DELETE") return json({ ok: true });
   }
+  if (path.startsWith("/hermes-memory")) {
+    if (!dash.hm.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
+    const h = dash.hm;
+    if (method !== "GET" && dash.stepUp) return json(stepUpBody, 401);
+    const status = (n: string) => (n === "byterover" ? "unavailable" : h.keySet ? "ready" : "needs_config");
+    if (path === "/hermes-memory" && method === "GET") {
+      return json({ active: h.active, files: h.files, providers: [
+        { name: "byterover", description: "ByteRover, Wissensbaum.", status: "unavailable", configured: false, available: false, required_env: [], missing: [{ name: "brv", install: "curl -fsSL https://byterover.dev/install.sh | sh" }] },
+        { name: "retaindb", description: "RetainDB, Cloud-Gedächtnis.", status: status("retaindb"), configured: h.keySet, available: true, required_env: ["RETAINDB_API_KEY"], missing: [] }] });
+    }
+    if (path === "/hermes-memory/provider" && method === "PUT") { h.active = String(body?.provider); return json({ ok: true, active: h.active }); }
+    if (path === "/hermes-memory/reset" && method === "POST") {
+      const t = String(body?.target); if (t === "all" || t === "memory") h.files.memory = 0; if (t === "all" || t === "user") h.files.user = 0;
+      return json({ ok: true, deleted: t === "memory" ? ["MEMORY.md"] : t === "user" ? ["USER.md"] : ["MEMORY.md", "USER.md"] });
+    }
+    const prov = /^\/hermes-memory\/providers\/(byterover|retaindb)$/.exec(path);
+    if (prov && method === "GET") {
+      return json({ name: prov[1], fields: prov[1] === "retaindb" ? [
+        { key: "api_key", label: "Api Key", kind: "secret", description: "RetainDB API key", required: true, is_set: h.keySet, options: [], url: "https://retaindb.com" },
+        { key: "project", label: "Project", kind: "text", description: "Projekt", is_set: Boolean(h.project), options: [], value: h.project },
+        { key: "mode", label: "Mode", kind: "select", description: "Modus", is_set: true, options: [{ value: "fast" }, { value: "deep" }], value: h.mode }] : [
+        { key: "auto_extract", label: "Auto Extract", kind: "select", description: "Automatisch", is_set: true, options: [{ value: "true" }, { value: "false" }], value: "true" }] });
+    }
+    if (prov && method === "PUT") {
+      if (prov[1] === "byterover") return json({ detail: "Das Dashboard meldet Fehler 400: Memory provider 'byterover' is not ready (unavailable)." }, 502);
+      const v = (body?.values ?? {}) as Record<string, string>;
+      if (v.api_key) h.keySet = true; if ("project" in v) h.project = v.project; if ("mode" in v) h.mode = v.mode;
+      h.active = "retaindb";
+      return json({ ok: true, active: "retaindb" });
+    }
+  }
   const toolRows = () => TOOL_CATALOG.map((t) => ({ name: t.name, label: t.label, description: t.description, enabled: dash.tools.enabled[t.name], configured: !t.providers.length || t.providers.some((p) => (p.env as Array<{ key: string }>).every((v) => v.key in dash.tools.keys)), tools: t.tools }));
   const toolPath = /^\/tools(?:\/([a-z_]+)(?:\/(provider|env|model|models))?)?$/.exec(path);
   if (path === "/terminal-backends" && method === "GET") {
@@ -467,6 +499,7 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
     loggedIn: new Set(["openai-codex"]), polls: 0, loginError: null,
     config: { model: "claude-test", "agent.service_tier": "normal", "agent.max_turns": 90, "display.streaming": true, fallback_providers: [], "web.api_key": null },
     msg: { available: true, enabled: {}, env: {}, gateway: { running: false, busy: false, sessions: 0 }, polls: 0, applied: [] },
+    hm: { available: true, active: "", files: { memory: 120, user: 45 }, keySet: false, project: "", mode: "fast" },
     tools: { available: true, enabled: { terminal: true, web: false, image_gen: true, computer_use: false }, keys: {}, provider: {}, model: "flux-2-pro", installed: false },
   };
   let runs = 0;

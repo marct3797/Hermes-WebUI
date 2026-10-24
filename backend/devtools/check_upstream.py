@@ -29,7 +29,7 @@ USED: dict[str, list[str]] = {
         "/api/tools/toolsets/{}/env", "/api/tools/toolsets/{}/models", "/api/tools/toolsets/{}/model", "/api/tools/terminal/backends",
         "/api/status", "/api/messaging/platforms", "/api/messaging/platforms/{}", "/api/messaging/platforms/{}/test", "/api/messaging/telegram/onboarding/start",
         "/api/messaging/telegram/onboarding/{}", "/api/messaging/telegram/onboarding/{}/apply", "/api/gateway/start", "/api/gateway/stop", "/api/gateway/restart",
-        "/api/actions/{}/status", "/api/mcp/servers", "/api/mcp/catalog", "/api/mcp/catalog/install", "/api/dashboard/plugins/hub",
+        "/api/actions/{}/status", "/api/memory", "/api/memory/provider", "/api/memory/reset", "/api/memory/providers/{}/config", "/api/mcp/servers", "/api/mcp/catalog", "/api/mcp/catalog/install", "/api/dashboard/plugins/hub",
         "/api/dashboard/plugins/catalog", "/api/dashboard/agent-plugins/install",
         "/api/cron/jobs", "/api/cron/jobs/{}", "/api/cron/jobs/{}/runs", "/api/cron/jobs/{}/pause", "/api/cron/jobs/{}/resume",
         "/api/cron/jobs/{}/trigger", "/api/cron/delivery-targets", "/api/cron/blueprints", "/api/cron/blueprints/instantiate",
