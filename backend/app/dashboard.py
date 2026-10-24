@@ -79,6 +79,11 @@ class DashboardClient:
             if explain:  # Anmeldungen scheitern aus Gründen, die der Person helfen (Netz, abgelaufen, abgelehnt)
                 try:
                     d = res.json().get("detail")
+                    if isinstance(d, str) and isinstance(json_body, dict):
+                        for field in ("value", "api_key", "code"):
+                            secret = json_body.get(field)
+                            if isinstance(secret, str) and secret:
+                                d = d.replace(secret, "[REDACTED]")
                     why = f": {d[:200]}" if isinstance(d, str) else ""
                 except (ValueError, AttributeError):
                     pass

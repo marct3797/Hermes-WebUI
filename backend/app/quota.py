@@ -10,6 +10,8 @@ import time
 from datetime import date, datetime, timezone
 from typing import Any
 
+from .providers import HIDDEN_PROVIDERS
+
 LOW_PERCENT = 10.0
 PLUGIN_MISSING = "Plugin ai-usage-tracker auf diesem Host nicht installiert"
 # Gründe des Plugins, die auf einen abgelaufenen oder fehlenden Zugang hindeuten (Kleinschreibung, Teilstring).
@@ -87,7 +89,7 @@ def normalize(body: Any, now: float | None = None) -> dict[str, Any]:
         return {"state": "error", "reason": "Das Plugin liefert keine Anbieterliste", "generated_at": stamp, "cached": False, "providers": []}
     body = strip_secrets(body)
     return {"state": "ok", "reason": None, "generated_at": body.get("generated_at") if isinstance(body.get("generated_at"), str) else stamp,
-            "cached": bool(body.get("cached")), "providers": [_provider(p, now_s) for p in body["providers"] if isinstance(p, dict)]}
+            "cached": bool(body.get("cached")), "providers": [_provider(p, now_s) for p in body["providers"] if isinstance(p, dict) and p.get("id") not in HIDDEN_PROVIDERS]}
 
 
 def failure(state: str, reason: str) -> dict[str, Any]:

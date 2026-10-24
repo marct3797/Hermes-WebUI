@@ -1,4 +1,5 @@
 import { invalidate } from "./dataCache";
+import { getPreferences } from "./preferences";
 import type { AgentRef, AgentStatus, CliAuth, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 
 export class ApiError extends Error {
@@ -86,8 +87,10 @@ export const api = {
   fork: (a: AgentRef, sid: string) => call<{ session_id: string }>("POST", `${base(a)}/sessions/${id(sid)}/fork`, {}),
   runStatus: (a: AgentRef, rid: string) => call<{ status?: string }>("GET", `${base(a)}/runs/${id(rid)}`),
   stop: (a: AgentRef, rid: string) => call<unknown>("POST", `${base(a)}/runs/${id(rid)}/stop`, {}),
-  approve: (a: AgentRef, rid: string, decision: Decision) =>
-    call<unknown>("POST", `${base(a)}/runs/${id(rid)}/approval`, { decision }),
+  approve: async (a: AgentRef, rid: string, decision: Decision) => {
+    if (decision !== "deny" && getPreferences().confirmApprovals && !window.confirm(`Freigabe „${decision}“ für ${a.agent} bestätigen?`)) throw new Error("Freigabe abgebrochen");
+    return call<unknown>("POST", `${base(a)}/runs/${id(rid)}/approval`, { decision });
+  },
   steer: (a: AgentRef, rid: string, text: string) =>
     call<unknown>("POST", `${base(a)}/runs/${id(rid)}/steer`, { text }),
   clarify: (a: AgentRef, rid: string, answer: string, clarifyId?: string) =>

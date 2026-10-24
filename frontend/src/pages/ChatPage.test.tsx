@@ -21,6 +21,24 @@ beforeEach(() => { resetRedirect(); ({ posted } = installBackend(["gamma"])); })
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("Chat", () => {
+  it("hält die Leseposition ohne Anheften und meldet eine wartende Freigabe nur einmal", async () => {
+    localStorage.setItem("hermes.preferences", JSON.stringify({ autoScroll: false, approvalDesktop: true }));
+    const notice = vi.fn();
+    vi.stubGlobal("Notification", class { static permission = "granted"; constructor(...args: unknown[]) { notice(...args); } });
+    await startRun();
+    const log = screen.getByRole("log");
+    Object.defineProperty(log, "scrollHeight", { value: 1000, configurable: true });
+    log.scrollTop = 123;
+    emit({ type: "message.delta", text: "Neue Antwort" });
+    await screen.findByText("Neue Antwort");
+    expect(log.scrollTop).toBe(123);
+    emit({ type: "approval.requested", command: "ls", reason: "", choices: ["once", "deny"], timeout_s: 300 });
+    await screen.findByRole("group", { name: "Freigabe nötig" });
+    await waitFor(() => expect(notice).toHaveBeenCalledOnce());
+    emit({ type: "message.delta", text: "Warte" });
+    expect(notice).toHaveBeenCalledOnce();
+    localStorage.removeItem("hermes.preferences");
+  });
   it("sends the chosen reasoning effort with the run and shows it at the answer", async () => {
     history.pushState(null, "", "/h/server/hermes/gamma/chat");
     render(<App />);

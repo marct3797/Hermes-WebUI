@@ -11,6 +11,7 @@ import type { ModelGroup } from "../../models";
 import { agentKey } from "../../router";
 import type { AgentRef, Queued, SkillInfo, SendMode } from "../../types";
 import { Icon } from "../Icon";
+import { usePreferences } from "../../preferences";
 
 type Props = {
   agent: AgentRef;
@@ -48,6 +49,9 @@ const wsKey = (host: string) => `hermes-webui-workspace:${host}`;
 
 export function Composer(p: Props) {
   const key = agentKey(p.agent);
+  const prefs = usePreferences();
+  const hostEffort = prefs.hosts[p.agent.host]?.effort ?? "agent";
+  const hostReasoning = (): Reasoning | undefined => hostEffort === "agent" ? undefined : hostEffort === "off" ? { thinking: false } : { thinking: true, effort: hostEffort };
   const [text, setText] = useState("");
   const [caret, setCaret] = useState(0);
   const [images, setImages] = useState<string[]>([]);
@@ -55,7 +59,7 @@ export function Composer(p: Props) {
   const [problem, setProblem] = useState<Problem>();
   const [sending, setSending] = useState(false);
   const [chosen, setChosen] = useState<SendMode>("steer");
-  const [reasoning, setReasoning] = useState<Reasoning | undefined>(() => loadReasoning(key));
+  const [reasoning, setReasoning] = useState<Reasoning | undefined>(() => loadReasoning(key) ?? hostReasoning());
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [dismissed, setDismissed] = useState<string>();
@@ -67,7 +71,7 @@ export function Composer(p: Props) {
   const mode: SendMode = p.canSteer ? chosen : "queue";
 
   // Aufwand je Agent merken und beim Agentwechsel wiederherstellen.
-  useEffect(() => { setReasoning(loadReasoning(key)); }, [key]);
+  useEffect(() => { setReasoning(loadReasoning(key) ?? hostReasoning()); }, [key, hostEffort]);
   const pickReasoning = useCallback((r?: Reasoning) => { setReasoning(r); saveReasoning(key, r); }, [key]);
 
   // --- Arbeitsordner --------------------------------------------------------------------
@@ -81,7 +85,8 @@ export function Composer(p: Props) {
         if (stale) return;
         setWorkspaces({ state: "ready", list: r.workspaces });
         let saved = ""; try { saved = localStorage.getItem(wsKey(p.agent.host)) ?? ""; } catch { /* privater Modus */ }
-        setWorkspace(r.workspaces.some((w) => w.id === saved) ? saved : "");
+        const preferred = prefs.hosts[p.agent.host]?.workspace || saved;
+        setWorkspace(r.workspaces.some((w) => w.id === preferred) ? preferred : "");
       })
       .catch((e: Error) => { if (!stale) { setWorkspaces({ state: "unavailable", list: [], reason: e.message }); setWorkspace(""); } });
     return () => { stale = true; };
@@ -295,7 +300,7 @@ export function Composer(p: Props) {
       }
       if (e.key === "Escape") { e.preventDefault(); setDismissed(triggerId); return; }
     } else if (e.key === "Escape" && optionsOpen) { setOptionsOpen(false); return; }
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void submit(); }
+    if (e.key === "Enter" && !e.shiftKey && (prefs.enterSends || e.ctrlKey || e.metaKey)) { e.preventDefault(); void submit(); }
   };
 
   const placeholder = p.disabled ? `${p.name} ist nicht erreichbar` : p.busy ? `Nachricht an ${p.name} … · ${MODE_HINT[mode]}` : `Nachricht an ${p.name}…`;

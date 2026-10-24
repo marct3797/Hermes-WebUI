@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { mountBgFx, type BgFx as Instance } from "../bgfx";
 import { useMedia } from "../useMedia";
 import { useUi } from "../ui";
+import { usePreferences } from "../preferences";
 
 /** Auf schmalen Schirmen steht der Shader still und ist ganz aus (Akku). */
 const NARROW = "(max-width: 800px)";
@@ -11,7 +12,8 @@ const REDUCE = "(prefers-reduced-motion: reduce)";
 export function BgFx() {
   const { shader } = useUi();
   const narrow = useMedia(NARROW);
-  const reduce = useMedia(REDUCE);
+  const systemReduce = useMedia(REDUCE);
+  const reduce = systemReduce || usePreferences().reducedMotion;
   const canvas = useRef<HTMLCanvasElement>(null);
   const fx = useRef<Instance | null>(null);
   const latest = useRef(shader);

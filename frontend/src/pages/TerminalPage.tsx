@@ -9,6 +9,7 @@ import { useNow } from "../useNow";
 import type { CliAuth } from "../types";
 import "../styles/workspace.css";
 import "../styles/files.css";
+import { getPreferences } from "../preferences";
 
 type Terminal = { id: string; cli: string; workspace: string; running: boolean; pid: number; created_at: number | string; exit_code?: number };
 type Info = { version?: string; available?: boolean; reason?: string; clis: { id: string; label: string; available: boolean; authenticated?: boolean | null; auth_note?: string }[]; workspaces: { id: string; label: string }[] };
@@ -63,7 +64,7 @@ export function TerminalPage({ host }: { host: string }) {
     try { noticeOptIn.current = sessionStorage.getItem("hermes-terminal-notifications") === "true"; setNotifications(noticeOptIn.current); } catch { /* private mode */ }
     request<Info>(`${base}/_hostd`, "GET", undefined, controller.signal).then(async (data) => {
       if (controller.signal.aborted) return;
-      setInfo(data); const wanted = new URLSearchParams(location.search).get("cli"); setCli(data.clis?.find((c) => c.available && c.id === wanted)?.id ?? data.clis?.find((c) => c.available)?.id ?? ""); setWorkspace(data.workspaces?.[0]?.id ?? "");
+      setInfo(data); const wanted = new URLSearchParams(location.search).get("cli"); setCli(data.clis?.find((c) => c.available && c.id === wanted)?.id ?? data.clis?.find((c) => c.available)?.id ?? ""); setWorkspace(data.workspaces?.find((w) => w.id === getPreferences().hosts[host]?.workspace)?.id ?? data.workspaces?.[0]?.id ?? "");
       if (data.available === false) return;
       request<CliAuth>(`${base}/_cli-auth`, "GET", undefined, controller.signal).then((a) => { if (!controller.signal.aborted) setAuth(a); })
         .catch(() => { if (!controller.signal.aborted) setAuthMissing(true); }); // Zustand ist nur Hinweis

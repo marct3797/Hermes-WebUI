@@ -1,4 +1,6 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { usePreferences } from "../preferences";
+import { notifyApproval } from "../notifications";
 import { useAgentRef, useResolvedAgent } from "../hosts";
 import { ShellContext, useSessions } from "../shell";
 import type { Me } from "../types";
@@ -36,6 +38,11 @@ function crumbs(page: Page): string[] {
 
 export function Shell({ me, path, page, onLogout, children }: Props) {
   const [menu, setMenu] = useState(false);
+  const prefs = usePreferences();
+  useEffect(() => {
+    document.documentElement.classList.toggle("compact", prefs.compact);
+    document.documentElement.classList.toggle("reduce-motion", prefs.reducedMotion);
+  }, [prefs.compact, prefs.reducedMotion]);
   const active = useAgentRef(page.name === "agent" ? page.ref : undefined);
   // Sessions nur von erreichbaren Runtimes holen: Offline-Hosts würden sonst bei jedem Öffnen Fehler melden.
   const resolved = useResolvedAgent(active);
@@ -47,6 +54,12 @@ export function Shell({ me, path, page, onLogout, children }: Props) {
   const { needs } = useActivity();
   const { needs: roomNeeds } = useRoomNeeds();
   const open = needs.length + roomNeeds.length;
+  const previousApprovals = useRef(new Set<string>());
+  useEffect(() => {
+    const ids = new Set([...needs.filter((n) => n.kind === "approval").map((n) => n.id), ...roomNeeds.filter((n) => n.ask?.kind === "approval").map((n) => n.id)]);
+    if ([...ids].some((id) => !previousApprovals.current.has(id))) notifyApproval();
+    previousApprovals.current = ids;
+  }, [needs, roomNeeds]);
   useEffect(() => { document.title = open ? `(${open}) Hermes` : "Hermes"; }, [open]);
   const trail = crumbs(page);
   const sessionId = page.name === "agent" ? page.sessionId : undefined;

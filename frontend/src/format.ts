@@ -1,4 +1,5 @@
 /** Zahlen und Zeiten für die Anzeige: deutsches Format, Zahlen in Mono. */
+import { getPreferences } from "./preferences";
 
 export const dec = (n: number, digits = 1) => n.toFixed(digits).replace(".", ",");
 
@@ -23,8 +24,8 @@ export const plainPreview = (md: string) =>
 
 export const fmtCount = (n: number) => n.toLocaleString("de-DE");
 
-export const fmtTime = (ms: number) => new Date(ms).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
-export const fmtTimeSec = (ms: number) => new Date(ms).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+export const fmtTime = (ms: number) => new Date(ms).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", hour12: getPreferences().timeFormat === "12h" });
+export const fmtTimeSec = (ms: number) => new Date(ms).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: getPreferences().timeFormat === "12h" });
 export const fmtDay = (ms: number) => new Date(ms).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
 
 /** Epoche in Sekunden oder Millisekunden sowie ISO-Texte; alles andere ergibt `undefined`. */

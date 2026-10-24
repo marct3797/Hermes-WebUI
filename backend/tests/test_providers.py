@@ -152,6 +152,12 @@ def test_validate_ok_reachable_false_does_not_store(make, dash, tmp_path):
     assert "OPENROUTER_API_KEY" not in dash.state.profiles["default"]["env"]
 
 
+def test_write_key_error_never_echoes_submitted_secret(make, dash):
+    dash.state.env_put_error = {"var": "OPENROUTER_API_KEY", "status": 500, "detail": f"Rejected value {SECRET}"}
+    r = make().put(f"{P}/key", json={"var": "OPENROUTER_API_KEY", "value": SECRET})
+    assert r.status_code == 502 and SECRET not in r.text and "[REDACTED]" in r.text
+
+
 def test_write_key_shows_dashboard_reason(make, dash):
     dash.state.env_put_error = {"var": "OPENROUTER_API_KEY", "status": 500, "detail": "Speichern derzeit gesperrt"}
     r = make().put(f"{P}/key", json={"var": "OPENROUTER_API_KEY", "value": "sk-or-x"})

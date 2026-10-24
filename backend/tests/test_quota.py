@@ -55,6 +55,19 @@ def test_real_fixture_providers_without_api_are_unavailable_not_failed():
     assert p["gemini"]["reason"] == "No public subscription-quota API for this provider."
 
 
+def test_removed_providers_from_live_plugin_never_reach_quota_or_summary(build):
+    from app.quota import summary_items
+    body = {"providers": [{"id": pid, "label": pid, "configured": True,
+                           "quota": {"unavailable_reason": "401 unauthorized"}}
+                          for pid in ("nous", "opencode-zen", "opencode-go")]}
+    assert [p["id"] for p in normalize(body)["providers"]] == ["opencode-go"]
+    c = build(quota=body)
+    assert [p["id"] for p in c.get(QUOTA).json()["providers"]] == ["opencode-go"]
+    summary = c.get("/bff/quota/summary").json()
+    assert {p["provider"] for p in summary["items"]} == {"opencode-go"}
+    assert {p["provider"] for p in summary_items("x", "hermes", "default", normalize(body))} == {"opencode-go"}
+
+
 def test_unconfigured_inactive_provider_with_auth_words_is_only_unavailable():
     body = {"providers": [{"id": "x", "configured": False, "active": False, "quota_capable": True, "quota": {"available": False, "windows": [], "unavailable_reason": "401 unauthorized"}}]}
     assert normalize(body, T0)["providers"][0]["state"] == "unavailable"
