@@ -1,6 +1,6 @@
 import { invalidate } from "./dataCache";
 import { getPreferences } from "./preferences";
-import type { AgentRef, AgentStatus, CliAuth, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import type { AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string, public data?: Record<string, unknown>) {
@@ -66,6 +66,7 @@ const dropSessions = () => invalidate("sessions:");
 
 export const api = {
   me: () => call<Me>("GET", "/bff/me"),
+  security: () => call<Security>("GET", "/bff/security"),
   logout: () => call<void>("POST", "/auth/logout"),
   hosts: (signal?: AbortSignal) => call<HostsResponse>("GET", "/bff/hosts", undefined, signal),
   ui: (signal?: AbortSignal) => call<UiConfig>("GET", "/bff/ui", undefined, signal),

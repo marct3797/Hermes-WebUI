@@ -49,6 +49,48 @@ describe("System", () => {
     expect(calls.filter((c) => c.method === "POST" && c.url.endsWith("/diagnose/run"))).toHaveLength(1);
   });
 
+  const withSecurity = (reply: () => Response) => {
+    const f = vi.mocked(globalThis.fetch);
+    const orig = f.getMockImplementation()!;
+    f.mockImplementation(async (input: URL | RequestInfo, init?: RequestInit) => (String(input) === "/bff/security" ? reply() : orig(input, init)));
+  };
+  const security = (proof: string, enabled = true) => () => new Response(JSON.stringify({ step_up: { enabled, window_s: 600, proof } }), { status: 200 });
+
+  it("warns when the login freshness cannot be proven by the identity provider", async () => {
+    ({ calls } = installBackend(["gamma"]));
+    withSecurity(security("prompt_login_only"));
+    history.pushState(null, "", "/system");
+    render(<App />);
+    const note = await screen.findByRole("note", { name: "Anmeldeschutz" });
+    expect(note).toHaveTextContent("Frische nicht belegbar");
+    expect(note).toHaveTextContent("prompt=login");
+  });
+
+  it("says plainly when step-up is off and shows no warning when auth_time proves freshness", async () => {
+    ({ calls } = installBackend(["gamma"]));
+    withSecurity(security("off", false));
+    history.pushState(null, "", "/system");
+    render(<App />);
+    expect(await screen.findByRole("note", { name: "Anmeldeschutz" })).toHaveTextContent("Anmeldeschutz aus");
+    cleanup();
+    ({ calls } = installBackend(["gamma"]));
+    withSecurity(security("auth_time"));
+    render(<App />);
+    const note = await screen.findByRole("note", { name: "Anmeldeschutz" });
+    expect(note).toHaveTextContent("höchstens 10 Minuten");
+    expect(note).not.toHaveTextContent("nicht belegbar");
+  });
+
+  it("keeps working without the card when the backend does not know /bff/security", async () => {
+    ({ calls } = installBackend(["gamma"]));
+    withSecurity(() => new Response(JSON.stringify({ detail: "Not Found" }), { status: 404 }));
+    history.pushState(null, "", "/system");
+    render(<App />);
+    await screen.findByRole("heading", { name: "System", level: 1 });
+    await screen.findByRole("region", { name: "Server gamma" });
+    expect(screen.queryByRole("note", { name: "Anmeldeschutz" })).toBeNull();
+  });
+
   it("shows an error when the check itself cannot be fetched", async () => {
     await open();
     const f = vi.mocked(globalThis.fetch);

@@ -402,6 +402,7 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
       }
       return json(uiState);
     }
+    if (url === "/bff/security") return json({ step_up: { enabled: true, window_s: 600, proof: "auth_time" } });
     if (url.endsWith("/_cli-auth") || url.endsWith("/_cli-auth/refresh")) {
       const refreshed = url.endsWith("/refresh");
       if (url.startsWith("/bff/h/laptop/")) return json({ available: false, reason: "Host-Dienst nicht eingerichtet" });

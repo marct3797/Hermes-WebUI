@@ -6,9 +6,24 @@ import { PageHead } from "../components/PageHead";
 import { StatusDot } from "../components/Status";
 import { useHosts } from "../hosts";
 import { agentKey } from "../router";
-import type { AgentRef, DiagReport } from "../types";
+import type { AgentRef, DiagReport, Security } from "../types";
+import { useAsync } from "../useAsync";
 
 type Entry = { busy: boolean; report?: DiagReport; error?: string };
+
+/** Anmeldeschutz: ehrlich sagen, ob die Frische der Anmeldung belegt ist (Warnung nur, wenn sie es nicht ist). */
+function StepUpNote({ step }: { step: Security["step_up"] }) {
+  const min = Math.round(step.window_s / 60);
+  const text: Record<Security["step_up"]["proof"], string> = {
+    off: "Anmeldeschutz aus: Terminal, Schlüssel und Installationen verlangen keine frische Anmeldung (HERMES_WEBUI_STEP_UP=off). Sinnvoll nur, wenn die WebUI ausschließlich im privaten Netz erreichbar ist.",
+    auth_time: `Anmeldeschutz an: Riskante Aktionen verlangen eine Anmeldung, die höchstens ${min} Minuten alt ist. Der Anbieter belegt die Anmeldezeit (auth_time).`,
+    prompt_login_only: `Anmeldeschutz an, aber die Frische nicht belegbar: Der Anbieter liefert kein auth_time. Die WebUI verlässt sich darauf, dass er die erneute Anmeldung erzwingt (prompt=login). Einmal prüfen: mit einer älteren Sitzung ein Terminal öffnen, die Anmeldung muss verlangt werden. Gültig sind höchstens ${min} Minuten.`,
+    unknown: "Anmeldeschutz an, Frische nicht prüfbar: Der Anbieter nennt weder auth_time noch seine unterstützten Angaben. Riskante Aktionen bleiben gesperrt, bis er auth_time liefert.",
+    unavailable: "Anmeldeschutz an; die Angaben des Anbieters sind gerade nicht lesbar.",
+  };
+  const warn = !["off", "auth_time"].includes(step.proof);
+  return <p role="note" aria-label="Anmeldeschutz" className={`small${warn ? " banner" : " muted"}`} style={{ maxWidth: 720 }}>{warn && <Icon name="alert" />}{text[step.proof]}</p>;
+}
 
 /**
  * System: der Diagnose-Ring. Prüft jeden Agent gegen das, was die WebUI von ihm erwartet (lesend), und kann einen
@@ -17,6 +32,7 @@ type Entry = { busy: boolean; report?: DiagReport; error?: string };
 export function SystemPage() {
   const { hosts, error: hostsError } = useHosts();
   const [results, setResults] = useState<Record<string, Entry>>({});
+  const security = useAsync(() => api.security(), []); // fehlt die Route (älteres BFF), bleibt die Karte weg
 
   const agents = (hosts ?? []).flatMap((h) =>
     h.runtimes.flatMap((r) => r.agents.map((a) => ({ ref: { host: h.id, runtime: r.id, agent: a.id } as AgentRef, label: a.label, host: h.label, runtimeLabel: r.label, online: r.status === "online" }))),
@@ -51,6 +67,7 @@ export function SystemPage() {
       <p className="muted small" style={{ maxWidth: 720 }}>
         Die Prüfung liest nur. Der Lauftest schickt einem Agent einen kurzen Auftrag („Antworte nur mit dem Wort OK“) und legt dafür eine Session an, die in dessen Liste bleibt.
       </p>
+      {security.data && <StepUpNote step={security.data.step_up} />}
       {hostsError && <p className="banner" role="alert"><Icon name="alert" />Hosts nicht ladbar: {hostsError}</p>}
       {!hosts && !hostsError && <p className="muted">Lade…</p>}
       <div className="diag-list">
