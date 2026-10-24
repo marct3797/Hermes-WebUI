@@ -12,6 +12,7 @@ config="${XDG_CONFIG_HOME:-$HOME/.config}/hermes-hostd/config.json"
 env_file="${XDG_CONFIG_HOME:-$HOME/.config}/hermes-hostd/daemon.env"
 unit_dir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 start=yes
+workspaces=()
 while (($#)); do
   case "$1" in
     --python|--venv|--config|--env-file|--unit-dir)
@@ -21,14 +22,28 @@ while (($#)); do
         --env-file) env_file=$2;; --unit-dir) unit_dir=$2;;
       esac
       shift 2;;
+    --workspace)
+      (($# >= 2)) || { printf '%s\n' "Missing value for $1" >&2; exit 2; }
+      workspaces+=("$2"); shift 2;;
     --no-start) start=no; shift;;
-    *) printf '%s\n' 'Options: --python ABS --venv ABS --config ABS --env-file ABS --unit-dir ABS --no-start' >&2; exit 2;;
+    *) printf '%s\n' 'Options: --python ABS --venv ABS --config ABS --env-file ABS --unit-dir ABS --workspace ID=ABS[:Label] --no-start' >&2; exit 2;;
   esac
 done
 for path in "$python" "$venv" "$config" "$env_file" "$unit_dir"; do
   [[ "$path" == /* && "$path" != *$'\n'* && "$path" != *$'\r'* ]] || {
     printf '%s\n' 'All paths must be absolute and single-line.' >&2; exit 2;
   }
+done
+# --workspace ID=ABSOLUTER_PFAD[:Label] vorab pruefen (vor Venv und Installation); Label darf Doppelpunkte enthalten, der Pfad nicht.
+ws_id=(); ws_path=(); ws_label=()
+for spec in ${workspaces[@]+"${workspaces[@]}"}; do
+  [[ "$spec" =~ ^([A-Za-z0-9_-]{1,64})=(/[^:]*)(:(.*))?$ && "$spec" != *$'\n'* ]] || {
+    printf '%s\n' "Invalid --workspace (expected ID=ABSOLUTE_PATH[:Label]): $spec" >&2; exit 2; }
+  real=$(realpath -e -- "${BASH_REMATCH[2]}" 2>/dev/null) && [[ -d "$real" ]] || {
+    printf '%s\n' "Workspace is not an existing directory: ${BASH_REMATCH[2]}" >&2; exit 2; }
+  [[ "$real" != / && "$real" != "$(realpath -e -- "$HOME")" ]] || {
+    printf '%s\n' "Refusing / or the home directory itself as workspace: $real" >&2; exit 2; }
+  ws_id+=("${BASH_REMATCH[1]}"); ws_path+=("$real"); ws_label+=("${BASH_REMATCH[4]:-${BASH_REMATCH[1]}}")
 done
 umask 077
 "$python" -m venv "$venv"
@@ -87,6 +102,11 @@ print('Daemon environment file (not printed):', env_file)
 PY
 # Hermes-Profile erkennen und ergaenzen (bestehende Eintraege bleiben unveraendert).
 "$venv/bin/python" -m hostd.discover --config "$config" --hermes-home "$HOME/.hermes"
+for i in ${!ws_id[@]+"${!ws_id[@]}"}; do
+  rc=0
+  "$venv/bin/python" -m hostd.workspaces add --config "$config" --id "${ws_id[$i]}" --path "${ws_path[$i]}" --label "${ws_label[$i]}" || rc=$?
+  ((rc == 0 || rc == 3)) || exit "$rc"
+done
 if [[ "$start" == yes ]]; then
   systemctl --user daemon-reload
   systemctl --user enable hermes-hostd.service

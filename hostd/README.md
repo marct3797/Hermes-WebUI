@@ -105,7 +105,8 @@ All HTTP and WebSocket requests require `Authorization: Bearer …`.
 
 Replay: 256 KiB per terminal, output chunks at most 8 KiB; no unbounded subscriber
 queues. Input: 16 KiB decoded, 24 KiB JSON frame; terminal-create body: 4 KiB;
-other write bodies: 1.5 MB (for the independent bounded-upload router).
+other write bodies: 1.5 MB (`/v1/files/write`: 7 MB, content itself at most 1 MiB). File write/mkdir/move and
+`python -m hostd.workspaces add|list` are described in OPERATIONS.md.
 Dimensions: 1–500 columns, 1–300 rows. Default terminal count: eight, including
 exited records until explicit DELETE (configurable 1–64). Slow writes/sends time
 out. Access logs are disabled; terminal text and bearer values are not logged.

@@ -65,7 +65,8 @@ def create_app(settings):
         if rejected:
             return JSONResponse({'detail': 'unauthorized' if rejected == 401 else 'origin forbidden'}, status_code=rejected)
         if request.method in ('POST', 'PUT', 'PATCH'):
-            limit = 4096 if request.url.path.startswith('/v1/terminals') else 1500000
+            limit = (4096 if request.url.path.startswith('/v1/terminals') else
+                     7000000 if request.url.path == '/v1/files/write' else 1500000)  # JSON-Escapes: 1 MiB Text kann bis ~6 MiB werden
             body = bytearray()
             async for chunk in request.stream():
                 body.extend(chunk)
