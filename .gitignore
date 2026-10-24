@@ -15,3 +15,6 @@ backend/hosts.json
 
 # Symlink oder Ordner (auch als Datei, z. B. in Worktrees)
 node_modules
+
+hostd/build/
+hostd/*.egg-info/
