@@ -6,14 +6,14 @@ import { emitRoom, installBackend, roomOf } from "../test-backend";
 import type { Room, RoomMessage } from "../types";
 
 const RID = "111111111111";
-const A = "hikari/hermes/raiden", B = "hikari/hermes/sora";
+const A = "server/hermes/gamma", B = "server/hermes/eta";
 const m = (seq: number, author: string, text: string, mentions: string[] = []): RoomMessage => ({ seq, author, kind: "message", text, mentions, at: 1_792_000_000 + seq });
 
 let env: ReturnType<typeof installBackend>;
 
 async function open(extra: Partial<Room> = {}) {
-  env = installBackend(["raiden", "sora"]);
-  env.rooms.push(roomOf(RID, "Planung", ["raiden", "sora"], { messages: [m(1, "user", "Hallo zusammen"), m(2, A, "Moin, **Marc**.")], ...extra }));
+  env = installBackend(["gamma", "eta"]);
+  env.rooms.push(roomOf(RID, "Planung", ["gamma", "eta"], { messages: [m(1, "user", "Hallo zusammen"), m(2, A, "Moin, **Alex**.")], ...extra }));
   history.pushState(null, "", `/rooms/${RID}`);
   render(<App />);
   await screen.findByRole("heading", { name: "Planung", level: 1 });
@@ -27,27 +27,27 @@ describe("Raum", () => {
     await open();
     const log = screen.getByRole("log", { name: "Verlauf" });
     expect(within(log).getByText("Hallo zusammen")).toBeInTheDocument();
-    expect(within(log).getByText("Marc").tagName).toBe("STRONG");
-    expect(within(log).getAllByRole("article").map((a) => a.getAttribute("aria-label")?.split(" um ")[0])).toEqual(["Du", "raiden"]);
+    expect(within(log).getByText("Alex").tagName).toBe("STRONG");
+    expect(within(log).getAllByRole("article").map((a) => a.getAttribute("aria-label")?.split(" um ")[0])).toEqual(["Du", "gamma"]);
   });
 
   it("sends on Enter, keeps Shift+Enter for a new line, and clears the field", async () => {
     await open();
     const box = screen.getByLabelText("Nachricht an den Raum");
-    fireEvent.change(box, { target: { value: "@sora was meinst du?" } });
+    fireEvent.change(box, { target: { value: "@eta was meinst du?" } });
     fireEvent.keyDown(box, { key: "Enter", shiftKey: true });
     expect(env.calls.some((c) => c.url.endsWith("/messages"))).toBe(false);
     fireEvent.keyDown(box, { key: "Enter" });
     await waitFor(() => expect(box).toHaveValue(""));
-    expect(env.calls.find((c) => c.url === `/bff/rooms/${RID}/messages`)?.body).toEqual({ text: "@sora was meinst du?" });
+    expect(env.calls.find((c) => c.url === `/bff/rooms/${RID}/messages`)?.body).toEqual({ text: "@eta was meinst du?" });
   });
 
   it("inserts a mention where the cursor is", async () => {
     await open();
     const box = screen.getByLabelText("Nachricht an den Raum") as HTMLTextAreaElement;
     fireEvent.change(box, { target: { value: "Hallo" } });
-    fireEvent.click(screen.getByRole("button", { name: "@sora einfügen" }));
-    expect(box.value).toBe("Hallo @sora ");
+    fireEvent.click(screen.getByRole("button", { name: "@eta einfügen" }));
+    expect(box.value).toBe("Hallo @eta ");
     fireEvent.click(screen.getByRole("button", { name: "@all einfügen" }));
     expect(box.value).toContain("@all");
   });
@@ -57,12 +57,12 @@ describe("Raum", () => {
     emitRoom({ type: "turn.started", turn: "t1" });
     emitRoom({ type: "member.started", member: B, round: 1 });
     emitRoom({ type: "member.event", member: B, run_id: "run_9", event: { type: "message.delta", text: "Ich über" } });
-    const live = await screen.findByRole("article", { name: "sora schreibt" });
+    const live = await screen.findByRole("article", { name: "eta schreibt" });
     expect(within(live).getByText(/Ich über/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Stopp" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Senden" })).not.toBeInTheDocument();
     emitRoom({ type: "message", message: m(3, B, "Ich überlege noch.") });
-    await waitFor(() => expect(screen.queryByRole("article", { name: "sora schreibt" })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole("article", { name: "eta schreibt" })).not.toBeInTheDocument());
     expect(screen.getByText("Ich überlege noch.")).toBeInTheDocument();
   });
 
@@ -78,26 +78,26 @@ describe("Raum", () => {
     await open();
     emitRoom({ type: "turn.started", turn: "t1" });
     emitRoom({ type: "asks", asks: [askOf()] });
-    const card = await screen.findByRole("group", { name: "sora braucht dich" });
+    const card = await screen.findByRole("group", { name: "eta braucht dich" });
     expect(within(card).getByText("rm -r build")).toBeInTheDocument();
     fireEvent.click(within(card).getByRole("button", { name: "Einmal erlauben" }));
-    await waitFor(() => expect(env.calls.find((c) => c.url === "/bff/h/hikari/hermes/sora/runs/run_9/approval")?.body).toEqual({ decision: "once" }));
+    await waitFor(() => expect(env.calls.find((c) => c.url === "/bff/h/server/hermes/eta/runs/run_9/approval")?.body).toEqual({ decision: "once" }));
     emitRoom({ type: "asks", asks: [] });
-    await waitFor(() => expect(screen.queryByRole("group", { name: "sora braucht dich" })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole("group", { name: "eta braucht dich" })).not.toBeInTheDocument());
   });
 
   it("shows a waiting approval again after the page was opened later or reconnected", async () => {
     await open({ running: true, speaker: B });
     emitRoom({ type: "state", running: true, speaker: B, asks: [askOf("run_7")] });
-    const card = await screen.findByRole("group", { name: "sora braucht dich" });
+    const card = await screen.findByRole("group", { name: "eta braucht dich" });
     fireEvent.click(within(card).getByRole("button", { name: "Ablehnen" }));
-    await waitFor(() => expect(env.calls.find((c) => c.url === "/bff/h/hikari/hermes/sora/runs/run_7/approval")?.body).toEqual({ decision: "deny" }));
+    await waitFor(() => expect(env.calls.find((c) => c.url === "/bff/h/server/hermes/eta/runs/run_7/approval")?.body).toEqual({ decision: "deny" }));
   });
 
   it("says who needs the person and why", async () => {
     await open({ needs_user: true, messages: [m(1, "user", "Räum auf"), m(2, B, "@user darf ich Dateien löschen?", ["user"])] });
     const banner = await screen.findByRole("status");
-    expect(within(banner).getByText("sora")).toBeInTheDocument();
+    expect(within(banner).getByText("eta")).toBeInTheDocument();
     expect(banner).toHaveTextContent("darf ich Dateien löschen?");
   });
 
@@ -121,7 +121,7 @@ describe("Raum", () => {
   });
 
   it("reports a room that does not exist", async () => {
-    env = installBackend(["raiden", "sora"]);
+    env = installBackend(["gamma", "eta"]);
     history.pushState(null, "", "/rooms/ffffffffffff");
     render(<App />);
     expect(await screen.findByText(/Raum nicht ladbar/)).toBeInTheDocument();

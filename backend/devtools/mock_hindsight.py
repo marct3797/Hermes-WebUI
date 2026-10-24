@@ -1,6 +1,6 @@
 """Hindsight-Ersatz für Tests: die Routen und Antwortformen der Hindsight-API (`/v1/default/banks/{bank}/…`).
 
-Die Formen folgen der OpenAPI-Beschreibung und der öffentlichen Doku, noch nicht einem Lauf gegen kage:8888. Weicht die echte
+Die Formen folgen der OpenAPI-Beschreibung und der öffentlichen Doku, noch nicht einem Lauf gegen eine echte Instanz. Weicht die echte
 Antwort ab, zeigt es die Diagnose unter /bff/memory/<id>/diagnose; die Normalisierung in app/memory.py wird dann angepasst.
 
 Start: uvicorn devtools.mock_hindsight:app --port 8888
@@ -13,12 +13,12 @@ from typing import Any
 from fastapi import FastAPI, HTTPException, Request
 
 UNITS = [
-    {"id": "u1", "text": "Marc nutzt Forgejo unter git.thiel.digital.", "context": "Setup", "date": "2026-10-20T10:00:00Z", "fact_type": "world",
-     "entities": "Marc, Forgejo", "document_id": "d1", "tags": ["infra"]},
-    {"id": "u2", "text": "Inari hat die WebUI-Tests ausgeführt.", "context": "Chat", "date": "2026-10-22T09:30:00Z", "fact_type": "experience",
-     "entities": "Inari, WebUI", "document_id": "d2", "tags": []},
-    {"id": "u3", "text": "Hikari betreibt den Container hermes-agents.", "context": None, "date": "2026-10-21T12:00:00Z", "fact_type": "world",
-     "entities": "Hikari", "document_id": "d1", "tags": ["infra", "hikari"]},
+    {"id": "u1", "text": "Alex nutzt Forgejo unter git.example.com.", "context": "Setup", "date": "2026-10-20T10:00:00Z", "fact_type": "world",
+     "entities": "Alex, Forgejo", "document_id": "d1", "tags": ["infra"]},
+    {"id": "u2", "text": "Delta hat die WebUI-Tests ausgeführt.", "context": "Chat", "date": "2026-10-22T09:30:00Z", "fact_type": "experience",
+     "entities": "Delta, WebUI", "document_id": "d2", "tags": []},
+    {"id": "u3", "text": "Server betreibt den Hermes-Container.", "context": None, "date": "2026-10-21T12:00:00Z", "fact_type": "world",
+     "entities": "Server", "document_id": "d1", "tags": ["infra", "server"]},
 ]
 
 
@@ -90,8 +90,8 @@ def create_mock(require_key: str | None = None, bank: str = "hermes") -> FastAPI
                             {"time": "2026-10-21T00:00:00+00:00", "world": 1, "experience": 0, "observation": 0},
                             {"time": "2026-10-22T00:00:00+00:00", "world": 0, "experience": 1, "observation": 1}]}
 
-    ENTITIES = [{"id": "en1", "canonical_name": "Marc", "mention_count": 7, "first_seen": "2026-10-01T00:00:00Z", "last_seen": "2026-10-22T00:00:00Z"},
-                {"id": "en2", "canonical_name": "Hikari", "mention_count": 3, "first_seen": None, "last_seen": None}]
+    ENTITIES = [{"id": "en1", "canonical_name": "Alex", "mention_count": 7, "first_seen": "2026-10-01T00:00:00Z", "last_seen": "2026-10-22T00:00:00Z"},
+                {"id": "en2", "canonical_name": "Server", "mention_count": 3, "first_seen": None, "last_seen": None}]
 
     @app.get(f"{base}/entities")
     async def entities(bank_id: str, limit: int = 100, offset: int = 0):
@@ -110,12 +110,12 @@ def create_mock(require_key: str | None = None, bank: str = "hermes") -> FastAPI
     async def mental_models(bank_id: str, limit: int = 100, offset: int = 0, detail: str = "full"):
         check(bank_id)
         return {"items": [{"id": "mm1", "name": "Infrastruktur", "source_query": "Welche Server gibt es?",
-                           "content": "Hikari ist der VPS, kage hostet Hindsight.", "tags": ["infra"], "last_refreshed_at": "2026-10-22T12:00:00Z"}]}
+                           "content": "Server ist der VPS, ein zweiter Server hostet Hindsight.", "tags": ["infra"], "last_refreshed_at": "2026-10-22T12:00:00Z"}]}
 
     @app.post(f"{base}/reflect")
     async def reflect(bank_id: str, body: dict[str, Any]):
         check(bank_id)
-        return {"text": f"Zu „{body.get('query')}“: Hikari betreibt den Container.", "based_on": {"world": [UNITS[2]], "experience": [], "opinion": []}}
+        return {"text": f"Zu „{body.get('query')}“: Server betreibt den Container.", "based_on": {"world": [UNITS[2]], "experience": [], "opinion": []}}
 
     return app
 
@@ -127,7 +127,7 @@ def big_graph(n: int, kinds: bool = True) -> dict:
     """Ein Graph in der Größe eines echten Gedächtnisses (150 Knoten, rund 7.000 Kanten): Fakten teilen sich Entitäten und bilden
     dadurch dichte Gruppen („entity“), dazu zeitliche Nachbarn, Ähnlichkeiten und ein paar Ursachen. Ohne `kinds` fehlt fact_type
     wie in der echten Instanz."""
-    topics = ["Marc", "Hikari", "Hermes", "Forgejo", "Tailscale", "Docker", "Hindsight", "Kanban", "Sora", "Omoikane", "Räume", "Caddy", "Laptop", "Skills"]
+    topics = ["Alex", "Server", "Hermes", "Forgejo", "Tailscale", "Docker", "Hindsight", "Kanban", "Eta", "Beta", "Räume", "Caddy", "Laptop", "Skills"]
     sentence = ["betreibt", "nutzt", "konfiguriert", "prüft", "migriert", "dokumentiert"]
     ents: list[list[int]] = [[(i * 5 + k * 3) % len(topics) for k in range(1 + (i % 3))] for i in range(n)]
     types = ("world", "experience", "observation")

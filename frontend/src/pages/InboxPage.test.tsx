@@ -6,7 +6,7 @@ import { FakeEventSource, emit, installBackend, roomOf } from "../test-backend";
 
 let posted: ReturnType<typeof installBackend>["posted"];
 
-beforeEach(() => { resetRedirect(); ({ posted } = installBackend(["raiden", "sora"])); });
+beforeEach(() => { resetRedirect(); ({ posted } = installBackend(["gamma", "eta"])); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 async function runIn(agent: string, text: string) {
@@ -22,18 +22,18 @@ const toInbox = () => fireEvent.click(screen.getAllByRole("link", { name: /^Inbo
 async function twoApprovals() {
   history.pushState(null, "", "/");
   render(<App />);
-  await runIn("raiden", "räum auf");
-  emit({ type: "approval.requested", command: "rm -r build", reason: "räumt auf", choices: ["once", "session", "always", "deny"], timeout_s: 300 }, "raiden");
-  await runIn("sora", "push es");
-  emit({ type: "approval.requested", command: "git push --force", reason: "", choices: ["once", "deny"], timeout_s: 120, smart_denied: true }, "sora");
+  await runIn("gamma", "räum auf");
+  emit({ type: "approval.requested", command: "rm -r build", reason: "räumt auf", choices: ["once", "session", "always", "deny"], timeout_s: 300 }, "gamma");
+  await runIn("eta", "push es");
+  emit({ type: "approval.requested", command: "git push --force", reason: "", choices: ["once", "deny"], timeout_s: 120, smart_denied: true }, "eta");
   toInbox();
   await screen.findByRole("heading", { name: "Braucht dich", level: 1 });
 }
 
 describe("Inbox", () => {
   it("lists rooms that call for the person, and counts them in the badges and the tab title", async () => {
-    const { rooms } = installBackend(["raiden"]);
-    rooms.push(roomOf("abcabcabcabc", "Planungsrunde", ["raiden", "sora"], { needs_user: true }), roomOf("defdefdefdef", "Ruhiger Raum", ["raiden"]));
+    const { rooms } = installBackend(["gamma"]);
+    rooms.push(roomOf("abcabcabcabc", "Planungsrunde", ["gamma", "eta"], { needs_user: true }), roomOf("defdefdefdef", "Ruhiger Raum", ["gamma"]));
     history.pushState(null, "", "/inbox");
     render(<App />);
     const group = await screen.findByRole("group", { name: "Räume" });
@@ -48,24 +48,24 @@ describe("Inbox", () => {
   });
 
   it("shows what agents wait for in a room, with a link to the room, and answers it in place", async () => {
-    const { rooms, calls } = installBackend(["raiden", "sora"]);
-    rooms.push(roomOf("abcabcabcabc", "Planungsrunde", ["raiden", "sora"], { asks: [
-      { kind: "approval", member: "hikari/hermes/sora", run_id: "run_9", command: "rm -r build", reason: "räumt auf", choices: ["once", "deny"], at: 1 },
-      { kind: "clarify", member: "hikari/hermes/raiden", run_id: "run_4", clarify_id: "c1", question: "Welche Datei?", choices: [], at: 2 },
+    const { rooms, calls } = installBackend(["gamma", "eta"]);
+    rooms.push(roomOf("abcabcabcabc", "Planungsrunde", ["gamma", "eta"], { asks: [
+      { kind: "approval", member: "server/hermes/eta", run_id: "run_9", command: "rm -r build", reason: "räumt auf", choices: ["once", "deny"], at: 1 },
+      { kind: "clarify", member: "server/hermes/gamma", run_id: "run_4", clarify_id: "c1", question: "Welche Datei?", choices: [], at: 2 },
     ] }));
     history.pushState(null, "", "/inbox");
     render(<App />);
     const group = await screen.findByRole("group", { name: "Räume" });
-    const approval = await within(group).findByRole("group", { name: "sora braucht dich" });
+    const approval = await within(group).findByRole("group", { name: "eta braucht dich" });
     expect(within(approval).getByText("rm -r build")).toBeInTheDocument();
     expect(within(approval).getByRole("link", { name: "Planungsrunde" })).toHaveAttribute("href", "/rooms/abcabcabcabc");
     expect(within(group).getByText("Welche Datei?")).toBeInTheDocument();
     expect(screen.getByText("2 offen · 0 laufen ab")).toBeInTheDocument();
     fireEvent.click(within(approval).getByRole("button", { name: "Ablehnen" }));
-    await waitFor(() => expect(calls.find((c) => c.url === "/bff/h/hikari/hermes/sora/runs/run_9/approval")?.body).toEqual({ decision: "deny" }));
+    await waitFor(() => expect(calls.find((c) => c.url === "/bff/h/server/hermes/eta/runs/run_9/approval")?.body).toEqual({ decision: "deny" }));
     fireEvent.change(within(group).getByLabelText("Antwort"), { target: { value: "die erste" } });
     fireEvent.click(within(group).getByRole("button", { name: "Senden" }));
-    await waitFor(() => expect(calls.find((c) => c.url === "/bff/h/hikari/hermes/raiden/runs/run_4/clarify")?.body).toEqual({ answer: "die erste", clarify_id: "c1" }));
+    await waitFor(() => expect(calls.find((c) => c.url === "/bff/h/server/hermes/gamma/runs/run_4/clarify")?.body).toEqual({ answer: "die erste", clarify_id: "c1" }));
   });
 
   it("says so when nothing is open", async () => {
@@ -79,7 +79,7 @@ describe("Inbox", () => {
     await twoApprovals();
     const list = screen.getByRole("group", { name: "Läuft ab" });
     const rows = within(list).getAllByRole("button");
-    // die kürzere Frist (sora, 2 Minuten) steht oben
+    // die kürzere Frist (eta, 2 Minuten) steht oben
     expect(rows[0]).toHaveTextContent("Smart-Deny: Freigabe nötig");
     expect(rows[1]).toHaveTextContent("Freigabe nötig");
     const detail = screen.getByRole("group", { name: "Deine Entscheidung" });
@@ -101,7 +101,7 @@ describe("Inbox", () => {
 
     fireEvent.keyDown(document.body, { key: "s" });
     await waitFor(() => expect(posted("/approval")).toHaveLength(1));
-    expect(posted("/approval")[0].url).toContain("/raiden/");
+    expect(posted("/approval")[0].url).toContain("/gamma/");
     expect(posted("/approval")[0].body).toEqual({ decision: "session" });
     // erledigt: wandert in die Liste „Erledigt heute“, die andere Freigabe rückt nach
     expect(await screen.findByText(/rm -r build · für die Session erlaubt/)).toBeInTheDocument();
@@ -124,10 +124,10 @@ describe("Inbox", () => {
   it("answers a question with a suggested choice or a typed answer", async () => {
     history.pushState(null, "", "/");
     render(<App />);
-    await runIn("sora", "Wochenbericht");
-    emit({ type: "clarify.requested", clarify_id: "c1", question: "Hindsight einbeziehen?", choices: ["Ja", "Nein"] }, "sora");
+    await runIn("eta", "Wochenbericht");
+    emit({ type: "clarify.requested", clarify_id: "c1", question: "Hindsight einbeziehen?", choices: ["Ja", "Nein"] }, "eta");
     toInbox();
-    expect(await screen.findByRole("heading", { name: "sora braucht eine Entscheidung" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "eta braucht eine Entscheidung" })).toBeInTheDocument();
     const send = screen.getByRole("button", { name: /Antwort senden/ });
     expect(send).toBeDisabled();
     fireEvent.click(screen.getByRole("radio", { name: "Ja" }));
@@ -140,12 +140,12 @@ describe("Inbox", () => {
   it("lists a failed run and lets the person dismiss it", async () => {
     history.pushState(null, "", "/");
     render(<App />);
-    await runIn("raiden", "mach was");
-    emit({ type: "run.failed", error: "Key abgelaufen" }, "raiden");
+    await runIn("gamma", "mach was");
+    emit({ type: "run.failed", error: "Key abgelaufen" }, "gamma");
     toInbox();
     expect(await screen.findByRole("heading", { name: "Der Run ist fehlgeschlagen" })).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("Key abgelaufen");
-    expect(screen.getByRole("link", { name: /Chat öffnen/ })).toHaveAttribute("href", "/h/hikari/hermes/raiden/chat/s1");
+    expect(screen.getByRole("link", { name: /Chat öffnen/ })).toHaveAttribute("href", "/h/server/hermes/gamma/chat/s1");
     fireEvent.click(screen.getByRole("button", { name: "Als gelesen markieren" }));
     expect(await screen.findByText("Nichts offen")).toBeInTheDocument();
   });

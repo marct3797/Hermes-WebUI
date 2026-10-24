@@ -97,7 +97,7 @@ describe("QuotaBars: Zustände", () => {
   });
 });
 
-async function openPage(path: string, mode: QuotaMode, agents = ["default", "sora"]) {
+async function openPage(path: string, mode: QuotaMode, agents = ["default", "eta"]) {
   const b = installBackend(agents);
   b.quota.mode = mode;
   b.dash.keys.OPENCODE_GO_API_KEY = "oc-geheim";  // der Key ist eingetragen; das Plugin meldet ihn als abgelaufen
@@ -108,23 +108,23 @@ async function openPage(path: string, mode: QuotaMode, agents = ["default", "sor
 
 describe("Keys & Nutzung", () => {
   it("replaces the old placeholder with the quota section, reloads on demand with refresh=1", async () => {
-    const b = await openPage("/h/hikari/hermes/default/providers", "ok");
+    const b = await openPage("/h/server/hermes/default/providers", "ok");
     const section = await screen.findByRole("region", { name: "Restkontingente" });
     expect(await within(section).findByRole("listitem", { name: "Anthropic" })).toBeInTheDocument();
     expect(document.body.textContent).not.toContain("zeigt die WebUI noch nicht");
     fireEvent.click(within(section).getByRole("button", { name: "Restkontingente neu laden" }));
-    await waitFor(() => expect(b.calls.some((c) => c.url === "/bff/h/hikari/hermes/default/quota?refresh=1")).toBe(true));
+    await waitFor(() => expect(b.calls.some((c) => c.url === "/bff/h/server/hermes/default/quota?refresh=1")).toBe(true));
   });
 
   it("says plainly when the plugin is missing", async () => {
-    await openPage("/h/hikari/hermes/default/providers", "missing");
+    await openPage("/h/server/hermes/default/providers", "missing");
     expect(await screen.findByText(/Plugin ai-usage-tracker auf diesem Host nicht installiert/)).toBeInTheDocument();
   });
 
   it("refreshes every 60 s only while the tab is visible", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
-      const b = await openPage("/h/hikari/hermes/default/providers", "ok");
+      const b = await openPage("/h/server/hermes/default/providers", "ok");
       await screen.findByRole("listitem", { name: "Anthropic" });
       const n = () => b.calls.filter((c) => c.url.endsWith("/default/quota")).length;
       const before = n();
@@ -141,51 +141,51 @@ describe("Keys & Nutzung", () => {
 });
 
 describe("Anbieter-Hub", () => {
-  const hikari = async () => {
-    const region = await screen.findByRole("region", { name: "Anbieter auf Hikari" });
+  const server = async () => {
+    const region = await screen.findByRole("region", { name: "Anbieter auf Server" });
     await within(region).findByRole("table");
     return region;
   };
 
   it("shows the quota under the table and loads it after the table without blocking it", async () => {
     await openPage("/providers", "ok");
-    const host = await hikari();
+    const host = await server();
     const group = await within(host).findByRole("group", { name: "Kontingente von default" });
     expect(await within(group).findByRole("listitem", { name: "OpenCode Go" })).toBeInTheDocument();
-    expect(within(host).getByRole("group", { name: "Kontingente von sora" })).toBeInTheDocument();
+    expect(within(host).getByRole("group", { name: "Kontingente von eta" })).toBeInTheDocument();
   });
 
   it("marks a profile with an expired access as 'Zugang prüfen' with the reason as tooltip, only in that profile", async () => {
     await openPage("/providers", "expired");
-    const host = await hikari();
+    const host = await server();
     const cell = await within(host).findByRole("button", { name: /^OpenCode Go für default.*Zugang prüfen$/ });
     expect(cell).toHaveTextContent("Zugang prüfen");
     expect(cell).toHaveAttribute("title", "HTTP 401 unauthorized: Key abgelaufen");
-    expect(within(host).getByRole("button", { name: /^OpenCode Go für sora/ })).not.toHaveTextContent("Zugang prüfen");
+    expect(within(host).getByRole("button", { name: /^OpenCode Go für eta/ })).not.toHaveTextContent("Zugang prüfen");
     expect(within(host).getByRole("button", { name: /^Claude für default/ })).not.toHaveTextContent("Zugang prüfen");
   });
 
   it("shows the missing plugin once per host instead of once per profile", async () => {
     await openPage("/providers", "missing");
-    const host = await hikari();
+    const host = await server();
     expect(await within(host).findAllByText(/Plugin ai-usage-tracker auf diesem Host nicht installiert/)).toHaveLength(1);
   });
 });
 
 describe("Cockpit", () => {
   it("shows the worst window of all profiles; exhausted is red", async () => {
-    await openPage("/", "ok", ["raiden"]);
+    await openPage("/", "ok", ["gamma"]);
     const kpi = await screen.findByLabelText("Kontingent");
     expect(kpi).toHaveClass("hot");
     expect(kpi).toHaveTextContent("0% Rest");
-    expect(kpi).toHaveTextContent(/(ChatGPT or Codex Subscription · Session|OpenCode Go · Monthly) · raiden · Reset in/);
-    expect(kpi).toHaveTextContent("1 Zugang abgelaufen (Nous Portal, raiden)");
+    expect(kpi).toHaveTextContent(/(ChatGPT or Codex Subscription · Session|OpenCode Go · Monthly) · gamma · Reset in/);
+    expect(kpi).toHaveTextContent("1 Zugang abgelaufen (Nous Portal, gamma)");
   });
 
   it("names the host when the plugin is missing, and is not red", async () => {
-    await openPage("/", "missing", ["raiden"]);
+    await openPage("/", "missing", ["gamma"]);
     const kpi = await screen.findByLabelText("Kontingent");
     expect(kpi).not.toHaveClass("hot");
-    expect(kpi).toHaveTextContent("hikari: Plugin ai-usage-tracker auf diesem Host nicht installiert");
+    expect(kpi).toHaveTextContent("server: Plugin ai-usage-tracker auf diesem Host nicht installiert");
   });
 });

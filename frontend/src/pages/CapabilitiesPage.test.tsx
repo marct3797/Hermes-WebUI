@@ -10,11 +10,11 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 describe("Skills und Werkzeuge", () => {
   it("lists skills and filters by category and text", async () => {
     installBackend();
-    history.pushState(null, "", "/h/hikari/hermes/raiden/skills");
+    history.pushState(null, "", "/h/server/hermes/gamma/skills");
     render(<App />);
     await screen.findByRole("heading", { name: "Skills", level: 1 });
     expect(await screen.findByText("Zerlegt Aufgaben in Schritte.")).toBeInTheDocument();
-    expect(screen.getByText("raiden · 2 installiert")).toBeInTheDocument();
+    expect(screen.getByText("gamma · 2 installiert")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "email" }));
     expect(screen.queryByText("plan")).not.toBeInTheDocument();
     expect(screen.getByText("himalaya")).toBeInTheDocument();
@@ -28,10 +28,10 @@ describe("Skills und Werkzeuge", () => {
     installBackend();
     const backend = globalThis.fetch;
     const rows = [{ name: "plan", description: "Zerlegt Aufgaben.", category: "software-development", enabled: true, provenance: "bundled" }, { name: "mein-skill", enabled: true, provenance: "agent" }];
-    vi.stubGlobal("fetch", (url: RequestInfo | URL, init?: RequestInit) => String(url).endsWith("/raiden/skills")
+    vi.stubGlobal("fetch", (url: RequestInfo | URL, init?: RequestInit) => String(url).endsWith("/gamma/skills")
       ? Promise.resolve(new Response(JSON.stringify({ object: "list", data: rows, source: "dashboard", note: "Die Agent-API konnte die Liste nicht liefern (Failed to enumerate skills); sie kommt aus dem Dashboard." }), { headers: { "content-type": "application/json" } }))
       : backend(url, init));
-    history.pushState(null, "", "/h/hikari/hermes/raiden/skills");
+    history.pushState(null, "", "/h/server/hermes/gamma/skills");
     render(<App />);
     expect(await screen.findByText(/Failed to enumerate skills\); sie kommt aus dem Dashboard/)).toBeInTheDocument();
     expect(screen.getByText("mitgeliefert")).toBeInTheDocument();
@@ -41,22 +41,22 @@ describe("Skills und Werkzeuge", () => {
 
   it("shows toolsets with their state, and flags those that are not set up", async () => {
     installBackend();
-    history.pushState(null, "", "/h/hikari/hermes/raiden/tools");
+    history.pushState(null, "", "/h/server/hermes/gamma/tools");
     render(<App />);
     await screen.findByRole("heading", { name: "Werkzeuge", level: 1 });
     // Sidebar enthält ebenfalls Terminal-Links; deshalb im Hauptbereich suchen.
     const main = screen.getByRole("main");
     expect(await within(main).findByText("Terminal")).toBeInTheDocument();
-    expect(screen.getByText("raiden · 2 von 3 aktiv")).toBeInTheDocument();
+    expect(screen.getByText("gamma · 2 von 3 aktiv")).toBeInTheDocument();
     expect(screen.getByText("nicht eingerichtet")).toBeInTheDocument();
     expect(screen.getByText("aus")).toBeInTheDocument();
   });
 
   it("is reachable from the chat's session column", async () => {
     installBackend();
-    history.pushState(null, "", "/h/hikari/hermes/raiden");
+    history.pushState(null, "", "/h/server/hermes/gamma");
     render(<App />);
-    fireEvent.click(await screen.findByRole("link", { name: "Skills von raiden" }));
+    fireEvent.click(await screen.findByRole("link", { name: "Skills von gamma" }));
     await screen.findByRole("heading", { name: "Skills", level: 1 });
   });
 });

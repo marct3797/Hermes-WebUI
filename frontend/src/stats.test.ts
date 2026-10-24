@@ -10,9 +10,9 @@ const row = (daysAgo: number, extra: Record<string, unknown> = {}) => ({
 
 describe("sessionStats", () => {
   it("reads Hermes' session rows and skips rows without a time", () => {
-    const s = sessionStats("inari", { data: [row(0, { ended_at: at(0) + 30, actual_cost_usd: 0.5, estimated_cost_usd: 0.4 }), { id: "x" }, null, "kaputt"] });
+    const s = sessionStats("delta", { data: [row(0, { ended_at: at(0) + 30, actual_cost_usd: 0.5, estimated_cost_usd: 0.4 }), { id: "x" }, null, "kaputt"] });
     expect(s).toHaveLength(1);
-    expect(s[0]).toMatchObject({ agent: "inari", durationMs: 30_000, input: 1000, output: 200, toolCalls: 2, cost: 0.5, source: "api_server" });
+    expect(s[0]).toMatchObject({ agent: "delta", durationMs: 30_000, input: 1000, output: 200, toolCalls: 2, cost: 0.5, source: "api_server" });
   });
   it("accepts plain lists and the older `sessions` shape, and survives garbage", () => {
     expect(sessionStats("a", [row(1)])).toHaveLength(1);
@@ -24,8 +24,8 @@ describe("sessionStats", () => {
 
 describe("aggregate", () => {
   const stats = [
-    ...sessionStats("inari", { data: [row(0), row(0, { input_tokens: 4000, cache_read_tokens: 6000, source: "cron", model: "kimi" }), row(3), row(40)] }),
-    ...sessionStats("raiden", { data: [row(1, { input_tokens: 500, output_tokens: 100, estimated_cost_usd: 1.25 })] }),
+    ...sessionStats("delta", { data: [row(0), row(0, { input_tokens: 4000, cache_read_tokens: 6000, source: "cron", model: "kimi" }), row(3), row(40)] }),
+    ...sessionStats("gamma", { data: [row(1, { input_tokens: 500, output_tokens: 100, estimated_cost_usd: 1.25 })] }),
   ];
 
   it("counts only the chosen number of calendar days, today included", () => {
@@ -33,14 +33,14 @@ describe("aggregate", () => {
     expect(u.totals.sessions).toBe(4); // die Session von vor 40 Tagen zählt nicht
     expect(u.days).toHaveLength(7);
     expect(u.days.at(-1)).toMatchObject({ sessions: 2, tokens: 1200 + 4200 });
-    expect(u.days[5].sessions).toBe(1); // gestern: raiden
+    expect(u.days[5].sessions).toBe(1); // gestern: gamma
     expect(u.days.reduce((n, d) => n + d.sessions, 0)).toBe(4);
   });
 
   it("sums totals, ranks agents by tokens and models by tokens, and reads the cache share", () => {
     const u = aggregate(stats, 7, NOON);
     expect(u.totals).toMatchObject({ toolCalls: 8, input: 1000 + 4000 + 1000 + 500, cacheRead: 6000, cost: 1.25 });
-    expect(u.byAgent.map((a) => a.agent)).toEqual(["inari", "raiden"]);
+    expect(u.byAgent.map((a) => a.agent)).toEqual(["delta", "gamma"]);
     expect(u.byModel[0]).toMatchObject({ model: "kimi", sessions: 1 }); // 4 200 Tokens vor 3 × muse zusammen 3 100
     expect(u.bySource).toEqual([{ source: "api_server", sessions: 3 }, { source: "cron", sessions: 1 }]);
     expect(u.cacheShare).toBeCloseTo(6000 / (6500 + 6000), 5);

@@ -84,7 +84,7 @@ def test_full_login_flow_and_cookie_flags(web, idp):
     low = cookie.lower()
     assert "httponly" in low and "secure" in low and "samesite=strict" in low and "path=/" in low and "domain" not in low
     me = web.get("/bff/me").json()
-    assert me["user"] == {"id": "42", "name": "marc"} and me["auth_mode"] == "oidc" and me["fresh"] is True
+    assert me["user"] == {"id": "42", "name": "alex"} and me["auth_mode"] == "oidc" and me["fresh"] is True
     assert web.get("/bff/hosts").status_code == 200
 
 
@@ -166,7 +166,7 @@ def test_wrong_client_secret_fails(web, idp, make_settings):
 
 
 @pytest.mark.parametrize("value,expected", [
-    ("/h/hikari/hermes/default/chat/x?y=1", "/h/hikari/hermes/default/chat/x?y=1"),
+    ("/h/server/hermes/default/chat/x?y=1", "/h/server/hermes/default/chat/x?y=1"),
     ("//evil.example", "/"), ("https://evil.example", "/"), ("/\\evil.example", "/"), ("evil", "/"), ("/a\nb", "/"),
 ])
 def test_next_parameter_is_sanitized(value, expected):
@@ -275,11 +275,11 @@ def test_session_store_unit():
 
 # --- Konfiguration -------------------------------------------------------------------------------
 def test_env_names_from_architecture_are_read(monkeypatch):
-    for k, v in {"FORGEJO_ISSUER": "https://git.thiel.digital", "FORGEJO_OIDC_CLIENT_ID": "abc",
+    for k, v in {"FORGEJO_ISSUER": "https://git.example.com", "FORGEJO_OIDC_CLIENT_ID": "abc",
                  "FORGEJO_OIDC_CLIENT_SECRET": "s3", "OIDC_ALLOWED_SUB": "1, 2"}.items():
         monkeypatch.setenv(k, v)
     s = Settings(_env_file=None)
-    assert s.oidc_issuer == "https://git.thiel.digital" and s.oidc_client_id == "abc"
+    assert s.oidc_issuer == "https://git.example.com" and s.oidc_client_id == "abc"
     assert s.oidc_client_secret.get_secret_value() == "s3" and s.allowed_subs() == {"1", "2"}
     assert "s3" not in repr(s)
 
@@ -299,3 +299,20 @@ def test_prod_requires_complete_oidc(make_settings):
     ok = create_app(make_settings(env="prod", auth_mode="oidc", oidc_issuer=ISSUER, oidc_client_id="a", oidc_client_secret="b",
                                   oidc_allowed_sub="1", public_url="https://x.test", allowed_hosts="x.test"))
     assert ok.docs_url is None and ok.openapi_url is None
+
+
+def test_knowledge_writes_require_fresh_login(web, idp, clock, oidc_app, tmp_path):
+    from app.knowledge import KnowledgeRegistry
+    f = tmp_path / "knowledge.json"
+    f.write_text('{"providers": [{"id": "rag", "type": "hermes-rag", "base_url": "http://rag.test"}]}')
+    oidc_app.state.knowledge = KnowledgeRegistry(f)
+    assert web.get("/bff/knowledge").status_code == 401 and web.get("/bff/knowledge/rag/sources").status_code == 401
+    assert web.post("/bff/knowledge/rag/search", json={"query": "x"}).status_code == 401
+    do_login(web, idp)
+    clock.t += 3600
+    assert web.get("/bff/knowledge").json()["providers"][0]["id"] == "rag"  # Lesen braucht kein Step-up
+    for path, body in (("ingest", {"title": "T", "text": "x"}), ("delete", {"sync_id": "manual:t"})):
+        r = web.post(f"/bff/knowledge/rag/{path}", json=body)
+        assert r.status_code == 401 and r.json()["detail"]["code"] == "step_up_required"
+    do_login(web, idp, step_up="true")
+    assert web.post("/bff/knowledge/rag/delete", json={"sync_id": "manual:t"}).status_code == 502  # Step-up ok, der Dienst ist im Test nicht erreichbar

@@ -1,4 +1,4 @@
-"""OIDC-Client für Forgejo: Authorization Code mit PKCE (S256), state und nonce.
+"""OIDC-Client: Authorization Code mit PKCE (S256), state und nonce.
 
 Das BFF ist der vertrauliche Client. Geprüft wird das ID-Token (Signatur über JWKS, iss, aud, exp,
 nonce); danach entscheidet die Allowlist (`OIDC_ALLOWED_SUB`) in `routes/auth.py`.

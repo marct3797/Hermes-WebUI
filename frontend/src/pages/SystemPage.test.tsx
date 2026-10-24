@@ -6,12 +6,12 @@ import { installBackend } from "../test-backend";
 
 let calls: ReturnType<typeof installBackend>["calls"];
 
-async function open(agents = ["raiden"]) {
+async function open(agents = ["gamma"]) {
   ({ calls } = installBackend(agents));
   history.pushState(null, "", "/system");
   render(<App />);
   await screen.findByRole("heading", { name: "System", level: 1 });
-  await screen.findByRole("region", { name: `Hikari ${agents[0]}` }); // erst wenn die Hosts geladen sind
+  await screen.findByRole("region", { name: `Server ${agents[0]}` }); // erst wenn die Hosts geladen sind
 }
 
 beforeEach(() => resetRedirect());
@@ -25,13 +25,13 @@ describe("System", () => {
   });
 
   it("checks every reachable agent with one click and shows the result per check", async () => {
-    await open(["raiden", "sora"]);
+    await open(["gamma", "eta"]);
     fireEvent.click(screen.getByRole("button", { name: /Alle prüfen/ }));
     await screen.findAllByText("Erreichbar und angemeldet");
     expect(calls.filter((c) => c.method === "GET" && c.url.endsWith("/diagnose")).map((c) => c.url)).toEqual([
-      "/bff/h/hikari/hermes/raiden/diagnose", "/bff/h/hikari/hermes/sora/diagnose",
+      "/bff/h/server/hermes/gamma/diagnose", "/bff/h/server/hermes/eta/diagnose",
     ]); // der Laptop ist nicht erreichbar und bleibt außen vor
-    const card = screen.getByRole("region", { name: "Hikari raiden" });
+    const card = screen.getByRole("region", { name: "Server gamma" });
     expect(within(card).getByText("Version 0.21.6")).toBeInTheDocument();
     expect(within(card).getAllByRole("img", { name: "in Ordnung" })).toHaveLength(2);
     expect(screen.getByText("2 in Ordnung · 0 Abweichungen · 0 Fehler")).toBeInTheDocument(); // je Agent ein Bericht
@@ -39,7 +39,7 @@ describe("System", () => {
 
   it("runs the live test only on request and keeps the read-only results next to it", async () => {
     await open();
-    const card = () => within(screen.getByRole("region", { name: "Hikari raiden" }));
+    const card = () => within(screen.getByRole("region", { name: "Server gamma" }));
     fireEvent.click(card().getByRole("button", { name: "Prüfen" }));
     await screen.findByText("Modelle und Anbieter");
     fireEvent.click(card().getByRole("button", { name: "Lauftest" }));
@@ -54,7 +54,7 @@ describe("System", () => {
     const f = vi.mocked(globalThis.fetch);
     const orig = f.getMockImplementation()!;
     f.mockImplementation(async (input: URL | RequestInfo, init?: RequestInit) => (String(input).endsWith("/diagnose") ? new Response(JSON.stringify({ detail: "Hermes nicht erreichbar" }), { status: 502 }) : orig(input, init)));
-    fireEvent.click(within(screen.getByRole("region", { name: "Hikari raiden" })).getByRole("button", { name: "Prüfen" }));
+    fireEvent.click(within(screen.getByRole("region", { name: "Server gamma" })).getByRole("button", { name: "Prüfen" }));
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Hermes nicht erreichbar"));
   });
 
@@ -76,7 +76,7 @@ describe("System", () => {
     expect(live).toBe(4);
     pending[0](); // einer fertig: der fünfte startet, das erste Ergebnis steht schon da
     await waitFor(() => expect(pending).toHaveLength(5));
-    await within(screen.getByRole("region", { name: "Hikari a1" })).findByText("Version 0.21.6");
+    await within(screen.getByRole("region", { name: "Server a1" })).findByText("Version 0.21.6");
     expect(screen.queryByText("1 in Ordnung · 0 Abweichungen · 0 Fehler")).toBeInTheDocument();
     pending.slice(1).forEach((r) => r());
     await waitFor(() => expect(pending).toHaveLength(6));
@@ -90,9 +90,9 @@ describe("System", () => {
     const f = vi.mocked(globalThis.fetch);
     const orig = f.getMockImplementation()!;
     f.mockImplementation(async (input: URL | RequestInfo, init?: RequestInit) => (String(input).endsWith("/diagnose")
-      ? new Response(JSON.stringify({ agent: "raiden", status: "warn", at: 1, checks: [{ id: "models", label: "Modelle und Anbieter", status: "slow", detail: "Langsam: keine Antwort nach 8 s", ms: 8001 }] }))
+      ? new Response(JSON.stringify({ agent: "gamma", status: "warn", at: 1, checks: [{ id: "models", label: "Modelle und Anbieter", status: "slow", detail: "Langsam: keine Antwort nach 8 s", ms: 8001 }] }))
       : orig(input, init)));
-    fireEvent.click(within(screen.getByRole("region", { name: "Hikari raiden" })).getByRole("button", { name: "Prüfen" }));
+    fireEvent.click(within(screen.getByRole("region", { name: "Server gamma" })).getByRole("button", { name: "Prüfen" }));
     expect(await screen.findByRole("img", { name: "langsam" })).toBeInTheDocument();
     expect(screen.getByText("0 in Ordnung · 1 Abweichungen · 0 Fehler")).toBeInTheDocument();
   });

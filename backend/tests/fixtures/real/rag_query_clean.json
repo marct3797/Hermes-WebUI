@@ -1,0 +1,27 @@
+{
+ "query": "Forgejo Runner",
+ "results": [
+  {
+   "content": "<!-- Quelle: https://forgejo.org/docs/latest/admin/actions/runner-installation/ | Stand: 2026-10-03 | Originale Herstellerdoku, unveraendert fuer RAG Referenz -",
+   "score": 0.7183063533442182,
+   "metadata": {
+    "source": "infrastruktur-doku",
+    "repo": "example-org/infrastruktur-doku",
+    "path": "referenzen/forgejo-runner.md",
+    "commit": "95c578367132c986303b12010aa5da7a39de51a0",
+    "sync_id": "infrastruktur-doku:referenzen/forgejo-runner.md"
+   }
+  },
+  {
+   "content": "A single Forgejo Runner can be connected to multiple Forgejo instances, or different users, organizations, or repositories within a single instance. Multiple Fo",
+   "score": 0.7019429927437967,
+   "metadata": {
+    "source": "infrastruktur-doku",
+    "repo": "example-org/infrastruktur-doku",
+    "path": "referenzen/forgejo-runner.md",
+    "commit": "95c578367132c986303b12010aa5da7a39de51a0",
+    "sync_id": "infrastruktur-doku:referenzen/forgejo-runner.md"
+   }
+  }
+ ]
+}

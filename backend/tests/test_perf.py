@@ -134,7 +134,7 @@ def test_pool_reuses_one_connection(make_settings, tmp_path):
     t.start()
     server = asyncio.run_coroutine_threadsafe(_keepalive_server(connections), loop).result(5)
     port = server.sockets[0].getsockname()[1]
-    cfg = {"hosts": [{"id": "hikari", "label": "H", "kind": "local", "runtimes": [
+    cfg = {"hosts": [{"id": "server", "label": "H", "kind": "local", "runtimes": [
         {"id": "hermes", "base_url": f"http://127.0.0.1:{port}", "api_key": API_KEY, "multiplex": True, "agents": ["default"]}]}]}
     f = tmp_path / "pool.json"
     f.write_text(json.dumps(cfg))
@@ -226,7 +226,7 @@ def test_stale_answer_when_dashboard_fails(cached):
 
 def test_matrix_limits_parallel_profile_queries(make_settings, tmp_path):
     names = [f"p{i}" for i in range(9)]
-    cfg = {"hosts": [{"id": "hikari", "label": "H", "kind": "local", "runtimes": [
+    cfg = {"hosts": [{"id": "server", "label": "H", "kind": "local", "runtimes": [
         {"id": "hermes", "base_url": "http://hermes.test", "api_key": API_KEY, "multiplex": True,
          "dashboard": {"base_url": "http://dashboard.test"}, "agents": names}]}]}
     f = tmp_path / "nine.json"
@@ -235,7 +235,7 @@ def test_matrix_limits_parallel_profile_queries(make_settings, tmp_path):
     app = create_app(make_settings(hosts_file=f), transport=RouterTransport({"hermes.test": httpx.ASGITransport(app=create_mock(delay=0)), "dashboard.test": dash}))
     with TestClient(app) as c:
         c.headers.update(HDR)
-        res = c.get("/bff/h/hikari/hermes/_provider-matrix")
+        res = c.get("/bff/h/server/hermes/_provider-matrix")
     assert res.status_code == 200 and res.json()["available"]
     assert 1 < dash.peak <= 8  # je Profil laufen env und oauth zusammen: höchstens 4 Profile mal 2 Abfragen
     assert dash.count("GET", "/api/env") == 9

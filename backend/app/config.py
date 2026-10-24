@@ -27,30 +27,31 @@ class Settings(BaseSettings):
     build: str = ""
     # Gedächtnis-Anbieter (Hindsight …), siehe memory.example.json. Fehlt die Datei, ist die Seite Gedächtnis leer.
     memory_file: Path | None = None
+    # Wissens-Anbieter (selbst gehostetes RAG), siehe knowledge.example.json. Fehlt die Datei, ist die Seite Wissen aus der Seitenleiste ausgeblendet.
+    knowledge_file: Path | None = None
+    # So lange gilt die Quellen- und Dokumentübersicht (ein Scan der Chroma-Datenbank), bevor sie neu gelesen wird.
+    knowledge_cache_s: int = 300
     # Gruppenchats (Räume): SQLite-Datei mit Raumliste, Nachrichten und der Session je Mitglied.
     rooms_db: Path = Path("rooms.db")
     # Verlauf der SOUL.md-Änderungen (ein Ordner je Agent). Wird nie gekürzt.
     soul_dir: Path = Path("soul-history")
-    # Host, auf den alte /p/<profil>-Links zeigen.
-    legacy_host: str = "hikari"
-
     # Gebautes Frontend. Leer = BFF liefert nur die API (Vite-Dev-Server übernimmt das UI).
     static_dir: Path | None = None
 
-    # Erlaubte Host-Header, kommagetrennt (z. B. "agents.thiel.digital").
+    # Erlaubte Host-Header, kommagetrennt (z. B. "webui.example.com").
     allowed_hosts: str = "localhost,127.0.0.1,testserver"
-    # Nur von diesen Adressen werden X-Forwarded-For-Header beachtet (Marcs Caddy auf dem Host).
+    # Nur von diesen Adressen werden X-Forwarded-For-Header beachtet (der Reverse-Proxy vor der WebUI).
     trusted_proxies: str = "127.0.0.1,::1"
-    # Öffentliche Adresse der WebUI, Grundlage der Redirect-URI (z. B. https://agents.thiel.digital).
+    # Öffentliche Adresse der WebUI, Grundlage der Redirect-URI (z. B. https://webui.example.com).
     public_url: str = ""
 
-    # Forgejo als OIDC-Anbieter. Die Namen ohne Präfix entsprechen der Architektur (Abschnitt Sicherheit).
+    # Beliebiger OIDC-Anbieter (Authorization Code + PKCE; getestet mit Forgejo). Die FORGEJO_*-Namen gelten weiter als Alias.
     oidc_issuer: str = Field("", validation_alias=_env("FORGEJO_ISSUER", "HERMES_WEBUI_OIDC_ISSUER"))
     oidc_client_id: str = Field("", validation_alias=_env("FORGEJO_OIDC_CLIENT_ID", "HERMES_WEBUI_OIDC_CLIENT_ID"))
     oidc_client_secret: SecretStr = Field(
         SecretStr(""), validation_alias=_env("FORGEJO_OIDC_CLIENT_SECRET", "HERMES_WEBUI_OIDC_CLIENT_SECRET")
     )
-    # Erlaubte Forgejo-Kennungen (`sub`), kommagetrennt. Nur diese Konten kommen hinein.
+    # Erlaubte Kennungen (`sub` des ID-Tokens), kommagetrennt. Nur diese Konten kommen hinein.
     oidc_allowed_sub: str = Field("", validation_alias=_env("OIDC_ALLOWED_SUB", "HERMES_WEBUI_OIDC_ALLOWED_SUB"))
 
     session_idle_s: int = 12 * 3600

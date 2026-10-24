@@ -9,12 +9,13 @@ import { UiProvider } from "./ui";
 import { AgentPage } from "./pages/AgentPage";
 import { CockpitPage } from "./pages/CockpitPage";
 import { NotFoundPage } from "./pages/Placeholders";
-import { navigate, parsePath, usePath } from "./router";
+import { parsePath, usePath } from "./router";
 import type { Me } from "./types";
 
 // Seltene oder schwere Seiten laden erst beim Öffnen (kleineres Startbundle); AgentPage und Cockpit bleiben im Start.
 const HostsPage = lazy(() => import("./pages/HostsPage").then(m => ({ default: m.HostsPage })));
 const InboxPage = lazy(() => import("./pages/InboxPage").then(m => ({ default: m.InboxPage })));
+const KnowledgePage = lazy(() => import("./pages/KnowledgePage").then(m => ({ default: m.KnowledgePage })));
 const MemoryPage = lazy(() => import("./pages/MemoryPage").then(m => ({ default: m.MemoryPage })));
 const ProvidersHubPage = lazy(() => import("./pages/ProvidersHubPage").then(m => ({ default: m.ProvidersHubPage })));
 const RoomPage = lazy(() => import("./pages/RoomPage").then(m => ({ default: m.RoomPage })));
@@ -31,7 +32,6 @@ export function App() {
   const [me, setMe] = useState<Me>();
   const [error, setError] = useState<ApiError | Error>();
   useEffect(() => { api.me().then(setMe).catch(setError); }, []);
-  useEffect(() => { if (page.name === "redirect") navigate(page.to, true); }, [page]);
 
   if (error) {
     const login = error instanceof ApiError && error.status === 401;
@@ -62,6 +62,7 @@ export function App() {
                 case "settings": return <SettingsPage />;
                 case "system": return <SystemPage />;
                 case "memory": return <MemoryPage />;
+                case "knowledge": return <KnowledgePage />;
                 case "providers": return <ProvidersHubPage />;
                 case "rooms": return <RoomsPage />;
                 case "room": return <RoomPage key={page.id} roomId={page.id} />;
@@ -69,7 +70,6 @@ export function App() {
                 case "operations": return <OperationsPage section={page.section} host={page.host} />;
                 case "terminal": return <TerminalPage host={page.host} />;
                 case "workspace": return <WorkspacePage host={page.host} />;
-                case "redirect": return null;
                 case "notfound": return <NotFoundPage />;
               }
             })()}

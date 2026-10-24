@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
-# Startet das Hermes-Dashboard im Container hermes-agents für die WebUI (SOUL und Profil-Einstellungen). Läuft als tenjin auf Hikari:
+# Startet das Hermes-Dashboard im Hermes-Container für die WebUI (SOUL und Profil-Einstellungen). Läuft auf dem Server der WebUI (HERMES_CONTAINER in webui.env oder Umgebung):
 #     bash deploy/dashboard.sh [Zielordner]          (Standard: ~/hermes-webui)
 # Das Dashboard lauscht nur auf 127.0.0.1:9122 (9119 gehört dem Host-Dashboard) und verlangt einen festen Token. Der Token wird
 # einmal erzeugt und als HERMES_DASHBOARD_TOKEN in webui.env abgelegt, nie ausgegeben. Eintrag "dashboard" in config/hosts.json
 # kommt hinzu, falls er fehlt (Sicherung: hosts.json.bak). Löscht nichts. Mehrfach ausführbar: läuft das Dashboard schon, passiert nichts.
-# Das Dashboard läuft als Prozess im Container und endet mit ihm: nach einem Neustart von hermes-agents das Skript erneut starten.
+# Das Dashboard läuft als Prozess im Container und endet mit ihm: nach einem Neustart des Containers das Skript erneut starten.
 home="${1:-$HOME/hermes-webui}"
 envf="$home/webui.env"
 hosts="$home/config/hosts.json"
 port="${DASHBOARD_PORT:-9122}"
-name="${HERMES_CONTAINER:-hermes-agents}"
+name="${HERMES_CONTAINER:-$(sed -n 's/^HERMES_CONTAINER=//p' "$envf" 2>/dev/null | head -n1)}"
+[ -n "$name" ] || { echo "HERMES_CONTAINER fehlt (Name des Hermes-Containers, docker ps) in webui.env oder Umgebung"; exit 1; }
 
 [ -f "$envf" ] || { echo "webui.env fehlt in $home (erst deploy.sh starten)"; exit 1; }
 

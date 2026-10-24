@@ -15,7 +15,7 @@ import httpx
 # Name der Fixture -> lesender Pfad unter der BFF-URL
 PATHS = {
     "real_jobs_list": "/bff/h/laptop/hermes/default/jobs",
-    "real_provider_matrix_hikari": "/bff/h/hikari/hermes/_provider-matrix",
+    "real_provider_matrix_server": "/bff/h/server/hermes/_provider-matrix",
     "real_providers_laptop_default": "/bff/h/laptop/hermes/default/providers",
     "real_terminals_after_exit": "/bff/h/laptop/_terminals",
     "real_hostd_info": "/bff/h/laptop/_hostd",

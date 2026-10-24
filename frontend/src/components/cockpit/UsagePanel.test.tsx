@@ -16,7 +16,7 @@ function mount(rows: Record<string, unknown[]>, opts: { rawRows?: number; loadin
   const byAgent = new Map<string, AgentUsage>();
   const all = Object.entries(rows).flatMap(([agent, list]) => {
     const stats = sessionStats(agent, { data: list });
-    byAgent.set(`hikari/hermes/${agent}`, { loaded: true, stats, rows: opts.rawRows ?? list.length });
+    byAgent.set(`server/hermes/${agent}`, { loaded: true, stats, rows: opts.rawRows ?? list.length });
     return stats;
   });
   render(<UsagePanel stats={all} byAgent={byAgent} loading={opts.loading ?? false} now={NOON} />);
@@ -24,7 +24,7 @@ function mount(rows: Record<string, unknown[]>, opts: { rawRows?: number; loadin
 
 describe("Auswertung", () => {
   it("shows tokens, tool calls and sessions of the chosen period", () => {
-    mount({ inari: [row(0), row(2), row(20)], raiden: [row(1, { model: "kimi", cache_read_tokens: 30_000 })] });
+    mount({ delta: [row(0), row(2), row(20)], gamma: [row(1, { model: "kimi", cache_read_tokens: 30_000 })] });
     const kpis = screen.getByRole("group", { name: /Kennzahlen, letzte 14 Tage/ });
     expect(within(kpis).getByText("Sessions").nextSibling).toHaveTextContent("3"); // die Session von vor 20 Tagen liegt außerhalb
     expect(within(kpis).getByText("36 k")).toBeInTheDocument(); // 3 × 12 000 Tokens
@@ -35,27 +35,27 @@ describe("Auswertung", () => {
   });
 
   it("ranks agents and models and hides cost unless Hermes reports one", () => {
-    mount({ inari: [row(0), row(0)], raiden: [row(1, { model: "kimi", input_tokens: 90_000 })] });
+    mount({ delta: [row(0), row(0)], gamma: [row(1, { model: "kimi", input_tokens: 90_000 })] });
     const byAgent = screen.getByRole("table", { name: "Nach Agent" });
-    expect(within(byAgent).getAllByRole("rowheader").map((h) => h.textContent)).toEqual(["raiden", "inari"]);
+    expect(within(byAgent).getAllByRole("rowheader").map((h) => h.textContent)).toEqual(["gamma", "delta"]);
     expect(within(screen.getByRole("table", { name: "Nach Modell" })).getAllByRole("rowheader")[0]).toHaveTextContent("kimi");
     expect(screen.queryByText("Kosten")).toBeNull();
   });
 
   it("shows cost when reported, and says so when nothing happened", () => {
-    mount({ inari: [row(0, { estimated_cost_usd: 1.5 })] });
+    mount({ delta: [row(0, { estimated_cost_usd: 1.5 })] });
     expect(screen.getByText("Kosten").nextSibling).toHaveTextContent("1,50 $");
     cleanup();
-    mount({ inari: [] });
+    mount({ delta: [] });
     expect(screen.getByText("Keine Sessions in diesem Zeitraum.")).toBeInTheDocument();
     expect(screen.getByText("Cache-Anteil").nextSibling).toHaveTextContent("–");
   });
 
   it("warns when the last 100 sessions do not reach back to the start of the period", () => {
-    mount({ inari: [row(0), row(3)] }, { rawRows: USAGE_PAGE });
+    mount({ delta: [row(0), row(3)] }, { rawRows: USAGE_PAGE });
     expect(screen.getByText(/letzten 100 Sessions/)).toBeInTheDocument();
     cleanup();
-    mount({ inari: [row(0), row(14)] }, { rawRows: USAGE_PAGE });
+    mount({ delta: [row(0), row(14)] }, { rawRows: USAGE_PAGE });
     expect(screen.queryByText(/letzten 100 Sessions/)).toBeNull(); // älteste Session liegt vor dem Zeitraum: nichts fehlt
   });
 

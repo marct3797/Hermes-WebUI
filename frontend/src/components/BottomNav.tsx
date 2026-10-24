@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useKnowledgeProviders } from "../knowledge";
 import { useRoomNeeds } from "../roomNeeds";
 import { useActivity } from "../runs";
 import type { Me } from "../types";
@@ -11,6 +12,7 @@ type Props = { me: Me; path: string; onChats: () => void; onLogout: () => void }
 export function BottomNav({ me, path, onChats, onLogout }: Props) {
   const { needs } = useActivity();
   const { needs: roomNeeds } = useRoomNeeds();
+  const wissen = useKnowledgeProviders().length > 0;
   const [more, setMore] = useState(false);
   useEffect(() => setMore(false), [path]);
   useEffect(() => {
@@ -35,6 +37,7 @@ export function BottomNav({ me, path, onChats, onLogout }: Props) {
           <Link to="/hosts"><Icon name="server" size={18} />Hosts</Link>
           <Link to="/rooms"><Icon name="orbit" size={18} />Räume{roomNeeds.length > 0 && <span className="ct" aria-label={`${roomNeeds.length} offen`}>{roomNeeds.length}</span>}</Link>
           <Link to="/memory"><Icon name="memory" size={18} />Gedächtnis</Link>
+          {wissen && <Link to="/knowledge"><Icon name="file" size={18} />Wissen</Link>}
           <Link to="/providers"><Icon name="coin" size={18} />Anbieter</Link>
           <Link to="/system"><Icon name="shield" size={18} />System</Link>
           <Link to="/settings"><Icon name="sliders" size={18} />Darstellung</Link>

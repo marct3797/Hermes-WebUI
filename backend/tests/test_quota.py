@@ -16,7 +16,7 @@ from tests.conftest import HDR, RouterTransport
 # Echte (bereinigte) Antwort des Plugins auf dem Laptop; die Rechenzeit ist deren Abrufzeit.
 REAL = json.loads((Path(__file__).parent / "fixtures" / "quota_usage_laptop.json").read_text())
 T0 = 1792797155.0  # 2026-10-23T23:12:35Z
-QUOTA = "/bff/h/hikari/hermes/default/quota"
+QUOTA = "/bff/h/server/hermes/default/quota"
 
 
 def by_id(n):
@@ -154,8 +154,8 @@ def test_route_returns_normalized_quota(build):
 def test_route_passes_profile_and_defaults_to_cached(build):
     c = build()
     c.get(QUOTA)
-    c.get("/bff/h/hikari/hermes/omoikane/quota")
-    assert c.dash.state.quota_calls == [("default", 0), ("omoikane", 0)]
+    c.get("/bff/h/server/hermes/beta/quota")
+    assert c.dash.state.quota_calls == [("default", 0), ("beta", 0)]
 
 
 def test_missing_plugin_is_reported_honestly(build):
@@ -185,9 +185,9 @@ def test_refresh_is_rate_limited_per_profile(build):
     c = build()
     for _ in range(3):
         assert c.get(QUOTA + "?refresh=1").status_code == 200
-    c.get("/bff/h/hikari/hermes/omoikane/quota?refresh=1")
+    c.get("/bff/h/server/hermes/beta/quota?refresh=1")
     # je Profil nur das erste erzwungene Neuladen; die weiteren fallen auf den Cache zurück
-    assert c.dash.state.quota_calls == [("default", 1), ("default", 0), ("default", 0), ("omoikane", 1)]
+    assert c.dash.state.quota_calls == [("default", 1), ("default", 0), ("default", 0), ("beta", 1)]
 
 
 def test_refresh_value_is_validated(build):
@@ -196,8 +196,8 @@ def test_refresh_value_is_validated(build):
 
 def test_runtime_quota_lists_all_configured_profiles(build):
     c = build()
-    body = c.get("/bff/h/hikari/hermes/_quota").json()
-    assert set(body["profiles"]) == {"default", "omoikane", "ghost", "sora"}  # "../evil" fällt beim Laden der Config weg
+    body = c.get("/bff/h/server/hermes/_quota").json()
+    assert set(body["profiles"]) == {"default", "beta", "ghost", "eta"}  # "../evil" fällt beim Laden der Config weg
     assert all(q["state"] == "ok" for q in body["profiles"].values())
     assert by_id(body["profiles"]["default"])["nous"]["state"] == "auth_failed"
 
@@ -208,14 +208,14 @@ def test_runtime_quota_timeout_is_per_profile(build, monkeypatch):
     orig = DashboardClient.quota
 
     async def quota(self, name, refresh):
-        if name == "omoikane":
+        if name == "beta":
             await asyncio.sleep(1)
         return await orig(self, name, refresh)
 
     monkeypatch.setattr(r, "QUOTA_TIMEOUT_S", 0.05)
     monkeypatch.setattr(DashboardClient, "quota", quota)
-    profiles = build().get("/bff/h/hikari/hermes/_quota").json()["profiles"]
-    assert profiles["omoikane"]["state"] == "error" and "rechtzeitig" in profiles["omoikane"]["reason"]
+    profiles = build().get("/bff/h/server/hermes/_quota").json()["profiles"]
+    assert profiles["beta"]["state"] == "error" and "rechtzeitig" in profiles["beta"]["reason"]
     assert profiles["default"]["state"] == "ok"
 
 
@@ -225,7 +225,7 @@ def test_runtime_quota_unknown_host_is_404(build):
 
 def test_summary_names_the_worst_window_and_expired_access(build):
     body = build().get("/bff/quota/summary").json()
-    assert body["runtimes"][0] == {"host": "hikari", "runtime": "hermes", "state": "ok", "reason": None}
+    assert body["runtimes"][0] == {"host": "server", "runtime": "hermes", "state": "ok", "reason": None}
     mine = [i for i in body["items"] if i["profile"] == "default"]
     codex = next(i for i in mine if i["provider"] == "openai-codex")
     assert (codex["state"], codex["remaining_percent"], codex["window"], codex["reset_in_s"] is not None) == ("exhausted", 0.0, "Session", True)

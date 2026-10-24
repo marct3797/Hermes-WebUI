@@ -17,7 +17,7 @@ describe("Abfragen der Cockpit-Seite in 60 s (gezählter Fake-Fetch)", () => {
   beforeEach(() => { resetRedirect(); vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date"] }); });
 
   async function requestsIn60s(visibility: "visible" | "hidden") {
-    const { calls } = installBackend(["raiden", "sora"]);
+    const { calls } = installBackend(["gamma", "eta"]);
     history.pushState(null, "", "/");
     render(<App />);
     await act(async () => { await vi.advanceTimersByTimeAsync(2000); }); // Start: me, hosts, ui, rooms, Sessions je Agent
@@ -123,11 +123,11 @@ describe("dataCache", () => {
 describe("Seitenwechsel", () => {
   it("does not refetch hosts, ui or the cockpit sessions when coming back within seconds", async () => {
     resetRedirect();
-    const { calls } = installBackend(["raiden", "sora"]);
+    const { calls } = installBackend(["gamma", "eta"]);
     history.pushState(null, "", "/");
     render(<App />);
     await waitFor(() => expect(calls.filter((c) => c.url.endsWith("/sessions")).length).toBeGreaterThanOrEqual(2));
-    const seen = () => calls.filter((c) => /^\/bff\/(hosts|ui)$|\/(raiden|sora)\/sessions$/.test(c.url)).length;
+    const seen = () => calls.filter((c) => /^\/bff\/(hosts|ui)$|\/(gamma|eta)\/sessions$/.test(c.url)).length;
     fireEvent.click(screen.getAllByRole("link", { name: "System" })[0]);
     await screen.findByRole("heading", { name: "System", level: 1 });
     const mid = seen();

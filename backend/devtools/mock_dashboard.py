@@ -18,7 +18,7 @@ from pydantic import BaseModel
 TOKEN = "dash-token"
 SOULS = {
     "default": "Du bist ein hilfsbereiter Assistent.\n",
-    "omoikane": "# Omoikane\n\nDu bewahrst Wissen und antwortest knapp.\n",
+    "beta": "# Beta\n\nDu bewahrst Wissen und antwortest knapp.\n",
 }
 
 
@@ -71,7 +71,7 @@ class ModelBody(BaseModel):
     model: str
 
 
-def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default", "omoikane", "sora"), drop_writes: bool = False, quota: dict[str, Any] | None = None) -> FastAPI:
+def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default", "beta", "eta"), drop_writes: bool = False, quota: dict[str, Any] | None = None) -> FastAPI:
     app = FastAPI()
     state: dict[str, dict[str, Any]] = {
         name: {"soul": SOULS.get(name), "description": "", "description_auto": False, "provider": "anthropic", "model": "claude-test",

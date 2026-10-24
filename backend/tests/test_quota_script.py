@@ -20,10 +20,10 @@ def run(*args):
 
 def test_local_dry_run_prints_link_and_enable_per_profile_and_changes_nothing(plugin, tmp_path):
     home = tmp_path / "hh"
-    r = run("local", "--source", str(plugin), "--home", str(home), "--profile", "default", "--profile", "sora")
+    r = run("local", "--source", str(plugin), "--home", str(home), "--profile", "default", "--profile", "eta")
     assert r.returncode == 0 and "Trockenlauf" in r.stdout
     assert f"ln -s {plugin} {home}/plugins/ai-usage-tracker" in r.stdout
-    assert "hermes plugins enable ai-usage-tracker" in r.stdout and "hermes -p sora plugins enable ai-usage-tracker" in r.stdout
+    assert "hermes plugins enable ai-usage-tracker" in r.stdout and "hermes -p eta plugins enable ai-usage-tracker" in r.stdout
     assert not home.exists()
 
 
@@ -63,8 +63,8 @@ def test_apply_with_copy_creates_the_plugin_dir_when_hermes_is_available(plugin,
     (bin_dir / "hermes").write_text("#!/bin/sh\necho \"hermes $*\" >> \"$LOG\"\n")
     (bin_dir / "hermes").chmod(0o755)
     home, log = tmp_path / "hh", tmp_path / "log"
-    r = subprocess.run(["bash", str(SCRIPT), "local", "--source", str(plugin), "--home", str(home), "--copy", "--profile", "sora", "--apply"],
+    r = subprocess.run(["bash", str(SCRIPT), "local", "--source", str(plugin), "--home", str(home), "--copy", "--profile", "eta", "--apply"],
                        capture_output=True, text=True, env={"PATH": f"{bin_dir}:/usr/bin:/bin", "LOG": str(log), "HOME": str(tmp_path)})
     assert r.returncode == 0, r.stderr
     assert (home / "plugins" / "ai-usage-tracker" / "plugin.yaml").is_file()
-    assert log.read_text() == "hermes -p sora plugins enable ai-usage-tracker\n"
+    assert log.read_text() == "hermes -p eta plugins enable ai-usage-tracker\n"

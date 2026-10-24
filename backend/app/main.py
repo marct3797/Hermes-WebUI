@@ -20,9 +20,10 @@ from .dashboard import CacheCfg, SoulHistory
 from .hosts import HostService
 from .oidc import OidcClient
 from .registry import AGENT_RE, Registry
+from .knowledge import KnowledgeRegistry
 from .memory import MemoryRegistry
 from .rooms import RoomService
-from .routes import agents, auth, cli_auth, dashboard as dashboard_routes, hosts, memory as memory_routes, operations as operations_routes, rooms as rooms_routes, ui as ui_routes
+from .routes import agents, auth, cli_auth, dashboard as dashboard_routes, hosts, knowledge as knowledge_routes, memory as memory_routes, operations as operations_routes, rooms as rooms_routes, ui as ui_routes
 from .redaction import RedactionMiddleware
 from .quota import RefreshGate
 from .security import RateLimiter, SecurityMiddleware
@@ -31,7 +32,7 @@ from .static import FingerprintedFiles
 
 
 # Unter dieser Adresse lief früher eine andere Anwendung mit Service Worker. Er bleibt im Browser registriert, fängt
-# Anfragen ab und scheitert an der Weiterleitung zu Forgejo. Diese Datei ersetzt ihn beim nächsten Update-Check:
+# Anfragen ab und scheitert an der Weiterleitung zur Anmeldung. Diese Datei ersetzt ihn beim nächsten Update-Check:
 # sie hat keinen fetch-Handler, leert die Caches, meldet sich ab und lädt offene Fenster neu.
 RETIRE_SERVICE_WORKER = """\
 self.addEventListener("install", () => self.skipWaiting());
@@ -50,7 +51,7 @@ def create_app(
     transport: httpx.AsyncBaseTransport | None = None,
     oidc_transport: httpx.AsyncBaseTransport | None = None,
 ) -> FastAPI:
-    """`transport` ersetzt die Verbindung zu den Runtimes, `oidc_transport` die zu Forgejo (für Tests)."""
+    """`transport` ersetzt die Verbindung zu den Runtimes, `oidc_transport` die zum OIDC-Anbieter (für Tests)."""
     settings = settings or get_settings()
     assert_auth_configured(settings)
     # OAuth-Codes dürfen nie in Betriebslogs landen; idempotent für wiederholte App-Erzeugung in Tests.
@@ -94,6 +95,7 @@ def create_app(
     app.state.registry = Registry(settings.hosts_file)
     app.state.ui = UiConfig(settings.ui_file)
     app.state.memory = MemoryRegistry(settings.memory_file)
+    app.state.knowledge = KnowledgeRegistry(settings.knowledge_file)
     app.state.limiter = RateLimiter(settings.runs_per_minute)
     app.state.quota_gate = RefreshGate()
     app.state.login_limiter = RateLimiter(settings.logins_per_minute)
@@ -116,6 +118,7 @@ def create_app(
     app.include_router(dashboard_routes.host_router)
     app.include_router(dashboard_routes.quota_router)
     app.include_router(memory_routes.router)
+    app.include_router(knowledge_routes.router)
     app.include_router(rooms_routes.router)
     app.include_router(ui_routes.router)
 
@@ -126,15 +129,6 @@ def create_app(
     @app.get("/healthz", include_in_schema=False)
     async def healthz():
         return {"ok": True}
-
-    # Alte Links /p/<profil>/… zeigen auf den Standard-Host und Hermes.
-    @app.get("/p/{profile}", include_in_schema=False)
-    @app.get("/p/{profile}/{rest:path}", include_in_schema=False)
-    async def legacy_profile_link(profile: str, rest: str = ""):
-        if not AGENT_RE.match(profile):
-            raise HTTPException(404)
-        tail = f"/{rest}" if rest else "/chat"
-        return RedirectResponse(f"/h/{settings.legacy_host}/hermes/{profile}{tail}", status_code=308)
 
     static = settings.static_dir
     if static and Path(static).is_dir():

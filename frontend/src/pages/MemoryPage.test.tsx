@@ -7,7 +7,7 @@ import { installBackend } from "../test-backend";
 let calls: ReturnType<typeof installBackend>["calls"];
 
 async function open(capabilities?: string[]) {
-  ({ calls } = installBackend(["raiden"], ["runs"], {}, capabilities));
+  ({ calls } = installBackend(["gamma"], ["runs"], {}, capabilities));
   history.pushState(null, "", "/memory");
   render(<App />);
   await screen.findByRole("heading", { name: "Gedächtnis", level: 1 });
@@ -36,7 +36,7 @@ describe("Gedächtnis", () => {
     expect(within(split).getByText(/67 %/)).toBeInTheDocument();
     expect(within(split).getByRole("img", { name: "Weltwissen 80, Erfahrungen 40" })).toBeInTheDocument();
     const ents = await screen.findByRole("region", { name: "Häufigste Entitäten" });
-    fireEvent.click(within(ents).getByRole("button", { name: /^Marc/ }));
+    fireEvent.click(within(ents).getByRole("button", { name: /^Alex/ }));
     const side = await screen.findByRole("complementary", { name: "Entität" });
     expect(await within(side).findByText(/7 Erwähnungen/)).toBeInTheDocument();
   });
@@ -44,30 +44,30 @@ describe("Gedächtnis", () => {
   it("opens a fact in full and jumps from its entity to that entity's page", async () => {
     await open();
     fireEvent.click(await tab("Fakten"));
-    fireEvent.click(await screen.findByRole("button", { name: /^Fakt öffnen: Marc betreibt einen Server/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Fakt öffnen: Alex betreibt einen Server/ }));
     const fact = await screen.findByRole("complementary", { name: "Fakt" });
-    expect(within(fact).getByText("Marc betreibt einen Server namens Hikari.")).toBeInTheDocument();
+    expect(within(fact).getByText("Alex betreibt einen Server namens Server.")).toBeInTheDocument();
     expect(within(fact).getByText(/Hindsight bietet keine Schnittstelle/)).toBeInTheDocument();
-    fireEvent.click(within(fact).getByRole("button", { name: "Hikari" }));
+    fireEvent.click(within(fact).getByRole("button", { name: "Server" }));
     expect(await screen.findByRole("tab", { name: "Entitäten", selected: true })).toBeInTheDocument();
     const entity = await screen.findByRole("complementary", { name: "Entität" });
     expect(await within(entity).findByText(/Erwähnungen/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Hikari/, pressed: true })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Server/, pressed: true })).toBeInTheDocument();
   });
 
   it("filters the entity list and leads from an entity to all of its facts", async () => {
     await open();
     fireEvent.click(await tab("Entitäten"));
-    await screen.findByRole("button", { name: /^Marc/ });
+    await screen.findByRole("button", { name: /^Alex/ });
     fireEvent.change(screen.getByLabelText("Entitäten filtern"), { target: { value: "hik" } });
-    expect(screen.queryByRole("button", { name: /^Marc/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Alex/ })).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Entitäten filtern"), { target: { value: "" } });
-    fireEvent.click(screen.getByRole("button", { name: /^Marc/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Alex/ }));
     fireEvent.click(await screen.findByRole("button", { name: "Alle Fakten dazu" }));
     expect(await screen.findByRole("tab", { name: "Fakten", selected: true })).toBeInTheDocument();
-    expect(await screen.findByText("Marc hat die WebUI gebaut.")).toBeInTheDocument();
-    expect(screen.getByText(/Gefiltert nach „Marc“/)).toBeInTheDocument();
-    expect(calls.some((c) => c.url.includes("/items") && c.url.includes("q=Marc"))).toBe(true);
+    expect(await screen.findByText("Alex hat die WebUI gebaut.")).toBeInTheDocument();
+    expect(screen.getByText(/Gefiltert nach „Alex“/)).toBeInTheDocument();
+    expect(calls.some((c) => c.url.includes("/items") && c.url.includes("q=Alex"))).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "aufheben" }));
     await waitFor(() => expect(screen.queryByText(/Gefiltert nach/)).not.toBeInTheDocument());
   });
@@ -94,14 +94,14 @@ describe("Gedächtnis", () => {
   it("pages through the facts and filters by kind", async () => {
     await open();
     fireEvent.click(await tab("Fakten"));
-    expect(await screen.findByText("Marc betreibt einen Server namens Hikari.")).toBeInTheDocument();
+    expect(await screen.findByText("Alex betreibt einen Server namens Server.")).toBeInTheDocument();
     expect(screen.getByText("3 Einträge")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Mehr laden" }));
-    expect(await screen.findByText("Hikari läuft im Tailnet.")).toBeInTheDocument();
+    expect(await screen.findByText("Server läuft im Tailnet.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Mehr laden" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "experience" }));
-    await waitFor(() => expect(screen.queryByText("Hikari läuft im Tailnet.")).not.toBeInTheDocument());
-    expect(screen.getByText("Marc hat die WebUI gebaut.")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText("Server läuft im Tailnet.")).not.toBeInTheDocument());
+    expect(screen.getByText("Alex hat die WebUI gebaut.")).toBeInTheDocument();
     expect(calls.some((c) => c.url.includes("/items") && c.url.includes("kind=experience"))).toBe(true);
   });
 
@@ -111,7 +111,7 @@ describe("Gedächtnis", () => {
     expect(calls.some((c) => c.url.includes("/search"))).toBe(false);
     fireEvent.change(screen.getByLabelText("Gedächtnis durchsuchen"), { target: { value: "tailnet" } });
     fireEvent.click(screen.getByRole("button", { name: "Suchen" }));
-    expect(await screen.findByText("Hikari läuft im Tailnet.")).toBeInTheDocument();
+    expect(await screen.findByText("Server läuft im Tailnet.")).toBeInTheDocument();
     expect(calls.filter((c) => c.url.includes("/search")).map((c) => c.url)).toEqual(["/bff/memory/hindsight/search?q=tailnet"]);
   });
 
@@ -137,9 +137,9 @@ describe("Gedächtnis", () => {
   it("opens an entity with its observations", async () => {
     await open();
     fireEvent.click(await tab("Entitäten"));
-    fireEvent.click(await screen.findByRole("button", { name: /^Marc/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Alex/ }));
     const side = await screen.findByRole("complementary", { name: "Entität" });
-    expect(await within(side).findByText("Marc hat die WebUI gebaut.")).toBeInTheDocument();
+    expect(await within(side).findByText("Alex hat die WebUI gebaut.")).toBeInTheDocument();
     expect(within(side).getByText(/7 Erwähnungen/)).toBeInTheDocument();
   });
 

@@ -1,4 +1,4 @@
-"""Simulierter OIDC-Anbieter (Forgejo-Stil) für die Login-Tests."""
+"""Simulierter OIDC-Anbieter (Forgejo-Stil, ohne auth_time) für die Login-Tests."""
 import base64
 import hashlib
 import secrets
@@ -85,7 +85,7 @@ class FakeIdp:
                 auth_default = real_now
             claims = {
                 "iss": ISSUER + "/", "aud": CLIENT_ID, "sub": self.sub, "iat": real_now, "exp": real_now + 300,
-                "nonce": entry["nonce"], "preferred_username": "marc", "auth_time": auth_default, **self.claims,
+                "nonce": entry["nonce"], "preferred_username": "alex", "auth_time": auth_default, **self.claims,
             }
             claims = {k: v for k, v in claims.items() if v is not None}
             key = self.sign_with if self.alg.startswith(("RS", "PS")) else "geheim-geheim-geheim-geheim-geheim"

@@ -7,8 +7,8 @@ import { installBackend } from "../test-backend";
 let backend: ReturnType<typeof installBackend>;
 
 async function open() {
-  backend = installBackend(["raiden"]);
-  history.pushState(null, "", "/h/hikari/hermes/raiden/providers");
+  backend = installBackend(["gamma"]);
+  history.pushState(null, "", "/h/server/hermes/gamma/providers");
   render(<App />);
   await screen.findByRole("heading", { name: "Keys & Nutzung", level: 1 });
   await screen.findByRole("region", { name: "Eingerichtete Anbieter" });
@@ -23,7 +23,7 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 describe("Anbieter", () => {
   it("shows configured providers with usage and masked keys, and hides the rest", async () => {
     await open();
-    expect(screen.getByText("raiden · 2 eingerichtet")).toBeInTheDocument();
+    expect(screen.getByText("gamma · 2 eingerichtet")).toBeInTheDocument();
     const anthropic = within(active().getByText("Anthropic").closest("li")!);
     expect(anthropic.getByText((_, el) => el?.tagName === "P" && (el.textContent ?? "").startsWith("12 Sessions · 1,5 M Token · 4,50 $ in 30 T"))).toBeInTheDocument();
     expect(anthropic.getByText("gesetzt")).toBeInTheDocument(); expect(anthropic.queryByText(/sk-a/)).toBeNull(); // nie Key-Fragmente
@@ -97,10 +97,10 @@ describe("Anbieter", () => {
   });
 
   it("is reachable from the session column and leads to the hub for providers per host", async () => {
-    backend = installBackend(["raiden"]);
-    history.pushState(null, "", "/h/hikari/hermes/raiden");
+    backend = installBackend(["gamma"]);
+    history.pushState(null, "", "/h/server/hermes/gamma");
     render(<App />);
-    fireEvent.click(await screen.findByRole("link", { name: "Keys von raiden" }));
+    fireEvent.click(await screen.findByRole("link", { name: "Keys von gamma" }));
     await screen.findByRole("heading", { name: "Keys & Nutzung", level: 1 });
   });
 });

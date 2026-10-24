@@ -161,7 +161,7 @@ export function ApprovalCard({ a, disabled, onDecide }: { a: Approval; disabled:
       {a.smartDenied && <span className="hint">Die automatische Prüfung hat diesen Befehl zunächst abgelehnt.</span>}
       <span className="hint">
         Die Anfrage erlischt nach {Math.round(a.timeoutS / 60)} Minuten.
-        {a.choices.includes("always") && " „Immer“ verlangt eine Forgejo-Bestätigung."}
+        {a.choices.includes("always") && " „Immer“ verlangt eine frische Anmeldung."}
       </span>
     </div>
   );

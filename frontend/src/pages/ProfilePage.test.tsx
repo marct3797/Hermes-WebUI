@@ -7,9 +7,9 @@ import type { UiConfig } from "../types";
 
 let calls: ReturnType<typeof installBackend>["calls"];
 
-async function open(ui: Partial<UiConfig> = { writable: true, write_error: null }, heading = "raiden") {
-  ({ calls } = installBackend(["raiden"], undefined, ui));
-  history.pushState(null, "", "/h/hikari/hermes/raiden/profil");
+async function open(ui: Partial<UiConfig> = { writable: true, write_error: null }, heading = "gamma") {
+  ({ calls } = installBackend(["gamma"], undefined, ui));
+  history.pushState(null, "", "/h/server/hermes/gamma/profil");
   render(<App />);
   await screen.findByRole("heading", { name: heading, level: 1 });
 }
@@ -29,17 +29,17 @@ describe("Profil bearbeiten", () => {
     symbols();
     fireEvent.click(screen.getByRole("button", { name: "terminal" }));
     fireEvent.click(screen.getByRole("button", { name: "Farbton 98°" }));
-    fireEvent.change(screen.getByLabelText("Anzeigename"), { target: { value: "Raiden" } });
-    expect(snippet()).toContain('"label": "Raiden"');
+    fireEvent.change(screen.getByLabelText("Anzeigename"), { target: { value: "Gamma" } });
+    expect(snippet()).toContain('"label": "Gamma"');
     expect(snippet()).toContain('"glyph": "neutral/terminal"');
     fireEvent.click(save());
     await screen.findByText("Gespeichert");
     expect(saves()).toHaveLength(1);
-    expect(saves()[0].url).toBe("/bff/ui/profiles/hikari/hermes/raiden");
-    expect(saves()[0].body).toEqual({ label: "Raiden", sigil: { type: "glyph", glyph: "neutral/terminal", hue: 98 } });
+    expect(saves()[0].url).toBe("/bff/ui/profiles/server/hermes/gamma");
+    expect(saves()[0].body).toEqual({ label: "Gamma", sigil: { type: "glyph", glyph: "neutral/terminal", hue: 98 } });
     // Der neue Name gilt in der ganzen WebUI, ohne Neuladen.
-    expect(screen.getByRole("heading", { name: "Raiden", level: 1 })).toBeInTheDocument();
-    expect(within(screen.getByRole("complementary", { name: "Navigation" })).getByRole("link", { name: /^Raiden/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Gamma", level: 1 })).toBeInTheDocument();
+    expect(within(screen.getByRole("complementary", { name: "Navigation" })).getByRole("link", { name: /^Gamma/ })).toBeInTheDocument();
     expect(save()).toBeDisabled();
   });
 
@@ -66,7 +66,7 @@ describe("Profil bearbeiten", () => {
 
   it("leaves out a name that equals the profile folder", async () => {
     await open();
-    fireEvent.change(screen.getByLabelText("Anzeigename"), { target: { value: " raiden " } });
+    fireEvent.change(screen.getByLabelText("Anzeigename"), { target: { value: " gamma " } });
     symbols();
     fireEvent.click(screen.getByRole("button", { name: "bolt" }));
     fireEvent.click(save());
@@ -86,7 +86,7 @@ describe("Profil bearbeiten", () => {
     vi.stubGlobal("navigator", { clipboard: { writeText: write } });
     fireEvent.click(screen.getByRole("button", { name: /Kopieren/ }));
     await waitFor(() => expect(write).toHaveBeenCalled());
-    expect(write.mock.calls[0][0]).toContain('"hikari/hermes/raiden"');
+    expect(write.mock.calls[0][0]).toContain('"server/hermes/gamma"');
     expect(saves()).toHaveLength(0);
   });
 
@@ -101,14 +101,14 @@ describe("Profil bearbeiten", () => {
   });
 
   it("offers packs from the config and saves a symbol of that pack", async () => {
-    await open({ writable: true, write_error: null, packs: { japan: ["kaze", "raiden"] } });
+    await open({ writable: true, write_error: null, packs: { japan: ["epsilon", "gamma"] } });
     expect(screen.getByRole("button", { name: /^Neutral STANDARD/ })).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: /^Japan/ }));
-    expect(screen.getAllByRole("button", { name: /^(kaze|raiden)$/ })).toHaveLength(2);
-    fireEvent.click(screen.getByRole("button", { name: "raiden" }));
+    expect(screen.getAllByRole("button", { name: /^(epsilon|gamma)$/ })).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: "gamma" }));
     fireEvent.click(save());
     await screen.findByText("Gespeichert");
-    expect(saves()[0].body).toMatchObject({ sigil: { type: "glyph", glyph: "japan/raiden" } });
+    expect(saves()[0].body).toMatchObject({ sigil: { type: "glyph", glyph: "japan/gamma" } });
   });
 
   it("hides the pack choice when there is only the neutral pack", async () => {
@@ -152,30 +152,30 @@ describe("Profil bearbeiten", () => {
   it("resets a saved profile to the default", async () => {
     await open({
       writable: true, write_error: null,
-      sigils: { "hikari/hermes/raiden": { type: "glyph", glyph: "neutral/bolt", hue: 98 } }, labels: { "hikari/hermes/raiden": "Blitz" },
+      sigils: { "server/hermes/gamma": { type: "glyph", glyph: "neutral/bolt", hue: 98 } }, labels: { "server/hermes/gamma": "Blitz" },
     }, "Blitz");
     fireEvent.click(screen.getByRole("button", { name: "Auf Standard zurücksetzen" }));
     await screen.findByText("Auf Standard zurückgesetzt");
     expect(saves()[0].body).toEqual({ label: null, sigil: null });
-    expect(screen.getByRole("heading", { name: "raiden", level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "gamma", level: 1 })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Auf Standard zurücksetzen" })).toBeNull();
   });
 
   it("says when the sigil comes from the general entry of the profile name", async () => {
-    await open({ writable: true, write_error: null, sigils: { raiden: { type: "glyph", glyph: "neutral/bolt", hue: 98 } } });
-    expect(screen.getByText(/Aktuell gilt der allgemeine Eintrag „raiden“/)).toBeInTheDocument();
+    await open({ writable: true, write_error: null, sigils: { gamma: { type: "glyph", glyph: "neutral/bolt", hue: 98 } } });
+    expect(screen.getByText(/Aktuell gilt der allgemeine Eintrag „gamma“/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "bolt" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.queryByRole("button", { name: "Auf Standard zurücksetzen" })).toBeNull();
   });
 
   it("is reachable from the session column and goes back to the chat", async () => {
-    installBackend(["raiden"]);
-    history.pushState(null, "", "/h/hikari/hermes/raiden/chat");
+    installBackend(["gamma"]);
+    history.pushState(null, "", "/h/server/hermes/gamma/chat");
     render(<App />);
-    fireEvent.click(await screen.findByRole("link", { name: "Profil von raiden bearbeiten" }));
-    await screen.findByRole("heading", { name: "raiden", level: 1 });
-    expect(location.pathname).toBe("/h/hikari/hermes/raiden/profil");
-    fireEvent.click(screen.getByRole("link", { name: "Zurück zu raiden" }));
-    await screen.findByPlaceholderText("Nachricht an raiden…");
+    fireEvent.click(await screen.findByRole("link", { name: "Profil von gamma bearbeiten" }));
+    await screen.findByRole("heading", { name: "gamma", level: 1 });
+    expect(location.pathname).toBe("/h/server/hermes/gamma/profil");
+    fireEvent.click(screen.getByRole("link", { name: "Zurück zu gamma" }));
+    await screen.findByPlaceholderText("Nachricht an gamma…");
   });
 });

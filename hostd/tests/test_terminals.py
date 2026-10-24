@@ -54,7 +54,7 @@ def test_config_and_launch_boundaries(tmp_path, monkeypatch):
     for host in ['0.0.0.0', '::', '8.8.8.8', '224.0.0.1', 'localhost']:
         with pytest.raises(ValueError):
             Settings.from_dict({'listen_host': host})
-    for host in ['127.0.0.1', '::1', '10.1.2.3', '100.100.1.2', 'fd00::1']:
+    for host in ['127.0.0.1', '::1', '10.1.2.3', '100.64.1.2', 'fd00::1']:
         assert Settings.from_dict({'listen_host': host}).listen_host == host
     for value in [{'allow_shell': True}, {'allowed_origins': ['*']}, {'max_terminals': 0},
                   {'clis': [{'id': 'x', 'label': 'X', 'command': 'sh -c id'}]}]:

@@ -79,7 +79,7 @@ def build_overview(env: Any, oauth: Any, analytics: Any, days: int) -> dict[str,
     return {"providers": out, "period_days": days}
 
 
-# --- Zugänge auf dem Host: die Coding-Anbieter, die Marc je Maschine führt ------------------------------------
+# --- Zugänge auf dem Host: die Coding-Anbieter, die je Maschine geführt werden ------------------------------------
 # Jeder Eintrag nennt, unter welchen Anbieter-Kennungen das Dashboard ihn führt. `login`: wie man sich anmeldet.
 ACCOUNTS: tuple[dict[str, Any], ...] = (
     {"id": "codex", "label": "OpenAI Codex", "cli": "codex", "slugs": ("openai-codex",), "login": "device", "provider": "openai-codex",

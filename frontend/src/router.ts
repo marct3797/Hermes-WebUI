@@ -1,9 +1,6 @@
 import { useSyncExternalStore } from "react";
 import type { AgentRef } from "./types";
 
-/** Host, auf den alte /p/<profil>-Links zeigen (entspricht HERMES_WEBUI_LEGACY_HOST im BFF). */
-export const LEGACY_HOST = "hikari";
-
 export type Page =
   | { name: "cockpit" }
   | { name: "inbox" }
@@ -14,17 +11,17 @@ export type Page =
   | { name: "settings" }
   | { name: "system" }
   | { name: "memory" }
+  | { name: "knowledge" }
   | { name: "providers" }
   | { name: "rooms" }
   | { name: "room"; id: string }
   | { name: "agent"; ref: AgentRef; module: string; sessionId?: string }
-  | { name: "redirect"; to: string }
   | { name: "notfound" };
 
 const dec = (s: string) => decodeURIComponent(s);
 const enc = encodeURIComponent;
 
-/** URL-Schema: / · /inbox · /hosts · /rooms[/<id>] · /memory · /providers · /system · /settings · /h/<host>/<runtime>/<agent>[/<modul>[/<id>]] (Modul `profil` bearbeitet das Profil) */
+/** URL-Schema: / · /inbox · /hosts · /rooms[/<id>] · /memory · /knowledge · /providers · /system · /settings · /h/<host>/<runtime>/<agent>[/<modul>[/<id>]] (Modul `profil` bearbeitet das Profil) */
 export function parsePath(pathname: string): Page {
   const parts = pathname.split("/").filter(Boolean);
   try {
@@ -41,17 +38,13 @@ export function parsePath(pathname: string): Page {
     if (head === "settings" && rest.length === 0) return { name: "settings" };
     if (head === "system" && rest.length === 0) return { name: "system" };
     if (head === "memory" && rest.length === 0) return { name: "memory" };
+    if (head === "knowledge" && rest.length === 0) return { name: "knowledge" };
     if (head === "providers" && rest.length === 0) return { name: "providers" };
     if (head === "rooms" && rest.length === 0) return { name: "rooms" };
     if (head === "rooms" && rest.length === 1) return { name: "room", id: dec(rest[0]) };
     if (head === "h" && rest.length >= 3) {
       const [host, runtime, agent, module = "chat", sessionId] = rest.map(dec);
       return { name: "agent", ref: { host, runtime, agent }, module, sessionId };
-    }
-    if (head === "p" && rest.length >= 1) {
-      // Alte Links /p/<profil>/chat/<id> gehören Hermes auf dem Standard-Host.
-      const [profile, ...tail] = rest;
-      return { name: "redirect", to: `/h/${LEGACY_HOST}/hermes/${profile}/${tail.length ? tail.join("/") : "chat"}` };
     }
   } catch {
     // ungültige Prozent-Kodierung

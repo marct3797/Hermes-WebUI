@@ -3,8 +3,8 @@ import { activityByAgent, liveRuns, needs } from "./attention";
 import { convKey, createRunStore } from "./runStore";
 import type { AgentRef, StreamEvent } from "./types";
 
-const A: AgentRef = { host: "hikari", runtime: "hermes", agent: "raiden" };
-const B: AgentRef = { host: "hikari", runtime: "hermes", agent: "sora" };
+const A: AgentRef = { host: "server", runtime: "hermes", agent: "gamma" };
+const B: AgentRef = { host: "server", runtime: "hermes", agent: "eta" };
 
 class FakeES {
   static all: FakeES[] = [];
@@ -126,10 +126,10 @@ describe("run store", () => {
     expect(needs(snap)).toHaveLength(1);
     expect(needs(snap)[0]).toMatchObject({ kind: "approval", topic: "räum auf", agent: A });
     expect(liveRuns(snap)[0]).toMatchObject({ waiting: "approval", activity: "wartet auf Freigabe" });
-    expect(activityByAgent(snap).get("hikari/hermes/raiden")).toMatchObject({ running: 1, waiting: 1 });
+    expect(activityByAgent(snap).get("server/hermes/gamma")).toMatchObject({ running: 1, waiting: 1 });
 
     const id = needs(snap)[0].id.split(":").slice(1).join(":");
-    await store.decide("hikari/hermes/raiden#s1", id, "once");
+    await store.decide("server/hermes/gamma#s1", id, "once");
     expect(api.approve).toHaveBeenCalledWith(A, "run_1", "once");
     expect(needs(store.getSnapshot())).toHaveLength(0);
     expect(store.getSnapshot().log[0].text).toBe("rm -r build · einmal erlaubt");
@@ -176,7 +176,7 @@ describe("run store", () => {
   it("sends the next queued message after a clean end, with the chosen model", async () => {
     const { store, api } = setup();
     await store.send(A, undefined, "erste", [], { model: "mock-small" });
-    store.enqueue("hikari/hermes/raiden#s1", "zweite", []);
+    store.enqueue("server/hermes/gamma#s1", "zweite", []);
     last().emit({ type: "run.completed" });
     await vi.waitFor(() => expect(api.startRun).toHaveBeenCalledTimes(2));
     expect(api.startRun.mock.calls[1][1]).toMatchObject({ text: "zweite", session_id: "s1", model: "mock-small" });
@@ -186,7 +186,7 @@ describe("run store", () => {
   it("does not send queued messages after a failure, and lists the failure in the inbox", async () => {
     const { store, api } = setup();
     await store.send(A, undefined, "erste", []);
-    store.enqueue("hikari/hermes/raiden#s1", "zweite", []);
+    store.enqueue("server/hermes/gamma#s1", "zweite", []);
     last().emit({ type: "run.failed", error: "Key abgelaufen" });
     expect(api.startRun).toHaveBeenCalledTimes(1);
     const [n] = needs(store.getSnapshot());

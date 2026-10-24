@@ -19,7 +19,7 @@ def test_step_up_requires_recent_numeric_auth_time(web, idp, value):
 
 
 def test_step_up_allows_fresh_roundtrip_when_idp_omits_auth_time(web, idp, clock):
-    # Forgejo wirbt claims_supported ohne auth_time an (live verifiziert); dann belegt der frische
+    # Manche Anbieter werben claims_supported ohne auth_time an; dann belegt der frische
     # Step-up-Roundtrip die erneute Anmeldung, statt privilegierte Aktionen dauerhaft zu sperren.
     idp.discovery_overrides = {"claims_supported": ["aud", "exp", "iat", "iss", "sub", "name", "preferred_username"]}
     idp.claims = {"auth_time": None}
@@ -39,7 +39,7 @@ def test_normal_sso_never_manufactures_freshness(web, idp, value):
     idp.claims = {"auth_time": value}
     assert do_login(web, idp).status_code == 303
     assert web.get("/bff/me").json()["fresh"] is False
-    assert web.put("/bff/h/hikari/hermes/default/providers/key", json={"var": "OPENROUTER_API_KEY", "value": "synthetic"}).status_code == 401
+    assert web.put("/bff/h/server/hermes/default/providers/key", json={"var": "OPENROUTER_API_KEY", "value": "synthetic"}).status_code == 401
 
 
 def test_step_up_binds_request_time_and_preserves_old_session_on_failure(web, idp, clock):

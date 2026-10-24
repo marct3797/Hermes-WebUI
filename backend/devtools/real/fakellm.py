@@ -19,13 +19,13 @@ def last_user(messages):
 def reply_for(text: str) -> str:
     me = (re.search(r"Du bist „([^“]+)“", text) or [None, "?"])[1]
     fresh = text.split("Neu im Raum seit deinem letzten Beitrag:")[-1]
-    from_other = re.search(r"^(Sora|Omoikane): ", fresh, re.M)
-    if me == "Sora":
+    from_other = re.search(r"^(Eta|Beta): ", fresh, re.M)
+    if me == "Eta":
         if from_other:
-            return "Danke dir, Omoikane. Dann fasse ich es zusammen."
-        return "Ich habe es gelesen. @Omoikane, kannst du das bitte prüfen? Ich fasse es dann für @user zusammen."
-    if me == "Omoikane":
-        return "@Sora habe es geprüft: Das stimmt so." if from_other else "[PASS]"
+            return "Danke dir, Beta. Dann fasse ich es zusammen."
+        return "Ich habe es gelesen. @Beta, kannst du das bitte prüfen? Ich fasse es dann für @user zusammen."
+    if me == "Beta":
+        return "@Eta habe es geprüft: Das stimmt so." if from_other else "[PASS]"
     return "[PASS]"
 
 @app.post("/v1/chat/completions")

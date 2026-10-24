@@ -60,7 +60,7 @@ describe("terminal", () => {
     history.pushState(null, "", "/");
   });
   it("shows an explicit unconfigured state", async () => {
-    setup(false); render(<TerminalPage host="hikari" />);
+    setup(false); render(<TerminalPage host="server" />);
     expect(await screen.findByText("Nicht eingerichtet")).toBeInTheDocument();
     expect(Socket.all).toHaveLength(0);
   });

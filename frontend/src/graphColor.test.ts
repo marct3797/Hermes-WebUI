@@ -36,8 +36,8 @@ describe("colorNodes mit den echten Daten", () => {
     expect(ctx.legend[0].count).toBeGreaterThanOrEqual(ctx.legend[1].count);
     expect(ctx.legend.map((l) => l.label)).toContain("Beispielkontext A");
     expect(ctx.legend.reduce((s, l) => s + l.count, 0)).toBe(nodes.length);
-    const ent = colorNodes("entity", [at("a", { entities: ["Marc", "Hikari"] }), at("b", { entities: ["Hikari"] }), at("c", { entities: ["Hikari"] }), at("d", { entities: [] })]);
-    expect(ent.legend[0]).toMatchObject({ label: "Hikari", count: 3 });
+    const ent = colorNodes("entity", [at("a", { entities: ["Alex", "Server"] }), at("b", { entities: ["Server"] }), at("c", { entities: ["Server"] }), at("d", { entities: [] })]);
+    expect(ent.legend[0]).toMatchObject({ label: "Server", count: 3 });
     expect(ent.colors[0]).toBe(ent.colors[1]);
     expect(ent.colors[3]).toBe("#6b7280");
   });

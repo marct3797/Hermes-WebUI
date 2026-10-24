@@ -11,7 +11,7 @@ from app.registry import AgentCfg, RuntimeCfg, parse_config
 
 
 def cfg(multiplex=True, key="k"):
-    return RuntimeCfg("hermes", "http://h.test:9121", key, multiplex, (AgentCfg("raiden", "raiden"),))
+    return RuntimeCfg("hermes", "http://h.test:9121", key, multiplex, (AgentCfg("gamma", "gamma"),))
 
 
 def adapter(handler, **kw):
@@ -176,10 +176,10 @@ async def test_requests_use_profile_prefix_and_key():
         return httpx.Response(202, json={"run_id": "run_7", "session_id": "s1"})
 
     a = adapter(handler)
-    info = await a.start_run("raiden", RunInput("hi", session_id="s0", model="m", images=("data:image/png;base64,AA==",)))
+    info = await a.start_run("gamma", RunInput("hi", session_id="s0", model="m", images=("data:image/png;base64,AA==",)))
     assert info.run_id == "run_7" and info.session_id == "s1"
     req = seen[0]
-    assert str(req.url) == "http://h.test:9121/p/raiden/v1/runs" and req.headers["authorization"] == "Bearer k"
+    assert str(req.url) == "http://h.test:9121/p/gamma/v1/runs" and req.headers["authorization"] == "Bearer k"
     body = json.loads(req.content)
     assert body["session_id"] == "s0" and body["model"] == "m"
     assert body["input"][0]["content"][1] == {"type": "image_url", "image_url": {"url": "data:image/png;base64,AA=="}}
@@ -193,8 +193,8 @@ async def test_idempotency_key_is_sent_as_header():
         return httpx.Response(202, json={"run_id": "run_7", "session_id": "s1"})
 
     a = adapter(handler)
-    await a.start_run("raiden", RunInput("hi", idempotency_key="abc-1"))
-    await a.start_run("raiden", RunInput("hi"))
+    await a.start_run("gamma", RunInput("hi", idempotency_key="abc-1"))
+    await a.start_run("gamma", RunInput("hi"))
     assert seen[0].headers["idempotency-key"] == "abc-1" and "idempotency-key" not in seen[1].headers
 
 
@@ -208,17 +208,17 @@ async def test_fork_and_paged_messages_use_session_routes():
         return httpx.Response(200, json={"data": [], "pagination": {}})
 
     a = adapter(handler)
-    assert await a.fork_session("raiden", "run_old") == {"session_id": "run_new"}
-    await a.session_messages("raiden", "run_old", limit=50, offset=100)
-    await a.session_messages("raiden", "run_old")
-    assert (seen[0].method, seen[0].url.path) == ("POST", "/p/raiden/api/sessions/run_old/fork")
+    assert await a.fork_session("gamma", "run_old") == {"session_id": "run_new"}
+    await a.session_messages("gamma", "run_old", limit=50, offset=100)
+    await a.session_messages("gamma", "run_old")
+    assert (seen[0].method, seen[0].url.path) == ("POST", "/p/gamma/api/sessions/run_old/fork")
     assert dict(seen[1].url.params) == {"limit": "50", "offset": "100"} and not seen[2].url.params
 
 
 async def test_fork_without_new_id_is_an_error():
     a = adapter(lambda req: httpx.Response(200, json={"ok": True}))
     with pytest.raises(UpstreamError) as e:
-        await a.fork_session("raiden", "run_old")
+        await a.fork_session("gamma", "run_old")
     assert e.value.status == 502
 
 
@@ -230,26 +230,26 @@ async def test_agent_key_overrides_runtime_key():
         return httpx.Response(202, json={"run_id": "r"})
 
     c = RuntimeCfg("hermes", "http://h.test:9121", "runtime-key", True,
-                   (AgentCfg("raiden", "raiden", api_key="raiden-key"), AgentCfg("sora", "sora")))
+                   (AgentCfg("gamma", "gamma", api_key="gamma-key"), AgentCfg("eta", "eta")))
     a = HermesAdapter(c, httpx.AsyncClient(transport=httpx.MockTransport(handler)))
-    await a.start_run("raiden", RunInput("hi"))
-    await a.start_run("sora", RunInput("hi"))
+    await a.start_run("gamma", RunInput("hi"))
+    await a.start_run("eta", RunInput("hi"))
     # Je Start folgt ein GET auf den Lauf-Status (Session-ID); alle Aufrufe tragen den Key ihres Agents.
     keys = [(r.method, r.url.path.split("/")[2], r.headers["authorization"]) for r in seen]
-    assert keys == [("POST", "raiden", "Bearer raiden-key"), ("GET", "raiden", "Bearer raiden-key"),
-                    ("POST", "sora", "Bearer runtime-key"), ("GET", "sora", "Bearer runtime-key")]
+    assert keys == [("POST", "gamma", "Bearer gamma-key"), ("GET", "gamma", "Bearer gamma-key"),
+                    ("POST", "eta", "Bearer runtime-key"), ("GET", "eta", "Bearer runtime-key")]
 
 
 def test_parse_config_reads_agent_key_from_env_and_hides_it():
-    raw = {"hosts": [{"id": "hikari", "runtimes": [{
+    raw = {"hosts": [{"id": "server", "runtimes": [{
         "id": "hermes", "base_url": "http://127.0.0.1:9121", "api_key_env": "K_RT", "multiplex": True,
-        "agents": ["default", {"id": "inari", "api_key_env": "K_INARI"}, {"id": "sora", "api_key_env": "FEHLT"}],
+        "agents": ["default", {"id": "delta", "api_key_env": "K_DELTA"}, {"id": "eta", "api_key_env": "FEHLT"}],
     }]}]}
-    rt = parse_config(raw, {"K_RT": "rt-secret", "K_INARI": "inari-secret"})["hikari"].runtimes[0]
+    rt = parse_config(raw, {"K_RT": "rt-secret", "K_DELTA": "delta-secret"})["server"].runtimes[0]
     keys = {a.id: a.api_key for a in rt.agents}
     assert rt.api_key == "rt-secret"
-    assert keys == {"default": "", "inari": "inari-secret", "sora": ""}  # fehlende Variable: Key der Runtime gilt
-    assert "inari-secret" not in repr(rt) and "inari-secret" not in repr(rt.agents)
+    assert keys == {"default": "", "delta": "delta-secret", "eta": ""}  # fehlende Variable: Key der Runtime gilt
+    assert "delta-secret" not in repr(rt) and "delta-secret" not in repr(rt.agents)
 
 
 async def test_start_run_reads_session_id_from_run_status():
@@ -262,9 +262,9 @@ async def test_start_run_reads_session_id_from_run_status():
             return httpx.Response(202, json={"run_id": "run_7", "status": "started", "replayed": False})
         return httpx.Response(200, json={"run_id": "run_7", "status": "running", "session_id": "0f0e0d0c-aaaa-bbbb-cccc-1234567890ab"})
 
-    info = await adapter(handler).start_run("raiden", RunInput("hi"))
+    info = await adapter(handler).start_run("gamma", RunInput("hi"))
     assert info.session_id == "0f0e0d0c-aaaa-bbbb-cccc-1234567890ab"
-    assert seen == [("POST", "/p/raiden/v1/runs"), ("GET", "/p/raiden/v1/runs/run_7")]
+    assert seen == [("POST", "/p/gamma/v1/runs"), ("GET", "/p/gamma/v1/runs/run_7")]
 
 
 async def test_start_run_keeps_given_session_and_survives_status_failure():
@@ -277,9 +277,9 @@ async def test_start_run_keeps_given_session_and_survives_status_failure():
         return httpx.Response(404, json={"error": "run_not_found"})
 
     a = adapter(handler)
-    assert (await a.start_run("raiden", RunInput("hi", session_id="s0"))).session_id == "s0"
+    assert (await a.start_run("gamma", RunInput("hi", session_id="s0"))).session_id == "s0"
     assert calls == ["POST"]  # bekannte Session: kein zusätzlicher Aufruf
-    assert (await a.start_run("raiden", RunInput("hi"))).session_id is None  # Status nicht lesbar: kein Abbruch
+    assert (await a.start_run("gamma", RunInput("hi"))).session_id is None  # Status nicht lesbar: kein Abbruch
 
 
 async def test_no_prefix_without_multiplex_and_plain_text_input():
@@ -301,22 +301,22 @@ async def test_actions_use_hermes_field_names():
         return httpx.Response(200, json={"ok": True})
 
     a = adapter(handler)
-    await a.approve("raiden", "r1", "session")
-    await a.steer("raiden", "r1", "anders")
-    await a.stop("raiden", "r1")
-    await a.clarify("raiden", "r1", "build", "c1")
+    await a.approve("gamma", "r1", "session")
+    await a.steer("gamma", "r1", "anders")
+    await a.stop("gamma", "r1")
+    await a.clarify("gamma", "r1", "build", "c1")
     posts = [s for s in seen if s[0] == "POST"]  # vor Freigabe und Rückfrage liest der Adapter den Lauf-Status
     assert posts == [
-        ("POST", "/p/raiden/v1/runs/r1/approval", {"choice": "session"}),
-        ("POST", "/p/raiden/v1/runs/r1/steer", {"input": "anders"}),
-        ("POST", "/p/raiden/v1/runs/r1/stop", {}),
-        ("POST", "/p/raiden/v1/runs/r1/clarify", {"answer": "build", "request_id": "c1"}),  # Doku: request_id
+        ("POST", "/p/gamma/v1/runs/r1/approval", {"choice": "session"}),
+        ("POST", "/p/gamma/v1/runs/r1/steer", {"input": "anders"}),
+        ("POST", "/p/gamma/v1/runs/r1/stop", {}),
+        ("POST", "/p/gamma/v1/runs/r1/clarify", {"answer": "build", "request_id": "c1"}),  # Doku: request_id
     ]
 
 
 async def test_start_run_without_run_id_is_an_error():
     with pytest.raises(UpstreamError) as e:
-        await adapter(lambda req: httpx.Response(202, json={})).start_run("raiden", RunInput("hi"))
+        await adapter(lambda req: httpx.Response(202, json={})).start_run("gamma", RunInput("hi"))
     assert e.value.status == 502
 
 
@@ -328,7 +328,7 @@ async def test_events_stream_translates_frames():
         ": stream closed",
     ]) + "\n\n"
     a = adapter(lambda req: httpx.Response(200, content=body.encode(), headers={"content-type": "text/event-stream"}))
-    evs = [e async for e in a.events("raiden", "r")]
+    evs = [e async for e in a.events("gamma", "r")]
     assert [e["type"] for e in evs] == ["run.started", "message.delta", "run.completed"]
     assert evs[-1]["usage"] == {"total_tokens": 3}
 
@@ -336,7 +336,7 @@ async def test_events_stream_translates_frames():
 async def test_events_errors_before_first_event():
     a = adapter(lambda req: httpx.Response(404, json={"error": {"message": "run_not_found"}}))
     with pytest.raises(UpstreamError) as e:
-        async for _ in a.events("raiden", "r"):
+        async for _ in a.events("gamma", "r"):
             pass
     assert e.value.status == 404 and "run_not_found" in e.value.detail
 
@@ -351,13 +351,13 @@ def probe_handler(health=200, caps=200):
 
 
 async def test_probe_states():
-    ok = await adapter(probe_handler()).probe("raiden")
+    ok = await adapter(probe_handler()).probe("gamma")
     assert ok.state == "online" and ok.version == "0.20.4" and "steer" in ok.features
-    assert (await adapter(probe_handler(caps=401)).probe("raiden")).state == "auth_error"
-    assert (await adapter(probe_handler(caps=404)).probe("raiden")).state == "gone"
+    assert (await adapter(probe_handler(caps=401)).probe("gamma")).state == "auth_error"
+    assert (await adapter(probe_handler(caps=404)).probe("gamma")).state == "gone"
     assert (await adapter(probe_handler(caps=404), multiplex=False).probe("default")).state == "unsupported"
-    assert (await adapter(probe_handler(health=503)).probe("raiden")).state == "unreachable"
-    assert (await adapter(probe_handler(caps=500)).probe("raiden")).state == "unreachable"
+    assert (await adapter(probe_handler(health=503)).probe("gamma")).state == "unreachable"
+    assert (await adapter(probe_handler(caps=500)).probe("gamma")).state == "unreachable"
 
 
 async def test_health_ignores_html_pages():
@@ -371,7 +371,7 @@ async def test_connection_errors_become_unreachable():
         raise httpx.ConnectError("nein", request=req)
     assert (await adapter(handler).health()).state == "unreachable"
     with pytest.raises(UpstreamError) as e:
-        await adapter(handler).models("raiden")
+        await adapter(handler).models("gamma")
     assert e.value.status == 502
 
 
@@ -399,7 +399,7 @@ async def test_approval_sends_ids_from_the_run_status_when_present():
         return httpx.Response(200, json={"ok": True})
 
     a = adapter(handler)
-    await a.approve("raiden", "run_1", "once")
+    await a.approve("gamma", "run_1", "once")
     assert json.loads(seen[-1].content) == {"choice": "once", "request_id": "r1", "execution_generation": 2}
 
 
@@ -410,7 +410,7 @@ async def test_approval_without_pending_controls_keeps_the_plain_body():
         seen.append(req)
         return httpx.Response(200, json={"status": "waiting_for_approval"} if req.method == "GET" else {"ok": True})
 
-    await adapter(handler).approve("raiden", "run_1", "deny")
+    await adapter(handler).approve("gamma", "run_1", "deny")
     assert json.loads(seen[-1].content) == {"choice": "deny"}
 
 
@@ -421,5 +421,5 @@ async def test_approval_still_goes_out_when_the_status_cannot_be_read():
         seen.append(req)
         return httpx.Response(500, json={"error": "x"}) if req.method == "GET" else httpx.Response(200, json={"ok": True})
 
-    await adapter(handler).approve("raiden", "run_1", "once")
+    await adapter(handler).approve("gamma", "run_1", "once")
     assert json.loads(seen[-1].content) == {"choice": "once"}

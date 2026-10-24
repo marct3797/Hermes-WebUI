@@ -78,20 +78,20 @@ def ui_dir(tmp_path):
     (d / "packs").mkdir()
     (d / "sigils" / "mein-symbol.svg").write_text(GLYPH)
     (d / "sigils" / "boese.svg").write_text(svg("<script>alert(1)</script>"))
-    (d / "packs" / "japan.json").write_text(json.dumps({"id": "japan", "glyphs": {"raiden": GLYPH, "kaputt": svg("<script/>")}}))
+    (d / "packs" / "japan.json").write_text(json.dumps({"id": "japan", "glyphs": {"gamma": GLYPH, "kaputt": svg("<script/>")}}))
     (d / "ui.json").write_text(json.dumps({
         "ui": {"backgroundShader": {"enabled": False, "strength": 9, "speed": "schnell"}},
         "packs": ["japan", "../geheim", "neutral", "fehlt"],
         "profiles": {
-            "raiden": {"sigil": {"type": "glyph", "glyph": "japan/raiden", "hue": 98}},
-            "hikari/hermes/default": {"sigil": {"type": "glyph", "glyph": "neutral/bolt", "hue": None}},
-            "sora": {"sigil": {"type": "initials", "text": "SO", "hue": "auto"}},
-            "kaze": {"sigil": {"type": "svg", "src": "sigils/mein-symbol.svg"}},
-            "yume": {"sigil": {"type": "svg", "src": "sigils/boese.svg"}},
-            "inari": {"sigil": {"type": "svg", "src": "../hosts.json"}},
-            "ryujin": {"sigil": {"type": "svg", "src": "sigils/../ui.json"}},
-            "benzai": {"sigil": {"type": "glyph", "glyph": "japan/kaputt"}},
-            "omoikane": {"sigil": {"type": "glyph", "glyph": "ghost/pack"}},
+            "gamma": {"sigil": {"type": "glyph", "glyph": "japan/gamma", "hue": 98}},
+            "server/hermes/default": {"sigil": {"type": "glyph", "glyph": "neutral/bolt", "hue": None}},
+            "eta": {"sigil": {"type": "initials", "text": "SO", "hue": "auto"}},
+            "epsilon": {"sigil": {"type": "svg", "src": "sigils/mein-symbol.svg"}},
+            "theta": {"sigil": {"type": "svg", "src": "sigils/boese.svg"}},
+            "delta": {"sigil": {"type": "svg", "src": "../hosts.json"}},
+            "alpha": {"sigil": {"type": "svg", "src": "sigils/../ui.json"}},
+            "zeta": {"sigil": {"type": "glyph", "glyph": "japan/kaputt"}},
+            "beta": {"sigil": {"type": "glyph", "glyph": "ghost/pack"}},
             "../evil": {"sigil": {"type": "initials", "text": "XX"}},
             "x": {"sigil": {"type": "nichts"}},
             "long": {"sigil": {"type": "initials", "text": "TOOLONG"}},
@@ -105,21 +105,21 @@ class TestParse:
     def test_valid_entries_and_clamped_shader(self, ui_dir):
         state = UiConfig(ui_dir / "ui.json").state()
         assert state.shader == {"enabled": False, "strength": 3.0, "speed": 1.0}
-        assert state.sigils["raiden"] == {"type": "glyph", "hue": 98.0, "glyph": "japan/raiden", "src": "/bff/ui/glyphs/japan/raiden.svg"}
-        assert state.sigils["hikari/hermes/default"] == {"type": "glyph", "hue": None, "glyph": "neutral/bolt"}
-        assert state.sigils["sora"] == {"type": "initials", "hue": "auto", "text": "SO"}
-        assert state.sigils["kaze"]["src"] == "/bff/ui/sigils/mein-symbol.svg"
+        assert state.sigils["gamma"] == {"type": "glyph", "hue": 98.0, "glyph": "japan/gamma", "src": "/bff/ui/glyphs/japan/gamma.svg"}
+        assert state.sigils["server/hermes/default"] == {"type": "glyph", "hue": None, "glyph": "neutral/bolt"}
+        assert state.sigils["eta"] == {"type": "initials", "hue": "auto", "text": "SO"}
+        assert state.sigils["epsilon"]["src"] == "/bff/ui/sigils/mein-symbol.svg"
         assert state.sigils["hue"]["hue"] == 360.0
         assert "text" not in state.sigils["long"]  # zu lang: Initialen kommen dann aus dem Namen
 
     def test_rejects_unsafe_entries_and_reports_them(self, ui_dir):
         state = UiConfig(ui_dir / "ui.json").state()
-        for key in ("yume", "inari", "ryujin", "benzai", "omoikane", "../evil", "x"):
+        for key in ("theta", "delta", "alpha", "zeta", "beta", "../evil", "x"):
             assert key not in state.sigils
         text = " ".join(state.warnings)
         assert "kaputt" in text and "../geheim" in text and "Pack fehlt" in text
         assert "sigil/boese" not in state.svgs and "glyph/japan/kaputt" not in state.svgs
-        assert set(state.svgs) == {"glyph/japan/raiden", "sigil/mein-symbol"}
+        assert set(state.svgs) == {"glyph/japan/gamma", "sigil/mein-symbol"}
 
     def test_defaults_without_a_file(self, tmp_path):
         cfg = UiConfig(tmp_path / "gibt-es-nicht.json")
@@ -134,10 +134,10 @@ class TestParse:
     def test_garbage_json_keeps_last_good_state(self, ui_dir):
         path = ui_dir / "ui.json"
         cfg = UiConfig(path)
-        assert "raiden" in cfg.state().sigils
+        assert "gamma" in cfg.state().sigils
         path.write_text("{kaputt")
         os.utime(path, ns=(10**18, 10**18))  # sicher neuerer Zeitstempel
-        assert "raiden" in cfg.state().sigils
+        assert "gamma" in cfg.state().sigils
         assert cfg.error and "nicht lesbar" in cfg.error
         path.write_text(json.dumps({"profiles": {}}))
         os.utime(path, ns=(2 * 10**18, 2 * 10**18))
@@ -149,18 +149,18 @@ class TestParse:
         state = parse_ui({
             "packs": ["demo"],
             "profiles": {
-                "raiden": {"label": "  Raiden  "},
-                "sora": {"label": "Sora", "sigil": {"type": "initials", "text": "SO"}},
-                "yume": {"label": "x" * 41},
-                "kaze": {"label": 7},
+                "gamma": {"label": "  Gamma  "},
+                "eta": {"label": "Eta", "sigil": {"type": "initials", "text": "SO"}},
+                "theta": {"label": "x" * 41},
+                "epsilon": {"label": 7},
             },
         }, tmp_path)
         assert state.packs == {"demo": ["eins", "zwei"]}
-        assert state.labels == {"raiden": "Raiden", "sora": "Sora"}
-        assert set(state.sigils) == {"sora"}
+        assert state.labels == {"gamma": "Gamma", "eta": "Eta"}
+        assert set(state.sigils) == {"eta"}
         warned = " ".join(state.warnings)
-        assert "yume: label" in warned and "kaze: label" in warned
-        assert "raiden" not in warned  # nur ein Name ist ein gültiger Eintrag
+        assert "theta: label" in warned and "epsilon: label" in warned
+        assert "gamma" not in warned  # nur ein Name ist ein gültiger Eintrag
 
     def test_non_dict_input_is_harmless(self, tmp_path):
         assert parse_ui([], tmp_path).sigils == {}
@@ -182,12 +182,12 @@ def ui_client(make_settings, mock, ui_dir):
 class TestRoutes:
     def test_config_endpoint(self, ui_client):
         data = ui_client.get("/bff/ui").json()
-        assert data["sigils"]["raiden"]["src"] == "/bff/ui/glyphs/japan/raiden.svg"
+        assert data["sigils"]["gamma"]["src"] == "/bff/ui/glyphs/japan/gamma.svg"
         assert data["ui"]["backgroundShader"]["enabled"] is False
         assert data["error"] is None
 
     def test_serves_sanitized_svg_with_strict_headers(self, ui_client):
-        for url in ("/bff/ui/glyphs/japan/raiden.svg", "/bff/ui/sigils/mein-symbol.svg"):
+        for url in ("/bff/ui/glyphs/japan/gamma.svg", "/bff/ui/sigils/mein-symbol.svg"):
             r = ui_client.get(url)
             assert r.status_code == 200
             assert r.headers["content-type"].startswith("image/svg+xml")
@@ -201,8 +201,8 @@ class TestRoutes:
         "/bff/ui/sigils/..%2Fui.json.svg",
         "/bff/ui/sigils/%2e%2e%2fhosts.svg",
         "/bff/ui/glyphs/japan/kaputt.svg",
-        "/bff/ui/glyphs/..%2F/raiden.svg",
-        "/bff/ui/glyphs/japan/RAIDEN.svg",
+        "/bff/ui/glyphs/..%2F/gamma.svg",
+        "/bff/ui/glyphs/japan/GAMMA.svg",
     ])
     def test_unknown_or_hostile_names_are_404(self, ui_client, url):
         assert ui_client.get(url).status_code == 404
@@ -218,11 +218,11 @@ def test_example_configs_load_without_warnings(tmp_path):
     root = Path(__file__).resolve().parent.parent
     japan = UiConfig(root / "examples" / "japan" / "ui.json").state()
     assert japan.warnings == []
-    assert set(japan.sigils) == {"default", "benzai", "inari", "kaze", "omoikane", "raiden", "ryujin", "sora", "yume"}
+    assert set(japan.sigils) == {"default", "zeta", "delta", "epsilon", "beta", "gamma", "alpha", "eta", "theta"}
     assert len(japan.svgs) == 9
     # Das Standardbeispiel verweist auf eine SVG-Datei, die es nur im eigenen Config-Ordner gibt: Hinweis statt Absturz.
     neutral = UiConfig(root / "ui.example.json").state()
-    assert "default" in neutral.sigils and "hikari/hermes/helper" in neutral.sigils
+    assert "default" in neutral.sigils and "server/hermes/helper" in neutral.sigils
     assert any("docs" in w for w in neutral.warnings)
 
 
@@ -234,11 +234,11 @@ def save_dir(tmp_path):
     d = tmp_path / "cfg"
     d.mkdir()
     (d / "packs").mkdir()
-    (d / "packs" / "japan.json").write_text(json.dumps({"glyphs": {"raiden": GLYPH}}))
+    (d / "packs" / "japan.json").write_text(json.dumps({"glyphs": {"gamma": GLYPH}}))
     (d / "ui.json").write_text(json.dumps({
         "packs": ["japan"],
         "theme": {"accent": "crimson"},
-        "profiles": {"sora": {"sigil": {"type": "initials", "text": "SO"}, "note": "bleibt"}},
+        "profiles": {"eta": {"sigil": {"type": "initials", "text": "SO"}, "note": "bleibt"}},
     }))
     return d
 
@@ -259,26 +259,26 @@ def on_disk(d):
     return json.loads((d / "ui.json").read_text())
 
 
-KEY = "hikari/hermes/raiden"
+KEY = "server/hermes/gamma"
 
 
 class TestSave:
     def test_glyph_with_label_is_written_and_served_back(self, save_client, save_dir):
-        r = save_client.put(f"/bff/ui/profiles/{KEY}", json={"label": " Raiden ", "sigil": {"type": "glyph", "glyph": "neutral/bolt", "hue": 98}})
+        r = save_client.put(f"/bff/ui/profiles/{KEY}", json={"label": " Gamma ", "sigil": {"type": "glyph", "glyph": "neutral/bolt", "hue": 98}})
         assert r.status_code == 200
         body = r.json()
         assert body["sigils"][KEY] == {"type": "glyph", "hue": 98.0, "glyph": "neutral/bolt"}
-        assert body["labels"][KEY] == "Raiden"
+        assert body["labels"][KEY] == "Gamma"
         saved = on_disk(save_dir)
-        assert saved["profiles"][KEY] == {"label": "Raiden", "sigil": {"type": "glyph", "hue": 98.0, "glyph": "neutral/bolt"}}
+        assert saved["profiles"][KEY] == {"label": "Gamma", "sigil": {"type": "glyph", "hue": 98.0, "glyph": "neutral/bolt"}}
         # Unbekannte Schlüssel und andere Profile bleiben, der Stand davor liegt als Sicherung daneben.
-        assert saved["theme"] == {"accent": "crimson"} and saved["profiles"]["sora"]["note"] == "bleibt"
-        assert "raiden" not in json.loads((save_dir / "ui.json.bak").read_text())["profiles"]
+        assert saved["theme"] == {"accent": "crimson"} and saved["profiles"]["eta"]["note"] == "bleibt"
+        assert "gamma" not in json.loads((save_dir / "ui.json.bak").read_text())["profiles"]
         assert save_client.get("/bff/ui").json()["sigils"][KEY]["glyph"] == "neutral/bolt"
 
     def test_pack_glyph_initials_and_neutral_hue(self, save_client):
-        r = save_client.put(f"/bff/ui/profiles/{KEY}", json={"sigil": {"type": "glyph", "glyph": "japan/raiden", "hue": None}})
-        assert r.json()["sigils"][KEY] == {"type": "glyph", "hue": None, "glyph": "japan/raiden", "src": "/bff/ui/glyphs/japan/raiden.svg"}
+        r = save_client.put(f"/bff/ui/profiles/{KEY}", json={"sigil": {"type": "glyph", "glyph": "japan/gamma", "hue": None}})
+        assert r.json()["sigils"][KEY] == {"type": "glyph", "hue": None, "glyph": "japan/gamma", "src": "/bff/ui/glyphs/japan/gamma.svg"}
         r = save_client.put(f"/bff/ui/profiles/{KEY}", json={"sigil": {"type": "initials", "text": "RA"}})
         assert r.json()["sigils"][KEY] == {"type": "initials", "hue": "auto", "text": "RA"}
 
@@ -286,7 +286,7 @@ class TestSave:
         r = save_client.put(f"/bff/ui/profiles/{KEY}", json={"sigil": {"type": "svg", "svg": GLYPH, "hue": 200}})
         assert r.status_code == 200
         src = r.json()["sigils"][KEY]["src"]
-        assert src.startswith("/bff/ui/sigils/hikari-hermes-raiden-")
+        assert src.startswith("/bff/ui/sigils/server-hermes-gamma-")
         assert save_client.get(src).headers["content-security-policy"].startswith("default-src 'none'")
         stored = list((save_dir / "sigils").glob("*.svg"))
         assert len(stored) == 1 and "<path" in stored[0].read_text()
@@ -315,12 +315,12 @@ class TestSave:
         assert (save_dir / "ui.json").read_text() == before
 
     def test_label_only_and_reset(self, save_client, save_dir):
-        r = save_client.put("/bff/ui/profiles/sora", json={"label": "Sora"})
+        r = save_client.put("/bff/ui/profiles/eta", json={"label": "Eta"})
         assert r.status_code == 200
-        entry = on_disk(save_dir)["profiles"]["sora"]
-        assert entry == {"note": "bleibt", "label": "Sora"}  # ohne sigil-Feld: Sigil ist entfernt, Unbekanntes bleibt
-        assert save_client.put("/bff/ui/profiles/sora", json={}).status_code == 200
-        assert on_disk(save_dir)["profiles"]["sora"] == {"note": "bleibt"}
+        entry = on_disk(save_dir)["profiles"]["eta"]
+        assert entry == {"note": "bleibt", "label": "Eta"}  # ohne sigil-Feld: Sigil ist entfernt, Unbekanntes bleibt
+        assert save_client.put("/bff/ui/profiles/eta", json={}).status_code == 200
+        assert on_disk(save_dir)["profiles"]["eta"] == {"note": "bleibt"}
         assert save_client.put(f"/bff/ui/profiles/{KEY}", json={"label": "A"}).status_code == 200
         assert save_client.put(f"/bff/ui/profiles/{KEY}", json={}).status_code == 200
         assert KEY not in on_disk(save_dir)["profiles"]
@@ -386,6 +386,6 @@ class TestSave:
             raise OSError(errno.EBUSY, "Device or resource busy")
 
         monkeypatch.setattr(os, "replace", busy)
-        assert save_client.put("/bff/ui/profiles/sora", json={"label": "Sora"}).status_code == 200
-        assert on_disk(save_dir)["profiles"]["sora"]["label"] == "Sora"
+        assert save_client.put("/bff/ui/profiles/eta", json={"label": "Eta"}).status_code == 200
+        assert on_disk(save_dir)["profiles"]["eta"]["label"] == "Eta"
         assert not list(save_dir.glob(".ui.json.*.tmp"))

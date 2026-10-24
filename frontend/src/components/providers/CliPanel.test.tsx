@@ -7,10 +7,10 @@ import { installBackend } from "../../test-backend";
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); resetRedirect(); });
 
 async function open() {
-  const backend = installBackend(["raiden", "sora"]);
+  const backend = installBackend(["gamma", "eta"]);
   history.pushState(null, "", "/providers");
   render(<App />);
-  const group = await screen.findByRole("group", { name: "Coding-CLIs auf Hikari" });
+  const group = await screen.findByRole("group", { name: "Coding-CLIs auf Server" });
   await within(group).findByText(/ANGEMELDET · ChatGPT/);
   return { backend, group };
 }
@@ -31,13 +31,13 @@ describe("CliPanel", () => {
     fireEvent.click(within(group).getByRole("button", { name: /Prüfen/ }));
     await waitFor(() => expect(within(group).queryByText("ABGEMELDET")).toBeNull());
     expect(within(group).getByText(/ANGEMELDET · claude\.ai/)).toBeInTheDocument();
-    expect(backend.calls.some((c) => c.method === "POST" && c.url === "/bff/h/hikari/_cli-auth/refresh")).toBe(true);
+    expect(backend.calls.some((c) => c.method === "POST" && c.url === "/bff/h/server/_cli-auth/refresh")).toBe(true);
   });
 
   it("Terminal öffnen verlinkt mit vorgewählter CLI; die Anbieter-Tabelle zeigt den Punkt nur lesend", async () => {
     const { group } = await open();
-    expect(within(group).getByRole("link", { name: /Claude Code auf Hikari/ })).toHaveAttribute("href", "/hosts/hikari/terminal?cli=claude");
-    const region = await screen.findByRole("region", { name: "Anbieter auf Hikari" });
+    expect(within(group).getByRole("link", { name: /Claude Code auf Server/ })).toHaveAttribute("href", "/hosts/server/terminal?cli=claude");
+    const region = await screen.findByRole("region", { name: "Anbieter auf Server" });
     await within(region).findByRole("table");
     expect((await within(region).findAllByRole("img", { name: /CLI OpenCode: unbekannt/ })).length).toBeGreaterThan(0);
   });

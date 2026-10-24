@@ -17,59 +17,59 @@
         "hue": null
       }
     },
-    "benzai": {
+    "zeta": {
       "sigil": {
         "type": "glyph",
-        "glyph": "japan/benzai",
+        "glyph": "japan/zeta",
         "hue": 178
       }
     },
-    "inari": {
+    "delta": {
       "sigil": {
         "type": "glyph",
-        "glyph": "japan/inari",
+        "glyph": "japan/delta",
         "hue": 58
       }
     },
-    "kaze": {
+    "epsilon": {
       "sigil": {
         "type": "glyph",
-        "glyph": "japan/kaze",
+        "glyph": "japan/epsilon",
         "hue": 140
       }
     },
-    "omoikane": {
+    "beta": {
       "sigil": {
         "type": "glyph",
-        "glyph": "japan/omoikane",
+        "glyph": "japan/beta",
         "hue": 292
       }
     },
-    "raiden": {
+    "gamma": {
       "sigil": {
         "type": "glyph",
-        "glyph": "japan/raiden",
+        "glyph": "japan/gamma",
         "hue": 98
       }
     },
-    "ryujin": {
+    "alpha": {
       "sigil": {
         "type": "glyph",
-        "glyph": "japan/ryujin",
+        "glyph": "japan/alpha",
         "hue": 255
       }
     },
-    "sora": {
+    "eta": {
       "sigil": {
         "type": "glyph",
-        "glyph": "japan/sora",
+        "glyph": "japan/eta",
         "hue": 215
       }
     },
-    "yume": {
+    "theta": {
       "sigil": {
         "type": "glyph",
-        "glyph": "japan/yume",
+        "glyph": "japan/theta",
         "hue": 330
       }
     }

@@ -1,4 +1,4 @@
-"""Login über Forgejo (Authorization Code + PKCE) und Logout."""
+"""Login über den OIDC-Anbieter (Authorization Code + PKCE) und Logout."""
 from __future__ import annotations
 
 import hmac
@@ -65,7 +65,7 @@ async def login(request: Request, next: str = "/", step_up: bool = False):
         url = await oidc.authorization_url(state, nonce, pkce_pair(verifier), step_up)
     except OidcError as e:
         request.app.state.audit.record("login.start", ip=ip, outcome="error", reason=str(e))
-        raise HTTPException(502, "Forgejo ist nicht erreichbar") from e
+        raise HTTPException(502, "Der Anmeldedienst ist nicht erreichbar") from e
     store[state] = Pending(nonce, verifier, browser, safe_next(next), time.monotonic(), step_up, request.app.state.sessions.now())
     response = RedirectResponse(url, status_code=302)
     # Lax, weil der Browser vom Anbieter (anderer Site) zurückkehrt; Strict würde das Cookie nicht mitschicken.
@@ -104,7 +104,7 @@ async def callback(
         tokens = await oidc.exchange(code, pending.verifier)
         claims = await oidc.verify_id_token(tokens["id_token"], pending.nonce)
     except OidcError as e:
-        return fail(str(e), 502, "Anmeldung bei Forgejo fehlgeschlagen")
+        return fail(str(e), 502, "Anmeldung fehlgeschlagen")
 
     sub = str(claims["sub"])
     if sub not in settings.allowed_subs():
@@ -117,7 +117,7 @@ async def callback(
     auth_time = authentication_time(claims, sessions.now())
     # NumericDate has whole-second precision; do not turn callback arrival into authentication.
     if pending.step_up and (auth_time is None or auth_time < int(pending.requested_at) or sessions.now() - auth_time > settings.step_up_s):
-        # Forgejo wirbt claims_supported ohne auth_time an (live verifiziert). Dann belegt der frische
+        # Manche Anbieter (z. B. Forgejo) werben claims_supported ohne auth_time an. Dann belegt der frische
         # Step-up-Roundtrip mit prompt=login die erneute Anmeldung, statt das System unbedienbar zu machen.
         # Unbekannte IdP-Fähigkeit bleibt fail-closed; normales SSO wird nie frisch gemacht.
         fallback_ok = False

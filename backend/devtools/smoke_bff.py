@@ -3,7 +3,7 @@
 Gedacht für eine laufende Instanz ohne Login (HERMES_WEBUI_ENV=dev, AUTH_MODE=none, nur Loopback), z. B. einen
 Wegwerf-Container neben der echten Instanz:
 
-    python backend/devtools/smoke_bff.py --base http://127.0.0.1:8421 --agent inari
+    python backend/devtools/smoke_bff.py --base http://127.0.0.1:8421 --agent delta
 """
 from __future__ import annotations
 
@@ -20,9 +20,9 @@ HEADERS = {"X-Requested-With": "hermes-webui"}
 async def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="http://127.0.0.1:8421")
-    ap.add_argument("--host", default="hikari")
+    ap.add_argument("--host", default="server")
     ap.add_argument("--runtime", default="hermes")
-    ap.add_argument("--agent", default="inari")
+    ap.add_argument("--agent", default="delta")
     ap.add_argument("--text", default="Antworte mit genau einem Wort: ok.")
     ap.add_argument("--wait", type=float, default=90.0)
     ap.add_argument("--twice", action="store_true", help="zweite Nachricht in derselben Session senden")

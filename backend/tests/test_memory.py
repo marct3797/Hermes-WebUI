@@ -119,9 +119,9 @@ def test_stats_items_search(mem_client):
     c = mem_client()
     assert {"key": "total_nodes", "value": 3} in c.get(f"{M}/hindsight/stats").json()["counts"]
     page = c.get(f"{M}/hindsight/items", params={"limit": 2}).json()
-    assert page["total"] == 3 and len(page["items"]) == 2 and page["items"][0]["entities"] == ["Marc", "Forgejo"]
+    assert page["total"] == 3 and len(page["items"]) == 2 and page["items"][0]["entities"] == ["Alex", "Forgejo"]
     assert [i["id"] for i in c.get(f"{M}/hindsight/items", params={"kind": "experience"}).json()["items"]] == ["u2"]
-    hits = c.get(f"{M}/hindsight/search", params={"q": "Hikari Container"}).json()["items"]
+    hits = c.get(f"{M}/hindsight/search", params={"q": "Server Container"}).json()["items"]
     assert [h["id"] for h in hits] == ["u3"] and hits[0]["kind"] == "world"
 
 
@@ -129,9 +129,9 @@ def test_graph_entities_models(mem_client):
     c = mem_client()
     g = c.get(f"{M}/hindsight/graph").json()
     assert len(g["nodes"]) == 2 and len(g["edges"]) == 1  # Weltfakten; die Kante ins Leere fehlt
-    assert [e["name"] for e in c.get(f"{M}/hindsight/entities").json()["items"]] == ["Marc", "Hikari"]
+    assert [e["name"] for e in c.get(f"{M}/hindsight/entities").json()["items"]] == ["Alex", "Server"]
     e = c.get(f"{M}/hindsight/entities/en1").json()
-    assert e["name"] == "Marc" and e["observations"][0]["text"].startswith("Marc taucht")
+    assert e["name"] == "Alex" and e["observations"][0]["text"].startswith("Alex taucht")
     assert c.get(f"{M}/hindsight/entities/nope").status_code == 404
     assert c.get(f"{M}/hindsight/models").json()["items"][0]["name"] == "Infrastruktur"
 
@@ -139,8 +139,8 @@ def test_graph_entities_models(mem_client):
 def test_reflect_is_post_only_audited_and_never_logs_the_question(mem_client, tmp_path):
     c = mem_client()
     assert c.get(f"{M}/hindsight/reflect").status_code == 405
-    r = c.post(f"{M}/hindsight/reflect", json={"query": "Was läuft auf Hikari?"})
-    assert r.status_code == 200 and "Hikari" in r.json()["text"] and r.json()["based_on"][0]["id"] == "u3"
+    r = c.post(f"{M}/hindsight/reflect", json={"query": "Was läuft auf Server?"})
+    assert r.status_code == 200 and "Server" in r.json()["text"] and r.json()["based_on"][0]["id"] == "u3"
     audit = (tmp_path / "audit.log").read_text()
     assert "memory.reflect" in audit and "Was läuft" not in audit
 
@@ -226,9 +226,9 @@ def test_real_graph_maps_link_types_and_never_dangles():
 
 def test_graph_keeps_unknown_link_type_and_trims_texts():
     raw = {"nodes": [{"data": {"id": "a", "text": "x" * 900}}, {"data": {"id": "b"}}],
-           "edges": [{"data": {"source": "a", "target": "b", "linkType": "rätselhaft", "entityName": "Marc", "ueberraschung": 1}}]}
+           "edges": [{"data": {"source": "a", "target": "b", "linkType": "rätselhaft", "entityName": "Alex", "ueberraschung": 1}}]}
     g = norm_graph(raw, 10)
-    assert g["edges"] == [{"source": "a", "target": "b", "type": "rätselhaft", "entity": "Marc"}]
+    assert g["edges"] == [{"source": "a", "target": "b", "type": "rätselhaft", "entity": "Alex"}]
     assert len(g["nodes"][0]["text"]) == 600 and g["nodes"][0]["text"].endswith("…")
 
 

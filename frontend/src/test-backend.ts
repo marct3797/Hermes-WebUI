@@ -2,14 +2,18 @@ import { act } from "@testing-library/react";
 import { vi } from "vitest";
 import quotaFixture from "./fixtures/quota_laptop.json";
 import graphFixture from "./fixtures/bff_graph_world.json";
-import type { HostInfo, MemGraph, ProfileInput, Room, RoomEvent, SigilConfig, StreamEvent, UiConfig } from "./types";
+import ragStats from "./fixtures/real/rag_stats_clean.json";
+import ragQuery from "./fixtures/real/rag_query_clean.json";
+import chromaGet from "./fixtures/real/chroma_get_clean.json";
+import { invalidate } from "./dataCache";
+import type { HostInfo, KnowledgeProvider, MemGraph, ProfileInput, Room, RoomEvent, SigilConfig, StreamEvent, UiConfig } from "./types";
 
 /** Gemeinsame Test-Attrappen: BFF-Antworten und EventSource für die Seiten-Tests. */
 
 export const hostsFor = (agents: string[]): HostInfo[] => [
-  { id: "hikari", label: "Hikari", kind: "local", address: null, status: "online", detail: null, runtimes: [
+  { id: "server", label: "Server", kind: "local", address: null, status: "online", detail: null, runtimes: [
     { id: "hermes", label: "Hermes", status: "online", version: "0.21.6", detail: null, multiplex: true, agents: agents.map((id) => ({ id, label: id })) }] },
-  { id: "laptop", label: "Laptop", kind: "remote", address: "100.100.3.4", status: "unreachable", detail: "Host-Dienst nicht verbunden", runtimes: [
+  { id: "laptop", label: "Laptop", kind: "remote", address: "100.64.3.4", status: "unreachable", detail: "Host-Dienst nicht verbunden", runtimes: [
     { id: "hermes", label: "Hermes", status: "unreachable", version: null, detail: "Host-Dienst nicht verbunden", multiplex: false, agents: [{ id: "default", label: "default" }] }] },
 ];
 
@@ -37,7 +41,7 @@ export function emitRoom(ev: RoomEvent) {
 
 export const roomOf = (id: string, name: string, agents: string[], extra: Partial<Room> = {}): Room => ({
   id, name, archived: false, needs_user: false, created_at: 1_792_000_000, running: false, speaker: null, asks: [],
-  members: agents.map((a) => ({ host: "hikari", runtime: "hermes", agent: a, label: a, key: `hikari/hermes/${a}` })), ...extra,
+  members: agents.map((a) => ({ host: "server", runtime: "hermes", agent: a, label: a, key: `server/hermes/${a}` })), ...extra,
 });
 
 export type Call = { method: string; url: string; body?: Record<string, unknown> };
@@ -59,7 +63,7 @@ export function sessionMessages(_path: string) {
 }
 
 const diag = (agent: string, withRun = false) => ({
-  agent: `hikari/hermes/${agent}`, status: withRun ? "warn" : "ok", at: 1_792_000_000,
+  agent: `server/hermes/${agent}`, status: withRun ? "warn" : "ok", at: 1_792_000_000,
   checks: withRun
     ? [{ id: "run.start", label: "Run starten", status: "ok", detail: "Run run_1", ms: 12 }, { id: "run.stream", label: "Ereignisstrom bis zum Abschluss", status: "warn", detail: "Antwort kam ohne Zeichenstrom", ms: 80 }]
     : [{ id: "health", label: "Erreichbar und angemeldet", status: "ok", detail: "Version 0.21.6", ms: 5 }, { id: "models", label: "Modelle und Anbieter", status: "ok", detail: "1 Anbieter, 2 Modelle", ms: 9 }],
@@ -67,9 +71,9 @@ const diag = (agent: string, withRun = false) => ({
 
 const memItem = (id: string, text: string, kind: string, entities: string[] = []) => ({ id, text, kind, context: null, entities, at: 1_792_000_000_000, tags: [], document: null });
 const MEM_ITEMS = [
-  memItem("f1", "Marc betreibt einen Server namens Hikari.", "world", ["Marc", "Hikari"]),
-  memItem("f2", "Marc hat die WebUI gebaut.", "experience", ["Marc"]),
-  memItem("f3", "Hikari läuft im Tailnet.", "world", ["Hikari"]),
+  memItem("f1", "Alex betreibt einen Server namens Server.", "world", ["Alex", "Server"]),
+  memItem("f2", "Alex hat die WebUI gebaut.", "experience", ["Alex"]),
+  memItem("f3", "Server läuft im Tailnet.", "world", ["Server"]),
 ];
 
 const GRAPH_WORLD = graphFixture as unknown as MemGraph;
@@ -99,11 +103,75 @@ function memoryRoute(url: string, method: string, capabilities: string[], json: 
     return json({ ...GRAPH_WORLD, nodes, table_rows: GRAPH_WORLD.table_rows.slice(0, limit).map((r) => ({ ...r, kind: type })), limit, returned: nodes.length, total: 44272 });
   }
   if (what === "timeseries") return json({ points: [{ t: "2026-10-21T00:00:00+00:00", count: 3 }, { t: "2026-10-22T00:00:00+00:00", count: 9 }, { t: "2026-10-23T00:00:00+00:00", count: 25 }] });
-  if (what === "entities" && rest) return json({ id: rest, name: "Marc", mentions: 7, first_seen: null, last_seen: 1_792_000_000_000, observations: [MEM_ITEMS[1]] });
-  if (what === "entities") return json({ items: [{ id: "e1", name: "Marc", mentions: 7, first_seen: null, last_seen: null }, { id: "e2", name: "Hikari", mentions: 4, first_seen: null, last_seen: null }], total: 2 });
+  if (what === "entities" && rest) return json({ id: rest, name: "Alex", mentions: 7, first_seen: null, last_seen: 1_792_000_000_000, observations: [MEM_ITEMS[1]] });
+  if (what === "entities") return json({ items: [{ id: "e1", name: "Alex", mentions: 7, first_seen: null, last_seen: null }, { id: "e2", name: "Server", mentions: 4, first_seen: null, last_seen: null }], total: 2 });
   if (what === "models") return json({ items: [{ id: "m1", name: "Zuhause", content: "**Netz:** Tailscale", query: "Wie sieht das Netz aus?", updated: 1_792_000_000_000, tags: ["netz"] }] });
   if (what === "diagnose") return json({ agent: "Gedächtnis/hindsight", status: "warn", checks: [{ id: "reach", label: "Erreichbar", status: "ok", detail: "Bank hermes", ms: 7 }, { id: "shape", label: "Antwortform", status: "warn", detail: "Graph ohne Kantenbeschriftung", ms: 9 }] });
   if (what === "reflect" && method === "POST") return json({ text: `Antwort auf: ${String(body?.query)}`, based_on: [MEM_ITEMS[0]] });
+  return json({ detail: "nicht da" }, 404);
+}
+
+/** Zustand der Wissens-Attrappe; Tests ändern ihn direkt (z. B. `kn.stepUp`, `kn.searchError`). */
+export type KnowledgeState = { available: boolean; truncated: boolean; stepUp: boolean; statsError: string | null; searchError: string | null; docs: Array<Record<string, unknown>> };
+
+const LINK = "https://git.example.com/{repo}/src/commit/{commit}/{path}";
+
+/** Dokumente aus den echten Chroma-Zeilen (fixtures/real/chroma_get_clean.json), je `sync_id` ein Dokument. */
+function knowledgeDocs(): KnowledgeState["docs"] {
+  const by = new Map<string, Record<string, unknown>>();
+  for (const m of chromaGet.metadatas as unknown as Array<Record<string, string>>) {
+    const d = by.get(m.sync_id) ?? { sync_id: m.sync_id, source: m.source, repo: m.repo ?? null, path: m.path ?? null, commit: m.commit ?? null, chunks: 0, title: m.title ?? null };
+    d.chunks = (d.chunks as number) + 1;
+    by.set(m.sync_id, d);
+  }
+  return [...by.values()].sort((a, b) => String(a.sync_id).localeCompare(String(b.sync_id)));
+}
+
+function knowledgeRoute(url: string, method: string, kn: KnowledgeState, providers: KnowledgeProvider[], json: (b: unknown, s?: number) => Response, body?: Record<string, unknown>): Response | undefined {
+  const u = new URL(url, "http://bff");
+  if (u.pathname === "/bff/knowledge") return json({ providers, config_error: null });
+  const m = /^\/bff\/knowledge\/([a-z0-9_-]+)\/([a-z]+)$/.exec(u.pathname);
+  if (!m) return undefined;
+  const what = m[2];
+  const sourceRows = () => {
+    const by = new Map<string, { source: string; chunks: number; documents: number; repos: Set<string> }>();
+    for (const d of kn.docs) {
+      const s = by.get(d.source as string) ?? { source: d.source as string, chunks: 0, documents: 0, repos: new Set<string>() };
+      s.chunks += d.chunks as number; s.documents += 1; if (d.repo) s.repos.add(d.repo as string);
+      by.set(s.source, s);
+    }
+    return [...by.values()].map((s) => ({ ...s, repos: [...s.repos] }));
+  };
+  if (what === "stats") {
+    if (kn.statsError) return json({ reachable: false, reason: kn.statsError });
+    return json({ reachable: true, ...ragStats, count: 7047, documents: kn.available ? kn.docs.length : null, sources: kn.available ? sourceRows().length : null });
+  }
+  if (what === "sources") {
+    if (!kn.available) return json({ available: false, reason: "Keine chroma_url konfiguriert.", items: [], scanned_chunks: 0, truncated: false, cache_age_s: 0 });
+    return json({ available: true, reason: null, items: sourceRows(), scanned_chunks: 10, truncated: kn.truncated, cache_age_s: 0 });
+  }
+  if (what === "documents") {
+    if (!kn.available) return json({ available: false, reason: "Keine chroma_url konfiguriert.", items: [], total: 0 });
+    const src = u.searchParams.get("source"), q = (u.searchParams.get("q") ?? "").toLowerCase();
+    const rows = kn.docs.filter((d) => (!src || d.source === src) && (!q || [d.sync_id, d.path, d.title].some((x) => String(x ?? "").toLowerCase().includes(q))));
+    const offset = Number(u.searchParams.get("offset") ?? 0), limit = Number(u.searchParams.get("limit") ?? 100);
+    return json({ available: true, reason: null, items: rows.slice(offset, offset + limit), total: rows.length });
+  }
+  if (what === "search" && method === "POST") {
+    if (kn.searchError) return json({ detail: kn.searchError }, 502);
+    const results = (String(body?.query).includes("nichts") ? [] : ragQuery.results).filter((r) => !body?.source || r.metadata.source === body.source).map((r) => ({
+      text: r.content, score: r.score, ...r.metadata, url: LINK.replace("{repo}", r.metadata.repo).replace("{commit}", r.metadata.commit).replace("{path}", r.metadata.path),
+    }));
+    return json({ results: results.map((r, i) => (i === 1 ? { ...r, url: null } : r)) }); // der zweite Treffer hat keinen Link
+  }
+  if ((what === "ingest" || what === "delete") && method === "POST") {
+    if (kn.stepUp) return json({ detail: { code: "step_up_required", message: "Bitte erneut anmelden" } }, 401);
+    if (what === "delete") { kn.docs = kn.docs.filter((d) => d.sync_id !== body?.sync_id); return json({ ok: true, deleted: 1 }); }
+    const sync_id = `manual:${String(body?.title).toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+    if (kn.docs.some((d) => d.sync_id === sync_id)) return json({ detail: `Es gibt schon ein Dokument mit der Kennung ${sync_id}.` }, 409);
+    kn.docs.push({ sync_id, source: "manual", repo: null, path: null, commit: null, chunks: 1, title: body?.title });
+    return json({ ok: true, source: "manual", sync_id, title: body?.title });
+  }
   return json({ detail: "nicht da" }, 404);
 }
 
@@ -154,10 +222,10 @@ function quotaSummary(agents: string[], mode: QuotaMode) {
     .filter((p) => p.state === "auth_failed" || p.windows.length > 0)
     .map((p) => {
       const w = [...p.windows].sort((a, b) => a.remaining_percent - b.remaining_percent)[0];
-      return { host: "hikari", runtime: "hermes", profile, provider: p.id, label: p.label, state: p.state, remaining_percent: w?.remaining_percent ?? null, window: w?.label ?? null, reset_in_s: w?.reset_in_s ?? null, reason: null };
+      return { host: "server", runtime: "hermes", profile, provider: p.id, label: p.label, state: p.state, remaining_percent: w?.remaining_percent ?? null, window: w?.label ?? null, reset_in_s: w?.reset_in_s ?? null, reason: null };
     }));
   const rank = (i: { remaining_percent: number | null }) => i.remaining_percent ?? -1;
-  return { runtimes: [{ host: "hikari", runtime: "hermes", state: mode === "missing" ? "plugin_missing" : mode === "offline" ? "dashboard_unavailable" : "ok", reason: mode === "ok" || mode === "expired" ? null : quotaOf("x", mode).reason }],
+  return { runtimes: [{ host: "server", runtime: "hermes", state: mode === "missing" ? "plugin_missing" : mode === "offline" ? "dashboard_unavailable" : "ok", reason: mode === "ok" || mode === "expired" ? null : quotaOf("x", mode).reason }],
     items, worst: [...items].sort((a, b) => rank(a) - rank(b))[0] ?? null };
 }
 
@@ -261,7 +329,9 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
   return undefined;
 }
 
-export function installBackend(agents: string[] = ["raiden"], features = ["runs", "steer"], uiOverride: Partial<UiConfig> = {}, memoryCapabilities = ["stats", "items", "search", "graph", "entities", "models", "reflect"]) {
+export function installBackend(agents: string[] = ["gamma"], features = ["runs", "steer"], uiOverride: Partial<UiConfig> = {}, memoryCapabilities = ["stats", "items", "search", "graph", "entities", "models", "reflect"], knowledgeProviders: KnowledgeProvider[] = []) {
+  invalidate("knowledge");
+  const kn: KnowledgeState = { available: true, truncated: false, stepUp: false, statsError: null, searchError: null, docs: knowledgeDocs() };
   FakeEventSource.all = [];
   try { sessionStorage.clear(); } catch { /* ohne Speicher */ }
   try { localStorage.clear(); } catch { /* ohne Speicher */ }
@@ -271,7 +341,7 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
   const rooms: Room[] = [];
   const quota: { mode: QuotaMode } = { mode: "ok" };
   const dash: DashState = {
-    available: true, reason: null, soul: "Du bist Raiden.\nDu antwortest knapp.\n", description: "", model: { provider: "mock", model: "mock-large" },
+    available: true, reason: null, soul: "Du bist Gamma.\nDu antwortest knapp.\n", description: "", model: { provider: "mock", model: "mock-large" },
     history: [], versions: {}, stepUp: false, keys: { ANTHROPIC_API_KEY: "sk-ant-geheim-1234" },
     loggedIn: new Set(["openai-codex"]), polls: 0, loginError: null,
   };
@@ -281,7 +351,7 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
   vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
     const method = init?.method ?? "GET";
     calls.push({ method, url, body: init?.body ? JSON.parse(String(init.body)) : undefined });
-    if (url === "/bff/me") return json({ user: { id: "42", name: "marc" }, auth_mode: "none", fresh: true, build: "3f5c30c" });
+    if (url === "/bff/me") return json({ user: { id: "42", name: "alex" }, auth_mode: "none", fresh: true, build: "3f5c30c" });
     if (url === "/bff/hosts") return json({ hosts: hostsFor(agents), config_error: null });
     if (url === "/bff/ui") return json(uiState);
     if (url.startsWith("/bff/rooms")) {
@@ -305,6 +375,10 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
       if (room && m![2] === "messages" && method === "POST") return json({ message: { seq: (room.messages?.length ?? 0) + 1, author: "user", kind: "message", text: body.text, mentions: [], at: 1_792_000_100 } }, 202);
       if (room && m![2] === "stop" && method === "POST") return json({ stopped: true });
       return json({ detail: "nicht da" }, 404);
+    }
+    if (url.startsWith("/bff/knowledge")) {
+      const r = knowledgeRoute(url, method, kn, knowledgeProviders, json, init?.body ? JSON.parse(String(init.body)) : undefined);
+      if (r) return r;
     }
     if (url.startsWith("/bff/memory")) {
       const r = memoryRoute(url, method, memoryCapabilities, json, init?.body ? JSON.parse(String(init.body)) : undefined);
@@ -338,10 +412,10 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
     }
     const qm = quota.mode;
     if (url === "/bff/quota/summary") return json(quotaSummary(agents, qm));
-    if (/^\/bff\/h\/hikari\/hermes\/_quota(\?refresh=1)?$/.test(url)) return json({ profiles: Object.fromEntries(agents.map((a) => [a, quotaOf(a, qm)])) });
-    if (url === "/bff/h/hikari/hermes/_provider-matrix") return json(providerMatrix(agents, dash));
-    if (url === "/bff/h/laptop/hermes/_provider-matrix") return json({ detail: "Hermes nicht erreichbar: keine Verbindung zu 100.100.3.4:8642. Läuft der API-Server dort und lauscht auf dieser Adresse?" }, 502);
-    const m = /^\/bff\/h\/hikari\/hermes\/([^/]+)(\/.*)$/.exec(url);
+    if (/^\/bff\/h\/server\/hermes\/_quota(\?refresh=1)?$/.test(url)) return json({ profiles: Object.fromEntries(agents.map((a) => [a, quotaOf(a, qm)])) });
+    if (url === "/bff/h/server/hermes/_provider-matrix") return json(providerMatrix(agents, dash));
+    if (url === "/bff/h/laptop/hermes/_provider-matrix") return json({ detail: "Hermes nicht erreichbar: keine Verbindung zu 100.64.3.4:8642. Läuft der API-Server dort und lauscht auf dieser Adresse?" }, 502);
+    const m = /^\/bff\/h\/server\/hermes\/([^/]+)(\/.*)$/.exec(url);
     if (m && agents.includes(m[1])) {
       const rest = m[2];
       const d = dashboardRoute(rest, method, m[1], dash, json, init?.body ? JSON.parse(String(init.body)) : undefined);
@@ -362,5 +436,5 @@ export function installBackend(agents: string[] = ["raiden"], features = ["runs"
     return json({ detail: "nicht da" }, 404);
   }));
   const posted = (suffix: string) => calls.filter((c) => c.method === "POST" && c.url.endsWith(suffix));
-  return { calls, posted, rooms, dash, quota };
+  return { calls, posted, rooms, dash, quota, kn };
 }

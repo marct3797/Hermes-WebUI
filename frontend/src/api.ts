@@ -1,5 +1,5 @@
 import { invalidate } from "./dataCache";
-import type { AgentRef, AgentStatus, CliAuth, Decision, DiagReport, HostsResponse, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import type { AgentRef, AgentStatus, CliAuth, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string, public data?: Record<string, unknown>) {
@@ -12,7 +12,7 @@ let redirecting = false;
 /** Seitenwechsel mit Neuladen (Anmeldung, Abmeldung). Ein Objekt, damit Tests es ersetzen können. */
 export const page = { assign: (url: string) => location.assign(url) };
 
-/** Sitzung abgelaufen: einmal zu Forgejo, danach zurück auf die aktuelle Seite. */
+/** Sitzung abgelaufen: einmal zum Anmeldedienst, danach zurück auf die aktuelle Seite. */
 export function toLogin(stepUp = false) {
   if (redirecting) return;
   redirecting = true;
@@ -51,6 +51,7 @@ export async function call<T>(method: string, path: string, body?: unknown, sign
   return (res.status === 204 ? undefined : await res.json()) as T;
 }
 
+const kn = (p: string) => `/bff/knowledge/${encodeURIComponent(p)}`;
 const mem = (p: string) => `/bff/memory/${encodeURIComponent(p)}`;
 const qs = (o: Record<string, string | number | boolean | string[] | undefined>) => {
   const e = Object.entries(o).flatMap(([k, v]) => (v === undefined || v === "" || v === false ? [] : (Array.isArray(v) ? v : [v]).map((x) => `${k}=${encodeURIComponent(String(x === true ? 1 : x))}`)));
@@ -124,6 +125,13 @@ export const api = {
   memoryModels: (p: string) => call<{ items: MemModel[] }>("GET", `${mem(p)}/models`),
   memoryReflect: (p: string, query: string) => call<{ text: string; based_on: MemItem[] }>("POST", `${mem(p)}/reflect`, { query }),
   memoryDiagnose: (p: string) => call<DiagReport>("GET", `${mem(p)}/diagnose`),
+  knowledgeProviders: () => call<{ providers: KnowledgeProvider[]; config_error: string | null }>("GET", "/bff/knowledge"),
+  knowledgeStats: (p: string) => call<KnowledgeStats>("GET", `${kn(p)}/stats`),
+  knowledgeSources: (p: string) => call<KnowledgeSources>("GET", `${kn(p)}/sources`),
+  knowledgeDocuments: (p: string, o: { source?: string; q?: string; limit?: number; offset?: number }) => call<KnowledgeDocs>("GET", `${kn(p)}/documents${qs(o)}`),
+  knowledgeSearch: (p: string, body: { query: string; top_k: number; source?: string }) => call<{ results: KnowledgeHit[] }>("POST", `${kn(p)}/search`, body),
+  knowledgeIngest: (p: string, body: { title: string; text: string; source?: string }) => call<{ ok: boolean; sync_id: string }>("POST", `${kn(p)}/ingest`, body),
+  knowledgeDelete: (p: string, syncId: string) => call<{ ok: boolean; deleted?: number }>("POST", `${kn(p)}/delete`, { sync_id: syncId }),
   rooms: (archived = false) => call<{ rooms: Room[] }>("GET", `/bff/rooms${archived ? "?archived=true" : ""}`),
   createRoom: (name: string, members: AgentRef[]) => call<Room>("POST", "/bff/rooms", { name, members }),
   room: (rid: string) => call<Room>("GET", `/bff/rooms/${id(rid)}`),

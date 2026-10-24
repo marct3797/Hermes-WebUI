@@ -103,7 +103,7 @@ def test_overview_route_never_returns_key_values(client):
 
 
 def test_other_profile_has_its_own_keys(client):
-    got = by_id(client.get(f"{BASE.replace('/default', '/omoikane')}/providers?days=7").json())
+    got = by_id(client.get(f"{BASE.replace('/default', '/beta')}/providers?days=7").json())
     assert not got["anthropic"]["keys"][0]["set"] and not got["anthropic"]["configured"] and got["anthropic"]["used"]
 
 
@@ -171,11 +171,11 @@ def test_validate_passes_the_providers_verdict_through(client, dash, tmp_path):
 
 def test_key_routes_require_csrf_header_and_known_agent(client):
     assert client.put(f"{P}/key", json={"var": "OPENROUTER_API_KEY", "value": "k"}, headers={"X-Requested-With": ""}).status_code == 403
-    assert client.put("/bff/h/hikari/hermes/ghost-agent/providers/key", json={"var": "OPENROUTER_API_KEY", "value": "k"}).status_code == 404
+    assert client.put("/bff/h/server/hermes/ghost-agent/providers/key", json={"var": "OPENROUTER_API_KEY", "value": "k"}).status_code == 404
 
 
 # --- Anbieter-Hauptseite: alle Profile einer Runtime, Modelle, Anmeldung ------------------------------------
-MATRIX = "/bff/h/hikari/hermes/_provider-matrix"
+MATRIX = "/bff/h/server/hermes/_provider-matrix"
 
 
 def test_matrix_lists_profiles_with_provider_and_model_and_the_three_accounts(client, dash):
@@ -183,15 +183,15 @@ def test_matrix_lists_profiles_with_provider_and_model_and_the_three_accounts(cl
     body = client.get(MATRIX).json()
     assert body["available"] is True and body["reason"] is None
     rows = {p["name"]: p for p in body["profiles"]}
-    # die Config führt default, omoikane, ghost und sora; das Dashboard kennt ghost nicht
-    assert set(rows) == {"default", "omoikane", "sora"}
-    assert rows["omoikane"]["provider"] == "anthropic" and rows["omoikane"]["model"] == "claude-test"
+    # die Config führt default, beta, ghost und eta; das Dashboard kennt ghost nicht
+    assert set(rows) == {"default", "beta", "eta"}
+    assert rows["beta"]["provider"] == "anthropic" and rows["beta"]["model"] == "claude-test"
     acc = {a["id"]: a for a in body["accounts"]}
     assert [a["id"] for a in body["accounts"]] == ["codex", "claude", "opencode-go"]
     assert acc["codex"]["profiles"]["default"] == {"configured": True, "via": "login", "detail": "~/.codex/auth.json"}
-    assert acc["claude"]["profiles"]["default"]["via"] == "key" and acc["claude"]["profiles"]["omoikane"]["configured"] is False
+    assert acc["claude"]["profiles"]["default"]["via"] == "key" and acc["claude"]["profiles"]["beta"]["configured"] is False
     assert acc["opencode-go"]["profiles"]["default"]["configured"] is True
-    assert acc["opencode-go"]["profiles"]["sora"]["configured"] is False
+    assert acc["opencode-go"]["profiles"]["eta"]["configured"] is False
     text = json.dumps(body)
     assert "ocg-geheim-9999" not in text and SECRET not in text  # nur geschwärzt
 
@@ -216,7 +216,7 @@ def test_matrix_keeps_a_profile_whose_query_failed(make):
 
 def test_unknown_host_or_runtime_is_404(client):
     assert client.get("/bff/h/nope/hermes/_provider-matrix").status_code == 404
-    assert client.get("/bff/h/hikari/opencode/_provider-matrix").status_code == 404
+    assert client.get("/bff/h/server/opencode/_provider-matrix").status_code == 404
 
 
 def test_model_options_are_normalized_current_first(client):

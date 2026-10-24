@@ -1,5 +1,5 @@
-# In Marcs Caddyfile einfügen (Zertifikat holt Caddy selbst per ACME). Port wie WEBUI_PORT.
-agents.thiel.digital {
+# In die Caddyfile einfügen (Zertifikat holt Caddy selbst per ACME). Port wie WEBUI_PORT.
+webui.example.com {
 	encode zstd gzip
 	reverse_proxy 127.0.0.1:8420 {
 		flush_interval -1   # SSE-Streams der Runs nicht puffern
