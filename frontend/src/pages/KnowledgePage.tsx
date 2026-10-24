@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ApiError, api, toLogin } from "../api";
 import { Icon } from "../components/Icon";
 import { PageHead } from "../components/PageHead";
@@ -100,6 +100,12 @@ function Unavailable({ reason }: { reason: string | null }) {
 }
 
 function ConfirmDelete({ provider, doc, onClose, onDone }: { provider: string; doc: KnowledgeDoc; onClose: () => void; onDone: () => void }) {
+  const modal = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = modal.current!;
+    dialog.showModal();
+    return () => dialog.close();
+  }, []);
   const [typed, setTyped] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -111,8 +117,8 @@ function ConfirmDelete({ provider, doc, onClose, onDone }: { provider: string; d
     } finally { setBusy(false); }
   };
   return (
-    <div className="kn-modal" onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}>
-      <div className="card" role="dialog" aria-modal="true" aria-label="Dokument löschen">
+    <dialog ref={modal} className="kn-modal" aria-label="Dokument löschen" onCancel={(e) => { e.preventDefault(); if (!busy) onClose(); }}>
+      <div className="card">
         <h2>Dokument löschen?</h2>
         <p style={{ margin: 0 }}><b>{doc.title ?? doc.path ?? doc.sync_id}</b>{" "}<span className="mono small t3">({de(doc.chunks)} Chunks)</span></p>
         <p className="hint" style={{ margin: 0 }}>{REMOVE_HINT}</p>
@@ -123,18 +129,19 @@ function ConfirmDelete({ provider, doc, onClose, onDone }: { provider: string; d
         {stepUp && <p className="banner" role="alert"><Icon name="lock" /><span>Das Löschen verlangt eine frische Anmeldung. <button type="button" className="linkish" onClick={() => toLogin(true)}>Erneut anmelden</button></span></p>}
         {error && <p className="banner" role="alert"><Icon name="alert" /><span>{error}</span></p>}
         <div className="row" style={{ gap: 8, justifyContent: "flex-end" }}>
-          <button type="button" className="btn btn-s" onClick={onClose}>Abbrechen</button>
+          <button type="button" className="btn btn-s" disabled={busy} onClick={onClose}>Abbrechen</button>
           <button type="button" className="btn btn-s btn-p" disabled={typed !== doc.sync_id || busy} onClick={() => void go()}>{busy ? "Lösche…" : "Endgültig löschen"}</button>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }
 
 function Documents({ provider, source, revision, onChanged }: { provider: string; source: string; revision: number; onChanged: () => void }) {
   const [q, setQ] = useState("");
+  const [offset, setOffset] = useState(0);
   const [doomed, setDoomed] = useState<KnowledgeDoc>();
-  const docs = useAsync(() => api.knowledgeDocuments(provider, { source: source || undefined, q: q.trim() || undefined, limit: 100 }), [provider, source, q, revision]);
+  const docs = useAsync(() => api.knowledgeDocuments(provider, { source: source || undefined, q: q.trim() || undefined, limit: 100, offset }), [provider, source, q, revision, offset]);
   const d = docs.data;
   return (
     <section className="kn-sec" aria-label="Dokumente">
@@ -142,7 +149,7 @@ function Documents({ provider, source, revision, onChanged }: { provider: string
       {d?.available && (
         <label className="search" style={{ marginBottom: 8 }}>
           <Icon name="search" size={14} />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Kennung, Pfad oder Titel" aria-label="Dokumente filtern" />
+          <input value={q} onChange={(e) => { setQ(e.target.value); setOffset(0); }} maxLength={200} placeholder="Kennung, Pfad oder Titel" aria-label="Dokumente filtern" />
         </label>
       )}
       {docs.error && <p className="banner" role="alert"><Icon name="alert" /><span>Dokumente nicht ladbar: {docs.error}</span></p>}
@@ -162,7 +169,11 @@ function Documents({ provider, source, revision, onChanged }: { provider: string
               ))}
             </tbody>
           </table>
-          {d.total > d.items.length && <p className="hint">Es werden {de(d.items.length)} von {de(d.total)} gezeigt. Mit dem Filter eingrenzen.</p>}
+          <nav className="row" aria-label="Dokumentseiten" style={{ gap: 8, marginTop: 8 }}>
+            <button type="button" className="btn btn-s" aria-label="Vorherige Dokumentseite" disabled={docs.loading || offset === 0} onClick={() => setOffset(Math.max(0, offset - 100))}>Zurück</button>
+            <span className="hint" role="status">{de(offset + 1)} bis {de(offset + d.items.length)} von {de(d.total)}</span>
+            <button type="button" className="btn btn-s" aria-label="Nächste Dokumentseite" disabled={docs.loading || offset + d.items.length >= d.total} onClick={() => setOffset(offset + 100)}>Weiter</button>
+          </nav>
         </div>
       ))}
       {doomed && <ConfirmDelete provider={provider} doc={doomed} onClose={() => setDoomed(undefined)} onDone={() => { setDoomed(undefined); onChanged(); }} />}
@@ -219,7 +230,7 @@ function Knowledge({ provider }: { provider: KnowledgeProvider }) {
         {s?.available && <SourceTable rows={s.items} source={source} setSource={setSource} />}
         {s?.available && s.truncated && <p className="hint" role="status">Nur die ersten {de(s.scanned_chunks)} Chunks wurden gezählt, die Übersicht ist unvollständig.</p>}
       </section>
-      <Documents provider={provider.id} source={source} revision={revision} onChanged={() => setRevision((r) => r + 1)} />
+      <Documents key={JSON.stringify([source, revision])} provider={provider.id} source={source} revision={revision} onChanged={() => setRevision((r) => r + 1)} />
       <Ingest provider={provider.id} onDone={() => setRevision((r) => r + 1)} />
     </>
   );

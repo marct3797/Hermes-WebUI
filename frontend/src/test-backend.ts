@@ -154,7 +154,8 @@ function knowledgeRoute(url: string, method: string, kn: KnowledgeState, provide
     if (!kn.available) return json({ available: false, reason: "Keine chroma_url konfiguriert.", items: [], total: 0 });
     const src = u.searchParams.get("source"), q = (u.searchParams.get("q") ?? "").toLowerCase();
     const rows = kn.docs.filter((d) => (!src || d.source === src) && (!q || [d.sync_id, d.path, d.title].some((x) => String(x ?? "").toLowerCase().includes(q))));
-    return json({ available: true, reason: null, items: rows, total: rows.length });
+    const offset = Number(u.searchParams.get("offset") ?? 0), limit = Number(u.searchParams.get("limit") ?? 100);
+    return json({ available: true, reason: null, items: rows.slice(offset, offset + limit), total: rows.length });
   }
   if (what === "search" && method === "POST") {
     if (kn.searchError) return json({ detail: kn.searchError }, 502);

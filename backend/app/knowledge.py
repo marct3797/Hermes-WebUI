@@ -9,8 +9,8 @@ Neuer Anbieter: Klasse von `KnowledgeProvider` ableiten und in `PROVIDER_TYPES` 
 """
 from __future__ import annotations
 
+import asyncio
 import json
-import os
 import re
 import time
 import unicodedata
@@ -166,12 +166,17 @@ class KnowledgeProvider:
 
     def __init__(self, cfg: KnowledgeCfg, http: httpx.AsyncClient, cache: dict[str, Any], ttl_s: float = 300, clock=time.monotonic):
         self.cfg, self._http, self._cache, self._ttl, self._clock = cfg, http, cache, ttl_s, clock
+        state = cache.get(cfg.id)
+        if state is None or state["cfg"] != cfg:
+            state = {"cfg": cfg, "scan": None, "scan_lock": asyncio.Lock(), "write_lock": asyncio.Lock()}
+            cache[cfg.id] = state
+        self._state = state
 
     def public(self) -> dict[str, Any]:
         return {"id": self.cfg.id, "label": self.cfg.label, "type": self.type, "has_sources": bool(self.cfg.chroma_url)}
 
     def drop_cache(self) -> None:
-        self._cache.pop(self.cfg.id, None)
+        self._state["scan"] = None
 
     async def stats(self) -> dict[str, Any]: raise NotImplementedError
     async def sources(self) -> dict[str, Any]: raise NotImplementedError
@@ -221,7 +226,11 @@ class HermesRagProvider(KnowledgeProvider):
         return s.get("collection") if isinstance(s, dict) else None
 
     async def _scan(self, fresh: bool = False) -> dict[str, Any]:
-        hit = self._cache.get(self.cfg.id)
+        async with self._state["scan_lock"]:
+            return await self._scan_locked(fresh)
+
+    async def _scan_locked(self, fresh: bool) -> dict[str, Any]:
+        hit = self._state["scan"]
         if hit and not fresh and self._clock() - hit["at"] < self._ttl:
             return hit
         c = self.cfg.chroma_url
@@ -230,22 +239,29 @@ class HermesRagProvider(KnowledgeProvider):
         cid = next((x.get("id") for x in cols if isinstance(x, dict) and x.get("name") == name), None) if isinstance(cols, list) else None
         if not isinstance(cid, str) or not re.fullmatch(r"[A-Za-z0-9-]{1,64}", cid):
             raise UpstreamError(502, "Sammlung in Chroma nicht gefunden")
-        metas: list[Any] = []
+        docs: dict[str, dict[str, Any]] = {}
+        n = 0
         truncated = False
         while True:
-            page = await self._call("POST", c, f"/api/v1/collections/{cid}/get", "Chroma", timeout=30.0, json={"include": ["metadatas"], "limit": PAGE, "offset": len(metas)})
+            page = await self._call("POST", c, f"/api/v1/collections/{cid}/get", "Chroma", timeout=30.0, json={"include": ["metadatas"], "limit": min(PAGE, MAX_SCAN - n), "offset": n})
             rows = page.get("metadatas") if isinstance(page, dict) else None
             if not isinstance(rows, list):
                 raise UpstreamError(502, "Chroma lieferte eine unbekannte Antwort")
-            metas += rows
-            if len(rows) < PAGE:
-                break
-            if len(metas) >= MAX_SCAN:
+            rows = rows[:MAX_SCAN - n]
+            batch, count = aggregate(rows)
+            for sid, doc in batch.items():
+                if sid in docs:
+                    docs[sid]["chunks"] += doc["chunks"]
+                else:
+                    docs[sid] = doc
+            n += count
+            if n >= MAX_SCAN:
                 truncated = True
                 break
-        docs, n = aggregate(metas)
+            if len(rows) < PAGE:
+                break
         scan = {"at": self._clock(), "docs": docs, "chunks": n, "truncated": truncated}
-        self._cache[self.cfg.id] = scan
+        self._state["scan"] = scan
         return scan
 
     async def sources(self) -> dict[str, Any]:
@@ -272,11 +288,20 @@ class HermesRagProvider(KnowledgeProvider):
 
     async def ingest(self, title: str, text: str, source: str) -> dict[str, Any]:
         slug = slugify(title)
+        # shortcut: Sperre gilt je BFF-Prozess; mehrere Worker brauchen atomare Eindeutigkeit im RAG-Dienst.
+        async with self._state["write_lock"]:
+            return await self._ingest_locked(slug, title, text, source)
+
+    async def _ingest_locked(self, slug: str, title: str, text: str, source: str) -> dict[str, Any]:
         if not slug:
             raise UpstreamError(422, "Aus dem Titel lässt sich keine Kennung bilden (bitte Buchstaben oder Ziffern verwenden)")
         meta = {"source": source, "sync_id": f"manual:{slug}", "title": title}
-        if self.cfg.chroma_url and meta["sync_id"] in (await self._scan(fresh=True))["docs"]:
-            raise UpstreamError(409, f"Es gibt schon ein Dokument mit der Kennung {meta['sync_id']}. Bitte einen anderen Titel wählen oder das alte Dokument zuerst löschen.")
+        if self.cfg.chroma_url:
+            scan = await self._scan(fresh=True)
+            if scan["truncated"]:
+                raise UpstreamError(409, "Die Dokumentübersicht ist unvollständig. Die Kennung kann nicht sicher auf Duplikate geprüft werden.")
+            if meta["sync_id"] in scan["docs"]:
+                raise UpstreamError(409, f"Es gibt schon ein Dokument mit der Kennung {meta['sync_id']}. Bitte einen anderen Titel wählen oder das alte Dokument zuerst löschen.")
         try:
             await self._rag("POST", "/api/v1/ingest", timeout=120.0, json={"text": text, "metadata": meta})
         finally:

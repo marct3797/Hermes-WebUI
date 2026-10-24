@@ -20,8 +20,16 @@ const search = async (q: string) => {
   fireEvent.click(screen.getByRole("button", { name: "Suchen" }));
 };
 
-beforeEach(() => resetRedirect());
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+beforeEach(() => {
+  resetRedirect();
+  Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value: function (this: HTMLDialogElement) { this.setAttribute("open", ""); } });
+  Object.defineProperty(HTMLDialogElement.prototype, "close", { configurable: true, value: function (this: HTMLDialogElement) { this.removeAttribute("open"); } });
+});
+afterEach(() => {
+  cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks();
+  Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal");
+  Reflect.deleteProperty(HTMLDialogElement.prototype, "close");
+});
 
 describe("Wissen", () => {
   it("shows exact numbers in German format in the header chips", async () => {
@@ -122,7 +130,7 @@ describe("Wissen", () => {
   it("closes the dialog with Escape", async () => {
     await open();
     fireEvent.click(await screen.findByRole("button", { name: "manual:notiz-1 löschen" }));
-    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    fireEvent(screen.getByRole("dialog"), new Event("cancel", { bubbles: false, cancelable: true }));
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
@@ -165,6 +173,23 @@ describe("Wissen", () => {
     cleanup();
     await open([RAG, { ...RAG, id: "zwei", label: "Zweites Wissen" }]);
     expect(await screen.findByRole("combobox", { name: "Anbieter" })).toBeInTheDocument();
+  });
+});
+
+describe("Dokumentnavigation", () => {
+  it("pages beyond the first hundred and resets the offset when filtering", async () => {
+    h = installBackend(["gamma"], ["runs"], {}, undefined, [RAG]);
+    h.kn.docs = Array.from({ length: 101 }, (_, i) => ({ sync_id: `manual:doc-${i}`, title: `Doc ${i}`, source: "manual", chunks: 1 }));
+    history.pushState(null, "", "/knowledge");
+    render(<App />);
+    expect(await screen.findByText("Doc 0")).toBeInTheDocument();
+    expect(screen.queryByText("Doc 100")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Nächste Dokumentseite" }));
+    expect(await screen.findByText("Doc 100")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Nächste Dokumentseite" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Dokumente filtern"), { target: { value: "Doc 0" } });
+    expect(await screen.findByText("Doc 0")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Vorherige Dokumentseite" })).toBeDisabled();
   });
 });
 

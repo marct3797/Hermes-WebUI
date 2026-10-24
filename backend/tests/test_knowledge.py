@@ -312,3 +312,53 @@ def test_unknown_collection_is_reported(make):
     r = c.get(f"{K}/rag/sources")
     assert r.status_code == 502 and "Sammlung" in r.json()["detail"]
     assert c.get(f"{K}/rag/stats").json()["documents"] is None  # Statistik bleibt trotzdem nutzbar
+
+
+@pytest.mark.asyncio
+async def test_concurrent_scans_share_one_request_and_config_changes_invalidate_cache():
+    import asyncio
+    from dataclasses import replace
+    rag = real_mock()
+
+    @rag.middleware("http")
+    async def slow(request, call_next):
+        await asyncio.sleep(0.01)
+        return await call_next(request)
+
+    cache = {}
+    conf = parse_knowledge_config(cfg())["rag"]
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=rag)) as http:
+        providers = [kn.HermesRagProvider(conf, http, cache) for _ in range(3)]
+        await asyncio.gather(*(p.sources() for p in providers))
+        assert len([c for c in rag.state.calls if c[0].endswith("/get")]) == 1
+        changed = kn.HermesRagProvider(replace(conf, collection="missing"), http, cache)
+        with pytest.raises(UpstreamError, match="Sammlung"):
+            await changed.sources()
+
+
+@pytest.mark.asyncio
+async def test_concurrent_ingests_cannot_replace_the_same_document():
+    import asyncio
+    rag = real_mock()
+
+    @rag.middleware("http")
+    async def slow(request, call_next):
+        await asyncio.sleep(0.01)
+        return await call_next(request)
+
+    cache = {}
+    conf = parse_knowledge_config(cfg())["rag"]
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=rag)) as http:
+        providers = [kn.HermesRagProvider(conf, http, cache) for _ in range(2)]
+        result = await asyncio.gather(*(p.ingest("Same title", "Example text", "manual") for p in providers), return_exceptions=True)
+        assert sum(isinstance(r, UpstreamError) and r.status == 409 for r in result) == 1
+        assert len([c for c in rag.state.calls if c[0] == "/api/v1/ingest"]) == 1
+
+
+def test_incomplete_scan_does_not_claim_a_document_is_new(make, monkeypatch):
+    monkeypatch.setattr(kn, "PAGE", 2)
+    monkeypatch.setattr(kn, "MAX_SCAN", 2)
+    c = make()
+    r = c.post(f"{K}/rag/ingest", json={"title": "Notiz 1", "text": "Must not replace existing text"})
+    assert r.status_code == 409
+    assert not any(path == "/api/v1/ingest" for path, _ in c.rag.state.calls)

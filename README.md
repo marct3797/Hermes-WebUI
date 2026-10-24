@@ -103,6 +103,8 @@ Dokumentübersicht, Text einspeisen, einzelne Dokumente löschen. Anbieter stehe
   `HERMES_WEBUI_KNOWLEDGE_CACHE_S` Sekunden (Standard 300); Einspeisen und Löschen verwerfen es.
 - Schreiben (Einspeisen, Löschen) verlangt eine frische Anmeldung und steht im Audit (`knowledge.ingest`, `knowledge.delete`, ohne Textinhalt). Gelöscht wird
   nur über die `sync_id`. Ein Sync kann das Dokument wieder hinzufügen, sobald sich die Datei im Repository ändert.
+  Duplikatprüfungen und Schreibsperren gelten für einen BFF-Prozess. Ohne `chroma_url` ist keine Duplikatprüfung möglich; bei einem abgeschnittenen Scan wird das Einspeisen abgelehnt.
+  Der Adapter unterstützt die hier dokumentierte Hermes-RAG-API und Chroma v1, nicht beliebige RAG-Produkte. Der Zugriff zum Dienst muss im privaten Netz abgesichert sein; der Adapter sendet derzeit keine Anbieter-Zugangsdaten.
 
 ### Devtools
 
@@ -237,7 +239,7 @@ Secrets nie in Repo, Chat oder Frontend: Umgebung oder Datei mit Modus 0600.
 Ein Container mit `network_mode: host`, BFF und Frontend in einem Image, davor ein Reverse-Proxy.
 
 ```bash
-git clone https://github.com/example-org/Hermes-WebUI && cd Hermes-WebUI
+git clone https://github.com/marct3797/Hermes-WebUI && cd Hermes-WebUI
 bash deploy/deploy.sh          # legt ~/hermes-webui/{config,data,webui.env} an (Vorlagen: deploy/hosts.example.json, deploy/webui.env.example), startet den Container, wartet auf /healthz
 ```
 
