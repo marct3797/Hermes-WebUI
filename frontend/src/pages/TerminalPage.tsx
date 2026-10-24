@@ -2,19 +2,36 @@ import { useEffect, useRef, useState } from "react";
 import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
+import { ApiError, call } from "../api";
 import { CLI_DOT } from "../components/providers/CliPanel";
+import { fmtAgo, fmtDuration, toMs } from "../format";
+import { useNow } from "../useNow";
 import type { CliAuth } from "../types";
 import "../styles/workspace.css";
+import "../styles/files.css";
 
-type Terminal = { id: string; cli: string; workspace: string; running: boolean; pid: number; created_at: number; exit_code?: number };
-type Info = { available?: boolean; reason?: string; clis: { id: string; label: string; available: boolean; authenticated?: boolean | null; auth_note?: string }[]; workspaces: { id: string; label: string }[] };
-async function request<T>(url: string, method = "GET", body?: unknown, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(url, { method, credentials: "same-origin", signal,
-    headers: { "X-Requested-With": "hermes-webui", ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
-  if (!response.ok) throw new Error(`Terminal-Anfrage fehlgeschlagen (${response.status}); ggf. frisch anmelden.`);
-  return response.json();
+type Terminal = { id: string; cli: string; workspace: string; running: boolean; pid: number; created_at: number | string; exit_code?: number };
+type Info = { version?: string; available?: boolean; reason?: string; clis: { id: string; label: string; available: boolean; authenticated?: boolean | null; auth_note?: string }[]; workspaces: { id: string; label: string }[] };
+const request = <T,>(url: string, method = "GET", body?: unknown, signal?: AbortSignal) => call<T>(method, url, body, signal);
+const ADD_WORKSPACE = "python -m hostd.workspaces add --config ~/.config/hermes-hostd/config.json --id projekt --path /absoluter/pfad";
+const LOGIN_HINT: Record<string, string> = { codex: "codex login", claude: "claude auth login", opencode: "opencode auth login" };
+const OLD_HOSTD = "Der Host-Dienst kennt diese Funktion nicht und ist vermutlich veraltet. Mit deploy/install-hostd.sh aktualisieren.";
+
+/** Verständlicher Fehlertext je Aktion und Status. */
+export function explain(e: unknown, action: string): string {
+  const status = e instanceof ApiError ? e.status : 0;
+  if (status === 400) return `${action} nicht möglich: CLI oder Arbeitsordner sind auf dem Host nicht verfügbar oder das Terminal-Limit ist erreicht.`;
+  if (status === 404 || status === 405) return `${action} nicht möglich. ${OLD_HOSTD}`;
+  if (status === 401 || status === 403) return `${action} nicht erlaubt; ggf. frisch anmelden.`;
+  if (status === 422) return `${action} nicht möglich: ungültige Angaben.`;
+  return `${action} fehlgeschlagen: ${(e as Error).message}`;
 }
+const olderThan = (version: string | undefined, min: number[]) => {
+  const have = version?.split(".").map(Number);
+  if (!have || have.some(Number.isNaN)) return false;
+  for (let i = 0; i < min.length; i++) if ((have[i] ?? 0) !== min[i]) return (have[i] ?? 0) < min[i];
+  return false;
+};
 const MOBILE_KEYS = [["Esc", "\x1b"], ["Tab", "\t"], ["Ctrl+C", "\x03"], ["Ctrl+D", "\x04"], ["↑", "\x1b[A"], ["↓", "\x1b[B"], ["←", "\x1b[D"], ["→", "\x1b[C"], ["Enter", "\r"]];
 const encodeInput = (data: string) => btoa(Array.from(new TextEncoder().encode(data), (byte) => String.fromCharCode(byte)).join(""));
 
@@ -26,6 +43,7 @@ export function TerminalPage({ host }: { host: string }) {
   const [cli, setCli] = useState("");
   const [workspace, setWorkspace] = useState("");
   const [auth, setAuth] = useState<CliAuth>();
+  const [authMissing, setAuthMissing] = useState(false);
   const [error, setError] = useState<string>();
   const [gap, setGap] = useState<string>();
   const [connection, setConnection] = useState("Nicht verbunden");
@@ -37,23 +55,25 @@ export function TerminalPage({ host }: { host: string }) {
   const reconnect = useRef<() => void>(() => {});
   const noticeOptIn = useRef(false);
   const current = terminals.find((t) => t.id === selected);
+  const now = useNow(terminals.some((t) => t.running), 30_000);
 
   useEffect(() => {
     const controller = new AbortController();
-    setInfo(undefined); setTerminals([]); setSelected(""); setAuth(undefined); setError(undefined);
+    setInfo(undefined); setTerminals([]); setSelected(""); setAuth(undefined); setAuthMissing(false); setError(undefined);
     try { noticeOptIn.current = sessionStorage.getItem("hermes-terminal-notifications") === "true"; setNotifications(noticeOptIn.current); } catch { /* private mode */ }
     request<Info>(`${base}/_hostd`, "GET", undefined, controller.signal).then(async (data) => {
       if (controller.signal.aborted) return;
       setInfo(data); const wanted = new URLSearchParams(location.search).get("cli"); setCli(data.clis?.find((c) => c.available && c.id === wanted)?.id ?? data.clis?.find((c) => c.available)?.id ?? ""); setWorkspace(data.workspaces?.[0]?.id ?? "");
       if (data.available === false) return;
-      request<CliAuth>(`${base}/_cli-auth`, "GET", undefined, controller.signal).then((a) => { if (!controller.signal.aborted) setAuth(a); }).catch(() => {}); // Zustand ist nur Hinweis
+      request<CliAuth>(`${base}/_cli-auth`, "GET", undefined, controller.signal).then((a) => { if (!controller.signal.aborted) setAuth(a); })
+        .catch(() => { if (!controller.signal.aborted) setAuthMissing(true); }); // Zustand ist nur Hinweis
       const list = await request<{ terminals: Terminal[] }>(`${base}/_terminals`, "GET", undefined, controller.signal);
       if (controller.signal.aborted) return;
       setTerminals(list.terminals);
       let saved: string | null = null;
       try { saved = sessionStorage.getItem(`hermes-terminal:${host}`); } catch { /* private mode */ }
       setSelected(list.terminals.find((t) => t.id === saved)?.id ?? list.terminals[0]?.id ?? "");
-    }).catch((e: Error) => { if (!controller.signal.aborted) setError(e.message); });
+    }).catch((e: Error) => { if (!controller.signal.aborted) setError(explain(e, "Terminal-Konfiguration laden")); });
     return () => controller.abort();
   }, [base, host]);
 
@@ -129,22 +149,18 @@ export function TerminalPage({ host }: { host: string }) {
     try {
       const term = await request<Terminal>(`${base}/_terminals`, "POST", { cli, workspace, cols: terminalRef.current?.cols ?? 80, rows: terminalRef.current?.rows ?? 24 });
       setTerminals((all) => [...all, term]); setSelected(term.id);
-    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+    } catch (e) { setError(explain(e, "Terminal starten")); } finally { setBusy(false); }
   };
-  const stop = async () => {
-    if (!selected || !window.confirm("Diesen Terminal-Prozess beenden?")) return;
-    setBusy(true);
-    try { await request(`${base}/_terminals/${encodeURIComponent(selected)}`, "DELETE"); const data = await request<{ terminals: Terminal[] }>(`${base}/_terminals`); setTerminals(data.terminals); }
-    catch (e) { setError((e as Error).message); } finally { setBusy(false); }
-  };
-  const remove = async () => {
-    if (!selected || current?.running) return;
-    setBusy(true);
+  // DELETE beendet einen laufenden Prozess und entfernt den Eintrag; laufende Terminals nur nach Bestätigung.
+  const close = async (t: Terminal) => {
+    if (t.running && !window.confirm("Diesen laufenden Terminal-Prozess beenden und schließen?")) return;
+    setBusy(true); setError(undefined);
     try {
-      await request(`${base}/_terminals/${encodeURIComponent(selected)}`, "DELETE");
+      await request(`${base}/_terminals/${encodeURIComponent(t.id)}`, "DELETE");
       const data = await request<{ terminals: Terminal[] }>(`${base}/_terminals`);
-      setTerminals(data.terminals); setSelected(data.terminals[0]?.id ?? "");
-    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+      setTerminals(data.terminals);
+      if (t.id === selected) setSelected(data.terminals[0]?.id ?? "");
+    } catch (e) { setError(explain(e, "Terminal schließen")); } finally { setBusy(false); }
   };
   const toggleNotifications = async (checked: boolean) => {
     try {
@@ -162,17 +178,31 @@ export function TerminalPage({ host }: { host: string }) {
     {(error || gap) && <p className="banner" role="alert">{error ?? gap}</p>}
     {!info && !error && <p role="status">Lade Terminal-Konfiguration…</p>}
     {info?.available === false ? <p role="status">{info.reason ?? "Host-Dienst nicht eingerichtet."}</p> : info && <>
+      {olderThan(info.version, [0, 3, 0]) && <p className="muted" role="status">Host-Dienst {info.version} ist veraltet. Neuere Funktionen (Dateien bearbeiten, Arbeitsordner-Anzeige) brauchen 0.3.0: <code>deploy/install-hostd.sh</code> erneut ausführen.</p>}
+      {info.workspaces?.length === 0 && <p className="banner" role="status">Kein Arbeitsordner konfiguriert. Auf dem Host eintragen und den Dienst neu starten: <code className="mono">{ADD_WORKSPACE}</code></p>}
+      {info.clis?.length > 0 && !info.clis.some((c) => c.available) && <p className="banner" role="status">Keine der konfigurierten CLIs ist auf dem Host installiert (PATH des Dienstes prüfen).</p>}
       <div className="workspace-toolbar">
         <label>CLI <select className="field" value={cli} onChange={(e) => setCli(e.target.value)}><option value="" disabled>CLI wählen</option>{info.clis?.map((c) => <option value={c.id} key={c.id} disabled={!c.available}>{c.label}{!c.available ? " · nicht verfügbar" : ""}</option>)}</select></label>
         <label>Arbeitsordner <select className="field" value={workspace} onChange={(e) => setWorkspace(e.target.value)}><option value="" disabled>Arbeitsordner wählen</option>{info.workspaces?.map((w) => <option key={w.id} value={w.id}>{w.label}</option>)}</select></label>
         <button className="btn btn-s" disabled={busy || !cli || !workspace} onClick={() => void create()}>Terminal starten</button>
       </div>
-      {(() => { const st = auth?.clis?.find((c) => c.id === cli); return st && <p className="muted" role="status">Anmeldung: {CLI_DOT[st.state].text}{st.method ? ` (${st.method})` : ""}{st.reason ? ` · ${st.reason}` : ""}{st.state === "signed_out" ? ". Der Start bleibt möglich, die Anmeldung erfolgt im Terminal." : ""}</p>; })()}
+      {(() => { const st = auth?.clis?.find((c) => c.id === cli); return st && <p className="muted" role="status">Anmeldung: {CLI_DOT[st.state].text}{st.method ? ` (${st.method})` : ""}{st.reason ? ` · ${st.reason}` : ""}{st.state === "signed_out" ? `. Der Start bleibt möglich, die Anmeldung erfolgt im Terminal${LOGIN_HINT[cli] ? ` mit ${LOGIN_HINT[cli]}` : ""}.` : ""}</p>; })()}
+      {authMissing && <p className="muted" role="status">Anmeldestatus nicht abrufbar (Host-Dienst veraltet oder nicht erreichbar). Der Start bleibt möglich.</p>}
       <p className="muted">Installation ist kein Anmeldenachweis. {info.clis?.find((c) => c.id === cli)?.auth_note ?? "Anmeldestatus unbekannt; Anmeldung bleibt in der CLI."}</p>
-      {terminals.length ? <label>Terminal auswählen <select className="field" value={selected} onChange={(e) => { setGap(undefined); setSelected(e.target.value); }}>{terminals.map((t) => <option value={t.id} key={t.id}>{t.cli} · {t.workspace} · {t.running ? "läuft" : `Beendet · Exit ${t.exit_code ?? "unbekannt"}`} · {t.id}</option>)}</select></label> : <p role="status">Keine Terminals. Ein Start führt die konfigurierte CLI aus.</p>}
+      {terminals.length ? <ul className="term-list" aria-label="Terminals">{terminals.map((t) => {
+        const start = toMs(t.created_at);
+        const label = info.workspaces?.find((w) => w.id === t.workspace)?.label ?? t.workspace;
+        return <li key={t.id} className={`term-row${t.id === selected ? " on" : ""}`}>
+          <span id={`term-${t.id}`}><strong>{info.clis?.find((c) => c.id === t.cli)?.label ?? t.cli}</strong> · {label} · {t.running ? "läuft" : `Beendet · Exit ${t.exit_code ?? "unbekannt"}`}
+            {start !== undefined && <span className="muted"> · {t.running ? `Laufzeit ${fmtDuration(now - start)}` : `gestartet ${fmtAgo(start, now)}`}</span>}</span>
+          <span className="row" style={{ gap: 6 }}>
+            <button className="btn btn-s" aria-describedby={`term-${t.id}`} onClick={() => { setGap(undefined); if (t.id === selected) reconnect.current(); else setSelected(t.id); }}>{t.id === selected ? "Neu verbinden" : "Wieder verbinden"}</button>
+            <button className="btn btn-s btn-g" aria-describedby={`term-${t.id}`} disabled={busy} onClick={() => void close(t)}>Schließen</button>
+          </span>
+        </li>; })}</ul> : <p role="status">Keine Terminals. Ein Start führt die konfigurierte CLI aus.</p>}
     </>}
     <div ref={container} className="terminal-viewport" aria-label="CLI Terminal" hidden={!selected} />
-    {selected && <><div className="workspace-toolbar"><p role="status">{connection}{current && !current.running ? ` · Beendet · Exit ${current.exit_code ?? "unbekannt"}` : ""}</p><button className="btn btn-s btn-g" onClick={() => reconnect.current()}>Neu verbinden</button><button className="btn btn-s btn-g" disabled={busy || !current?.running} onClick={() => void stop()}>Prozess beenden</button>{current && !current.running && <button className="btn btn-s btn-g" disabled={busy} onClick={() => void remove()}>Entfernen</button>}</div>
+    {selected && <><div className="workspace-toolbar"><p role="status">{connection}{current && !current.running ? ` · Beendet · Exit ${current.exit_code ?? "unbekannt"}` : ""}</p></div>
       <div className="terminal-keys" aria-label="Mobile CLI-Tasten">{MOBILE_KEYS.map(([label, key]) => <button className="btn btn-s" key={label} disabled={!current?.running || connection !== "Verbunden"} onClick={() => { if (socket.current?.readyState === 1) socket.current.send(JSON.stringify({ type: "input", data: encodeInput(key) })); terminalRef.current?.focus(); }}>{label}</button>)}</div>
       <p className="muted small">Navigation und Verbindungsabbruch beenden den Prozess nicht. Ausgabe wird nur begrenzt wiederholt.</p></>}
   </main>;
