@@ -189,3 +189,13 @@ export type QuotaProvider = { id: string; label: string; configured: boolean; ac
 export type Quota = { state: "ok" | "plugin_missing" | "dashboard_unavailable" | "error"; reason: string | null; generated_at: string; cached: boolean; providers: QuotaProvider[] };
 export type QuotaItem = { host: string; runtime: string; profile: string; provider: string; label: string; state: QuotaState; remaining_percent: number | null; window: string | null; reset_in_s: number | null; reason: string | null };
 export type QuotaSummary = { runtimes: Array<{ host: string; runtime: string; state: Quota["state"]; reason: string | null }>; items: QuotaItem[]; worst: QuotaItem | null };
+
+/** Werkzeug-Gruppen eines Profils (vom Dashboard): Zustand, Anbieter mit „Schlüssel gesetzt“, nie ein Wert. */
+export type ToolsetRow = { name: string; label?: string; description?: string; platform?: string; enabled: boolean; configured: boolean; tools?: string[] };
+export type ToolEnvVar = { key: string; prompt?: string; url?: string | null; is_set: boolean };
+export type ToolProvider = { name: string; badge?: string; tag?: string; post_setup?: string | null; requires_nous_auth?: boolean; is_active?: boolean; status?: string; web_backend?: string; capabilities?: string[]; env_vars: ToolEnvVar[] };
+export type ToolConfig = { name: string; has_category: boolean; active_provider: string | null; providers: ToolProvider[] };
+export type ToolModel = { id: string; display?: string; speed?: string; strengths?: string; price?: string };
+export type ToolModels = { name: string; has_models: boolean; provider?: string | null; models: ToolModel[]; current: string | null; default: string | null };
+export type TerminalBackend = { name: string; label?: string; description?: string; active?: boolean; status?: string; detail?: string };
+export type TerminalBackends = { active: string | null; backends: TerminalBackend[] };

@@ -124,6 +124,10 @@
 .cap-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
 .cap-card{padding:12px 14px;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
 .cap-card p{margin:0}
+.cap-wide{grid-column:1/-1;list-style:none}
+.tool-panel{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.tool-prov{display:flex;flex-direction:column;gap:8px;padding-top:10px;border-top:1px solid var(--line)}
+.tool-note{margin-top:14px;padding:12px 14px}
 .mem-chips .lbl{align-self:center;margin-right:2px}
 .mem-chips .chip .swatch{width:8px;height:8px;margin-right:2px}
 .mem-stats{display:flex;flex-direction:column;gap:16px}

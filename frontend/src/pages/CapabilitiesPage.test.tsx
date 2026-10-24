@@ -39,8 +39,8 @@ describe("Skills und Werkzeuge", () => {
     expect(screen.queryByText(/Skills nicht ladbar/)).not.toBeInTheDocument();
   });
 
-  it("shows toolsets with their state, and flags those that are not set up", async () => {
-    installBackend();
+  it("shows toolsets with their state, and flags those that are not set up (read-only without a dashboard)", async () => {
+    installBackend().dash.tools.available = false;
     history.pushState(null, "", "/h/server/hermes/gamma/tools");
     render(<App />);
     await screen.findByRole("heading", { name: "Werkzeuge", level: 1 });
@@ -50,6 +50,7 @@ describe("Skills und Werkzeuge", () => {
     expect(screen.getByText("gamma · 2 von 3 aktiv")).toBeInTheDocument();
     expect(screen.getByText("nicht eingerichtet")).toBeInTheDocument();
     expect(screen.getByText("aus")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /einrichten/ })).not.toBeInTheDocument();
   });
 
   it("is reachable from the chat's session column", async () => {

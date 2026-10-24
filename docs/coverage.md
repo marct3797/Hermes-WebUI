@@ -30,7 +30,7 @@ Von 390 Routen (Modul, Methode, Pfad) nutzt das BFF 99 pfadgenau. Nach Modul, we
 | `web_routers/delegation.py` | 4 | 0 | Delegation: Routing, Backends, Modellzuordnung |
 | `web_routers/memory_providers.py` | 3 | 0 | Einrichtung der Hermes-Gedächtnis-Anbieter |
 | `web_routers/status.py` | 20 | 1 | Status, Gesundheit, Systemwerte, Curator, Lerngraph |
-| `web_routers/tools.py` | 12 | 1 | Toolset-Konfiguration, Terminal-Backend, Computer Use |
+| `web_routers/tools.py` | 12 | 8 | Toolsets, Anbieter, Keys, Modelle; **bewusst nicht**: Terminal-Backend setzen, `post-setup`, Computer-Use-Rechte, siehe unten |
 | `web_routers/models.py` | 7 | 1 | Hilfsmodelle, Mixture of Agents, empfohlenes Standardmodell |
 | `plugins/kanban` | 48 | 18 | Kanban |
 | `web_routers/profiles.py` | 20 | 6 | Profile anlegen, löschen, umbenennen, exportieren, importieren |
@@ -53,7 +53,7 @@ Pfadgenau heißt: ein Pfad zählt als genutzt, auch wenn nur eine seiner Methode
 | Profile (`Profiles`) | teilweise: SOUL, Beschreibung, Standardmodell. Fehlt: anlegen, löschen, umbenennen, Import/Export, aktives Profil | `profiles.py`: 6 von 20 |
 | Konfiguration (`Configuration`) | abgebildet über das Schema (alle Felder, Geheimnisse ausgenommen). Fehlt: Roh-YAML, Migration, Standardwerte | `config_env.py`, `analytics.py` |
 | Modelle und Anbieter (`Providers`) | teilweise: Keys, Anmeldung, Modellwahl, Nutzung. Fehlt: eigene Endpunkte, Credential-Pools, lokale Modelle, Hilfsmodelle und Mixture of Agents als eigene Seite (einzelne Felder stehen im Einstellungs-Editor) | `config_env.py`, `local_models.py`, `models.py` |
-| Werkzeuge (`Tools`) | teilweise: Liste. Fehlt: Toolsets ein-/ausschalten und konfigurieren, Terminal-Backend, Computer Use. **Werkzeug-Keys (Websuche usw.) lassen sich nicht setzen**, nur Anbieter-Keys | `tools.py`: 1 von 12; `providers.py` `provider_keys` |
+| Werkzeuge (`Tools`) | ja: Gruppen ein-/ausschalten, Anbieter wählen (bei `web` getrennt für Suche und Extraktion), Werkzeug-Keys setzen (nur Variablen, die die Gruppe selbst nennt, nie angezeigt), Bild-/Video-Modell wählen, Terminal-Backend anzeigen. **Bewusst nicht**: Terminal-Backend umstellen, `post-setup` starten, Computer-Use-Rechte vergeben (Hermes prüft das serverseitig nicht) | `tools.py`: 8 von 12; `routes/tools.py`, `ToolsetPanel.tsx` |
 | Skills (`Skills System`) | abgebildet. Fehlt: Curator | `skills.py`: 13 von 13 |
 | Gedächtnis (`Memory`, `Memory Providers`) | **nur Hindsight** über einen eigenen Client. Fehlt: das eingebaute `MEMORY.md`/`USER.md`, Auswahl und Einrichtung der Hermes-Anbieter | `memory_providers.py`, `ops.py` |
 | MCP | teilweise: Liste, Katalog, Installieren. Fehlt: Testen, Aktivieren, Entfernen, OAuth | `mcp.py`: 5 von 12 |
@@ -89,7 +89,7 @@ Pfadgenau heißt: ein Pfad zählt als genutzt, auch wenn nur eine seiner Methode
 
 **P1: ohne das ist es keine vollständige Oberfläche für Hermes**
 1. Messaging-Plattformen und Gateway-Betrieb (Liste, Konfiguration, Test, Start/Stopp/Neustart).
-2. Werkzeuge konfigurieren und **Werkzeug-Keys setzen** (heute nur Anbieter-Keys).
+2. ~~Werkzeuge konfigurieren und Werkzeug-Keys setzen~~ umgesetzt und gegen ein echtes Dashboard geprüft (`devtools/real/contract_tools.py`).
 3. Hermes-Gedächtnis: eingebautes `MEMORY.md`/`USER.md` und die Anbieter-Auswahl, statt nur Hindsight.
 4. Profil-Lebenszyklus: anlegen, löschen, umbenennen, Import/Export.
 5. Betrieb: Status/Gesundheit, Doctor, Backup, Update-Prüfung.
@@ -104,3 +104,14 @@ Pfadgenau heißt: ein Pfad zählt als genutzt, auch wenn nur eine seiner Methode
 **P3**
 11. Curator, Lerngraph, Achievements, Pets, Themes; Artefakte im Chat; Computer Use; Egress und Managed Scope anzeigen.
 12. Übersetzungsschicht für die Oberfläche (Englisch zuerst).
+
+## Was die WebUI bei Werkzeugen bewusst nicht durchreicht
+
+Aus dem Hermes-Quelltext (0.22.5, `hermes_cli/web_routers/tools.py`, `config_env.py`) gelesen und am Sandbox-Dashboard bestätigt:
+
+- `PUT /api/env` schreibt **jeden** Variablennamen, der nicht auf einer kurzen Sperrliste steht (nicht gesperrt z. B. `TERMINAL_SSH_HOST`). Die Beschränkung „nur Anbieter-Keys“ ist reine Client-Logik. Die WebUI schreibt Werkzeug-Keys deshalb nur über `PUT /api/tools/toolsets/{name}/env` und prüft vorher selbst, dass der Name zur Gruppe gehört.
+- `POST /api/env/reveal` liefert jeden Wert aus der `.env` im Klartext (Limit: 5 Aufrufe je 30 s für den ganzen Prozess). Nicht durchgereicht.
+- `PUT /api/tools/terminal/backend` kann das Terminal auf `local` (keine Isolation) oder `ssh` stellen. Nicht durchgereicht, nur angezeigt.
+- `POST .../post-setup` und `POST /api/tools/computer-use/permissions/grant` führen Installationen bzw. Systemdialoge aus. Nicht durchgereicht.
+- Beim Einschalten kann Hermes selbst eine Installation starten. Im Quelltext prüft es das nur für `cua_driver`; die WebUI verlangt deshalb für Anbieter mit `post_setup` und Status `needs_setup` eine ausdrückliche Zustimmung. Das ist ein bewusst zu weit gefasster Schutz: Bei `web` (Anbieter `ddgs`) fragt sie, obwohl Hermes dort nichts installiert.
+- Werkzeug-Keys können über die WebUI gesetzt, aber nicht gelöscht werden (Hermes überspringt leere Werte). Löschen geht im Hermes-Dashboard oder per `hermes config`.

@@ -184,7 +184,18 @@ export type DashState = {
   polls: number; // wie oft die laufende Geräte-Anmeldung abgefragt wurde; ab der zweiten Abfrage ist sie bestätigt
   loginError: string | null; // lässt die Anmeldung scheitern
   config: Record<string, unknown>; // Werte der Hermes-Einstellungen (Punkt-Pfad → Wert)
+  tools: { available: boolean; enabled: Record<string, boolean>; keys: Record<string, string>; provider: Record<string, string>; model: string; installed: boolean }; // Werkzeug-Gruppen
 };
+
+const TOOL_CATALOG = [
+  { name: "terminal", label: "Terminal", description: "Befehle ausführen.", tools: ["terminal"], providers: [] as Array<Record<string, unknown>> },
+  { name: "web", label: "Web", description: "Suchen und Seiten lesen.", tools: ["web_search"], providers: [
+    { name: "Brave Search (Free)", badge: "free", status: "needs_keys", capabilities: ["search"], env: [{ key: "BRAVE_SEARCH_API_KEY", prompt: "Brave Search API key", url: "https://brave.com/search/api/" }] },
+    { name: "Firecrawl Cloud", badge: "paid", status: "needs_keys", capabilities: ["search", "extract"], env: [{ key: "FIRECRAWL_API_KEY", prompt: "Firecrawl API key", url: "javascript:alert(1)" }] }] },
+  { name: "image_gen", label: "Bilder", description: "Bilder erzeugen.", tools: ["image_generate"], providers: [{ name: "FAL.ai", badge: "paid", status: "needs_keys", env: [{ key: "FAL_KEY", prompt: "FAL API key" }] }] },
+  { name: "computer_use", label: "Computer Use", description: "Bildschirm steuern.", tools: ["computer_use"], providers: [{ name: "Cua Driver", badge: "local", status: "needs_setup", post_setup: "cua_driver", env: [] }] },
+];
+const stepUpBody = { detail: { code: "step_up_required", message: "Bitte erneut anmelden" } };
 const hashOf = (text: string) => `h${text.length}:${text.slice(0, 12)}`;
 
 const KEY_VARS: Array<[provider: string, label: string, varName: string]> = [
@@ -343,6 +354,41 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
   }
   if (rest === "/profile/description" && method === "PUT") { dash.description = String(body?.description).trim(); return json({ ok: true, description: dash.description }); }
   if (rest === "/profile/model" && method === "PUT") { dash.model = { provider: String(body?.provider), model: String(body?.model) }; return json({ ok: true, ...dash.model }); }
+  const toolRows = () => TOOL_CATALOG.map((t) => ({ name: t.name, label: t.label, description: t.description, enabled: dash.tools.enabled[t.name], configured: !t.providers.length || t.providers.some((p) => (p.env as Array<{ key: string }>).every((v) => v.key in dash.tools.keys)), tools: t.tools }));
+  const toolPath = /^\/tools(?:\/([a-z_]+)(?:\/(provider|env|model|models))?)?$/.exec(path);
+  if (path === "/terminal-backends" && method === "GET") {
+    return dash.tools.available ? json({ active: "local", backends: [{ name: "local", label: "Local", description: "Run commands directly on this machine. No isolation.", active: true, status: "ready", detail: "" }, { name: "docker", label: "Docker / Podman", description: "Isolated container.", active: false, status: "needs_setup", detail: "Docker CLI not found" }] }) : json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
+  }
+  if (toolPath) {
+    if (!dash.tools.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
+    const [, name, sub] = toolPath;
+    const entry = TOOL_CATALOG.find((t) => t.name === name);
+    if (!name) return json({ toolsets: toolRows() });
+    if (!entry) return json({ detail: "Unbekannte Werkzeuggruppe" }, 404);
+    if (method !== "GET" && dash.stepUp) return json(stepUpBody, 401);
+    if (!sub && method === "GET") {
+      return json({ name, has_category: entry.providers.length > 0, active_provider: dash.tools.provider[name] ?? null, providers: entry.providers.map((p) => ({
+        name: p.name, badge: p.badge, status: p.post_setup && dash.tools.installed ? "ready" : p.status, post_setup: p.post_setup ?? null, is_active: dash.tools.provider[name] === p.name, capabilities: p.capabilities,
+        env_vars: (p.env as Array<{ key: string; prompt: string; url?: string }>).map((v) => ({ ...v, is_set: v.key in dash.tools.keys })) })) });
+    }
+    if (!sub && method === "PUT") {
+      const wantsInstall = entry.providers.some((p) => p.post_setup && !dash.tools.installed);
+      if (body?.enabled && wantsInstall && !body?.accept_install) return json({ detail: { code: "install_consent_required", message: "Das Einschalten kann Software installieren (cua_driver). Bitte ausdrücklich zustimmen." } }, 409);
+      dash.tools.enabled[name] = Boolean(body?.enabled);
+      return json({ ok: true, name, enabled: body?.enabled, post_setup_started: body?.enabled && wantsInstall ? "cua_driver" : null });
+    }
+    if (sub === "provider" && method === "PUT") { dash.tools.provider[name] = String(body?.provider); return json({ ok: true, name, provider: body?.provider, capability: body?.capability ?? null }); }
+    if (sub === "env" && method === "PUT") {
+      const env = (body?.env ?? {}) as Record<string, string>;
+      if (Object.values(env).some((v) => v.includes("abgelehnt"))) return json({ detail: "BRAVE_SEARCH_API_KEY: das ist eine geschwärzte Vorschau, kein Schlüssel" }, 422);
+      Object.assign(dash.tools.keys, env);
+      return json({ ok: true, name, saved: Object.keys(env), skipped: [] });
+    }
+    if (sub === "models" && method === "GET") {
+      return json(name === "image_gen" ? { name, has_models: true, provider: "FAL.ai", models: [{ id: "flux-2-pro", display: "FLUX 2 Pro", price: "$0.05" }, { id: "flux-2-klein", display: "FLUX 2 Klein", price: "$0.01" }], current: dash.tools.model, default: "flux-2-pro" } : { name, has_models: false, models: [], current: null, default: null });
+    }
+    if (sub === "model" && method === "PUT") { dash.tools.model = String(body?.model); return json({ ok: true, name, model: dash.tools.model }); }
+  }
   return undefined;
 }
 
@@ -362,6 +408,7 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
     history: [], versions: {}, stepUp: false, keys: { ANTHROPIC_API_KEY: "sk-ant-geheim-1234" },
     loggedIn: new Set(["openai-codex"]), polls: 0, loginError: null,
     config: { model: "claude-test", "agent.service_tier": "normal", "agent.max_turns": 90, "display.streaming": true, fallback_providers: [], "web.api_key": null },
+    tools: { available: true, enabled: { terminal: true, web: false, image_gen: true, computer_use: false }, keys: {}, provider: {}, model: "flux-2-pro", installed: false },
   };
   let runs = 0;
   const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });

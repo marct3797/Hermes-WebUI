@@ -1,6 +1,6 @@
 import { invalidate } from "./dataCache";
 import { getPreferences } from "./preferences";
-import type { HermesConfig, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import type { HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string, public data?: Record<string, unknown>) {
@@ -100,6 +100,14 @@ export const api = {
   soul: (a: AgentRef) => call<SoulState>("GET", `${base(a)}/soul`),
   saveSoul: (a: AgentRef, content: string, baseHash: string) => call<SoulSaved>("PUT", `${base(a)}/soul`, { content, base: baseHash }),
   hermesConfig: (a: AgentRef) => call<HermesConfig>("GET", `${base(a)}/config`),
+  tools: (a: AgentRef) => call<{ toolsets: ToolsetRow[] }>("GET", `${base(a)}/tools`),
+  toolConfig: (a: AgentRef, name: string) => call<ToolConfig>("GET", `${base(a)}/tools/${encodeURIComponent(name)}`),
+  toolModels: (a: AgentRef, name: string) => call<ToolModels>("GET", `${base(a)}/tools/${encodeURIComponent(name)}/models`),
+  terminalBackends: (a: AgentRef) => call<TerminalBackends>("GET", `${base(a)}/terminal-backends`),
+  toggleTool: (a: AgentRef, name: string, enabled: boolean, acceptInstall = false) => call<{ ok: boolean; post_setup_started: string | null }>("PUT", `${base(a)}/tools/${encodeURIComponent(name)}`, { enabled, accept_install: acceptInstall }),
+  setToolProvider: (a: AgentRef, name: string, provider: string, capability?: "search" | "extract") => call<{ ok: boolean }>("PUT", `${base(a)}/tools/${encodeURIComponent(name)}/provider`, { provider, ...(capability ? { capability } : {}) }),
+  setToolKeys: (a: AgentRef, name: string, env: Record<string, string>) => call<{ ok: boolean; saved: string[]; skipped: string[] }>("PUT", `${base(a)}/tools/${encodeURIComponent(name)}/env`, { env }),
+  setToolModel: (a: AgentRef, name: string, model: string) => call<{ ok: boolean }>("PUT", `${base(a)}/tools/${encodeURIComponent(name)}/model`, { model }),
   saveHermesConfig: (a: AgentRef, changes: Record<string, unknown>) => call<{ ok: boolean; changed: string[] }>("PUT", `${base(a)}/config`, { changes }),
   soulVersion: (a: AgentRef, vid: string) => call<SoulVersion>("GET", `${base(a)}/soul/history/${id(vid)}`),
   restoreSoul: (a: AgentRef, vid: string) => call<SoulSaved & { content: string }>("POST", `${base(a)}/soul/restore`, { id: vid }),

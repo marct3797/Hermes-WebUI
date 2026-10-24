@@ -292,7 +292,8 @@ def test_skills_fall_back_to_the_dashboard_when_hermes_cannot_list_them(build):
 
 def test_toolsets_fall_back_the_same_way(build):
     body = build(broken_lists=True).get(f"{BASE}/toolsets").json()
-    assert body["source"] == "dashboard" and {t["name"]: t["enabled"] for t in body["data"]} == {"terminal": True, "web": False}
+    state = {t["name"]: t["enabled"] for t in body["data"]}
+    assert body["source"] == "dashboard" and state["terminal"] is True and state["web"] is False
 
 
 def test_without_a_dashboard_the_original_error_stays_visible(build):

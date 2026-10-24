@@ -31,6 +31,22 @@ ENV_CATALOG = {
     "FIRECRAWL_API_KEY": {"provider": "", "provider_label": "", "category": "tool", "description": "Web scraping", "url": None},
     "TELEGRAM_BOT_TOKEN": {"provider": "", "provider_label": "", "category": "messaging", "description": "Telegram", "url": None, "channel_managed": True},
 }
+# Werkzeug-Gruppen in der Form von GET /api/tools/toolsets und .../config (aus Hermes 0.22.5 gemessen, gekürzt).
+TOOLSETS: dict[str, dict[str, Any]] = {
+    "terminal": {"label": "Terminal", "description": "Befehle ausführen.", "tools": ["terminal", "process"]},
+    "web": {"label": "Web", "description": "Suchen.", "tools": ["web_search"], "providers": [
+        {"name": "Brave Search (Free)", "badge": "free", "tag": "Brave Search API", "web_backend": "brave", "capabilities": ["search"],
+         "env_vars": [{"key": "BRAVE_SEARCH_API_KEY", "prompt": "Brave Search API key", "url": "https://brave.com/search/api/", "default": None}]},
+        {"name": "Firecrawl Cloud", "badge": "paid", "tag": "Suche und Extraktion", "web_backend": "firecrawl", "capabilities": ["search", "extract"],
+         "env_vars": [{"key": "FIRECRAWL_API_KEY", "prompt": "Firecrawl API key", "url": "https://firecrawl.dev/", "default": None}]}]},
+    "image_gen": {"label": "Bilder", "description": "Bilder erzeugen.", "tools": ["image_generate"],
+                  "providers": [{"name": "FAL.ai", "badge": "paid", "tag": "FLUX und mehr", "env_vars": [{"key": "FAL_KEY", "prompt": "FAL API key", "url": "https://fal.ai/dashboard/keys", "default": None}]}],
+                  "models": [{"id": "flux-2-pro", "display": "FLUX 2 Pro", "speed": "~10s", "strengths": "Qualität", "price": "$0.05"},
+                             {"id": "flux-2-klein", "display": "FLUX 2 Klein", "speed": "~3s", "strengths": "Tempo", "price": "$0.01"}]},
+    "computer_use": {"label": "Computer Use", "description": "Bildschirm und Eingaben steuern.", "tools": ["computer_use"], "providers": [
+        {"name": "Cua Driver", "badge": "local", "tag": "macOS", "post_setup": "cua_driver", "env_vars": []}]},
+}
+
 OAUTH = [
     {"id": "anthropic", "name": "Anthropic", "flow": "pkce", "cli_command": "hermes auth add anthropic", "docs_url": None,
      "status": {"logged_in": False, "source": None, "source_label": None, "expires_at": None}},
@@ -97,6 +113,27 @@ class EnvBody(BaseModel):
 class ModelBody(BaseModel):
     provider: str
     model: str
+
+class ToolToggleBody(BaseModel):
+    enabled: bool
+    profile: str | None = None
+
+
+class ToolProviderBody(BaseModel):
+    provider: str
+    capability: str | None = None
+    profile: str | None = None
+
+
+class ToolEnvBody(BaseModel):
+    env: dict[str, str]
+    profile: str | None = None
+
+
+class ToolModelBody(BaseModel):
+    model: str
+    provider: str | None = None
+    profile: str | None = None
 
 
 def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default", "beta", "eta"), drop_writes: bool = False, quota: dict[str, Any] | None = None, env_put_error: dict[str, Any] | None = None) -> FastAPI:
@@ -259,15 +296,136 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
             {"name": "mein-skill", "description": "Selbst geschrieben.", "category": None, "enabled": True, "usage": 0, "provenance": "agent"},
         ]
 
+    app.state.tool_calls = []  # (Methode, Pfad) jeder Werkzeug-Route; Tests belegen damit, was das BFF nie aufruft
+    app.state.post_setups = []
+    app.state.installed: set[str] = set()  # post_setup-Schlüssel, deren Installation als erledigt gilt
+
+    def tools_of(prof: dict[str, Any]) -> dict[str, Any]:
+        return prof.setdefault("tools", {"enabled": {n: n in ("terminal", "image_gen") for n in TOOLSETS}, "provider": {}, "model": {}, "backend": "local"})
+
+    def toolset(name: str) -> dict[str, Any]:
+        if name not in TOOLSETS:
+            raise HTTPException(400, f"Unknown toolset: {name}")
+        return TOOLSETS[name]
+
+    def has_keys(prof: dict[str, Any], name: str) -> bool:
+        provs = TOOLSETS[name].get("providers", [])
+        return not provs or any(all(v["key"] in prof["env"] for v in pr["env_vars"]) for pr in provs)
+
     @app.get("/api/tools/toolsets")
     async def toolsets(profile: str | None = None):
-        profile_or_default(profile)
-        return [
-            {"name": "terminal", "label": "Terminal", "description": "Befehle ausführen.", "platform": "cli", "platform_label": "CLI", "enabled": True,
-             "available": True, "configured": True, "tools": ["terminal", "process"]},
-            {"name": "web", "label": "Web", "description": "Suchen.", "platform": "cli", "platform_label": "CLI", "enabled": False,
-             "available": False, "configured": False, "tools": ["web_search"]},
-        ]
+        prof = profile_or_default(profile)
+        st = tools_of(prof)
+        return [{"name": n, "label": t["label"], "description": t["description"], "platform": "cli", "platform_label": "CLI", "enabled": st["enabled"][n],
+                 "available": st["enabled"][n], "configured": has_keys(prof, n), "tools": t["tools"]} for n, t in TOOLSETS.items()]
+
+    @app.get("/api/tools/toolsets/{name}/config")
+    async def toolset_config(name: str, profile: str | None = None):
+        prof = profile_or_default(profile)
+        app.state.tool_calls.append(("GET", f"/api/tools/toolsets/{name}/config"))
+        t = toolset(name)
+        if not t.get("providers"):
+            return {"name": name, "has_category": False, "providers": [], "active_provider": None}
+        active = tools_of(prof)["provider"].get(name)
+        rows = [{"name": pr["name"], "badge": pr["badge"], "tag": pr["tag"], "post_setup": pr.get("post_setup"), "requires_nous_auth": False, "managed_nous_feature": None,
+                 "is_active": pr["name"] == active, "status": ("ready" if pr["post_setup"] in app.state.installed else "needs_setup") if pr.get("post_setup") else "ready" if all(v["key"] in prof["env"] for v in pr["env_vars"]) else "needs_keys",
+                 "env_vars": [{"key": v["key"], "prompt": v["prompt"], "url": v.get("url"), "default": v.get("default"), "is_set": v["key"] in prof["env"]} for v in pr["env_vars"]],
+                 **({"web_backend": pr["web_backend"], "capabilities": pr["capabilities"]} if "web_backend" in pr else {})} for pr in t["providers"]]
+        return {"name": name, "has_category": True, "providers": rows, "active_provider": active}
+
+    @app.put("/api/tools/toolsets/{name}")
+    async def toolset_toggle(name: str, body: ToolToggleBody, profile: str | None = None):
+        prof = profile_or_default(body.profile or profile)
+        app.state.tool_calls.append(("PUT", f"/api/tools/toolsets/{name}"))
+        t = toolset(name)
+        if not drop_writes:
+            tools_of(prof)["enabled"][name] = body.enabled
+        started = None
+        if body.enabled:
+            started = next((pr["post_setup"] for pr in t.get("providers", []) if pr.get("post_setup") and pr["post_setup"] not in app.state.installed), None)
+            if started:
+                app.state.post_setups.append((body.profile or profile or "default", started))
+        return {"ok": True, "name": name, "platform": "cli", "enabled": body.enabled, "post_setup_started": started}
+
+    @app.put("/api/tools/toolsets/{name}/provider")
+    async def toolset_provider(name: str, body: ToolProviderBody, profile: str | None = None):
+        prof = profile_or_default(body.profile or profile)
+        app.state.tool_calls.append(("PUT", f"/api/tools/toolsets/{name}/provider"))
+        t = toolset(name)
+        if body.provider not in [pr["name"] for pr in t.get("providers", [])]:
+            raise HTTPException(400, f"Unknown provider: {body.provider}")
+        if body.capability and name != "web":
+            raise HTTPException(400, "capability is only valid for the web toolset")
+        if not drop_writes:
+            tools_of(prof)["provider"][name] = body.provider
+        return {"ok": True, "name": name, "provider": body.provider, **({"capability": body.capability} if body.capability else {})}
+
+    @app.put("/api/tools/toolsets/{name}/env")
+    async def toolset_env(name: str, body: ToolEnvBody, profile: str | None = None):
+        prof = profile_or_default(body.profile or profile)
+        app.state.tool_calls.append(("PUT", f"/api/tools/toolsets/{name}/env"))
+        t = toolset(name)
+        allowed = {v["key"] for pr in t.get("providers", []) for v in pr["env_vars"]}
+        unknown = sorted(set(body.env) - allowed)
+        if unknown:
+            raise HTTPException(400, f"Unknown env var(s) for toolset {name}: {', '.join(unknown)}")
+        saved, skipped = [], []
+        for key, value in body.env.items():
+            if value.strip():
+                if not drop_writes:
+                    prof["env"][key] = value.strip()
+                saved.append(key)
+            else:
+                skipped.append(key)
+        return {"ok": True, "name": name, "saved": saved, "skipped": skipped, "is_set": {k: k in prof["env"] for k in allowed}}
+
+    @app.get("/api/tools/toolsets/{name}/models")
+    async def toolset_models(name: str, provider: str | None = None, profile: str | None = None):
+        prof = profile_or_default(profile)
+        app.state.tool_calls.append(("GET", f"/api/tools/toolsets/{name}/models"))
+        cat = TOOLSETS.get(name, {}).get("models")
+        if not cat:
+            return {"name": name, "has_models": False, "models": [], "current": None, "default": None}
+        return {"name": name, "has_models": True, "provider": "FAL.ai", "plugin": "fal", "models": cat, "current": tools_of(prof)["model"].get(name, cat[0]["id"]), "default": cat[0]["id"]}
+
+    @app.put("/api/tools/toolsets/{name}/model")
+    async def toolset_model(name: str, body: ToolModelBody, profile: str | None = None):
+        prof = profile_or_default(body.profile or profile)
+        app.state.tool_calls.append(("PUT", f"/api/tools/toolsets/{name}/model"))
+        cat = TOOLSETS.get(name, {}).get("models")
+        if not cat:
+            raise HTTPException(400, f"{name} has no model catalog")
+        if body.model not in [m["id"] for m in cat]:
+            raise HTTPException(400, f"Unknown model: {body.model}")
+        if not drop_writes:
+            tools_of(prof)["model"][name] = body.model
+        return {"ok": True, "name": name, "model": body.model, "plugin": "fal"}
+
+    @app.get("/api/tools/terminal/backends")
+    async def terminal_backends(profile: str | None = None):
+        prof = profile_or_default(profile)
+        app.state.tool_calls.append(("GET", "/api/tools/terminal/backends"))
+        active = tools_of(prof)["backend"]
+        return {"active": active, "backends": [
+            {"name": "local", "label": "Local", "description": "Run commands directly on this machine. No isolation.", "active": active == "local", "status": "ready", "detail": ""},
+            {"name": "docker", "label": "Docker / Podman", "description": "Run commands in an isolated container.", "active": active == "docker", "status": "needs_setup", "detail": "Docker CLI not found"}]}
+
+    # Routen, die das BFF bewusst NICHT durchreicht. Das Mock führt sie aus, damit ein Test beweisen kann, dass sie nie ankommen.
+    @app.put("/api/tools/terminal/backend")
+    async def terminal_backend_set(body: dict[str, Any], profile: str | None = None):
+        app.state.tool_calls.append(("PUT", "/api/tools/terminal/backend"))
+        tools_of(profile_or_default(profile))["backend"] = body.get("backend", "local")
+        return {"ok": True, "backend": body.get("backend")}
+
+    @app.post("/api/tools/toolsets/{name}/post-setup")
+    async def toolset_post_setup(name: str, body: dict[str, Any]):
+        app.state.tool_calls.append(("POST", f"/api/tools/toolsets/{name}/post-setup"))
+        return {"ok": True, "pid": 1, "name": "tools-post-setup", "key": body.get("key")}
+
+    @app.post("/api/tools/computer-use/permissions/grant")
+    async def computer_use_grant():
+        app.state.tool_calls.append(("POST", "/api/tools/computer-use/permissions/grant"))
+        return {"ok": True, "pid": 1, "name": "computer-use-grant"}
 
     @app.get("/api/plugins/kanban/board")
     async def kanban_board(profile: str | None = None):
