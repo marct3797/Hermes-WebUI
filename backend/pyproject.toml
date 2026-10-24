@@ -2,6 +2,7 @@
 name = "hermes-webui-bff"
 version = "0.2.0"
 description = "Backend for Frontend der Hermes WebUI: Hosts, Runtime-Adapter, Login und Sicherheitsbasis"
+license = "AGPL-3.0-only"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.115",
