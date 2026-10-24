@@ -21,6 +21,27 @@ beforeEach(() => { resetRedirect(); ({ posted } = installBackend(["gamma"])); })
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("Chat", () => {
+  it("sends the chosen reasoning effort with the run and shows it at the answer", async () => {
+    history.pushState(null, "", "/h/server/hermes/gamma/chat");
+    render(<App />);
+    const box = await screen.findByPlaceholderText("Nachricht an gamma…");
+    await waitFor(() => expect(screen.getByRole("button", { name: /Denken: Standard/ })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: /Denken: Standard/ }));
+    fireEvent.click(screen.getByRole("radio", { name: "Hoch" }));
+    fireEvent.change(box, { target: { value: "Denk nach" } });
+    fireEvent.click(screen.getByRole("button", { name: "Senden" }));
+    await waitFor(() => expect(posted("/runs")).toHaveLength(1));
+    expect(posted("/runs")[0].body).toMatchObject({ text: "Denk nach", model_options: { reasoning: { enabled: true, effort: "high" } } });
+    await waitFor(() => expect(FakeEventSource.all).toHaveLength(1));
+    emit({ type: "message.delta", text: "Antwort" });
+    expect(await screen.findByText("Aufwand: Hoch")).toBeInTheDocument();
+  });
+
+  it("sends no model_options without a choice", async () => {
+    await startRun();
+    expect(posted("/runs")[0].body).not.toHaveProperty("model_options");
+  });
+
   it("sends a run, streams the answer and shows the tool in the inspector", async () => {
     await startRun();
     expect(posted("/runs")[0].body).toMatchObject({ text: "Prüfe die Tests" });

@@ -236,3 +236,16 @@ describe("run store", () => {
     expect(conv(store, A, "s1")?.state.runStatus).toBe("running");
   });
 });
+
+describe("Denk-Aufwand im Run", () => {
+  it("sendet model_options.reasoning nur bei gewählter Stufe und merkt sie für Vorgemerktes", async () => {
+    const { store, api } = setup();
+    await store.send(A, undefined, "ohne", []);
+    expect(JSON.parse(JSON.stringify(api.startRun.mock.calls[0][1]))).not.toHaveProperty("model_options"); // so geht es über die Leitung
+    await store.send(A, "s1", "mit", [], { reasoning: { thinking: true, effort: "xhigh" } });
+    expect(api.startRun.mock.calls[1][1]).toMatchObject({ model_options: { reasoning: { enabled: true, effort: "xhigh" } } });
+    await store.send(A, "s1", "aus", [], { reasoning: { thinking: false } });
+    expect(api.startRun.mock.calls[2][1]).toMatchObject({ model_options: { reasoning: { enabled: false } } });
+    expect(store.getSnapshot().convs.get(convKey(A, "s1"))?.reasoning).toEqual({ thinking: false });
+  });
+});
