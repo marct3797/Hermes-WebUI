@@ -30,6 +30,9 @@ MAX_SCAN = 50_000  # darüber bricht der Scan ab (`truncated`)
 NO_ID = "(ohne Kennung)"
 NO_SOURCE = "(ohne Quelle)"
 TEXT_MAX = 1200
+DOC_CHUNKS = 500  # Chunks je Dokument, die die Detailansicht und das Ersetzen höchstens anfassen
+INGEST_MAX = 1_048_576  # Zeichen je Dokument (1 MiB)
+MIN_OVERLAP = 20  # kürzere Übereinstimmungen am Chunk-Rand gelten nicht als Überlappung
 
 
 @dataclass(frozen=True)
@@ -137,6 +140,25 @@ def slugify(title: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", unicodedata.normalize("NFKD", t).encode("ascii", "ignore").decode()).strip("-")[:100]
 
 
+def join_chunks(texts: list[str]) -> str:
+    """Chunks zum Volltext zusammensetzen. Der Dienst schneidet mit Überlappung: der Anfang eines Chunks wiederholt das Ende des vorigen und wird nur einmal übernommen.
+    shortcut: Überlappung wird am Text erkannt (mind. MIN_OVERLAP Zeichen), nicht an Token-Grenzen; ohne Treffer trennt eine Leerzeile."""
+    out = ""
+    for t in texts:
+        if not out:
+            out = t
+            continue
+        head, tail, cut = t[:MIN_OVERLAP], out[-2000:], 0
+        i = tail.find(head) if len(head) == MIN_OVERLAP else -1
+        while i != -1:
+            if t.startswith(tail[i:]):
+                cut = len(tail) - i
+                break
+            i = tail.find(head, i + 1)
+        out = out + t[cut:] if cut else f"{out}\n\n{t}"
+    return out
+
+
 def aggregate(metadatas: list[Any]) -> tuple[dict[str, dict[str, Any]], int]:
     """Chunks → Dokumente je `sync_id`. Metadaten dürfen fehlen oder `null` sein."""
     docs: dict[str, dict[str, Any]] = {}
@@ -184,6 +206,8 @@ class KnowledgeProvider:
     async def search(self, query: str, top_k: int, source: str | None) -> list[dict[str, Any]]: raise NotImplementedError
     async def ingest(self, title: str, text: str, source: str) -> dict[str, Any]: raise NotImplementedError
     async def delete(self, sync_id: str) -> dict[str, Any]: raise NotImplementedError
+    async def document(self, sync_id: str) -> dict[str, Any]: raise NotImplementedError
+    async def replace(self, sync_id: str, title: str | None, text: str) -> dict[str, Any]: raise NotImplementedError
 
 
 class HermesRagProvider(KnowledgeProvider):
@@ -225,6 +249,14 @@ class HermesRagProvider(KnowledgeProvider):
         s = await self._rag("GET", "/api/v1/stats")
         return s.get("collection") if isinstance(s, dict) else None
 
+    async def _collection_id(self) -> str:
+        name = self.cfg.collection or await self._collection_name()
+        cols = await self._call("GET", self.cfg.chroma_url, "/api/v1/collections", "Chroma")
+        cid = next((x.get("id") for x in cols if isinstance(x, dict) and x.get("name") == name), None) if isinstance(cols, list) else None
+        if not isinstance(cid, str) or not re.fullmatch(r"[A-Za-z0-9-]{1,64}", cid):
+            raise UpstreamError(502, "Sammlung in Chroma nicht gefunden")
+        return cid
+
     async def _scan(self, fresh: bool = False) -> dict[str, Any]:
         async with self._state["scan_lock"]:
             return await self._scan_locked(fresh)
@@ -234,11 +266,7 @@ class HermesRagProvider(KnowledgeProvider):
         if hit and not fresh and self._clock() - hit["at"] < self._ttl:
             return hit
         c = self.cfg.chroma_url
-        name = self.cfg.collection or await self._collection_name()
-        cols = await self._call("GET", c, "/api/v1/collections", "Chroma")
-        cid = next((x.get("id") for x in cols if isinstance(x, dict) and x.get("name") == name), None) if isinstance(cols, list) else None
-        if not isinstance(cid, str) or not re.fullmatch(r"[A-Za-z0-9-]{1,64}", cid):
-            raise UpstreamError(502, "Sammlung in Chroma nicht gefunden")
+        cid = await self._collection_id()
         docs: dict[str, dict[str, Any]] = {}
         n = 0
         truncated = False
@@ -315,6 +343,60 @@ class HermesRagProvider(KnowledgeProvider):
             self.drop_cache()
         n = next((r[k] for k in ("deleted", "count", "deleted_count") if isinstance(r, dict) and isinstance(r.get(k), int) and not isinstance(r.get(k), bool)), None)
         return {"ok": True, **({"deleted": n} if n is not None else {})}
+
+    async def _chunks(self, sync_id: str) -> tuple[list[dict[str, Any]], bool]:
+        """Chunks eines Dokuments aus Chroma in Speicherreihenfolge: [{id, text, meta}], abgeschnitten?"""
+        if not self.cfg.chroma_url:
+            raise UpstreamError(409, "Ohne chroma_url gibt es keine Dokumentansicht und kein Bearbeiten.")
+        cid = await self._collection_id()
+        page = await self._call("POST", self.cfg.chroma_url, f"/api/v1/collections/{cid}/get", "Chroma", timeout=30.0,
+                                json={"where": {"sync_id": sync_id}, "include": ["documents", "metadatas"], "limit": DOC_CHUNKS, "offset": 0})
+        ids, docs, metas = (page.get(k) if isinstance(page, dict) else None for k in ("ids", "documents", "metadatas"))
+        if not (isinstance(ids, list) and isinstance(docs, list) and len(ids) == len(docs)):
+            raise UpstreamError(502, "Chroma lieferte eine unbekannte Antwort")
+        metas = metas if isinstance(metas, list) and len(metas) == len(ids) else [None] * len(ids)
+        rows = [{"id": i, "text": d if isinstance(d, str) else "", "meta": m if isinstance(m, dict) else {}} for i, d, m in zip(ids, docs, metas) if isinstance(i, str)]
+        return rows, len(rows) >= DOC_CHUNKS
+
+    async def document(self, sync_id: str) -> dict[str, Any]:
+        rows, truncated = await self._chunks(sync_id)
+        if not rows:
+            raise UpstreamError(404, "Dokument nicht gefunden")
+        d = next(iter(aggregate([r["meta"] for r in rows])[0].values()))
+        return {**{k: d[k] for k in ("sync_id", "source", "repo", "path", "commit", "title")}, "sync_id": sync_id, "chunks": len(rows), "truncated": truncated,
+                "editable": not truncated, "text": join_chunks([r["text"] for r in rows]), "parts": [{"index": n, "text": r["text"]} for n, r in enumerate(rows)]}
+
+    async def replace(self, sync_id: str, title: str | None, text: str) -> dict[str, Any]:
+        """Dokument ersetzen: neue Fassung unter derselben `sync_id` einspeisen, erst danach genau die alten Chunks (nach Chroma-ID) entfernen.
+        Schlägt das Einspeisen fehl, bleibt das Alte unberührt. Schlägt nur das Entfernen fehl, existieren beide Fassungen (Fehlermeldung nennt das).
+        shortcut: nicht atomar über beide Dienste, kein Rollback der neuen Chunks nach einem Fehler beim Entfernen; die Sperre gilt je BFF-Prozess."""
+        async with self._state["write_lock"]:
+            return await self._replace_locked(sync_id, title, text)
+
+    async def _replace_locked(self, sync_id: str, title: str | None, text: str) -> dict[str, Any]:
+        old, truncated = await self._chunks(sync_id)
+        if not old:
+            raise UpstreamError(404, "Dokument nicht gefunden")
+        if truncated:
+            raise UpstreamError(409, f"Das Dokument hat mindestens {DOC_CHUNKS} Chunks und lässt sich nicht sicher ersetzen.")
+        d = next(iter(aggregate([old[0]["meta"]])[0].values()))
+        meta = {k: v for k, v in {"source": d["source"], "sync_id": sync_id, "title": title or d["title"], "repo": d["repo"], "path": d["path"], "commit": d["commit"]}.items() if v}
+        old_ids = {r["id"] for r in old}
+        try:
+            await self._rag("POST", "/api/v1/ingest", timeout=120.0, json={"text": text, "metadata": meta})
+        finally:
+            self.drop_cache()
+        now, _ = await self._chunks(sync_id)
+        fresh = [r["id"] for r in now if r["id"] not in old_ids]
+        if not fresh:
+            raise UpstreamError(502, "Die neue Fassung ist nicht in der Datenbank angekommen. Das alte Dokument bleibt unverändert.")
+        try:
+            await self._call("POST", self.cfg.chroma_url, f"/api/v1/collections/{await self._collection_id()}/delete", "Chroma", timeout=30.0, json={"ids": sorted(old_ids)})
+        except UpstreamError as e:
+            raise UpstreamError(502, f"Die neue Fassung ist gespeichert, aber die {len(old_ids)} alten Chunks ließen sich nicht entfernen ({e.detail}). Das Dokument ist vorübergehend doppelt vorhanden.") from e
+        finally:
+            self.drop_cache()
+        return {"ok": True, "sync_id": sync_id, "chunks": len(fresh), "removed": len(old_ids)}
 
 
 PROVIDER_TYPES: dict[str, type[KnowledgeProvider]] = {"hermes-rag": HermesRagProvider}

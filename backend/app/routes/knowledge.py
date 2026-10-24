@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from ..adapters import UpstreamError
 from ..auth import User, current_user, fresh_user
-from ..knowledge import ID_RE, PROVIDER_TYPES, KnowledgeProvider
+from ..knowledge import ID_RE, INGEST_MAX, PROVIDER_TYPES, KnowledgeProvider
 from ..security import client_ip
 from .memory import upstream
 
@@ -56,6 +56,14 @@ async def documents(provider: Prov, source: str | None = Query(None, max_length=
     return await upstream(provider.documents(source, q, limit, offset))
 
 
+SyncId = Annotated[str, Path(min_length=1, max_length=300, pattern=r"^[^\x00-\x1f\x7f]+$")]
+
+
+@router.get("/{provider_id}/documents/{sync_id:path}")
+async def document(provider: Prov, sync_id: SyncId):
+    return await upstream(provider.document(sync_id))
+
+
 class SearchRequest(BaseModel):
     query: str = Field(min_length=1, max_length=500)
     top_k: int = Field(8, ge=1, le=20)
@@ -69,7 +77,7 @@ async def search(provider: Prov, req: SearchRequest):
 
 class IngestRequest(BaseModel):
     title: str = Field(min_length=1, max_length=120)
-    text: str = Field(min_length=1, max_length=20000)
+    text: str = Field(min_length=1, max_length=INGEST_MAX)
     source: str = Field("manual", min_length=1, max_length=100, pattern=r"^[^\x00-\x1f\x7f]+$")
 
     @field_validator("title")
@@ -79,6 +87,19 @@ class IngestRequest(BaseModel):
         if not v or CONTROL.search(v):
             raise ValueError("Titel leer oder mit Steuerzeichen")
         return v
+
+
+class ReplaceRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+    title: str | None = Field(None, min_length=1, max_length=120)
+    text: str = Field(min_length=1, max_length=INGEST_MAX)
+
+    @field_validator("title")
+    @classmethod
+    def _title(cls, v: str | None) -> str | None:
+        if v is not None and (not v.strip() or CONTROL.search(v)):
+            raise ValueError("Titel leer oder mit Steuerzeichen")
+        return v.strip() if v else v
 
 
 class DeleteRequest(BaseModel):
@@ -100,4 +121,11 @@ async def ingest(request: Request, provider: Prov, req: IngestRequest, user: Use
 async def delete(request: Request, provider: Prov, req: DeleteRequest, user: User = Depends(fresh_user)):
     result = await upstream(provider.delete(req.sync_id))
     _audit(request, user, "knowledge.delete", provider, sync_id=req.sync_id)
+    return result
+
+
+@router.put("/{provider_id}/documents/{sync_id:path}")
+async def replace(request: Request, provider: Prov, sync_id: SyncId, req: ReplaceRequest, user: User = Depends(fresh_user)):
+    result = await upstream(provider.replace(sync_id, req.title, req.text))
+    _audit(request, user, "knowledge.update", provider, sync_id=sync_id, chars=len(req.text), chunks=result["chunks"], removed=result["removed"])  # nie der Text selbst
     return result
