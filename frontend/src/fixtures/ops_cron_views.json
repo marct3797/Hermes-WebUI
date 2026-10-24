@@ -1,0 +1,238 @@
+{
+ "jobs": [
+  {
+   "id": "d935fe014c20",
+   "name": "db-check",
+   "prompt": "",
+   "skills": [],
+   "model": null,
+   "provider": null,
+   "system": true,
+   "script": "db-health.sh",
+   "no_agent": true,
+   "schedule": {
+    "kind": "cron",
+    "expr": "30 4 * * *",
+    "minutes": null,
+    "display": "30 4 * * *"
+   },
+   "repeat": {
+    "times": null,
+    "completed": 19
+   },
+   "enabled": true,
+   "state": "scheduled",
+   "paused_reason": null,
+   "next_run_at": "2026-10-25T04:30:00+00:00",
+   "last_run_at": "2026-10-24T04:30:10.182930+00:00",
+   "last_status": "ok",
+   "last_error": null,
+   "failure_streak": 0,
+   "deliver": "local",
+   "latest": {
+    "status": "completed",
+    "started_at": "2026-10-24T04:30:03.278919+00:00",
+    "finished_at": "2026-10-24T04:30:10.197982+00:00"
+   }
+  },
+  {
+   "id": "dcba8b738849",
+   "name": "tagescheck",
+   "prompt": "Pruefe den Dienst und fasse das Ergebnis kurz zusammen.",
+   "skills": [],
+   "model": null,
+   "provider": null,
+   "system": false,
+   "script": null,
+   "no_agent": false,
+   "schedule": {
+    "kind": "cron",
+    "expr": "30 3 * * *",
+    "minutes": null,
+    "display": "30 3 * * *"
+   },
+   "repeat": {
+    "times": null,
+    "completed": 18
+   },
+   "enabled": true,
+   "state": "scheduled",
+   "paused_reason": null,
+   "next_run_at": "2026-10-25T03:30:00+00:00",
+   "last_run_at": "2026-10-24T03:31:04.958684+00:00",
+   "last_status": "ok",
+   "last_error": null,
+   "failure_streak": 0,
+   "deliver": "local",
+   "latest": {
+    "status": "completed",
+    "started_at": "2026-10-24T03:30:03.958270+00:00",
+    "finished_at": "2026-10-24T03:31:04.987414+00:00"
+   }
+  },
+  {
+   "id": "0123456789ab",
+   "name": "wochenbericht",
+   "prompt": "Pruefe den Dienst und fasse das Ergebnis kurz zusammen.",
+   "skills": [
+    "plan"
+   ],
+   "model": null,
+   "provider": null,
+   "system": false,
+   "script": null,
+   "no_agent": false,
+   "schedule": {
+    "kind": "interval",
+    "expr": null,
+    "minutes": 30,
+    "display": "every 30m"
+   },
+   "repeat": {
+    "times": null,
+    "completed": 18
+   },
+   "enabled": false,
+   "state": "paused",
+   "paused_reason": "Neu angelegt, bitte bewusst aktivieren",
+   "next_run_at": null,
+   "last_run_at": null,
+   "last_status": null,
+   "last_error": null,
+   "failure_streak": 0,
+   "deliver": "local",
+   "latest": null
+  }
+ ],
+ "runs": [
+  {
+   "id": "cron_output:d935fe014c20:2026-10-24_04-30-10",
+   "status": "COMPLETED",
+   "started_at": 1792816210.0,
+   "ended_at": 1792816210.0,
+   "duration_s": 0.0,
+   "preview": "# Cron Job: db-health **Job ID:** d935fe014c20 **Run Time:** 2026-10-24 04:30:10 **Mode:** no_agent (script) **Status:** silent (empty output)",
+   "active": false
+  },
+  {
+   "id": "cron_output:d935fe014c20:2026-10-23_04-30-08",
+   "status": "COMPLETED",
+   "started_at": 1792729808.0,
+   "ended_at": 1792729808.0,
+   "duration_s": 0.0,
+   "preview": "# Cron Job: db-health **Job ID:** d935fe014c20 **Run Time:** 2026-10-23 04:30:08 **Mode:** no_agent (script) **Status:** silent (empty output)",
+   "active": false
+  },
+  {
+   "id": "cron_output:d935fe014c20:2026-10-22_04-30-44",
+   "status": "FAILED",
+   "started_at": 1792643444.0,
+   "ended_at": 1792643444.0,
+   "duration_s": 0.0,
+   "preview": "# Cron Job: db-check Fehler beim Lauf",
+   "active": false
+  }
+ ],
+ "targets": [
+  {
+   "id": "local",
+   "name": "Local (save only)",
+   "ready": true
+  },
+  {
+   "id": "bot-chat:alpha",
+   "name": "Bot Chat (alpha)",
+   "ready": true
+  }
+ ],
+ "blueprints": [
+  {
+   "key": "morning-brief",
+   "title": "Morning briefing",
+   "description": "A short daily briefing: today's calendar, weather, and anything urgent waiting on you.",
+   "category": "daily",
+   "schedule_human": "daily at 08:00",
+   "fields": [
+    {
+     "name": "time",
+     "type": "time",
+     "label": "What time?",
+     "default": "08:00",
+     "options": [],
+     "optional": false,
+     "help": "24h local time, e.g. 08:00"
+    },
+    {
+     "name": "deliver",
+     "type": "enum",
+     "label": "Where to deliver?",
+     "default": "origin",
+     "options": [
+      "origin",
+      "local",
+      "bot-chat:default",
+      "bot-chat:alpha"
+     ],
+     "optional": false,
+     "help": "origin = the chat you set this up from (or your configured home channel when created from the dashboard); local = save only, no message; or any connected platform name"
+    }
+   ]
+  },
+  {
+   "key": "important-mail",
+   "title": "Important-mail monitor",
+   "description": "Check your inbox periodically and ping you ONLY about mail that actually needs attention.",
+   "category": "email",
+   "schedule_human": "every 30 minutes",
+   "fields": [
+    {
+     "name": "interval_min",
+     "type": "enum",
+     "label": "How often?",
+     "default": "30",
+     "options": [
+      "15",
+      "30",
+      "60"
+     ],
+     "optional": false,
+     "help": "minutes between checks"
+    },
+    {
+     "name": "criteria",
+     "type": "text",
+     "label": "Only notify me if the mail…",
+     "default": "needs a reply today, is from my manager or family, or mentions a deadline",
+     "options": [],
+     "optional": false,
+     "help": ""
+    },
+    {
+     "name": "deliver",
+     "type": "enum",
+     "label": "Where to deliver?",
+     "default": "origin",
+     "options": [
+      "origin",
+      "local",
+      "bot-chat:default",
+      "bot-chat:alpha"
+     ],
+     "optional": false,
+     "help": "origin = the chat you set this up from (or your configured home channel when created from the dashboard); local = save only, no message; or any connected platform name"
+    }
+   ]
+  }
+ ],
+ "logs": {
+  "file": "agent",
+  "lines": [
+   "2026-10-24 03:30:04,691 INFO [cron_x] agent.run: Lauf gestartet",
+   "2026-10-24 03:30:31,549 WARNING [cron_x] agent.tool_executor: Tool terminal returned error (0.29s)",
+   "2026-10-24 03:31:00,000 ERROR [cron_x] cron.scheduler: Zustellung fehlgeschlagen",
+   "2026-10-24 03:31:01,000 INFO [cron_x] agent.run: Zugang https://example.com/pfad"
+  ],
+  "redacted": true,
+  "truncated": false
+ }
+}

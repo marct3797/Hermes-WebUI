@@ -2,16 +2,16 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ApiError, api, toLogin } from "../api";
 import { Icon } from "../components/Icon";
 import { PageHead } from "../components/PageHead";
-import type { KnowledgeDoc, KnowledgeHit, KnowledgeProvider } from "../types";
-import { useAsync } from "../useAsync";
+import { DocView } from "../components/knowledge/DocView";
+import { IngestForm } from "../components/knowledge/IngestForm";
+import type { KnowledgeDoc, KnowledgeHit, KnowledgeProvider, KnowledgeStats } from "../types";
+import { useAsync, type Async } from "../useAsync";
 
 const de = (n: number) => n.toLocaleString("de-DE");
 const score = (n: number) => n.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const INGEST_MAX = 20000;
 const REMOVE_HINT = "Der Sync fügt dieses Dokument erst wieder hinzu, wenn sich die Datei im Repository ändert.";
 
-function Chips({ provider }: { provider: string }) {
-  const s = useAsync(() => api.knowledgeStats(provider), [provider]);
+function Chips({ s }: { s: Async<KnowledgeStats> }) {
   if (s.error) return <p className="banner" role="alert"><Icon name="alert" />Statistik nicht ladbar: {s.error}</p>;
   if (!s.data) return <p className="muted small">Lade…</p>;
   const d = s.data;
@@ -25,7 +25,7 @@ function Chips({ provider }: { provider: string }) {
   );
 }
 
-function Hit({ h }: { h: KnowledgeHit }) {
+function Hit({ h, onOpen }: { h: KnowledgeHit; onOpen: (syncId: string, focus: string) => void }) {
   const pct = Math.max(0, Math.min(1, h.score)) * 100;
   return (
     <li className="card kn-hit">
@@ -36,12 +36,13 @@ function Hit({ h }: { h: KnowledgeHit }) {
         <span className="kn-score" title="Ähnlichkeit"><span className="prog" aria-hidden><b style={{ width: `${pct}%` }} /></span><span className="mono small" aria-label={`Score ${score(h.score)}`}>{score(h.score)}</span></span>
       </div>
       <pre>{h.text}</pre>
+      {h.sync_id && <button type="button" className="btn btn-s" style={{ alignSelf: "flex-start" }} onClick={() => onOpen(h.sync_id!, h.text)}>Dokument öffnen</button>}
       {h.url && <a className="linkish small" href={h.url} target="_blank" rel="noopener noreferrer">Im Repo öffnen</a>}
     </li>
   );
 }
 
-function Search({ provider, source, setSource, sources }: { provider: string; source: string; setSource: (s: string) => void; sources?: string[] }) {
+function Search({ provider, source, setSource, sources, onOpen }: { provider: string; source: string; setSource: (s: string) => void; sources?: string[]; onOpen: (syncId: string, focus: string) => void }) {
   const [query, setQuery] = useState("");
   const [topK, setTopK] = useState(8);
   const [state, setState] = useState<{ busy?: boolean; error?: string; hits?: KnowledgeHit[] }>({});
@@ -71,7 +72,7 @@ function Search({ provider, source, setSource, sources }: { provider: string; so
         <button type="submit" className="btn btn-s btn-p" disabled={!query.trim() || state.busy}>{state.busy ? "Suche…" : "Suchen"}</button>
       </form>
       {state.error && <p className="banner" role="alert"><Icon name="alert" /><span>Suche fehlgeschlagen: {state.error}</span></p>}
-      {state.hits && (state.hits.length === 0 ? <p className="panel-empty">Keine Treffer.</p> : <ul className="kn-hits">{state.hits.map((h, i) => <Hit key={i} h={h} />)}</ul>)}
+      {state.hits && (state.hits.length === 0 ? <p className="panel-empty">Keine Treffer.</p> : <ul className="kn-hits">{state.hits.map((h, i) => <Hit key={i} h={h} onOpen={onOpen} />)}</ul>)}
       {!state.hits && !state.error && !state.busy && <p className="panel-empty">Die Suche arbeitet nach Bedeutung, nicht nur nach Wortlaut.</p>}
     </section>
   );
@@ -84,8 +85,8 @@ function SourceTable({ rows, source, setSource }: { rows: Array<{ source: string
         <thead><tr><th>Quelle</th><th>Chunks</th><th>Dokumente</th><th>Repos</th></tr></thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.source} className={r.source === source ? "on" : undefined}>
-              <td><button type="button" className="linkish" aria-pressed={r.source === source} onClick={() => setSource(r.source === source ? "" : r.source)}>{r.source}</button></td>
+            <tr key={r.source} className={`kn-click${r.source === source ? " on" : ""}`} onClick={() => setSource(r.source === source ? "" : r.source)}>
+              <td><button type="button" className="linkish" aria-pressed={r.source === source}>{r.source}</button></td>
               <td>{de(r.chunks)}</td><td>{de(r.documents)}</td><td>{r.repos.join(", ") || "–"}</td>
             </tr>
           ))}
@@ -137,7 +138,7 @@ function ConfirmDelete({ provider, doc, onClose, onDone }: { provider: string; d
   );
 }
 
-function Documents({ provider, source, revision, onChanged }: { provider: string; source: string; revision: number; onChanged: () => void }) {
+function Documents({ provider, source, revision, onChanged, onOpen }: { provider: string; source: string; revision: number; onChanged: () => void; onOpen: (syncId: string) => void }) {
   const [q, setQ] = useState("");
   const [offset, setOffset] = useState(0);
   const [doomed, setDoomed] = useState<KnowledgeDoc>();
@@ -161,10 +162,10 @@ function Documents({ provider, source, revision, onChanged }: { provider: string
             <thead><tr><th>Dokument</th><th>Quelle</th><th>Chunks</th><th><span className="sr-only">Aktion</span></th></tr></thead>
             <tbody>
               {d.items.map((x) => (
-                <tr key={x.sync_id}>
-                  <td><span className="mono small">{x.title ?? x.path ?? x.sync_id}</span>{(x.title || x.path) && <div className="hint">{x.sync_id}</div>}</td>
+                <tr key={x.sync_id} className="kn-click" onClick={() => onOpen(x.sync_id)}>
+                  <td><button type="button" className="linkish mono small" style={{ textAlign: "left" }}>{x.title ?? x.path ?? x.sync_id}</button>{(x.title || x.path) && <div className="hint">{x.sync_id}</div>}</td>
                   <td>{x.source}</td><td>{de(x.chunks)}</td>
-                  <td><button type="button" className="btn btn-s" onClick={() => setDoomed(x)} aria-label={`${x.sync_id} löschen`}><Icon name="x" size={14} />Löschen</button></td>
+                  <td><button type="button" className="btn btn-s" onClick={(e) => { e.stopPropagation(); setDoomed(x); }} aria-label={`${x.sync_id} löschen`}><Icon name="x" size={14} />Löschen</button></td>
                 </tr>
               ))}
             </tbody>
@@ -181,46 +182,35 @@ function Documents({ provider, source, revision, onChanged }: { provider: string
   );
 }
 
-function Ingest({ provider, onDone }: { provider: string; onDone: () => void }) {
-  const [title, setTitle] = useState("");
-  const [text, setText] = useState("");
-  const [state, setState] = useState<{ busy?: boolean; error?: string; stepUp?: boolean; done?: string }>({});
-  const tooLong = text.length > INGEST_MAX;
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    setState({ busy: true });
-    try {
-      const r = await api.knowledgeIngest(provider, { title: title.trim(), text });
-      setState({ done: `Eingespeist als ${r.sync_id}.` }); setTitle(""); setText(""); onDone();
-    } catch (err) {
-      setState(err instanceof ApiError && err.code === "step_up_required" ? { stepUp: true } : { error: (err as Error).message });
-    }
-  };
+function SourceHead({ row, onAll }: { row: { source: string; chunks: number; documents: number; repos: string[] }; onAll: () => void }) {
   return (
-    <details className="kn-sec">
-      <summary>Text einspeisen</summary>
-      <form className="col" style={{ gap: 8, marginTop: 8 }} onSubmit={(e) => void submit(e)}>
-        <input className="field field-line" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder="Titel" aria-label="Titel" />
-        <textarea className="field" rows={8} value={text} onChange={(e) => setText(e.target.value)} placeholder="Text" aria-label="Text" />
-        <span className={`mono small ${tooLong ? "error" : "t3"}`}>{de(text.length)} / {de(INGEST_MAX)} Zeichen</span>
-        {state.stepUp && <p className="banner" role="alert"><Icon name="lock" /><span>Das Einspeisen verlangt eine frische Anmeldung. <button type="button" className="linkish" onClick={() => toLogin(true)}>Erneut anmelden</button></span></p>}
-        {state.error && <p className="banner" role="alert"><Icon name="alert" /><span>{state.error}</span></p>}
-        {state.done && <p className="hint crimt" role="status" style={{ margin: 0 }}>{state.done}</p>}
-        <div><button type="submit" className="btn btn-s btn-p" disabled={!title.trim() || !text.trim() || tooLong || state.busy}>{state.busy ? "Speichere…" : "Einspeisen"}</button></div>
-      </form>
-    </details>
+    <section className="card kn-sourcehead" aria-label="Quellenansicht">
+      <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+        <h2 className="grow" style={{ margin: 0 }}>Quelle {row.source}</h2>
+        <span className="chip"><span className="lbl">Dokumente</span>{de(row.documents)}</span>
+        <span className="chip"><span className="lbl">Chunks</span>{de(row.chunks)}</span>
+        {row.repos.length > 0 && <span className="chip"><span className="lbl">Repos</span>{row.repos.join(", ")}</span>}
+        <button type="button" className="btn btn-s" onClick={onAll}>Alle Quellen</button>
+      </div>
+    </section>
   );
 }
 
 function Knowledge({ provider }: { provider: KnowledgeProvider }) {
   const [source, setSource] = useState("");
   const [revision, setRevision] = useState(0);
+  const [open, setOpen] = useState<{ syncId: string; focus?: string }>();
+  const stats = useAsync(() => api.knowledgeStats(provider.id), [provider.id, revision]);
   const sources = useAsync(() => (provider.has_sources ? api.knowledgeSources(provider.id) : Promise.resolve(undefined)), [provider.id, revision]);
   const s = sources.data;
+  const bump = () => setRevision((r) => r + 1);
+  const sd = stats.data;
+  const row = s?.available ? s.items.find((i) => i.source === source) : undefined;
+  if (open) return <DocView key={open.syncId} provider={provider.id} syncId={open.syncId} focus={open.focus} chunkSize={sd?.chunk_size} overlap={sd?.chunk_overlap} onBack={() => setOpen(undefined)} onChanged={bump} />;
   return (
     <>
-      <Chips key={revision} provider={provider.id} />
-      <Search provider={provider.id} source={source} setSource={setSource} sources={s?.available ? s.items.map((i) => i.source) : undefined} />
+      <Chips s={stats} />
+      <Search provider={provider.id} source={source} setSource={setSource} sources={s?.available ? s.items.map((i) => i.source) : undefined} onOpen={(syncId, focus) => setOpen({ syncId, focus })} />
       <section className="kn-sec" aria-label="Quellen">
         <h2>Quellen</h2>
         {sources.error && <p className="banner" role="alert"><Icon name="alert" /><span>Quellen nicht ladbar: {sources.error}</span></p>}
@@ -230,13 +220,14 @@ function Knowledge({ provider }: { provider: KnowledgeProvider }) {
         {s?.available && <SourceTable rows={s.items} source={source} setSource={setSource} />}
         {s?.available && s.truncated && <p className="hint" role="status">Nur die ersten {de(s.scanned_chunks)} Chunks wurden gezählt, die Übersicht ist unvollständig.</p>}
       </section>
-      <Documents key={JSON.stringify([source, revision])} provider={provider.id} source={source} revision={revision} onChanged={() => setRevision((r) => r + 1)} />
-      <Ingest provider={provider.id} onDone={() => setRevision((r) => r + 1)} />
+      {row && <SourceHead row={row} onAll={() => setSource("")} />}
+      <Documents key={JSON.stringify([source, revision])} provider={provider.id} source={source} revision={revision} onChanged={bump} onOpen={(syncId) => setOpen({ syncId })} />
+      <IngestForm provider={provider.id} sources={s?.available ? s.items.map((i) => i.source) : undefined} chunkSize={sd?.chunk_size} overlap={sd?.chunk_overlap} onDone={bump} />
     </>
   );
 }
 
-/** Wissen: ein selbst gehostetes RAG-System ansehen und pflegen (Statistik, Suche, Quellen, Dokumente, Einspeisen, Löschen). Die Anbieter stehen in der Konfiguration des BFF. */
+/** Wissen: ein selbst gehostetes RAG-System ansehen und pflegen (Statistik, Suche, Quellen, Dokumente mit Detailansicht und Bearbeiten, Einspeisen, Löschen). Die Anbieter stehen in der Konfiguration des BFF. */
 export function KnowledgePage() {
   const list = useAsync(() => api.knowledgeProviders(), []);
   const [chosen, setChosen] = useState<string>();

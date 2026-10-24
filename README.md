@@ -96,8 +96,7 @@ Die Seite **Wissen** (`/knowledge`) zeigt und pflegt ein selbst gehostetes RAG-S
 Dokumentübersicht, Text einspeisen, einzelne Dokumente löschen. Anbieter stehen in der Datei, auf die `HERMES_WEBUI_KNOWLEDGE_FILE` zeigt (Vorlage
 `backend/knowledge.example.json`). Fehlt die Datei, ist der Eintrag in der Seitenleiste ausgeblendet; `/knowledge` zeigt dann eine Anleitung.
 
-- Typ `hermes-rag` (`app/knowledge.py`): `base_url` (Statistik, Suche, Einspeisen, Löschen), optional `chroma_url` (die Chroma-Datenbank dahinter, **nur lesend**,
-  liefert Quellen und Dokumente; ohne sie bleibt die Suche mit freiem Quellenfeld), `collection` (sonst die aus `/api/v1/stats`) und `link_template` mit
+- Typ `hermes-rag` (`app/knowledge.py`): `base_url` (Statistik, Suche, Einspeisen, Löschen), optional `chroma_url` (die Chroma-Datenbank dahinter, liefert Quellen, Dokumente und Chunk-Texte; **geschrieben wird nur beim Ersetzen eines Dokuments** und dann genau: alte Chunks löschen per Chroma-ID; ohne sie bleibt die Suche mit freiem Quellenfeld), `collection` (sonst die aus `/api/v1/stats`) und `link_template` mit
   `{repo}`, `{commit}`, `{path}` (jedes Teilstück wird URL-kodiert; fehlt ein Wert, gibt es keinen Link). URLs: nur http/https, keine Zugangsdaten darin.
 - Die Quellenübersicht scannt die Chroma-Metadaten seitenweise (1000 je Anfrage, Abbruch bei 50 000 Chunks mit Hinweis) und merkt sich das Ergebnis
   `HERMES_WEBUI_KNOWLEDGE_CACHE_S` Sekunden (Standard 300); Einspeisen und Löschen verwerfen es.
@@ -105,6 +104,13 @@ Dokumentübersicht, Text einspeisen, einzelne Dokumente löschen. Anbieter stehe
   nur über die `sync_id`. Ein Sync kann das Dokument wieder hinzufügen, sobald sich die Datei im Repository ändert.
   Duplikatprüfungen und Schreibsperren gelten für einen BFF-Prozess. Ohne `chroma_url` ist keine Duplikatprüfung möglich; bei einem abgeschnittenen Scan wird das Einspeisen abgelehnt.
   Der Adapter unterstützt die hier dokumentierte Hermes-RAG-API und Chroma v1, nicht beliebige RAG-Produkte. Der Zugriff zum Dienst muss im privaten Netz abgesichert sein; der Adapter sendet derzeit keine Anbieter-Zugangsdaten.
+
+- Dokument-Detail (`GET /bff/knowledge/{id}/documents/{sync_id}`): Metadaten, Volltext und Chunks (höchstens 500 Chunks). Der Volltext entsteht aus den Chunks in Speicherreihenfolge; die Überlappung wird am Text erkannt und nur einmal gezeigt (bei periodischem Text kann das ungenau sein). Bearbeiten (`PUT` auf dieselbe Route, Audit `knowledge.update` ohne Text) speist die neue Fassung unter derselben `sync_id` ein und entfernt erst danach die alten Chunks nach Chroma-ID; schlägt das Einspeisen fehl, bleibt das Alte. Schlägt nur das Entfernen fehl, ist das Dokument vorübergehend doppelt (die Meldung sagt es). Das ist nicht atomar über beide Dienste und braucht `chroma_url` mit Schreibzugriff auf Chroma v1 (`POST /collections/{id}/delete`). Einspeisen und Ersetzen nehmen bis 1 MiB Text.
+
+### Zeitpläne und Logs (Dashboard)
+
+- `routes/cron.py`: `/bff/h/{host}/_cron/{profile}/schedules[/{id}[/runs|pause|resume|trigger]]`, `/targets`, `/blueprints`, `/skill-names` und `/bff/h/{host}/_logs`. Alles läuft über das Dashboard des Hosts (`/api/cron/*`, `/api/logs`). Schreiben verlangt eine frische Anmeldung und steht im Audit (`cron.create|update|pause|resume|trigger|delete`, nur Job-ID und Profil). Neue Zeitpläne und Vorlagen entstehen immer pausiert. Skript-Jobs (`script`/`no_agent`) sind System-Jobs: Ändern, Ausführen und Löschen nur mit `confirm_system`.
+- Logs: Dateien `agent`, `errors`, `gateway`, `gui`, `desktop`; höchstens 500 Zeilen je Anfrage (Grenze des Dashboards) und 256 KiB; Zeilen mit Geheimnismustern und URL-Zugangsteile werden serverseitig geschwärzt (`redacted: true`).
 
 ### Devtools
 
