@@ -40,15 +40,52 @@ class Upload(BaseModel):
     content_base64: str = Field(max_length=1398104)
 
 
+class Mkdir(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    workspace: str = Field(max_length=128)
+    path: str = Field(min_length=1, max_length=2048)
+
+
+class Write(Mkdir):
+    content: str = Field(max_length=files.UPLOAD_LIMIT)
+    expected_sha256: str | None = Field(None, pattern=r'^[0-9a-f]{64}$')
+    create: bool = False
+
+
+class Move(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    workspace: str = Field(max_length=128)
+    source: str = Field(min_length=1, max_length=2048, alias='from')
+    target: str = Field(min_length=1, max_length=2048, alias='to')
+
+
 @router.get('/workspaces')
 def workspaces(request: Request):
-    return {'workspaces': [{'id': value(w, 'id'), 'label': value(w, 'label', value(w, 'id'))}
+    def is_git(w):
+        git_dir = Path(value(w, 'path', '')) / '.git'
+        return git_dir.is_dir() and not git_dir.is_symlink()
+    return {'workspaces': [{'id': value(w, 'id'), 'label': value(w, 'label', value(w, 'id')), 'is_git': is_git(w)}
                            for w in configured(request.app.state.settings, 'workspaces')]}
 
 
 @router.get('/files')
-def browse(request: Request, workspace: str, path: str = Query('', max_length=2048)):
-    return files.browse(workspace_root(request, workspace), workspace, path)
+def browse(request: Request, workspace: str, path: str = Query('', max_length=2048), full: bool = False):
+    return files.browse(workspace_root(request, workspace), workspace, path, full)
+
+
+@router.post('/files/mkdir')
+def mkdir(request: Request, body: Mkdir):
+    return files.mkdir(workspace_root(request, body.workspace), body.path)
+
+
+@router.put('/files/write')
+def write(request: Request, body: Write):
+    return files.write(workspace_root(request, body.workspace), body.path, body.content, body.expected_sha256, body.create)
+
+
+@router.post('/files/move')
+def move(request: Request, body: Move):
+    return files.move(workspace_root(request, body.workspace), body.source, body.target)
 
 
 @router.get('/files/download')

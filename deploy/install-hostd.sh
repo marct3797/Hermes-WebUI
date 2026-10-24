@@ -102,7 +102,7 @@ print('Daemon environment file (not printed):', env_file)
 PY
 # Hermes-Profile erkennen und ergaenzen (bestehende Eintraege bleiben unveraendert).
 "$venv/bin/python" -m hostd.discover --config "$config" --hermes-home "$HOME/.hermes"
-for i in ${!ws_id[@]+"${!ws_id[@]}"}; do
+for ((i = 0; i < ${#ws_id[@]}; i++)); do
   rc=0
   "$venv/bin/python" -m hostd.workspaces add --config "$config" --id "${ws_id[$i]}" --path "${ws_path[$i]}" --label "${ws_label[$i]}" || rc=$?
   ((rc == 0 || rc == 3)) || exit "$rc"

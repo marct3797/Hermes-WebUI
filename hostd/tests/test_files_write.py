@@ -220,3 +220,13 @@ def test_workspaces_cli_add_list_validation(tmp_path):
     assert run_cli('add', '--config', str(config), '--id', 'bad id!', '--path', str(folder)).returncode == 2
     assert len(json.loads(config.read_text())['workspaces']) == 1
     assert not [p for p in tmp_path.iterdir() if p.name.startswith('.config-')]
+
+
+@pytest.mark.parametrize('spec', ['x=/', 'x=~HOME~', 'x=relativ', 'x=~TMP~/fehlt', 'bad id=~TMP~'])
+def test_installer_rejects_bad_workspace_before_installing(tmp_path, spec):
+    script = os.path.join(os.path.dirname(__file__), '..', '..', 'deploy', 'install-hostd.sh')
+    spec = spec.replace('~HOME~', os.path.expanduser('~')).replace('~TMP~', str(tmp_path))
+    done = subprocess.run(['bash', script, '--no-start', '--venv', str(tmp_path / 'venv'), '--config', str(tmp_path / 'c.json'),
+                           '--env-file', str(tmp_path / 'e'), '--unit-dir', str(tmp_path / 'u'), '--workspace', spec],
+                          capture_output=True, text=True)
+    assert done.returncode == 2 and not (tmp_path / 'venv').exists() and not (tmp_path / 'c.json').exists()
