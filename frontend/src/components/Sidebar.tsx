@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useHosts } from "../hosts";
 import { agentKey, agentPath, sameAgent } from "../router";
 import { useRoomNeeds } from "../roomNeeds";
@@ -22,22 +23,38 @@ type Props = {
   onLogout: () => void;
 };
 
-const NAV = [
+type NavItem = { to: string; label: string; icon: string };
+// Oben immer sichtbar: was Aufmerksamkeit braucht. Darunter die Chats (Agents), danach aufklappbare Gruppen.
+const TOP: NavItem[] = [
   { to: "/", label: "Cockpit", icon: "grid" },
   { to: "/inbox", label: "Inbox", icon: "inbox" },
-  { to: "/hosts", label: "Hosts", icon: "server" },
   { to: "/rooms", label: "Räume", icon: "orbit" },
-  { to: "/kanban", label: "Kanban", icon: "kanban" },
-  { to: "/jobs", label: "Zeitpläne", icon: "clock" },
-  { to: "/search", label: "Inhaltssuche", icon: "search" },
-  { to: "/memory", label: "Gedächtnis", icon: "memory" },
-  { to: "/knowledge", label: "Wissen", icon: "file" },
-  { to: "/providers", label: "Anbieter", icon: "coin" },
-  { to: "/extensions", label: "Erweiterungen", icon: "wrench" },
-  { to: "/marketplace", label: "Marktplatz", icon: "layers" },
-  { to: "/logs", label: "Logs", icon: "layers" },
-  { to: "/system", label: "System", icon: "shield" },
 ];
+const GROUPS: { id: string; label: string; items: NavItem[] }[] = [
+  { id: "work", label: "Arbeit", items: [
+    { to: "/kanban", label: "Kanban", icon: "kanban" },
+    { to: "/jobs", label: "Zeitpläne", icon: "clock" },
+  ] },
+  { id: "know", label: "Wissen", items: [
+    { to: "/memory", label: "Gedächtnis", icon: "memory" },
+    { to: "/knowledge", label: "Wissen", icon: "file" },
+    { to: "/search", label: "Inhaltssuche", icon: "search" },
+  ] },
+  { id: "ext", label: "Erweiterungen", items: [
+    { to: "/extensions", label: "Skills, MCP, Plugins", icon: "wrench" },
+    { to: "/marketplace", label: "Marktplatz", icon: "layers" },
+  ] },
+  { id: "ops", label: "Betrieb", items: [
+    { to: "/hosts", label: "Hosts", icon: "server" },
+    { to: "/providers", label: "Anbieter", icon: "coin" },
+    { to: "/logs", label: "Logs", icon: "layers" },
+    { to: "/system", label: "System", icon: "shield" },
+  ] },
+];
+const STORE = "hermes-nav-groups";
+function readOpen(): Record<string, boolean> {
+  try { return JSON.parse(localStorage.getItem(STORE) ?? "{}") as Record<string, boolean>; } catch { return {}; }
+}
 // Bereiche eines Hermes-Agents: stehen unter dem gewählten Agent, damit man sie nicht erst in einer Icon-Leiste suchen muss.
 const MODULES = [
   { module: "soul", label: "SOUL & Profil", icon: "spark" },
@@ -54,6 +71,20 @@ export function Sidebar(p: Props) {
   const { needs: roomNeeds } = useRoomNeeds();
   const wissen = useKnowledgeProviders().length > 0; // nur sichtbar, wenn ein Wissens-Anbieter eingerichtet ist
   const open = (to: string) => (to === "/inbox" ? needs.length + roomNeeds.length : to === "/rooms" ? roomNeeds.length : 0);
+  const [stored, setStored] = useState<Record<string, boolean>>(readOpen);
+  // Die Gruppe der aktuellen Seite ist immer offen; sonst gilt die gemerkte Wahl des Nutzers.
+  const isOpen = (g: (typeof GROUPS)[number]) => g.items.some((n) => p.path === n.to || p.path.startsWith(`${n.to}/`)) || stored[g.id] === true;
+  const toggle = (g: (typeof GROUPS)[number]) => setStored((prev) => {
+    const next = { ...prev, [g.id]: !isOpen(g) };
+    try { localStorage.setItem(STORE, JSON.stringify(next)); } catch { /* ohne Speicher gilt die Auswahl nur bis zum Neuladen */ }
+    return next;
+  });
+  const link = (n: NavItem) => (
+    <Link key={n.to} to={n.to} className={p.path === n.to ? "on" : undefined} aria-current={p.path === n.to ? "page" : undefined} onClick={p.onClose}>
+      <Icon name={n.icon} size={18} />{n.label}
+      {open(n.to) > 0 && <span className="ct" aria-label={`${open(n.to)} offen`}>{open(n.to)}</span>}
+    </Link>
+  );
   return (
     <>
       {p.open && <div className="scrim" onClick={p.onClose} aria-hidden />}
@@ -65,15 +96,7 @@ export function Sidebar(p: Props) {
         </Link>
 
         <div className="side-scroll">
-          <nav aria-label="Übersicht" className="nav">
-            {NAV.filter((n) => n.to !== "/knowledge" || wissen).map((n) => (
-              <Link key={n.to} to={n.to} className={p.path === n.to ? "on" : undefined} aria-current={p.path === n.to ? "page" : undefined} onClick={p.onClose}>
-                <Icon name={n.icon} size={18} />{n.label}
-                {open(n.to) > 0 && <span className="ct" aria-label={`${open(n.to)} offen`}>{open(n.to)}</span>}
-              </Link>
-            ))}
-
-          </nav>
+          <nav aria-label="Übersicht" className="nav">{TOP.map(link)}</nav>
 
           {error && <p className="error small" role="alert" style={{ padding: "0 16px" }}>Hosts nicht ladbar: {error}</p>}
           {!hosts && !error && <p className="muted small" style={{ padding: "0 16px" }}>Lade…</p>}
@@ -85,10 +108,6 @@ export function Sidebar(p: Props) {
                 {h.kind === "remote" && <span className="tag">remote</span>}
                 <span className="r">{h.runtimes.map((r) => `${r.id} · ${r.agents.length}`).join(" · ")}</span>
               </h2>
-              <div className="side-sessions" role="group" aria-label={`Host-Werkzeuge ${h.label}`}>
-                <Link to={`/hosts/${encodeURIComponent(h.id)}/terminal`} onClick={p.onClose}><Icon name="terminal" size={14} />Terminal</Link>
-                <Link to={`/hosts/${encodeURIComponent(h.id)}/workspace`} onClick={p.onClose}><Icon name="layers" size={14} />Workspace & Git</Link>
-              </div>
               {h.status !== "online" && h.detail && <p className="muted small" style={{ padding: "0 16px 4px" }}>{h.detail}</p>}
               {h.runtimes.map((r) => (
                 <div key={r.id}>
@@ -139,6 +158,31 @@ export function Sidebar(p: Props) {
               ))}
             </section>
           ))}
+
+          <nav aria-label="Bereiche" className="nav nav-groups">
+            {GROUPS.map((g) => {
+              const items = g.items.filter((n) => n.to !== "/knowledge" || wissen);
+              const expanded = isOpen(g);
+              return (
+                <div key={g.id} className="nav-group">
+                  <button type="button" className="nav-group-h" aria-expanded={expanded} aria-controls={`nav-${g.id}`} onClick={() => toggle(g)}>
+                    <Icon name={expanded ? "chevd" : "chevr"} size={14} />{g.label}
+                    <span className="r">{items.length}</span>
+                  </button>
+                  {expanded && <div id={`nav-${g.id}`} className="nav-group-b">
+                    {items.map(link)}
+                    {g.id === "ops" && hosts?.map((h) => (
+                      <div key={h.id} className="nav-host" role="group" aria-label={`Werkzeuge ${h.label}`}>
+                        <span className="lbl">{h.label}</span>
+                        <Link to={`/hosts/${encodeURIComponent(h.id)}/terminal`} className={p.path === `/hosts/${encodeURIComponent(h.id)}/terminal` ? "on" : undefined} onClick={p.onClose}><Icon name="terminal" size={14} />Terminal</Link>
+                        <Link to={`/hosts/${encodeURIComponent(h.id)}/workspace`} className={p.path === `/hosts/${encodeURIComponent(h.id)}/workspace` ? "on" : undefined} onClick={p.onClose}><Icon name="file" size={14} />Dateien & Git</Link>
+                      </div>
+                    ))}
+                  </div>}
+                </div>
+              );
+            })}
+          </nav>
         </div>
 
         <footer className="side-foot">

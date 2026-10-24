@@ -199,11 +199,14 @@ describe("Wissen in der Navigation", () => {
     history.pushState(null, "", "/");
     render(<App />);
     const side = await screen.findByRole("complementary", { name: "Navigation" });
+    fireEvent.click(await within(side).findByRole("button", { name: /^Wissen/ }));
     await within(side).findByRole("link", { name: /Gedächtnis/ });
-    expect(within(side).queryByRole("link", { name: /Wissen/ })).toBeNull();
+    expect(within(side).queryByRole("link", { name: "Wissen" })).toBeNull();
     cleanup();
     installBackend(["gamma"], ["runs"], {}, undefined, [RAG]);
     render(<App />);
-    expect(await within(await screen.findByRole("complementary", { name: "Navigation" })).findByRole("link", { name: /Wissen/ })).toHaveAttribute("href", "/knowledge");
+    const side2 = await screen.findByRole("complementary", { name: "Navigation" });
+    fireEvent.click(await within(side2).findByRole("button", { name: /^Wissen/ }));
+    expect(await within(side2).findByRole("link", { name: "Wissen" })).toHaveAttribute("href", "/knowledge");
   });
 });
