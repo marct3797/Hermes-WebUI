@@ -27,8 +27,8 @@ export function editableSchedule(s: Schedule | null | undefined): string | undef
 /** API-Felder nie ungeprüft als React-Kind: Objekte würden die ganze Seite abstürzen lassen. */
 export const text = (v: unknown): string => typeof v === "string" ? v : typeof v === "number" || typeof v === "boolean" ? String(v) : "";
 
-export type Availability = { available?: boolean; configured?: boolean; supported?: boolean; reason?: string; warnings?: string[]; truncated?: boolean };
-export type Entry = { id: string; title?: string; transitions?: string[]; name?: string; label?: string; description?: string; enabled?: boolean; status?: string; actions?: string[] };
+export type Availability = { source?: string; available?: boolean; configured?: boolean; supported?: boolean; reason?: string; warnings?: string[]; truncated?: boolean };
+export type Entry = { id: string; assignee?: string; version?: string; title?: string; transitions?: string[]; name?: string; label?: string; description?: string; enabled?: boolean; status?: string; actions?: string[] };
 export type Source = Entry & { url?: string; reviewed?: boolean; installable?: boolean; trust?: string; kind?: string; requirements?: string[] };
 export type Catalog = Availability & { profiles?: { id: string }[]; sources?: Source[] };
 export type Listing = Availability & { actions?: string[]; note?: string; items?: Entry[]; content?: string; redacted?: boolean; columns?: string[]; tasks?: (Entry & { title: string; status: string; transitions?: string[] })[]; jobs?: (Entry & { schedule?: Schedule; paused?: boolean })[] };

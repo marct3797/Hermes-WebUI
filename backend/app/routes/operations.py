@@ -14,8 +14,10 @@ from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.websockets import WebSocketDisconnect
 
+from .. import dashboard_ops
 from ..adapters.hermes import HermesAdapter
 from ..auth import DEV_USER, SESSION_COOKIE, User, current_user, fresh_user, is_fresh
+from ..dashboard import DashboardClient
 from ..operations import HostdClient, REVIEWED_SOURCES, UPLOAD_LIMIT, websocket_connect
 from ..registry import AGENT_RE, ID_RE, HostCfg
 from .agents import Tgt, audit, upstream
@@ -41,6 +43,14 @@ def daemon(request: Request, host: str) -> HostdClient:
     if cfg is None:
         raise HTTPException(503, "Kein Host-Dienst konfiguriert")
     return HostdClient(cfg, request.app.state.http)
+
+
+def host_dashboard(request: Request, host: str) -> DashboardClient | None:
+    """Dashboard derselben Maschine als lesende Ersatzquelle, wenn der Host-Dienst Profile nicht sieht (z. B. Hermes im Container)."""
+    for runtime in host_cfg(request, host).runtimes:
+        if runtime.dashboard is not None:
+            return DashboardClient(runtime.dashboard, request.app.state.http, request.app.state.dash_cache)
+    return None
 
 
 def record(request, user: User, action: str, host: str):
@@ -246,7 +256,12 @@ async def upload(request: Request, host: HostId, body: Upload, user: User = Depe
 
 @router.get("/h/{host}/_git")
 async def git(request: Request, host: HostId, workspace: Workspace, _user: User = Depends(current_user)):
-    return await daemon(request, host).request("GET", "/v1/git", params={"workspace": workspace})
+    try:
+        return await daemon(request, host).request("GET", "/v1/git", params={"workspace": workspace})
+    except HTTPException as exc:
+        if exc.status_code != 409:  # ältere Host-Dienste melden einen Ordner ohne Repository als 409
+            raise
+        return {"repository": False, "reason": "Kein lesbares Git-Repository in diesem Arbeitsordner"}
 
 
 @router.get("/search")
@@ -259,9 +274,17 @@ async def search(request: Request, q: str = Query(min_length=1, max_length=200),
     async def one(host):
         async with semaphore:
             try:
-                return await daemon(request, host.id).request("GET", "/v1/search", params={"q": q})
+                batch = await daemon(request, host.id).request("GET", "/v1/search", params={"q": q})
+                failure = None
             except HTTPException as exc:
-                return {"warning": exc.detail}
+                batch, failure = {}, exc.detail
+            dash = host_dashboard(request, host.id)
+            if dash is not None and not (isinstance(batch.get("results"), list) and batch["results"]):
+                try:  # Host-Dienst fehlt, ist veraltet oder sieht keine Profile: das Dashboard kennt die Sitzungen
+                    return await upstream(dashboard_ops.search(dash, q))
+                except HTTPException as exc:
+                    failure = failure or exc.detail
+            return {"warning": failure} if failure else batch
     batches = await asyncio.gather(*(one(h) for h in hosts))
     results, warnings, truncated = [], [], False
     for host, batch in zip(hosts, batches, strict=True):
@@ -285,7 +308,21 @@ async def search(request: Request, q: str = Query(min_length=1, max_length=200),
 
 @router.get("/h/{host}/_manage")
 async def manage(request: Request, host: HostId, _user: User = Depends(current_user)):
-    result = await daemon(request, host).request("GET", "/v1/manage")
+    failure = None
+    try:
+        result = await daemon(request, host).request("GET", "/v1/manage")
+    except HTTPException as exc:
+        result, failure = {}, exc
+    if not (isinstance(result.get("profiles"), list) and result["profiles"]):
+        dash = host_dashboard(request, host)
+        if dash is not None:  # Host-Dienst ohne Profile: die Profile des Dashboards verwenden, nur lesend
+            try:
+                result = {**result, "profiles": await upstream(dashboard_ops.profiles(dash)), "source": "dashboard"}
+                failure = None
+            except HTTPException:
+                pass
+    if failure is not None:
+        raise failure
     sources = list(REVIEWED_SOURCES)
     # Host-owned reviewed catalog exposes identifiers, never an install URL accepted from the browser.
     for source in result.get("sources", []):
@@ -305,7 +342,19 @@ async def manage(request: Request, host: HostId, _user: User = Depends(current_u
 
 @router.get("/h/{host}/_manage/{profile}/{kind}")
 async def management(request: Request, host: HostId, profile: ProfileId, kind: Kind, _user: User = Depends(current_user)):
-    return await daemon(request, host).request("GET", f"/v1/manage/{profile}/{kind}")
+    failure, data = None, None
+    try:
+        data = await daemon(request, host).request("GET", f"/v1/manage/{profile}/{kind}")
+    except HTTPException as exc:
+        failure = exc
+    if data is not None and data.get("available") is not False:
+        return data
+    dash = host_dashboard(request, host)
+    if dash is None:  # keine Ersatzquelle: die ursprüngliche Antwort oder den Fehler unverändert weitergeben
+        if failure is not None:
+            raise failure
+        return data
+    return await upstream(dashboard_ops.listing(dash, profile, kind))
 
 
 class ManagementWrite(StrictModel):

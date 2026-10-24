@@ -19,6 +19,7 @@ def create_mock():
     app.state.jobs = {}
     app.state.jobs_admin = True
     app.state.fail = None
+    app.state.unavailable = False
 
     @app.middleware("http")
     async def authenticate(request: Request, call_next):
@@ -111,6 +112,8 @@ def create_mock():
 
     @app.get("/v1/manage/{profile}/{kind}")
     async def management(profile: str, kind: str):
+        if app.state.unavailable:  # wie ein Host-Dienst ohne native Anbindung
+            return {"available": False, "reason": "Native Kanban adapter not configured", "items": [], "actions": []}
         return {"profile": profile, "kind": kind, "items": [], "enabled": app.state.enabled}
 
     @app.post("/v1/manage/{profile}/{kind}/{action}")

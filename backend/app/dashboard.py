@@ -143,6 +143,22 @@ class DashboardClient:
             raise UpstreamError(502, f"Das Dashboard liefert {what} in unbekannter Form")
         return [r for r in rows if isinstance(r, dict)]
 
+    # Nur lesende Host-Daten (Kanban, Logs, MCP, Plugins, Suche): Ersatzquelle, wenn der Host-Dienst sie nicht liefern kann.
+    async def kanban_board(self, name: str) -> Any:
+        return await self._call("GET", "/api/plugins/kanban/board", params={"profile": name}, missing="Kanban ist auf diesem Dashboard nicht verfügbar")
+
+    async def logs(self, name: str, lines: int) -> Any:
+        return await self._call("GET", "/api/logs", params={"profile": name, "lines": str(lines)})
+
+    async def mcp_servers(self, name: str) -> Any:
+        return await self._call("GET", "/api/mcp/servers", params={"profile": name})
+
+    async def plugin_hub(self, name: str) -> Any:
+        return await self._call("GET", "/api/dashboard/plugins/hub", params={"profile": name})
+
+    async def session_search(self, query: str) -> Any:
+        return await self._call("GET", "/api/sessions/search", params={"q": query})
+
     # Modelle und Anmeldungen: welche Anbieter ein Profil nutzen kann und wie man sich bei ihnen anmeldet.
     async def model_options(self, name: str) -> Any:
         return await self._cached("models", name, "models_ttl", lambda: self._call("GET", "/api/model/options", params={"profile": name}))

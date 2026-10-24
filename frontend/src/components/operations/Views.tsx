@@ -12,7 +12,7 @@ export function Kanban({ data, base, ask }: { data: Listing; base: string; ask: 
     {tasks.length === 0 && <p className="empty">Keine Aufgaben vorhanden.</p>}
     <div className={view === "columns" ? "ops-columns" : "ops-stack"}>{columns.map(column => <section className="ops-column" key={column} aria-label={column}>
       <h2>{column}</h2><ul className="ops-list">{tasks.filter(task => task.status === column).map(task => <li className="card ops-card" key={task.id}>
-        <h3>{task.title}</h3>{text(task.description) && <p className="ops-text">{text(task.description)}</p>}
+        <h3>{task.title}</h3>{text(task.assignee) && <p className="muted">Zugewiesen: {text(task.assignee)}</p>}{text(task.description) && <p className="ops-text">{text(task.description)}</p>}
         {task.transitions && task.transitions.length > 0 && <form className="ops-toolbar" onSubmit={e => { e.preventDefault(); const status = new FormData(e.currentTarget).get("status") as string; if (task.transitions?.includes(status)) ask(`${task.title} nach ${status} verschieben?`, `${base}/transition`, { id: task.id, status }); }}>
           <select className="field" name="status" aria-label={`Status für ${task.title}`} defaultValue={task.transitions[0]}>{task.transitions.map(status => <option key={status}>{status}</option>)}</select><button className="btn btn-s">Verschieben</button>
         </form>}
@@ -34,7 +34,7 @@ export function ManagedItems({ data, base, ask }: { data: Listing; base: string;
   if (!Array.isArray(data.items)) return <p role="alert">Antwortformat nicht unterstützt.</p>;
   return data.items.length === 0 ? <p className="empty">Keine Einträge vorhanden.</p> : <ul className="ops-list">{data.items.map(item => <li className="card ops-card" key={item.id}>
     <h2>{text(item.label) || text(item.name) || text(item.id)}</h2>{text(item.description) && <p className="ops-text">{text(item.description)}</p>}
-    <p className="muted">{item.enabled === true ? "Aktiviert" : item.enabled === false ? "Deaktiviert" : text(item.status) || "Status unbekannt"}</p>
+    <p className="muted">{item.enabled === true ? "Aktiviert" : item.enabled === false ? "Deaktiviert" : text(item.status) || "Status unbekannt"}{text(item.version) && ` · Version ${text(item.version)}`}</p>
     <div className="ops-toolbar">{["enable", "disable"].filter(action => (item.actions ?? data.actions)?.includes(action)).map(action => <button className="btn btn-s" type="button" key={action} onClick={() => ask(`${item.name || item.id}: ${labels[action]}?`, `${base}/${action}`, { id: item.id })}>{labels[action]}</button>)}</div>
   </li>)}</ul>;
 }
