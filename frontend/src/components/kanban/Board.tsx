@@ -49,7 +49,7 @@ export function BoardColumns({ columns, total, filtered, selected, dragId, onOpe
         const shown = col.tasks.slice(0, limit[col.name] ?? PAGE);
         const ok = droppable(col.name);
         return (
-          <section key={col.name} className={`kb-col${over === col.name ? " over" : ""}${dragId && !ok ? " nodrop" : ""}`} aria-label={`Spalte ${columnLabel(col.name)}`}
+          <section key={col.name} className={`kb-col${over === col.name ? " over" : ""}${dragId && !ok ? " nodrop" : ""}${!dragId && col.tasks.length === 0 ? " empty" : ""}`} aria-label={`Spalte ${columnLabel(col.name)}`}
             onDragOver={(e) => { if (dragId && ok) { e.preventDefault(); setOver(col.name); } }} onDragLeave={() => setOver((o) => (o === col.name ? undefined : o))}
             onDrop={(e) => { e.preventDefault(); setOver(undefined); const id = dragId ?? e.dataTransfer?.getData("text/plain"); onDragId(undefined); if (id && ok) onMove(id, col.name); }}>
             <h2 className="kb-colh"><span>{columnLabel(col.name)}</span><span className="mono small t3" data-testid="count">{filtered ? `${col.tasks.length} von ${total[col.name] ?? col.tasks.length}` : col.tasks.length}</span></h2>

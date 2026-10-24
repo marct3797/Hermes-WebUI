@@ -6,7 +6,7 @@
 .kb-chips{align-items:center}
 .kb-layout{display:flex;gap:12px;align-items:flex-start;min-width:0}
 .kb-board{flex:1;min-width:0;display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;align-items:flex-start}
-.kb-col{flex:0 0 260px;display:flex;flex-direction:column;gap:8px;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--s1);max-height:calc(100dvh - 260px);overflow-y:auto}
+.kb-col{flex:1 1 240px;min-width:220px;display:flex;flex-direction:column;gap:8px;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--s1);max-height:calc(100dvh - 260px);overflow-y:auto}
 .kb-col.over{border-color:var(--crim);background:var(--s2)}
 .kb-col.nodrop{opacity:.55}
 .kb-colh{display:flex;justify-content:space-between;margin:0;font:600 12px/18px var(--sans);text-transform:uppercase;letter-spacing:.04em;color:var(--t2)}
@@ -42,3 +42,7 @@
   .kb-layout.has-panel .kb-board{display:none}
   .kb-panel{position:fixed;inset:0;z-index:40;max-height:none;border-radius:0;flex-basis:auto;background:var(--s0)}
 }
+
+/* Leere Spalten schrumpfen, damit Blockiert und Erledigt ohne Seitwaertsrollen sichtbar bleiben (beim Ziehen werden alle wieder breit) */
+.kb-col.empty{flex:0 0 112px;min-width:0}
+.kb-col.empty .small,.kb-col.empty .empty{font-size:11px}

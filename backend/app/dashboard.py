@@ -147,7 +147,7 @@ class DashboardClient:
                       missing: str | None = None) -> Any:
         """Öffentlicher Durchgriff auf eine Dashboard-Route (Pakete bauen darauf ihre festen, validierten Routen).
         Fehlertexte des Dashboards werden mitgegeben, damit Eingabefehler (z. B. ungültiger Skill-Name) sichtbar werden."""
-        return await self._call(method, path, json_body=body, params=params, missing=missing, explain=True)
+        return await self._call(method, path, json_body=body, params=params, missing=missing or "Nicht gefunden: das Dashboard kennt diese Ressource nicht", explain=True)
 
     # Nur lesende Host-Daten (Kanban, Logs, MCP, Plugins, Suche): Ersatzquelle, wenn der Host-Dienst sie nicht liefern kann.
     async def kanban_board(self, name: str) -> Any:

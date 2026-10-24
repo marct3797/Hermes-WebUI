@@ -108,7 +108,7 @@ export function ScopeBar({ s, profile = true }: { s: ReturnType<typeof useScope>
 
 export function SearchBox({ value, onChange, label, placeholder }: { value: string; onChange: (v: string) => void; label: string; placeholder?: string }) {
   return (
-    <label className="search" style={{ maxWidth: 420 }}>
+    <label className="search" style={{ maxWidth: 420, flex: "1 1 260px", minWidth: 240 }}>
       <Icon name="search" />
       <input type="search" value={value} placeholder={placeholder ?? label} aria-label={label} onChange={(e) => onChange(e.target.value)} />
     </label>

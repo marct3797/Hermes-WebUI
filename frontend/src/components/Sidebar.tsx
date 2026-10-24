@@ -98,6 +98,31 @@ export function Sidebar(p: Props) {
         <div className="side-scroll">
           <nav aria-label="Übersicht" className="nav">{TOP.map(link)}</nav>
 
+          <nav aria-label="Bereiche" className="nav nav-groups">
+            {GROUPS.map((g) => {
+              const items = g.items.filter((n) => n.to !== "/knowledge" || wissen);
+              const expanded = isOpen(g);
+              return (
+                <div key={g.id} className="nav-group">
+                  <button type="button" className="nav-group-h" aria-expanded={expanded} aria-controls={`nav-${g.id}`} onClick={() => toggle(g)}>
+                    <Icon name={expanded ? "chevd" : "chevr"} size={14} />{g.label}
+                    <span className="r">{items.length}</span>
+                  </button>
+                  {expanded && <div id={`nav-${g.id}`} className="nav-group-b">
+                    {items.map(link)}
+                    {g.id === "ops" && hosts?.map((h) => (
+                      <div key={h.id} className="nav-host" role="group" aria-label={`Werkzeuge ${h.label}`}>
+                        <span className="lbl">{h.label}</span>
+                        <Link to={`/hosts/${encodeURIComponent(h.id)}/terminal`} className={p.path === `/hosts/${encodeURIComponent(h.id)}/terminal` ? "on" : undefined} onClick={p.onClose}><Icon name="terminal" size={14} />Terminal</Link>
+                        <Link to={`/hosts/${encodeURIComponent(h.id)}/workspace`} className={p.path === `/hosts/${encodeURIComponent(h.id)}/workspace` ? "on" : undefined} onClick={p.onClose}><Icon name="file" size={14} />Dateien & Git</Link>
+                      </div>
+                    ))}
+                  </div>}
+                </div>
+              );
+            })}
+          </nav>
+
           {error && <p className="error small" role="alert" style={{ padding: "0 16px" }}>Hosts nicht ladbar: {error}</p>}
           {!hosts && !error && <p className="muted small" style={{ padding: "0 16px" }}>Lade…</p>}
           {hosts?.map((h) => (
@@ -159,30 +184,6 @@ export function Sidebar(p: Props) {
             </section>
           ))}
 
-          <nav aria-label="Bereiche" className="nav nav-groups">
-            {GROUPS.map((g) => {
-              const items = g.items.filter((n) => n.to !== "/knowledge" || wissen);
-              const expanded = isOpen(g);
-              return (
-                <div key={g.id} className="nav-group">
-                  <button type="button" className="nav-group-h" aria-expanded={expanded} aria-controls={`nav-${g.id}`} onClick={() => toggle(g)}>
-                    <Icon name={expanded ? "chevd" : "chevr"} size={14} />{g.label}
-                    <span className="r">{items.length}</span>
-                  </button>
-                  {expanded && <div id={`nav-${g.id}`} className="nav-group-b">
-                    {items.map(link)}
-                    {g.id === "ops" && hosts?.map((h) => (
-                      <div key={h.id} className="nav-host" role="group" aria-label={`Werkzeuge ${h.label}`}>
-                        <span className="lbl">{h.label}</span>
-                        <Link to={`/hosts/${encodeURIComponent(h.id)}/terminal`} className={p.path === `/hosts/${encodeURIComponent(h.id)}/terminal` ? "on" : undefined} onClick={p.onClose}><Icon name="terminal" size={14} />Terminal</Link>
-                        <Link to={`/hosts/${encodeURIComponent(h.id)}/workspace`} className={p.path === `/hosts/${encodeURIComponent(h.id)}/workspace` ? "on" : undefined} onClick={p.onClose}><Icon name="file" size={14} />Dateien & Git</Link>
-                      </div>
-                    ))}
-                  </div>}
-                </div>
-              );
-            })}
-          </nav>
         </div>
 
         <footer className="side-foot">

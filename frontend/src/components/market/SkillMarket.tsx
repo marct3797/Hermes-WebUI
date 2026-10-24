@@ -106,7 +106,7 @@ export function SkillMarket({ host, profile, profiles }: { host: string; profile
   return (
     <section className="col" style={{ gap: 10 }} aria-label="Skill-Marktplatz">
       <form className="row" style={{ gap: 8, flexWrap: "wrap" }} onSubmit={(e) => { e.preventDefault(); setQ(input.trim()); }} role="search">
-        <SearchBox value={input} onChange={setInput} label="Skills suchen" placeholder="Skills suchen, z. B. pdf oder github" />
+        <SearchBox value={input} onChange={setInput} label="Skills suchen" placeholder="z. B. pdf oder github" />
         <select className="field field-line" style={{ width: "auto" }} value={source} onChange={(e) => setSource(e.target.value)} aria-label="Quelle">
           <option value="all">Alle Quellen</option>{options.map((s) => <option key={s.ref} value={s.ref}>{s.label}</option>)}
         </select>
