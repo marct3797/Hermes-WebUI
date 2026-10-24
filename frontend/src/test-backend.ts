@@ -183,6 +183,7 @@ export type DashState = {
   loggedIn: Set<string>; // Anbieter mit Anmeldung (Codex ist von Anfang an angemeldet)
   polls: number; // wie oft die laufende Geräte-Anmeldung abgefragt wurde; ab der zweiten Abfrage ist sie bestätigt
   loginError: string | null; // lässt die Anmeldung scheitern
+  config: Record<string, unknown>; // Werte der Hermes-Einstellungen (Punkt-Pfad → Wert)
 };
 const hashOf = (text: string) => `h${text.length}:${text.slice(0, 12)}`;
 
@@ -303,6 +304,22 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
     dash.versions[id] = dash.soul;
     dash.history = [{ id, at: "2026-10-23T17:00:00Z", reason, chars: dash.soul.length }, ...dash.history];
   };
+  if (rest === "/config" && method === "GET") {
+    const fields = [
+      { key: "model", type: "string", description: "Default model", category: "general" },
+      { key: "agent.service_tier", type: "select", description: "Fast mode", category: "agent", options: ["", "normal", "fast"] },
+      { key: "agent.max_turns", type: "number", description: "Max turns", category: "agent" },
+      { key: "display.streaming", type: "boolean", description: "Streaming", category: "display" },
+      { key: "fallback_providers", type: "list", description: "Fallback providers", category: "general" },
+    ].map((x) => ({ ...x, value: dash.config[x.key] }));
+    return json({ fields: [...fields, { key: "web.api_key", type: "string", description: "Search key", category: "tools", secret: true, set: true, value: null }], category_order: ["general", "agent", "display", "tools"] });
+  }
+  if (rest === "/config" && method === "PUT") {
+    if (dash.stepUp) return json({ detail: { code: "step_up_required", message: "Bitte erneut anmelden" } }, 401);
+    if ("agent.max_turns" in (body?.changes as object) && (body?.changes as Record<string, unknown>)["agent.max_turns"] === 0) return json({ detail: "agent.max_turns: ungültiger Wert für Typ „number“" }, 422);
+    Object.assign(dash.config, body?.changes);
+    return json({ ok: true, changed: Object.keys(body?.changes as object).sort() });
+  }
   if (rest === "/soul" && method === "GET") return json({ content: dash.soul, exists: true, hash: hashOf(dash.soul), max_chars: 100, history: dash.history });
   if (rest === "/soul" && method === "PUT") {
     if (dash.stepUp) return json({ detail: { code: "step_up_required", message: "Bitte erneut anmelden" } }, 401);
@@ -344,6 +361,7 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
     available: true, reason: null, soul: "Du bist Gamma.\nDu antwortest knapp.\n", description: "", model: { provider: "mock", model: "mock-large" },
     history: [], versions: {}, stepUp: false, keys: { ANTHROPIC_API_KEY: "sk-ant-geheim-1234" },
     loggedIn: new Set(["openai-codex"]), polls: 0, loginError: null,
+    config: { model: "claude-test", "agent.service_tier": "normal", "agent.max_turns": 90, "display.streaming": true, fallback_providers: [], "web.api_key": null },
   };
   let runs = 0;
   const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });

@@ -138,6 +138,8 @@ export type DashboardStatus = { available: boolean; reason: string | null; profi
 export type SoulEntry = { id: string; at: string; reason: string; chars: number };
 export type SoulState = { content: string; exists: boolean; hash: string; max_chars: number; history: SoulEntry[] };
 export type SoulSaved = { changed: boolean; hash: string; history: SoulEntry[] };
+export type ConfigField = { key: string; type: "string" | "text" | "number" | "boolean" | "select" | "list"; description: string; category: string; options?: string[]; value?: unknown; secret?: boolean; set?: boolean };
+export type HermesConfig = { fields: ConfigField[]; category_order: string[] };
 export type SoulVersion = { id: string; at: string; reason: string; content: string };
 
 export type ProviderKey = { var: string; set: boolean; redacted: string | null; description: string; url: string | null; secret: boolean; advanced: boolean };

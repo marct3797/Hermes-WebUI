@@ -1,6 +1,6 @@
 import { invalidate } from "./dataCache";
 import { getPreferences } from "./preferences";
-import type { AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import type { HermesConfig, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string, public data?: Record<string, unknown>) {
@@ -99,6 +99,8 @@ export const api = {
   dashboard: (a: AgentRef) => call<DashboardStatus>("GET", `${base(a)}/dashboard`),
   soul: (a: AgentRef) => call<SoulState>("GET", `${base(a)}/soul`),
   saveSoul: (a: AgentRef, content: string, baseHash: string) => call<SoulSaved>("PUT", `${base(a)}/soul`, { content, base: baseHash }),
+  hermesConfig: (a: AgentRef) => call<HermesConfig>("GET", `${base(a)}/config`),
+  saveHermesConfig: (a: AgentRef, changes: Record<string, unknown>) => call<{ ok: boolean; changed: string[] }>("PUT", `${base(a)}/config`, { changes }),
   soulVersion: (a: AgentRef, vid: string) => call<SoulVersion>("GET", `${base(a)}/soul/history/${id(vid)}`),
   restoreSoul: (a: AgentRef, vid: string) => call<SoulSaved & { content: string }>("POST", `${base(a)}/soul/restore`, { id: vid }),
   saveDescription: (a: AgentRef, description: string) => call<{ ok: boolean; description: string }>("PUT", `${base(a)}/profile/description`, { description }),

@@ -53,8 +53,36 @@ USAGE = [
 ]
 
 
+# `GET /api/config/schema` (Auszug): flache Schlüssel mit Punkt-Pfad, wie Hermes 0.22 sie liefert.
+CONFIG_SCHEMA = {
+    "model": {"type": "string", "description": "Default model", "category": "general"},
+    "agent.service_tier": {"type": "select", "description": "Fast mode", "category": "agent", "options": ["", "normal", "fast"]},
+    "agent.max_turns": {"type": "number", "description": "Max turns", "category": "agent"},
+    "display.streaming": {"type": "boolean", "description": "Streaming", "category": "display"},
+    "fallback_providers": {"type": "list", "description": "Fallback providers", "category": "general"},
+    "web.api_key": {"type": "string", "description": "Search key", "category": "tools"},
+}
+CONFIG_ORDER = ["general", "agent", "display", "tools"]
+
+
+def default_config() -> dict[str, Any]:
+    return {"model": "claude-test", "agent": {"service_tier": "normal", "max_turns": 90}, "display": {"streaming": True},
+            "fallback_providers": [], "web": {"api_key": "geheim-aus-der-config"}, "custom_providers": [{"name": "x"}]}
+
+
+def deep_merge(base: dict[str, Any], extra: dict[str, Any]) -> dict[str, Any]:
+    for k, v in extra.items():
+        base[k] = deep_merge(base[k], v) if isinstance(v, dict) and isinstance(base.get(k), dict) else v
+    return base
+
+
 class SoulBody(BaseModel):
     content: str
+
+
+class ConfigBody(BaseModel):
+    config: dict[str, Any]
+    profile: str | None = None
 
 
 class DescriptionBody(BaseModel):
@@ -76,7 +104,7 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
     app.state.env_put_error = env_put_error  # {"var": ..., "status": 500, "detail": "..."}: PUT /api/env scheitert für diese Variable
     state: dict[str, dict[str, Any]] = {
         name: {"soul": SOULS.get(name), "description": "", "description_auto": False, "provider": "anthropic", "model": "claude-test",
-              "env": {"ANTHROPIC_API_KEY": "sk-ant-geheim-1234"} if name == "default" else {}}
+              "env": {"ANTHROPIC_API_KEY": "sk-ant-geheim-1234"} if name == "default" else {}, "config": default_config()}
         for name in profiles
     }
     app.state.profiles = state  # Tests lesen und ändern den Stand direkt
@@ -142,6 +170,22 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
 
     def redact(value: str) -> str:
         return f"{value[:4]}…{value[-4:]}" if len(value) > 8 else "…"
+
+    @app.get("/api/config/schema")
+    async def config_schema(profile: str | None = None):
+        profile_or_default(profile)
+        return {"fields": CONFIG_SCHEMA, "category_order": CONFIG_ORDER}
+
+    @app.get("/api/config")
+    async def get_config(profile: str | None = None):
+        return profile_or_default(profile)["config"]
+
+    @app.put("/api/config")
+    async def put_config(body: ConfigBody, profile: str | None = None):
+        p = profile_or_default(body.profile or profile)
+        if not drop_writes:
+            deep_merge(p["config"], body.config)
+        return {"ok": True}
 
     @app.get("/api/env")
     async def get_env(profile: str | None = None):
