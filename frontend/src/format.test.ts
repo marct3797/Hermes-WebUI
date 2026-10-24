@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { dayGroup, fmtClock, fmtDuration, plainPreview, toMs, toolIcon } from "./format";
+import { dayGroup, fmtClock, fmtDuration, fmtTime, fmtTimeSec, plainPreview, toMs, toolIcon } from "./format";
 
 describe("format", () => {
+  it("verwendet das gewählte Zeitformat auch mit Sekunden", () => {
+    const t = new Date(2026, 9, 24, 17, 5, 9).getTime();
+    localStorage.setItem("hermes.preferences", JSON.stringify({ timeFormat: "24h" }));
+    expect(fmtTime(t)).toBe("17:05");
+    localStorage.setItem("hermes.preferences", JSON.stringify({ timeFormat: "12h" }));
+    expect(fmtTime(t)).toContain("05:05");
+    expect(fmtTimeSec(t)).toContain("05:05:09");
+    localStorage.removeItem("hermes.preferences");
+  });
   it("formats durations and clocks the German way", () => {
     expect(fmtDuration(40)).toBe("0,04 s");
     expect(fmtDuration(3200)).toBe("3,2 s");

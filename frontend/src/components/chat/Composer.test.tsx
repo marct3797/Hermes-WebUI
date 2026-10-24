@@ -54,6 +54,21 @@ const type = (box: HTMLTextAreaElement, value: string) => fireEvent.change(box, 
 const enter = (box: HTMLElement) => fireEvent.keyDown(box, { key: "Enter" });
 const workspaceReady = async () => { await screen.findByRole("combobox", { name: "Arbeitsordner" }); await waitFor(() => expect(screen.getByRole("option", { name: "Alpha" })).toBeInTheDocument()); };
 
+describe("Gerätevorgaben", () => {
+  it("sendet bei ausgeschaltetem Enter-Senden nur mit Strg+Enter und nutzt den Host-Aufwand", async () => {
+    localStorage.setItem("hermes.preferences", JSON.stringify({ enterSends: false, hosts: { server: { effort: "high", workspace: "alpha" } } }));
+    localStorage.removeItem("hermes-webui-reasoning:server/hermes/default");
+    const { box, props } = setup();
+    await workspaceReady();
+    expect(screen.getByRole("combobox", { name: "Arbeitsordner" })).toHaveValue("alpha");
+    type(box, "Hallo"); enter(box);
+    expect(props.onSend).not.toHaveBeenCalled();
+    fireEvent.keyDown(box, { key: "Enter", ctrlKey: true });
+    await waitFor(() => expect(props.onSend).toHaveBeenCalledWith("Hallo", [], undefined, { thinking: true, effort: "high" }));
+    localStorage.removeItem("hermes.preferences");
+  });
+});
+
 describe("Slash-Menü", () => {
   it("öffnet bei / mit Skills und ehrlich markierten Hermes-Befehlen", async () => {
     const { box } = setup();

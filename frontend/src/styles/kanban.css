@@ -5,8 +5,10 @@
 .kb-stat{margin:0}
 .kb-chips{align-items:center}
 .kb-layout{display:flex;gap:12px;align-items:flex-start;min-width:0}
-.kb-board{flex:1;min-width:0;display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;align-items:flex-start}
-.kb-col{flex:1 1 240px;min-width:220px;display:flex;flex-direction:column;gap:8px;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--s1);max-height:calc(100dvh - 260px);overflow-y:auto}
+.kb-board{flex:1;min-width:0;display:flex;flex-direction:column;gap:12px}
+.kb-empty-columns{display:flex;flex-wrap:wrap;gap:8px}
+.kb-columns{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:12px;align-items:start}
+.kb-col{min-width:0;display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--s1)}
 .kb-col.over{border-color:var(--crim);background:var(--s2)}
 .kb-col.nodrop{opacity:.55}
 .kb-colh{display:flex;justify-content:space-between;margin:0;font:600 12px/18px var(--sans);text-transform:uppercase;letter-spacing:.04em;color:var(--t2)}
@@ -23,7 +25,7 @@
 .kb-warn{color:var(--ruby-t)}
 .kb-move{margin-left:auto;max-width:120px;background:var(--s3);color:var(--t2);border:1px solid var(--line);border-radius:4px;font:400 11.5px var(--sans);height:24px}
 .kb-none{list-style:none;padding:4px}
-.kb-panel{flex:0 0 420px;max-width:100%;max-height:calc(100dvh - 200px);overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:12px;border:1px solid var(--line);border-radius:6px;background:var(--s1)}
+.kb-panel{position:fixed;right:0;top:0;bottom:0;z-index:30;width:min(480px,100%);overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:16px;border-left:1px solid var(--line);background:var(--s1);box-shadow:-12px 0 40px #0006}
 .kb-phead{display:flex;gap:8px;align-items:flex-start}
 .kb-phead h2{margin:0;font:600 15px/22px var(--sans);overflow-wrap:anywhere}
 .kb-sec{display:flex;flex-direction:column;gap:8px;padding-top:10px;border-top:1px solid var(--line)}
@@ -38,11 +40,13 @@
 .kb-modal .card{max-width:560px}
 @media (max-width:760px){
   .kb-layout{flex-direction:column}
-  .kb-col{flex-basis:82vw;max-height:none}
   .kb-layout.has-panel .kb-board{display:none}
   .kb-panel{position:fixed;inset:0;z-index:40;max-height:none;border-radius:0;flex-basis:auto;background:var(--s0)}
 }
 
-/* Leere Spalten schrumpfen, damit Blockiert und Erledigt ohne Seitwaertsrollen sichtbar bleiben (beim Ziehen werden alle wieder breit) */
-.kb-col.empty{flex:0 0 112px;min-width:0}
+/* Leere Zustände bleiben als kompakte Drop-Ziele sichtbar; nur die Seite scrollt. */
+.kb-empty-columns .kb-col{flex:1 1 128px;max-width:none;margin:0}
+.kb-col.empty{min-width:0}
+.kb-col.empty .kb-colh{font-size:11px;letter-spacing:.02em}
+.kb-col.empty .kb-colh span:first-child{overflow-wrap:anywhere}
 .kb-col.empty .small,.kb-col.empty .empty{font-size:11px}

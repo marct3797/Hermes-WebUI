@@ -86,7 +86,7 @@ describe("Marktplatz: Quellen", () => {
     await screen.findByRole("button", { name: "1password ansehen" });
     tab("Quellen");
     expect(await screen.findByText("Offizielles MCP-Registry")).toBeInTheDocument();
-    expect(screen.getByText("Official (Nous)")).toBeInTheDocument();
+    expect(screen.getByText("Official")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Official.*entfernen/ })).not.toBeInTheDocument();  // vorinstalliert: nicht löschbar
     const form = screen.getByRole("form", { name: "Quelle hinzufügen" });
     const add = within(form).getByRole("button", { name: "Quelle hinzufügen" });

@@ -168,6 +168,10 @@
 .field::placeholder{color:var(--t3)}
 .field:focus{outline:none;border-color:var(--crim);box-shadow:var(--glow)}
 .field-line{min-height:0;height:32px;padding:0 12px;resize:none;flex:1}
+/* Auswahllisten sind keine Textfelder: keine 100%-Breite und kein Flex-Wachstum. */
+select.field{width:auto;max-width:100%;min-width:0;min-height:0;height:28px;padding:0 8px;flex:0 1 auto;font-size:12px;line-height:18px}
+select option{font-size:12px}
+@media (pointer:coarse){select.field{min-height:44px;font-size:16px}}
 
 /* Markdown in der Antwort */
 .md>:first-child{margin-top:0}.md>:last-child{margin-bottom:0}

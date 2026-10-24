@@ -6,6 +6,29 @@ import { dec } from "../format";
 import { useMedia } from "../useMedia";
 import { useUi } from "../ui";
 import { useRunStore } from "../runs";
+import { EFFORTS } from "../composerLogic";
+import { composerApi } from "../composerApi";
+import { useHosts } from "../hosts";
+import { useAsync } from "../useAsync";
+import { savePreferences, usePreferences, type HostDefaults, type Preferences } from "../preferences";
+import { playNotice } from "../notifications";
+
+function HostSettings({ host, label, value, onChange }: { host: string; label: string; value: HostDefaults; onChange: (v: HostDefaults) => void }) {
+  const ws = useAsync(() => composerApi.workspaces(host), [host]);
+  return <fieldset className="settings-host">
+    <legend>{label}</legend>
+    <label>Denkaufwand <select className="field field-line" aria-label={`Denkaufwand für ${host}`} value={value.effort} onChange={(e) => onChange({ ...value, effort: e.target.value as HostDefaults["effort"] })}>
+      <option value="agent">Standard des Agents</option><option value="off">Aus</option>
+      {EFFORTS.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}
+    </select></label>
+    <label>Arbeitsordner <select className="field field-line" aria-label={`Standard-Arbeitsordner für ${host}`} value={value.workspace} disabled={!ws.data} onChange={(e) => onChange({ ...value, workspace: e.target.value })}>
+      <option value="">Keine Vorgabe</option>
+      {value.workspace && !ws.data?.workspaces.some((w) => w.id === value.workspace) && <option value={value.workspace}>Nicht verfügbar: {value.workspace}</option>}
+      {ws.data?.workspaces.map((w) => <option key={w.id} value={w.id}>{w.label}</option>)}
+    </select></label>
+    {ws.error && <p className="hint" role="status">Arbeitsordner nicht ladbar: {ws.error}</p>}
+  </fieldset>;
+}
 
 /** Darstellung: der Hintergrund-Shader. Die Regler wirken sofort und gelten zuerst nur für dieses Gerät. */
 export function SettingsPage() {
@@ -16,6 +39,26 @@ export function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string>();
   const store = useRunStore();
+  const prefs = usePreferences();
+  const registry = useHosts();
+  const [preferenceError, setPreferenceError] = useState<string>();
+  const update = (patch: Partial<Preferences>) => {
+    try { savePreferences(patch); setPreferenceError(undefined); }
+    catch { setPreferenceError("Der Browser erlaubt das Speichern dieser Einstellungen nicht."); }
+  };
+  const desktop = async (on: boolean) => {
+    if (!on) { update({ approvalDesktop: false }); return; }
+    try {
+      if (typeof Notification === "undefined") throw new Error("Dieser Browser unterstützt keine Desktop-Mitteilungen.");
+      const permission = Notification.permission === "default" ? await Notification.requestPermission() : Notification.permission;
+      update({ approvalDesktop: permission === "granted" });
+      if (permission !== "granted") setPreferenceError("Desktop-Mitteilungen sind im Browser nicht erlaubt.");
+    } catch (e) { setPreferenceError((e as Error).message); }
+  };
+  const sound = async (on: boolean) => {
+    try { if (on) await playNotice(); update({ approvalSound: on }); }
+    catch (e) { setPreferenceError((e as Error).message); }
+  };
   const [notify, setNotify] = useState(store.notificationsEnabled);
   useEffect(() => { setNotify(store.notificationsEnabled); }, [store]);
 
@@ -34,7 +77,40 @@ export function SettingsPage() {
 
   return (
     <main className="page">
-      <PageHead title="Darstellung" sub="Hintergrund-Shader" />
+      <PageHead title="Darstellung" sub="Einstellungen für dieses Gerät" />
+      <p className="hint">Änderungen gelten sofort in diesem Browser. Host-Vorgaben gelten für neue Chats und die Terminal-Auswahl; eine eigene Auswahl im Chat bleibt vorrangig.</p>
+      {preferenceError && <p className="banner" role="alert">{preferenceError}</p>}
+      <div className="settings-options">
+        <section className="pf-s" aria-label="Chat-Verhalten">
+          <h2>Chat-Verhalten</h2>
+          <label><input type="checkbox" checked={prefs.enterSends} onChange={(e) => update({ enterSends: e.target.checked })} />Enter sendet Nachrichten</label>
+          <p className="hint">Wenn aus: Strg+Enter oder Cmd+Enter sendet. Umschalt+Enter erzeugt immer einen Zeilenumbruch.</p>
+          <label><input type="checkbox" checked={prefs.autoScroll} onChange={(e) => update({ autoScroll: e.target.checked })} />Verlauf automatisch am Ende halten</label>
+          <p className="hint">Nach manuellem Hochscrollen bleibt die Leseposition erhalten. Sessions lassen sich über ihr Menü anpinnen.</p>
+          <label><input type="checkbox" checked={prefs.confirmApprovals} onChange={(e) => update({ confirmApprovals: e.target.checked })} />Freigaben vor dem Erlauben bestätigen</label>
+          <p className="hint">Gilt auch in Inbox, Cockpit und Räumen. Abschalten erteilt keine automatische Freigabe.</p>
+        </section>
+        <section className="pf-s" aria-label="Anzeige">
+          <h2>Anzeige</h2>
+          <label><input type="checkbox" checked={prefs.compact} onChange={(e) => update({ compact: e.target.checked })} />Kompakte Listen</label>
+          <label>Zeitformat <select className="field field-line" aria-label="Zeitformat" value={prefs.timeFormat} onChange={(e) => update({ timeFormat: e.target.value as Preferences["timeFormat"] })}><option value="24h">24 Stunden</option><option value="12h">12 Stunden</option></select></label>
+          <label><input type="checkbox" checked={prefs.reducedMotion} onChange={(e) => update({ reducedMotion: e.target.checked })} />Bewegung reduzieren</label>
+          <p className="hint">Animationen und Shader-Bewegung stoppen. Die Systemvorgabe hat immer Vorrang.</p>
+        </section>
+        <section className="pf-s" aria-label="Sitzungsvorgaben">
+          <h2>Sitzungen</h2>
+          <p className="hint">Denkaufwand und Arbeitsordner je Host. Profil-Konfigurationen auf dem Server werden nicht verändert.</p>
+          {registry.error && <p role="alert">{registry.error}</p>}
+          {registry.hosts?.map((h) => <HostSettings key={h.id} host={h.id} label={h.label} value={prefs.hosts[h.id] ?? { effort: "agent", workspace: "" }} onChange={(value) => update({ hosts: { ...prefs.hosts, [h.id]: value } })} />)}
+        </section>
+        <section className="pf-s" aria-label="Wartende Freigaben">
+          <h2>Benachrichtigungen</h2>
+          <label><input type="checkbox" checked={prefs.approvalDesktop} onChange={(e) => void desktop(e.target.checked)} />Desktop-Hinweis bei wartenden Freigaben</label>
+          <label><input type="checkbox" checked={prefs.approvalSound} onChange={(e) => void sound(e.target.checked)} />Ton bei wartenden Freigaben</label>
+          <button type="button" className="btn btn-s" onClick={() => void playNotice().catch((e: Error) => setPreferenceError(e.message))}>Testton abspielen</button>
+          <p className="hint">Nur für Freigaben, die diese geöffnete WebUI erkennt. Desktop-Hinweise brauchen deine Browser-Erlaubnis; Ton kann nach einem Neuladen bis zum ersten Klick blockiert sein.</p>
+        </section>
+      </div>
 
       <section className="pf-s" aria-label="Hintergrund-Shader">
         <p className="muted small" style={{ margin: 0, maxWidth: 640 }}>

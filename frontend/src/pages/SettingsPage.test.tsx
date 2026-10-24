@@ -19,6 +19,22 @@ beforeEach(() => { resetRedirect(); localStorage.clear(); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("Darstellung", () => {
+  it("speichert alle vier Bereiche und wendet die Geräteanzeige sofort an", async () => {
+    await open();
+    fireEvent.click(screen.getByLabelText("Enter sendet Nachrichten"));
+    fireEvent.click(screen.getByLabelText("Verlauf automatisch am Ende halten"));
+    fireEvent.click(screen.getByLabelText("Freigaben vor dem Erlauben bestätigen"));
+    fireEvent.click(screen.getByLabelText("Kompakte Listen"));
+    fireEvent.click(screen.getByLabelText("Bewegung reduzieren"));
+    fireEvent.change(screen.getByLabelText("Zeitformat"), { target: { value: "12h" } });
+    await waitFor(() => expect(document.documentElement).toHaveClass("compact", "reduce-motion"));
+    expect(JSON.parse(localStorage.getItem("hermes.preferences")!)).toMatchObject({ enterSends: false, autoScroll: false, confirmApprovals: true, compact: true, reducedMotion: true, timeFormat: "12h" });
+    expect(screen.getByLabelText("Desktop-Hinweis bei wartenden Freigaben")).toBeInTheDocument();
+    expect(screen.getByLabelText("Ton bei wartenden Freigaben")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Denkaufwand für server")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Denkaufwand für server"), { target: { value: "high" } });
+    expect(JSON.parse(localStorage.getItem("hermes.preferences")!).hosts.server.effort).toBe("high");
+  });
   it("shows the default of the WebUI and switches the shader for this device", async () => {
     await open();
     expect(screen.getByText(/Vorgabe der WebUI: Stärke 1,6 · Tempo 1,0/)).toBeInTheDocument();

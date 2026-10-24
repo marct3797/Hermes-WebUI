@@ -17,6 +17,7 @@ import { sigilFor, useUi } from "../ui";
 import { useChat } from "../useChat";
 import { parseModelOptions, type ModelGroup } from "../models";
 import { useNow } from "../useNow";
+import { usePreferences } from "../preferences";
 
 type Props = { agent: AgentRef; label: string; runtimeLabel: string; sessionId?: string };
 
@@ -33,6 +34,7 @@ type Approval = Extract<Item, { kind: "approval" }>;
 export function ChatPage({ agent, label, runtimeLabel, sessionId }: Props) {
   const { refreshSessions, sessions, openMenu } = useShell();
   const { sigils } = useUi();
+  const prefs = usePreferences();
   const [status, setStatus] = useState<AgentStatus>();
   const [models, setModels] = useState<ModelGroup[]>([]);
   const [defaultModel, setDefaultModel] = useState<string>();
@@ -95,8 +97,8 @@ export function ChatPage({ agent, label, runtimeLabel, sessionId }: Props) {
   const stick = useRef(true);
   useEffect(() => {
     const el = log.current;
-    if (el && stick.current) el.scrollTop = el.scrollHeight;
-  }, [state.items, state.runStatus]);
+    if (el && prefs.autoScroll && stick.current) el.scrollTop = el.scrollHeight;
+  }, [state.items, state.runStatus, prefs.autoScroll]);
 
   const now = useNow(state.runStatus === "running");
   // Solange die Liste die neue Session noch nicht kennt, steht die erste Nachricht als Titel da.

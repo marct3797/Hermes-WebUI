@@ -169,24 +169,6 @@
    }
   },
   {
-   "id": "nous",
-   "label": "Nous Portal",
-   "configured": true,
-   "quota_capable": true,
-   "active": false,
-   "last_active_at": null,
-   "quota": {
-    "available": false,
-    "source": "portal-account",
-    "title": "Account limits",
-    "plan": null,
-    "windows": [],
-    "details": [],
-    "unavailable_reason": "Not signed in to Nous Portal, or the portal returned no subscription data.",
-    "fetched_at": null
-   }
-  },
-  {
    "id": "omniroute",
    "label": "Omniroute",
    "configured": false,
@@ -242,24 +224,6 @@
     "details": [],
     "unavailable_reason": null,
     "fetched_at": "2026-10-23T23:12:35.169606+00:00"
-   }
-  },
-  {
-   "id": "opencode-zen",
-   "label": "OpenCode Zen",
-   "configured": true,
-   "quota_capable": true,
-   "active": false,
-   "last_active_at": null,
-   "quota": {
-    "available": false,
-    "source": "zen_credits",
-    "title": "Account limits",
-    "plan": null,
-    "windows": [],
-    "details": [],
-    "unavailable_reason": "OpenCode Zen exposes no reachable credits/usage endpoint for this key — it is pay-as-you-go.",
-    "fetched_at": null
    }
   }
  ],

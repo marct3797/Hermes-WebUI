@@ -79,6 +79,11 @@ class DashboardClient:
             if explain:  # Anmeldungen scheitern aus Gründen, die der Person helfen (Netz, abgelaufen, abgelehnt)
                 try:
                     d = res.json().get("detail")
+                    if isinstance(d, str) and isinstance(json_body, dict):
+                        for field in ("value", "api_key", "code"):
+                            secret = json_body.get(field)
+                            if isinstance(secret, str) and secret:
+                                d = d.replace(secret, "[REDACTED]")
                     why = f": {d[:200]}" if isinstance(d, str) else ""
                 except (ValueError, AttributeError):
                     pass
@@ -195,7 +200,7 @@ class DashboardClient:
         return await self._call("POST", "/api/providers/validate", json_body={"key": var, "value": value})
 
     async def set_key(self, name: str, var: str, value: str) -> None:
-        await self._call("PUT", "/api/env", params={"profile": name}, json_body={"key": var, "value": value})
+        await self._call("PUT", "/api/env", params={"profile": name}, json_body={"key": var, "value": value}, explain=True)
         self._changed()
 
 

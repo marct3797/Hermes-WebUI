@@ -8,6 +8,9 @@ from __future__ import annotations
 
 from typing import Any
 
+# Diese Produkte gehören nicht zum Anbieterangebot der WebUI; OpenCode Go bleibt eigenständig.
+HIDDEN_PROVIDERS = frozenset({"nous", "opencode-zen"})
+
 
 def _rows(value: Any) -> list[dict[str, Any]]:
     return [r for r in value if isinstance(r, dict)] if isinstance(value, list) else []
@@ -71,6 +74,8 @@ def build_overview(env: Any, oauth: Any, analytics: Any, days: int) -> dict[str,
 
     out = []
     for g in groups.values():
+        if g["id"] in HIDDEN_PROVIDERS:
+            continue
         g["configured"] = any(k["set"] for k in g["keys"]) or bool(g["oauth"] and g["oauth"]["logged_in"])
         g["used"] = bool(g["usage"] and g["usage"]["sessions"])
         out.append(g)
@@ -121,7 +126,7 @@ def normalize_models(options: Any) -> list[dict[str, Any]]:
     out = []
     for p in _rows(options.get("providers") if isinstance(options, dict) else None):
         slug = str(p.get("slug") or "")
-        if not slug:
+        if not slug or slug in HIDDEN_PROVIDERS:
             continue
         out.append({
             "slug": slug, "name": str(p.get("name") or slug), "current": bool(p.get("is_current")), "authenticated": bool(p.get("authenticated")),

@@ -5,7 +5,6 @@ describe("parseModelOptions", () => {
   it("reads Hermes' provider list and the current model", () => {
     const o = parseModelOptions({
       providers: [
-        { slug: "nous", name: "Nous", authenticated: false, models: [] },
         { slug: "opencode-go", name: "OpenCode Go", is_current: true, authenticated: true, models: ["muse-spark-1.3-contributor", { id: "kimi-k2" }], featured_models: ["kimi-k2"] },
         { slug: "fireworks", name: "Fireworks", authenticated: false, models: ["x"] },
       ],

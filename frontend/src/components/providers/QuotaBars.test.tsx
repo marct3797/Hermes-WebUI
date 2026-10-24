@@ -54,21 +54,11 @@ describe("QuotaBars mit der echten Plugin-Antwort", () => {
     expect(c.getAllByText("in 8 Tagen")[0]).toHaveAttribute("title", "Reset am 01.11.2026");
   });
 
-  it("shows Nous as expired access with the plugin's reason, never as a plain empty block", () => {
-    const n = block("Nous Portal");
-    expect(n.getByText("Zugang prüfen")).toBeInTheDocument();
-    expect(n.getByText(/Not signed in to Nous Portal/)).toBeInTheDocument();
-  });
-
   it("lists providers without an API under 'Nicht abfragbar' with their reason", () => {
     const d = screen.getByText("Nicht abfragbar (4)").closest("details")!;
     expect(within(d).getByText(/Google AI Studio/).closest("li")).toHaveTextContent("No public subscription-quota API for this provider.");
     expect(within(d).getByText(/Omniroute/).closest("li")).toHaveTextContent("Provider not in the Hermes catalog.");
     expect(screen.queryByRole("listitem", { name: "Google AI Studio" })).not.toBeInTheDocument();
-    // OpenCode Zen ist abfragefähig, liefert aber nichts: eigener Block mit Badge und Grund
-    const zen = block("OpenCode Zen");
-    expect(zen.getByText("Nicht abfragbar")).toBeInTheDocument();
-    expect(zen.getByText(/pay-as-you-go/)).toBeInTheDocument();
   });
 });
 
@@ -179,7 +169,7 @@ describe("Cockpit", () => {
     expect(kpi).toHaveClass("hot");
     expect(kpi).toHaveTextContent("0% Rest");
     expect(kpi).toHaveTextContent(/(ChatGPT or Codex Subscription · Session|OpenCode Go · Monthly) · gamma · Reset in/);
-    expect(kpi).toHaveTextContent("1 Zugang abgelaufen (Nous Portal, gamma)");
+    expect(kpi).toHaveTextContent("2 erschöpft");
   });
 
   it("names the host when the plugin is missing, and is not red", async () => {

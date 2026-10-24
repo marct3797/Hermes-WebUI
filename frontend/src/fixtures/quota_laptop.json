@@ -128,18 +128,6 @@
    "reason": "No public subscription-quota API for this provider."
   },
   {
-   "id": "nous",
-   "label": "Nous Portal",
-   "configured": true,
-   "active": false,
-   "quota_capable": true,
-   "plan": null,
-   "state": "auth_failed",
-   "worst_remaining_percent": null,
-   "windows": [],
-   "reason": "Not signed in to Nous Portal, or the portal returned no subscription data."
-  },
-  {
    "id": "omniroute",
    "label": "Omniroute",
    "configured": false,
@@ -187,18 +175,6 @@
     }
    ],
    "reason": null
-  },
-  {
-   "id": "opencode-zen",
-   "label": "OpenCode Zen",
-   "configured": true,
-   "active": false,
-   "quota_capable": true,
-   "plan": null,
-   "state": "unavailable",
-   "worst_remaining_percent": null,
-   "windows": [],
-   "reason": "OpenCode Zen exposes no reachable credits/usage endpoint for this key — it is pay-as-you-go."
   }
  ]
 }

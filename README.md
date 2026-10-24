@@ -216,6 +216,14 @@ die zuerst nur für das Gerät gelten (Browser-Speicher) und dort als Vorgabe f�
 - Es ändert sich nur der Teil, den die Seite bearbeitet: unbekannte Schlüssel und andere Profile bleiben, der Stand davor liegt als `ui.json.bak` daneben, geschrieben wird atomar. Eine Datei, die kein gültiges JSON ist, wird nie überschrieben (409).
 - Neue SVG-Dateien gehen als Text an das BFF, werden wie beim Laden bereinigt und landen als `sigils/<profil>-<kurzhash>.svg`; bei einem Fehler wird nichts geändert. Jede Änderung steht im Audit-Log (`ui.profile`, `ui.shader`), ohne Namen oder Inhalte.
 
+### Persönliche Einstellungen
+
+`/settings` enthält Chat-Verhalten (Enter-Senden, am Verlaufende bleiben, Freigaben bestätigen), kompakte Listen, 12-/24-Stunden-Zeit und reduzierte Bewegung. Denkaufwand und Standard-Arbeitsordner werden je konfiguriertem Host gewählt. Diese Vorgaben liegen nur im Browser (`hermes.preferences`), nicht in der Server- oder Agent-Konfiguration. Die bestehende Aufwandwahl je Agent bleibt vorrangig; die Arbeitsordnerauswahl nutzt nur vom Host-Dienst freigegebene Ordner.
+
+Desktop-Hinweis und Ton bei wartenden Freigaben sind getrennte Opt-ins. Erst der Klick in den Einstellungen fragt nach der Browser-Erlaubnis. Die Meldungen gelten nur für von dieser geöffneten WebUI erkannte Freigaben (inklusive Räume), nicht für unsichtbare CLI-Läufe. Der Testton zeigt Browser-Sperren; nach einem Neuladen kann vor dem ersten Klick noch kein Ton laufen. Eine Bestätigung auszuschalten ersetzt nie eine Freigabe oder die serverseitigen Sicherheitsprüfungen.
+
+Nous Portal und OpenCode Zen gehören nicht zum angezeigten Anbieterangebot. Der zentrale Normalisierer entfernt ihre echten Dashboard-/Plugin-Einträge aus Kontingenten und Anbieterübersichten; OpenCode Go bleibt erhalten. Zugangsdaten dieser Produkte werden weder gelöscht noch umgeschrieben.
+
 ## Betrieb (hinter einem Reverse-Proxy)
 
 Der Reverse-Proxy (Caddy, nginx, Traefik …) terminiert TLS und leitet an den BFF (`127.0.0.1:8000`). Der BFF liefert das gebaute Frontend selbst aus
