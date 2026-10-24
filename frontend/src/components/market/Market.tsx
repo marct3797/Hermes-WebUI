@@ -71,7 +71,7 @@ export function McpMarket({ scope }: { scope: Scope }) {
     <section className="col" style={{ gap: 10 }} aria-label="MCP-Marktplatz">
       <label className="row small" style={{ gap: 6 }}>Quelle
         <select className="field field-line" style={{ width: "auto" }} value={source} onChange={(e) => setSource(e.target.value)} aria-label="MCP-Quelle">
-          <option value="catalog">Katalog des Hosts (von Nous geprüft)</option>{regs.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
+          <option value="catalog">Katalog des Hosts</option>{regs.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
         </select>
       </label>
       {source === "catalog"

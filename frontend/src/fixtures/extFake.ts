@@ -98,7 +98,7 @@ export class FakeBff {
 
   private market(m: string, rest: string, q: URLSearchParams, b: Record<string, any> | undefined): unknown {
     if (rest === "sources") return { sources: [
-      { id: "official", ref: "official", label: "Official (Nous)", kind: "hub", builtin: true, searchable: true },
+      { id: "official", ref: "official", label: "Official", kind: "hub", builtin: true, searchable: true },
       { id: "browse-sh", ref: "browse-sh", label: "browse.sh", kind: "hub", builtin: true, searchable: true },
       ...this.custom.filter((c) => c.kind !== "mcp-registry").map((c) => ({ ...c, ref: `custom:${c.id}`, builtin: false, searchable: true })),
     ] };

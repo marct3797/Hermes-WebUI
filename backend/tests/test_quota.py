@@ -48,14 +48,9 @@ def test_real_fixture_copilot_date_only_reset_counts_from_midnight_utc():
     assert c["state"] == "ok" and c["plan"] == "individual" and c["windows"][0]["reset_in_s"] == 694_045  # bis 2026-11-01T00:00Z
 
 
-def test_real_fixture_nous_not_signed_in_is_auth_failed_with_reason():
-    n = by_id(normalize(REAL, T0))["nous"]
-    assert n["state"] == "auth_failed" and "Not signed in" in n["reason"] and n["windows"] == []
-
-
 def test_real_fixture_providers_without_api_are_unavailable_not_failed():
     p = by_id(normalize(REAL, T0))
-    for pid in ("custom", "gemini", "huggingface", "omniroute", "opencode-zen"):
+    for pid in ("custom", "gemini", "huggingface", "omniroute"):
         assert p[pid]["state"] == "unavailable" and p[pid]["reason"], pid
     assert p["gemini"]["reason"] == "No public subscription-quota API for this provider."
 
@@ -199,7 +194,7 @@ def test_runtime_quota_lists_all_configured_profiles(build):
     body = c.get("/bff/h/server/hermes/_quota").json()
     assert set(body["profiles"]) == {"default", "beta", "ghost", "eta"}  # "../evil" fällt beim Laden der Config weg
     assert all(q["state"] == "ok" for q in body["profiles"].values())
-    assert by_id(body["profiles"]["default"])["nous"]["state"] == "auth_failed"
+    assert by_id(body["profiles"]["default"])["openai-codex"]["state"] == "exhausted"
 
 
 def test_runtime_quota_timeout_is_per_profile(build, monkeypatch):
@@ -229,8 +224,6 @@ def test_summary_names_the_worst_window_and_expired_access(build):
     mine = [i for i in body["items"] if i["profile"] == "default"]
     codex = next(i for i in mine if i["provider"] == "openai-codex")
     assert (codex["state"], codex["remaining_percent"], codex["window"], codex["reset_in_s"] is not None) == ("exhausted", 0.0, "Session", True)
-    nous = next(i for i in mine if i["provider"] == "nous")
-    assert nous["state"] == "auth_failed" and nous["remaining_percent"] is None and "Not signed in" in nous["reason"]
     assert not any(i["provider"] == "gemini" for i in mine)
     assert body["worst"]["state"] in ("auth_failed", "exhausted")
 

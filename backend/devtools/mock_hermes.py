@@ -75,7 +75,6 @@ def create_mock(
             "providers": [
                 {"slug": "mock", "name": "Mock", "is_current": True, "authenticated": True,
                  "models": ["mock-large", "mock-small"], "featured_models": ["mock-large"]},
-                {"slug": "nous", "name": "Nous", "is_current": False, "authenticated": False, "models": []},
             ],
             "model": "mock-large", "provider": "mock",
         }

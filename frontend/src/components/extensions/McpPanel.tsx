@@ -104,7 +104,7 @@ function CatalogInstall({ scope, entry, onClose, onDone }: { scope: Scope; entry
   );
 }
 
-/** Katalog des Hosts (von Nous geprüft) mit Suche, Filter und Installation. `load` bestimmt die Quelle (Verwaltung oder Marktplatz). */
+/** Katalog des Hosts mit Suche, Filter und Installation. `load` bestimmt die Quelle (Verwaltung oder Marktplatz). */
 export function McpCatalog({ scope, load, onInstalled }: { scope: Scope; load: (q: string) => Promise<{ entries: McpCatalogEntry[] }>; onInstalled: () => void }) {
   const [q, setQ] = useState("");
   const [kind, setKind] = useState("");
