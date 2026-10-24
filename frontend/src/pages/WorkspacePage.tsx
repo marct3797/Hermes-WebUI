@@ -1,135 +1,160 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Editor } from "../components/files/Editor";
+import { FileTree } from "../components/files/FileTree";
+import { GitPanel } from "../components/files/GitPanel";
+import { Modal } from "../components/files/Modal";
+import { hostFiles, joinPath, parentOf, type Entry, type Git, type Workspace } from "../filesApi";
+import { useHosts } from "../hosts";
+import { navigate } from "../router";
 import "../styles/workspace.css";
+import "../styles/files.css";
 
-type Workspace = { id: string; label: string };
-type Entry = { name: string; path: string; kind: "directory" | "file"; size?: number };
-type Files = { entries?: Entry[]; content?: string; truncated?: boolean; mime?: string };
-type Git = { repository?: boolean; reason?: string;  branch: string; status: string; diff: string; remotes: { name: string; url: string }[]; truncated?: boolean };
-const PREVIEW_LIMIT = 65536;
-
-async function request<T>(url: string, body?: unknown, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(url, { method: body === undefined ? "GET" : "POST", credentials: "same-origin", signal,
-    headers: { "X-Requested-With": "hermes-webui", ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
-  if (!response.ok) throw new Error(`Anfrage fehlgeschlagen (${response.status})${response.status === 401 || response.status === 403 ? "; ggf. frisch anmelden" : ""}.`);
-  return response.json();
-}
-
-function encodedFile(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Datei nicht lesbar"));
-    reader.onload = () => resolve(String(reader.result).split(",")[1]);
-    reader.readAsDataURL(file);
-  });
-}
+type Dialog = { kind: "file" | "dir" | "move"; value: string; from?: string };
+const BAD_NAME = /[\\/\x00-\x1f]|^\.\.?$/;
+const encodedFile = (file: File): Promise<string> => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onerror = () => reject(new Error("Datei nicht lesbar"));
+  reader.onload = () => resolve(String(reader.result).split(",")[1]);
+  reader.readAsDataURL(file);
+});
 
 export function WorkspacePage({ host, initialWorkspace }: { host: string; initialWorkspace?: string }) {
-  const base = `/bff/h/${encodeURIComponent(host)}`;
+  const files = useMemo(() => hostFiles(host), [host]);
+  const { hosts } = useHosts();
+  const query = new URLSearchParams(location.search);
   const [workspaces, setWorkspaces] = useState<Workspace[]>();
   const [workspace, setWorkspace] = useState("");
-  const [directory, setDirectory] = useState("");
-  const [entries, setEntries] = useState<Entry[]>();
-  const [selected, setSelected] = useState<string>();
-  const [preview, setPreview] = useState<Files>();
+  const [cwd, setCwd] = useState("");
+  const [focus, setFocus] = useState<string>();
+  const [openFile, setOpenFile] = useState<string | undefined>(query.get("file") ?? undefined);
+  const [dirty, setDirty] = useState(false);
   const [git, setGit] = useState<Git>();
-  const [error, setError] = useState<string>();
   const [gitError, setGitError] = useState<string>();
+  const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
-  const [uploading, setUploading] = useState(false);
+  const [dialog, setDialog] = useState<Dialog>();
+  const [dialogError, setDialogError] = useState<string>();
+  const [busy, setBusy] = useState(false);
   const [revision, setRevision] = useState(0);
-  const previewRequest = useRef(0);
-  const scope = useRef(0);
-  const query = (path: string) => new URLSearchParams({ workspace, path }).toString();
+  const [gitRevision, setGitRevision] = useState(0);
+  const refresh = () => { setRevision((n) => n + 1); setGitRevision((n) => n + 1); };
+  const discard = () => !dirty || window.confirm("Ungespeicherte Änderungen verwerfen?");
 
   useEffect(() => {
     const controller = new AbortController();
     setWorkspaces(undefined); setWorkspace(""); setError(undefined);
-    request<{ workspaces: Workspace[] }>(`${base}/_workspaces`, undefined, controller.signal).then((data) => {
-      if (controller.signal.aborted) return;
+    files.workspaces(controller.signal).then((data) => {
       setWorkspaces(data.workspaces);
-      setWorkspace(data.workspaces.find((w) => w.id === initialWorkspace)?.id ?? data.workspaces[0]?.id ?? "");
+      const wanted = initialWorkspace ?? new URLSearchParams(location.search).get("ws") ?? "";
+      setWorkspace(data.workspaces.find((w) => w.id === wanted)?.id ?? data.workspaces[0]?.id ?? "");
     }).catch((e: Error) => { if (!controller.signal.aborted) setError(e.message); });
     return () => controller.abort();
-  }, [base, initialWorkspace]);
+  }, [files, initialWorkspace]);
 
-  useEffect(() => {
-    scope.current++; previewRequest.current++;
-    setDirectory(""); setSelected(undefined); setPreview(undefined); setNotice(undefined);
-    return () => { scope.current++; previewRequest.current++; };
-  }, [base, workspace]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    setGit(undefined); setGitError(undefined);
-    if (workspace) request<Git>(`${base}/_git?${new URLSearchParams({ workspace })}`, undefined, controller.signal)
-      .then((data) => { if (!controller.signal.aborted) setGit(data); }).catch((e: Error) => { if (!controller.signal.aborted) setGitError(e.message); });
-    return () => controller.abort();
-  }, [base, workspace, revision]);
-
+  useEffect(() => { setCwd(""); setFocus(undefined); setNotice(undefined); }, [files, workspace]);
+  useEffect(() => { // Auswahl im URL-Query merken (ohne neuen Verlaufseintrag)
+    if (!workspace) return;
+    const params = new URLSearchParams({ ws: workspace, ...(openFile ? { file: openFile } : {}) });
+    history.replaceState(history.state, "", `${location.pathname}?${params}`);
+  }, [workspace, openFile]);
   useEffect(() => {
     const controller = new AbortController();
-    setEntries(undefined); setError(undefined);
-    if (workspace) request<Files>(`${base}/_files?${new URLSearchParams({ workspace, path: directory })}`, undefined, controller.signal)
-      .then((data) => { if (!controller.signal.aborted) setEntries(data.entries ?? []); }).catch((e: Error) => { if (!controller.signal.aborted) setError(e.message); });
+    setGitError(undefined);
+    if (workspace) files.git(workspace, controller.signal).then((data) => setGit(data))
+      .catch((e: Error) => { if (!controller.signal.aborted) { setGit(undefined); setGitError(e.message); } });
     return () => controller.abort();
-  }, [base, workspace, directory, revision]);
+  }, [files, workspace, gitRevision]);
 
-  const open = async (entry: Entry) => {
-    previewRequest.current++;
-    if (entry.kind === "directory") { setDirectory(entry.path); setSelected(undefined); setPreview(undefined); return; }
-    const id = previewRequest.current;
-    setSelected(entry.path); setPreview(undefined); setError(undefined);
-    // PDF and other binary content is attachment-only, never embedded active content.
-    if (/\.(pdf|png|jpe?g|gif|webp|zip|gz|woff2?|exe|bin)$/i.test(entry.name)) { setPreview({ mime: "application/octet-stream" }); return; }
-    try {
-      const data = await request<Files>(`${base}/_files?${query(entry.path)}`);
-      if (id !== previewRequest.current) return;
-      setPreview({ ...data, content: data.content?.slice(0, PREVIEW_LIMIT), truncated: data.truncated || (data.content?.length ?? 0) > PREVIEW_LIMIT });
-    } catch (e) { if (id === previewRequest.current) setError(`${(e as Error).message} Binärdateien nur herunterladen.`); }
+  const open = (entry: Entry) => { if (!discard()) return; setFocus(entry.path); setCwd(parentOf(entry.path)); setOpenFile(entry.path); setError(undefined); };
+  const selectDir = (path: string) => { setFocus(path); setCwd(path); };
+  const run = async (action: () => Promise<void>) => {
+    setBusy(true); setDialogError(undefined);
+    try { await action(); setDialog(undefined); } catch (e) { setDialogError((e as Error).message); } finally { setBusy(false); }
+  };
+  const submit = () => {
+    if (!dialog) return;
+    const value = dialog.value.trim();
+    if (dialog.kind === "move") {
+      if (!value || value.split("/").some((p) => !p || BAD_NAME.test(p))) { setDialogError("Ungültiger Pfad."); return; }
+      if (value === dialog.from) { setDialog(undefined); return; }
+      if (openFile && dirty && (openFile === dialog.from || openFile.startsWith(`${dialog.from}/`)) && !discard()) return;
+      void run(async () => {
+        await files.move(workspace, dialog.from!, value);
+        if (openFile === dialog.from) setOpenFile(value);
+        else if (openFile?.startsWith(`${dialog.from}/`)) setOpenFile(undefined);
+        setFocus(value); setNotice(`Verschoben nach ${value}.`); refresh();
+      });
+      return;
+    }
+    if (!value || BAD_NAME.test(value)) { setDialogError("Ungültiger Name: kein Schrägstrich, nicht leer, nicht „.“ oder „..“."); return; }
+    const path = joinPath(cwd, value);
+    void run(async () => {
+      if (dialog.kind === "dir") { await files.mkdir(workspace, path); setNotice(`Ordner ${path} angelegt.`); }
+      else { await files.write(workspace, path, ""); if (!discard()) return; setOpenFile(path); setNotice(`Datei ${path} angelegt.`); }
+      refresh();
+    });
   };
 
   const upload = async (file?: File) => {
-    if (!file || uploading) return;
+    if (!file || busy) return;
     setError(undefined); setNotice(undefined);
     if (file.size > 1048576) { setError("Maximal 1 MiB pro Datei."); return; }
     if (!file.name || /[\\/]/.test(file.name)) { setError("Ungültiger Dateiname."); return; }
-    const currentScope = scope.current;
-    setUploading(true);
+    setBusy(true);
     try {
-      const content_base64 = await encodedFile(file);
-      if (currentScope !== scope.current) return;
-      await request(`${base}/_files/upload`, { workspace, path: directory ? `${directory}/${file.name}` : file.name, content_base64 });
-      if (currentScope !== scope.current) return;
-      setRevision((n) => n + 1);
-      setNotice("Datei hochgeladen. Bestehende Dateien werden nicht überschrieben.");
-    } catch (e) { if (currentScope === scope.current) setError((e as Error).message); }
-    finally { setUploading(false); }
+      await files.upload(workspace, joinPath(cwd, file.name), await encodedFile(file));
+      setNotice("Datei hochgeladen. Bestehende Dateien werden nicht überschrieben."); refresh();
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
+
+  const onDirty = useCallback((value: boolean) => setDirty(value), []);
+  const hint = <details className="ws-hint"><summary>Weiteren Arbeitsordner eintragen</summary>
+    <p>Arbeitsordner stehen in der Konfiguration des Host-Dienstes. Auf dem Host eintragen und den Dienst neu starten:</p>
+    <pre className="mono">python -m hostd.workspaces add --config ~/.config/hermes-hostd/config.json --id projekt --path /absoluter/pfad --label "Mein Projekt"</pre>
+    <p className="muted">Oder beim Installieren: <code>deploy/install-hostd.sh --workspace projekt=/absoluter/pfad</code></p></details>;
 
   return <main className="page workspace-page">
     <header className="workspace-toolbar"><div><h1>Workspace</h1><p className="muted">{host} · Nur freigegebene Arbeitsordner</p></div>
-      <label>Arbeitsordner <select className="field" value={workspace} onChange={(e) => setWorkspace(e.target.value)} disabled={!workspaces?.length}>
-        <option value="" disabled>Arbeitsordner wählen</option>{workspaces?.map((w) => <option key={w.id} value={w.id}>{w.label}</option>)}
+      {hosts && hosts.length > 1 && <label>Host <select className="field" value={host} onChange={(e) => { if (discard()) navigate(`/hosts/${encodeURIComponent(e.target.value)}/workspace`); }}>
+        {hosts.map((h) => <option key={h.id} value={h.id}>{h.id}</option>)}</select></label>}
+      <label>Arbeitsordner <select className="field" value={workspace} onChange={(e) => { if (discard()) { setOpenFile(undefined); setWorkspace(e.target.value); } }} disabled={!workspaces?.length}>
+        <option value="" disabled>Arbeitsordner wählen</option>{workspaces?.map((w) => <option key={w.id} value={w.id}>{w.label}{w.is_git ? " · Git" : ""}</option>)}
       </select></label>
-      <label className="btn btn-s">{uploading ? "Lade hoch…" : "Datei hochladen"}<input aria-label="Datei hochladen" type="file" disabled={!workspace || uploading} onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = ""; }} /></label>
     </header>
     {error && <p className="banner" role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
     {!workspaces && !error && <p role="status">Lade Arbeitsordner…</p>}
-    {workspaces?.length === 0 && <p role="status">Keine Arbeitsordner eingerichtet.</p>}
+    {workspaces?.length === 0 && <><p role="status">Keine Arbeitsordner eingerichtet.</p>{hint}</>}
     {workspace && <div className="workspace-grid">
-      <section className="workspace-files" aria-label="Dateien"><h2>Dateien</h2><p className="mono">/{directory}</p>
-        {directory && <button className="btn btn-s btn-g" onClick={() => { setDirectory(directory.split("/").slice(0, -1).join("/")); setSelected(undefined); previewRequest.current++; }}>Übergeordneter Ordner</button>}
-        {!entries ? <p role="status">Lade Dateien…</p> : entries.length === 0 ? <p className="muted">Dieser Arbeitsordner ist leer.</p> : <ul>{entries.map((entry) => <li key={entry.path}><button className="btn btn-g" onClick={() => void open(entry)}>{entry.name}{entry.kind === "directory" ? "/" : ""}</button></li>)}</ul>}
+      <section className="workspace-files" aria-label="Dateien"><h2>Dateien</h2>
+        <nav className="ft-crumbs mono" aria-label="Pfad"><button type="button" className="btn btn-s btn-g" onClick={() => selectDir("")}>/</button>
+          {cwd.split("/").filter(Boolean).map((part, i, all) => <button type="button" className="btn btn-s btn-g" key={i} onClick={() => selectDir(all.slice(0, i + 1).join("/"))}>{part}</button>)}</nav>
+        <div className="ft-actions">
+          <button type="button" className="btn btn-s" onClick={() => { setDialogError(undefined); setDialog({ kind: "file", value: "" }); }}>Neue Datei</button>
+          <button type="button" className="btn btn-s" onClick={() => { setDialogError(undefined); setDialog({ kind: "dir", value: "" }); }}>Neuer Ordner</button>
+          <button type="button" className="btn btn-s btn-g" disabled={!focus} onClick={() => { setDialogError(undefined); setDialog({ kind: "move", value: focus!, from: focus }); }}>Umbenennen/Verschieben</button>
+          <label className="btn btn-s btn-g">{busy ? "Bitte warten…" : "Hochladen"}<input aria-label="Datei hochladen" type="file" disabled={busy} onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = ""; }} /></label>
+          <button type="button" className="btn btn-s btn-g" onClick={refresh}>Aktualisieren</button>
+        </div>
+        <FileTree key={workspace} files={files} workspace={workspace} revision={revision} selected={openFile} cwd={cwd} onOpenFile={open} onSelectDir={selectDir}
+          rootEmpty={<>Lege mit „Neue Datei“ oder „Neuer Ordner“ los.</>} />
+        {hint}
       </section>
-      <section className="workspace-preview" aria-label="Dateivorschau"><h2>{selected ?? "Vorschau"}</h2>
-        {selected ? <><a className="inline-link" href={`${base}/_files/download?${query(selected)}`} download>Datei herunterladen</a>
-          {preview?.content !== undefined ? <pre aria-label="Textvorschau">{preview.content}</pre> : <p className="muted">{preview ? "Keine Textvorschau. Datei sicher herunterladen." : "Lade Textvorschau…"}</p>}
-          {preview?.truncated && <p role="status">Vorschau gekürzt (maximal 64 KiB).</p>}</> : <p className="muted">Datei auswählen. PDF und Binärdateien werden nur heruntergeladen.</p>}
+      <section className="workspace-preview" aria-label="Editor">
+        {openFile ? <Editor files={files} workspace={workspace} path={openFile} onDirty={onDirty} onSaved={refresh} />
+          : <><h2>Editor</h2><p className="muted">Datei im Baum auswählen oder mit „Neue Datei“ anlegen. PDF, Bilder und Binärdateien werden nur heruntergeladen.</p></>}
       </section>
-      <section className="workspace-git" aria-label="Git"><h2>Git · {git?.branch ?? "Arbeitsordner"}</h2>
-        {gitError ? <p role="alert">{gitError}</p> : !git ? <p role="status">Lade Git…</p> : git.repository === false ? <p className="muted" role="status">{git.reason ?? "Kein Git-Repository in diesem Arbeitsordner"}</p> : <><pre aria-label="Git Status">{git.status || "Keine Änderungen."}</pre><pre aria-label="Git Diff">{git.diff?.slice(0, PREVIEW_LIMIT) || "Kein Diff."}</pre>{(git.truncated || git.diff?.length > PREVIEW_LIMIT) && <p role="status">Git-Ausgabe gekürzt.</p>}{git.remotes?.map((remote) => <p className="mono" key={remote.name}>{remote.name}: {remote.url}</p>)}</>}
-      </section>
+      <GitPanel git={git} error={gitError} onRefresh={() => setGitRevision((n) => n + 1)} onOpenFile={(path) => open({ name: path.split("/").pop()!, path, kind: "file" })} />
     </div>}
+    {dialog && <Modal label={dialog.kind === "file" ? "Neue Datei" : dialog.kind === "dir" ? "Neuer Ordner" : "Umbenennen/Verschieben"} busy={busy} onClose={() => setDialog(undefined)}>
+      <form onSubmit={(e) => { e.preventDefault(); submit(); }} className="ws-form">
+        <label>{dialog.kind === "move" ? "Neuer Pfad im Arbeitsordner" : `Name (in /${cwd})`}
+          <input className="field field-line" autoFocus value={dialog.value} maxLength={200} onChange={(e) => setDialog({ ...dialog, value: e.target.value })} /></label>
+        {dialogError && <p className="banner" role="alert">{dialogError}</p>}
+        <div className="row" style={{ gap: 8, justifyContent: "flex-end" }}>
+          <button type="button" className="btn btn-g" disabled={busy} onClick={() => setDialog(undefined)}>Abbrechen</button>
+          <button type="submit" className="btn" disabled={busy || !dialog.value.trim()}>{dialog.kind === "move" ? "Verschieben" : "Anlegen"}</button>
+        </div>
+      </form>
+    </Modal>}
   </main>;
 }
