@@ -13,7 +13,7 @@ The main documentation is in German ([README.md](README.md)). This page is the E
 | Kanban plugin (ships with Hermes) | kanban board | no |
 | `hostd` (this repo) | terminal, files, git, CLI sign-in | no |
 
-Which Hermes version was checked, and what is covered or open: [docs/compatibility.md](docs/compatibility.md) (German). Check it yourself against any Hermes source tree:
+Which Hermes version was checked, and what is covered or open: [docs/compatibility.md](docs/compatibility.md); how much of Hermes' native API and feature set the UI maps (99 of 390 routes today, with the list of gaps): [docs/coverage.md](docs/coverage.md) (both German). Check it yourself against any Hermes source tree:
 
 ```
 cd backend && python -m devtools.check_upstream /path/to/hermes-agent

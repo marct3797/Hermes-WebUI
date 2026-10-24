@@ -21,6 +21,8 @@ python -m devtools.check_upstream /pfad/zu/hermes-agent     # Exit 0 = alle Pfad
 Das Skript liest Zeichenketten aus dem Quelltext. Es beweist, dass ein Pfad existiert, nicht dass Anfrage und Antwort passen.
 `backend/tests/test_compat.py` stellt sicher, dass kein vom BFF genutzter Pfad in der Liste fehlt.
 
+Welche Hermes-Funktionen die WebUI abbildet und welche nicht (390 Routen, Funktionsbereiche, Risiken, Reihenfolge): [coverage.md](coverage.md).
+
 ## Bausteine
 
 | Baustein | Aufgabe | Pflicht? | Wo er herkommt |

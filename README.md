@@ -280,7 +280,7 @@ bash deploy/deploy.sh          # legt ~/hermes-webui/{config,data,webui.env} an 
 
 ## Kompatibilität
 
-Welche Hermes-Version, welche Bausteine, welche Funktion in welchem Stand: [docs/compatibility.md](docs/compatibility.md).
+Welche Hermes-Version, welche Bausteine, welche Funktion in welchem Stand: [docs/compatibility.md](docs/compatibility.md). Was von Hermes nativ abgebildet ist und was nicht: [docs/coverage.md](docs/coverage.md).
 
 ## Lizenz
 

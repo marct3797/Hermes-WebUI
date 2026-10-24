@@ -32,3 +32,14 @@ def test_checker_finds_listed_paths_in_a_source_tree(tmp_path):
     assert "/v1/capabilities" not in gone["gateway"] and "/v1/runs/{}/stop" not in gone["gateway"]
     assert "/v1/skills" in gone["gateway"]
     assert "/api/plugins/kanban/board" not in gone["kanban-plugin"] and "/api/plugins/kanban/stats" in gone["kanban-plugin"]
+
+
+def test_coverage_counts_routes_per_module_and_marks_used_ones(tmp_path):
+    from devtools.check_upstream import coverage, upstream_routes
+    (tmp_path / "hermes_cli" / "web_routers").mkdir(parents=True)
+    (tmp_path / "hermes_cli" / "web_routers" / "x.py").write_text('@router.get("/api/skills")\n@router.post("/api/unbekannt")\n@router.get("/kein-api")\n')
+    (tmp_path / "gateway" / "platforms").mkdir(parents=True)
+    (tmp_path / "gateway" / "platforms" / "api_server.py").write_text('R = [("GET", "/v1/skills"), ("POST", "/v1/nichts")]\n')
+    assert len(upstream_routes(tmp_path)) == 4
+    cov = coverage(tmp_path)
+    assert cov["hermes_cli/web_routers/x.py"] == (2, 1) and cov["gateway/api_server"] == (2, 1)

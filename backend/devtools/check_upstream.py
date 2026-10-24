@@ -1,6 +1,7 @@
 """Prüft, ob jede Hermes-Route, die die WebUI aufruft, im Quelltext einer Hermes-Installation vorkommt.
 
-    python -m devtools.check_upstream /pfad/zu/hermes-agent
+    python -m devtools.check_upstream /pfad/zu/hermes-agent              # Exit 0 = alle genutzten Pfade vorhanden
+    python -m devtools.check_upstream /pfad/zu/hermes-agent --coverage   # welcher Teil der Hermes-Routen ist abgebildet
 
 Das belegt nur, dass der Pfad existiert, nicht dass Anfrage und Antwort dieselbe Form haben (das prüfen die Vertragstests, siehe
 docs/contract-tests.md). Die Liste unten ist die einzige Quelle für docs/compatibility.md; `tests/test_compat.py` hält sie vollständig.
@@ -65,10 +66,52 @@ def missing(root: Path) -> dict[str, list[str]]:
     return {c: [p for p in paths if p not in have] for c, paths in USED.items()}
 
 
+ROUTE = re.compile(r"""@(\w+)\.(get|post|put|patch|delete|websocket)\(\s*f?["'](/[^"']*)["']""")
+TUPLE = re.compile(r"""\(\s*["'](GET|POST|PUT|PATCH|DELETE)["']\s*,\s*f?["'](/(?:v1|api)/[^"']*)["']""")
+
+
+def upstream_routes(root: Path) -> set[tuple[str, str, str]]:
+    """Alle Routen (Modul, Methode, Pfad), die Dashboard-Router, Plugins und der Gateway-API-Server anbieten."""
+    found: set[tuple[str, str, str]] = set()
+    for f in (root / "hermes_cli").rglob("*.py") if (root / "hermes_cli").is_dir() else []:
+        if "tests" in f.parts:
+            continue
+        for m in ROUTE.finditer(f.read_text(errors="ignore")):
+            if m.group(3).startswith(("/api/", "/v1/")):
+                found.add((f.relative_to(root).as_posix(), m.group(2).upper(), normalize(m.group(3))))
+    for f in root.glob("plugins/*/dashboard/plugin_api.py"):
+        name = f.parent.parent.name
+        for m in ROUTE.finditer(f.read_text(errors="ignore")):
+            found.add((f"plugins/{name}", m.group(2).upper(), normalize(f"/api/plugins/{name}{m.group(3)}")))
+    for f in root.glob("gateway/platforms/api_server*.py"):
+        for m in TUPLE.finditer(f.read_text(errors="ignore")):
+            found.add(("gateway/api_server", m.group(1), normalize(m.group(2))))
+    return found
+
+
+def coverage(root: Path) -> dict[str, tuple[int, int]]:
+    """Modul -> (Routen, davon vom BFF genutzt; pfadgenau, ohne Methode)."""
+    used = {normalize(p) for paths in USED.values() for p in paths}
+    out: dict[str, list[int]] = {}
+    for module, _, path in upstream_routes(root):
+        row = out.setdefault(module, [0, 0])
+        row[0] += 1
+        row[1] += path in used
+    return {m: (a, b) for m, (a, b) in out.items()}
+
+
 if __name__ == "__main__":
-    if len(sys.argv) != 2 or not Path(sys.argv[1]).is_dir():
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    if len(args) != 1 or not Path(args[0]).is_dir():
         sys.exit(__doc__)
-    gone = missing(Path(sys.argv[1]))
+    if "--coverage" in sys.argv:
+        rows = sorted(coverage(Path(args[0])).items(), key=lambda kv: (kv[1][1] / kv[1][0], -kv[1][0]))
+        print(f"{'Modul':50} {'Routen':>6} {'genutzt':>7}")
+        for module, (total, used_) in rows:
+            print(f"{module:50} {total:6} {used_:7}")
+        print(f"{'GESAMT':50} {sum(t for t, _ in dict(rows).values()):6} {sum(u for _, u in dict(rows).values()):7}")
+        sys.exit(0)
+    gone = missing(Path(args[0]))
     for comp, paths in USED.items():
         print(f"{comp}: {len(paths) - len(gone[comp])}/{len(paths)} gefunden")
         for p in gone[comp]:
