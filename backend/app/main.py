@@ -20,9 +20,10 @@ from .dashboard import CacheCfg, SoulHistory
 from .hosts import HostService
 from .oidc import OidcClient
 from .registry import AGENT_RE, Registry
+from .knowledge import KnowledgeRegistry
 from .memory import MemoryRegistry
 from .rooms import RoomService
-from .routes import agents, auth, cli_auth, dashboard as dashboard_routes, hosts, memory as memory_routes, operations as operations_routes, rooms as rooms_routes, ui as ui_routes
+from .routes import agents, auth, cli_auth, dashboard as dashboard_routes, hosts, knowledge as knowledge_routes, memory as memory_routes, operations as operations_routes, rooms as rooms_routes, ui as ui_routes
 from .redaction import RedactionMiddleware
 from .quota import RefreshGate
 from .security import RateLimiter, SecurityMiddleware
@@ -94,6 +95,7 @@ def create_app(
     app.state.registry = Registry(settings.hosts_file)
     app.state.ui = UiConfig(settings.ui_file)
     app.state.memory = MemoryRegistry(settings.memory_file)
+    app.state.knowledge = KnowledgeRegistry(settings.knowledge_file)
     app.state.limiter = RateLimiter(settings.runs_per_minute)
     app.state.quota_gate = RefreshGate()
     app.state.login_limiter = RateLimiter(settings.logins_per_minute)
@@ -116,6 +118,7 @@ def create_app(
     app.include_router(dashboard_routes.host_router)
     app.include_router(dashboard_routes.quota_router)
     app.include_router(memory_routes.router)
+    app.include_router(knowledge_routes.router)
     app.include_router(rooms_routes.router)
     app.include_router(ui_routes.router)
 

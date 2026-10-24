@@ -20,6 +20,7 @@ services:
       HERMES_WEBUI_HOSTS_FILE: /config/hosts.json
       HERMES_WEBUI_UI_FILE: /config/ui.json
       HERMES_WEBUI_MEMORY_FILE: /config/memory.json
+      HERMES_WEBUI_KNOWLEDGE_FILE: /config/knowledge.json
       HERMES_WEBUI_AUDIT_FILE: /data/audit.log
       HERMES_WEBUI_ROOMS_DB: /data/rooms.db
       HERMES_WEBUI_SOUL_DIR: /data/soul-history

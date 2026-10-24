@@ -1,0 +1,7 @@
+{
+ "collection": "hermes-rag-m3",
+ "count": 7047,
+ "embedding_model": "BAAI/bge-m3",
+ "chunk_size": 512,
+ "chunk_overlap": 50
+}

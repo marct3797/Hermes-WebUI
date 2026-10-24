@@ -110,6 +110,13 @@ export type DiagCheck = { id: string; label: string; status: DiagStatus | "slow"
   detail: string; ms: number | null };
 export type DiagReport = { agent: string; status: DiagStatus; checks: DiagCheck[]; at: number };
 
+export type KnowledgeProvider = { id: string; label: string; type: string; has_sources: boolean };
+export type KnowledgeStats = { reachable: boolean; reason?: string; collection?: string; count?: number; embedding_model?: string; chunk_size?: number; chunk_overlap?: number; documents?: number | null; sources?: number | null };
+export type KnowledgeSource = { source: string; chunks: number; documents: number; repos: string[] };
+export type KnowledgeSources = { available: boolean; reason: string | null; items: KnowledgeSource[]; scanned_chunks: number; truncated: boolean; cache_age_s: number };
+export type KnowledgeDoc = { sync_id: string; source: string; repo: string | null; path: string | null; commit: string | null; chunks: number; title: string | null };
+export type KnowledgeDocs = { available: boolean; reason: string | null; items: KnowledgeDoc[]; total: number };
+export type KnowledgeHit = { text: string; score: number; source: string | null; repo: string | null; path: string | null; commit: string | null; sync_id: string | null; url: string | null };
 export type MemProvider = { id: string; type: string; label: string; bank: string; capabilities: string[] };
 export type MemItem = { id: string; text: string; kind: string | null; context: string | null; entities: string[]; at: number | null; tags: string[]; document: string | null };
 export type MemPage = { items: MemItem[]; total: number | null; limit: number; offset: number };

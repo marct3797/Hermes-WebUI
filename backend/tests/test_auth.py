@@ -299,3 +299,20 @@ def test_prod_requires_complete_oidc(make_settings):
     ok = create_app(make_settings(env="prod", auth_mode="oidc", oidc_issuer=ISSUER, oidc_client_id="a", oidc_client_secret="b",
                                   oidc_allowed_sub="1", public_url="https://x.test", allowed_hosts="x.test"))
     assert ok.docs_url is None and ok.openapi_url is None
+
+
+def test_knowledge_writes_require_fresh_login(web, idp, clock, oidc_app, tmp_path):
+    from app.knowledge import KnowledgeRegistry
+    f = tmp_path / "knowledge.json"
+    f.write_text('{"providers": [{"id": "rag", "type": "hermes-rag", "base_url": "http://rag.test"}]}')
+    oidc_app.state.knowledge = KnowledgeRegistry(f)
+    assert web.get("/bff/knowledge").status_code == 401 and web.get("/bff/knowledge/rag/sources").status_code == 401
+    assert web.post("/bff/knowledge/rag/search", json={"query": "x"}).status_code == 401
+    do_login(web, idp)
+    clock.t += 3600
+    assert web.get("/bff/knowledge").json()["providers"][0]["id"] == "rag"  # Lesen braucht kein Step-up
+    for path, body in (("ingest", {"title": "T", "text": "x"}), ("delete", {"sync_id": "manual:t"})):
+        r = web.post(f"/bff/knowledge/rag/{path}", json=body)
+        assert r.status_code == 401 and r.json()["detail"]["code"] == "step_up_required"
+    do_login(web, idp, step_up="true")
+    assert web.post("/bff/knowledge/rag/delete", json={"sync_id": "manual:t"}).status_code == 502  # Step-up ok, der Dienst ist im Test nicht erreichbar

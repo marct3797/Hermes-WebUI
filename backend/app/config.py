@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     build: str = ""
     # Gedächtnis-Anbieter (Hindsight …), siehe memory.example.json. Fehlt die Datei, ist die Seite Gedächtnis leer.
     memory_file: Path | None = None
+    # Wissens-Anbieter (selbst gehostetes RAG), siehe knowledge.example.json. Fehlt die Datei, ist die Seite Wissen aus der Seitenleiste ausgeblendet.
+    knowledge_file: Path | None = None
+    # So lange gilt die Quellen- und Dokumentübersicht (ein Scan der Chroma-Datenbank), bevor sie neu gelesen wird.
+    knowledge_cache_s: int = 300
     # Gruppenchats (Räume): SQLite-Datei mit Raumliste, Nachrichten und der Session je Mitglied.
     rooms_db: Path = Path("rooms.db")
     # Verlauf der SOUL.md-Änderungen (ein Ordner je Agent). Wird nie gekürzt.

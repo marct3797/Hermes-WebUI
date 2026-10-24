@@ -4,6 +4,7 @@ import { useRoomNeeds } from "../roomNeeds";
 import { useActivity } from "../runs";
 import type { AgentRef, Me, SessionSummary } from "../types";
 import { sigilFor, useUi } from "../ui";
+import { useKnowledgeProviders } from "../knowledge";
 import { Icon } from "./Icon";
 import { Link } from "./Link";
 import { Sigil } from "./Sigil";
@@ -30,6 +31,7 @@ const NAV = [
   { to: "/jobs", label: "Zeitpläne", icon: "clock" },
   { to: "/search", label: "Inhaltssuche", icon: "search" },
   { to: "/memory", label: "Gedächtnis", icon: "memory" },
+  { to: "/knowledge", label: "Wissen", icon: "file" },
   { to: "/providers", label: "Anbieter", icon: "coin" },
   { to: "/manage", label: "Erweiterungen", icon: "wrench" },
   { to: "/marketplaces", label: "Quellen", icon: "layers" },
@@ -50,6 +52,7 @@ export function Sidebar(p: Props) {
   const { sigils } = useUi();
   const { needs, byAgent } = useActivity();
   const { needs: roomNeeds } = useRoomNeeds();
+  const wissen = useKnowledgeProviders().length > 0; // nur sichtbar, wenn ein Wissens-Anbieter eingerichtet ist
   const open = (to: string) => (to === "/inbox" ? needs.length + roomNeeds.length : to === "/rooms" ? roomNeeds.length : 0);
   return (
     <>
@@ -63,7 +66,7 @@ export function Sidebar(p: Props) {
 
         <div className="side-scroll">
           <nav aria-label="Übersicht" className="nav">
-            {NAV.map((n) => (
+            {NAV.filter((n) => n.to !== "/knowledge" || wissen).map((n) => (
               <Link key={n.to} to={n.to} className={p.path === n.to ? "on" : undefined} aria-current={p.path === n.to ? "page" : undefined} onClick={p.onClose}>
                 <Icon name={n.icon} size={18} />{n.label}
                 {open(n.to) > 0 && <span className="ct" aria-label={`${open(n.to)} offen`}>{open(n.to)}</span>}

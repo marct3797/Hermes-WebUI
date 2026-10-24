@@ -1,0 +1,13 @@
+{
+  "providers": [
+    {
+      "id": "rag",
+      "type": "hermes-rag",
+      "label": "Wissen",
+      "base_url": "http://rag.example.internal:8000",
+      "chroma_url": "http://rag.example.internal:8001",
+      "collection": "",
+      "link_template": "https://git.example.com/{repo}/src/commit/{commit}/{path}"
+    }
+  ]
+}

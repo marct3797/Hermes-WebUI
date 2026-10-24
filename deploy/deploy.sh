@@ -11,7 +11,7 @@ docker=(docker); docker info >/dev/null 2>&1 || docker=(sudo docker)
 mkdir -p "$home/config" "$home/data"
 
 # Config nur anlegen, nie überschreiben. hosts.json ist ein Beispiel zum Anpassen; ein Gedächtnis-Anbieter (memory.json, siehe
-# deploy/memory.example.json) und ein Beispiel-Theme (WITH_EXAMPLE_THEME=1) sind optional.
+# deploy/memory.example.json), ein Wissens-Anbieter (knowledge.json, siehe backend/knowledge.example.json) und ein Beispiel-Theme (WITH_EXAMPLE_THEME=1) sind optional.
 [ -f "$home/config/hosts.json" ] || cp "$here/hosts.example.json" "$home/config/hosts.json"
 [ "${WITH_EXAMPLE_THEME:-0}" = 1 ] && cp -rn "$here/../backend/examples/japan/." "$home/config/" 2>/dev/null
 

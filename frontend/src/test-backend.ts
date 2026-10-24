@@ -2,7 +2,11 @@ import { act } from "@testing-library/react";
 import { vi } from "vitest";
 import quotaFixture from "./fixtures/quota_laptop.json";
 import graphFixture from "./fixtures/bff_graph_world.json";
-import type { HostInfo, MemGraph, ProfileInput, Room, RoomEvent, SigilConfig, StreamEvent, UiConfig } from "./types";
+import ragStats from "./fixtures/real/rag_stats_clean.json";
+import ragQuery from "./fixtures/real/rag_query_clean.json";
+import chromaGet from "./fixtures/real/chroma_get_clean.json";
+import { invalidate } from "./dataCache";
+import type { HostInfo, KnowledgeProvider, MemGraph, ProfileInput, Room, RoomEvent, SigilConfig, StreamEvent, UiConfig } from "./types";
 
 /** Gemeinsame Test-Attrappen: BFF-Antworten und EventSource für die Seiten-Tests. */
 
@@ -104,6 +108,69 @@ function memoryRoute(url: string, method: string, capabilities: string[], json: 
   if (what === "models") return json({ items: [{ id: "m1", name: "Zuhause", content: "**Netz:** Tailscale", query: "Wie sieht das Netz aus?", updated: 1_792_000_000_000, tags: ["netz"] }] });
   if (what === "diagnose") return json({ agent: "Gedächtnis/hindsight", status: "warn", checks: [{ id: "reach", label: "Erreichbar", status: "ok", detail: "Bank hermes", ms: 7 }, { id: "shape", label: "Antwortform", status: "warn", detail: "Graph ohne Kantenbeschriftung", ms: 9 }] });
   if (what === "reflect" && method === "POST") return json({ text: `Antwort auf: ${String(body?.query)}`, based_on: [MEM_ITEMS[0]] });
+  return json({ detail: "nicht da" }, 404);
+}
+
+/** Zustand der Wissens-Attrappe; Tests ändern ihn direkt (z. B. `kn.stepUp`, `kn.searchError`). */
+export type KnowledgeState = { available: boolean; truncated: boolean; stepUp: boolean; statsError: string | null; searchError: string | null; docs: Array<Record<string, unknown>> };
+
+const LINK = "https://git.example.com/{repo}/src/commit/{commit}/{path}";
+
+/** Dokumente aus den echten Chroma-Zeilen (fixtures/real/chroma_get_clean.json), je `sync_id` ein Dokument. */
+function knowledgeDocs(): KnowledgeState["docs"] {
+  const by = new Map<string, Record<string, unknown>>();
+  for (const m of chromaGet.metadatas as unknown as Array<Record<string, string>>) {
+    const d = by.get(m.sync_id) ?? { sync_id: m.sync_id, source: m.source, repo: m.repo ?? null, path: m.path ?? null, commit: m.commit ?? null, chunks: 0, title: m.title ?? null };
+    d.chunks = (d.chunks as number) + 1;
+    by.set(m.sync_id, d);
+  }
+  return [...by.values()].sort((a, b) => String(a.sync_id).localeCompare(String(b.sync_id)));
+}
+
+function knowledgeRoute(url: string, method: string, kn: KnowledgeState, providers: KnowledgeProvider[], json: (b: unknown, s?: number) => Response, body?: Record<string, unknown>): Response | undefined {
+  const u = new URL(url, "http://bff");
+  if (u.pathname === "/bff/knowledge") return json({ providers, config_error: null });
+  const m = /^\/bff\/knowledge\/([a-z0-9_-]+)\/([a-z]+)$/.exec(u.pathname);
+  if (!m) return undefined;
+  const what = m[2];
+  const sourceRows = () => {
+    const by = new Map<string, { source: string; chunks: number; documents: number; repos: Set<string> }>();
+    for (const d of kn.docs) {
+      const s = by.get(d.source as string) ?? { source: d.source as string, chunks: 0, documents: 0, repos: new Set<string>() };
+      s.chunks += d.chunks as number; s.documents += 1; if (d.repo) s.repos.add(d.repo as string);
+      by.set(s.source, s);
+    }
+    return [...by.values()].map((s) => ({ ...s, repos: [...s.repos] }));
+  };
+  if (what === "stats") {
+    if (kn.statsError) return json({ reachable: false, reason: kn.statsError });
+    return json({ reachable: true, ...ragStats, count: 7047, documents: kn.available ? kn.docs.length : null, sources: kn.available ? sourceRows().length : null });
+  }
+  if (what === "sources") {
+    if (!kn.available) return json({ available: false, reason: "Keine chroma_url konfiguriert.", items: [], scanned_chunks: 0, truncated: false, cache_age_s: 0 });
+    return json({ available: true, reason: null, items: sourceRows(), scanned_chunks: 10, truncated: kn.truncated, cache_age_s: 0 });
+  }
+  if (what === "documents") {
+    if (!kn.available) return json({ available: false, reason: "Keine chroma_url konfiguriert.", items: [], total: 0 });
+    const src = u.searchParams.get("source"), q = (u.searchParams.get("q") ?? "").toLowerCase();
+    const rows = kn.docs.filter((d) => (!src || d.source === src) && (!q || [d.sync_id, d.path, d.title].some((x) => String(x ?? "").toLowerCase().includes(q))));
+    return json({ available: true, reason: null, items: rows, total: rows.length });
+  }
+  if (what === "search" && method === "POST") {
+    if (kn.searchError) return json({ detail: kn.searchError }, 502);
+    const results = (String(body?.query).includes("nichts") ? [] : ragQuery.results).filter((r) => !body?.source || r.metadata.source === body.source).map((r) => ({
+      text: r.content, score: r.score, ...r.metadata, url: LINK.replace("{repo}", r.metadata.repo).replace("{commit}", r.metadata.commit).replace("{path}", r.metadata.path),
+    }));
+    return json({ results: results.map((r, i) => (i === 1 ? { ...r, url: null } : r)) }); // der zweite Treffer hat keinen Link
+  }
+  if ((what === "ingest" || what === "delete") && method === "POST") {
+    if (kn.stepUp) return json({ detail: { code: "step_up_required", message: "Bitte erneut anmelden" } }, 401);
+    if (what === "delete") { kn.docs = kn.docs.filter((d) => d.sync_id !== body?.sync_id); return json({ ok: true, deleted: 1 }); }
+    const sync_id = `manual:${String(body?.title).toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+    if (kn.docs.some((d) => d.sync_id === sync_id)) return json({ detail: `Es gibt schon ein Dokument mit der Kennung ${sync_id}.` }, 409);
+    kn.docs.push({ sync_id, source: "manual", repo: null, path: null, commit: null, chunks: 1, title: body?.title });
+    return json({ ok: true, source: "manual", sync_id, title: body?.title });
+  }
   return json({ detail: "nicht da" }, 404);
 }
 
@@ -261,7 +328,9 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
   return undefined;
 }
 
-export function installBackend(agents: string[] = ["gamma"], features = ["runs", "steer"], uiOverride: Partial<UiConfig> = {}, memoryCapabilities = ["stats", "items", "search", "graph", "entities", "models", "reflect"]) {
+export function installBackend(agents: string[] = ["gamma"], features = ["runs", "steer"], uiOverride: Partial<UiConfig> = {}, memoryCapabilities = ["stats", "items", "search", "graph", "entities", "models", "reflect"], knowledgeProviders: KnowledgeProvider[] = []) {
+  invalidate("knowledge");
+  const kn: KnowledgeState = { available: true, truncated: false, stepUp: false, statsError: null, searchError: null, docs: knowledgeDocs() };
   FakeEventSource.all = [];
   try { sessionStorage.clear(); } catch { /* ohne Speicher */ }
   try { localStorage.clear(); } catch { /* ohne Speicher */ }
@@ -305,6 +374,10 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
       if (room && m![2] === "messages" && method === "POST") return json({ message: { seq: (room.messages?.length ?? 0) + 1, author: "user", kind: "message", text: body.text, mentions: [], at: 1_792_000_100 } }, 202);
       if (room && m![2] === "stop" && method === "POST") return json({ stopped: true });
       return json({ detail: "nicht da" }, 404);
+    }
+    if (url.startsWith("/bff/knowledge")) {
+      const r = knowledgeRoute(url, method, kn, knowledgeProviders, json, init?.body ? JSON.parse(String(init.body)) : undefined);
+      if (r) return r;
     }
     if (url.startsWith("/bff/memory")) {
       const r = memoryRoute(url, method, memoryCapabilities, json, init?.body ? JSON.parse(String(init.body)) : undefined);
@@ -362,5 +435,5 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
     return json({ detail: "nicht da" }, 404);
   }));
   const posted = (suffix: string) => calls.filter((c) => c.method === "POST" && c.url.endsWith(suffix));
-  return { calls, posted, rooms, dash, quota };
+  return { calls, posted, rooms, dash, quota, kn };
 }
