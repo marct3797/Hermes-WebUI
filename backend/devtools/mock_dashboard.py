@@ -221,6 +221,34 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
              "available": False, "configured": False, "tools": ["web_search"]},
         ]
 
+    @app.get("/api/plugins/kanban/board")
+    async def kanban_board(profile: str | None = None):
+        profile_or_default(profile)
+        task = lambda i, status, body="": {"id": f"t_{i}", "title": f"Aufgabe {i}", "body": body, "assignee": "worker", "status": status,
+                                            "created_at": i, "completed_at": i if status == "done" else None}
+        return {"columns": [{"name": "todo", "tasks": [task(1, "todo", "Zugang: password=hunter2\nSonst harmlos")]},
+                            {"name": "done", "tasks": [task(i, "done") for i in range(2, 62)]}], "latest_event_id": 7}
+
+    @app.get("/api/logs")
+    async def logs(profile: str | None = None, lines: int = 100):
+        profile_or_default(profile)
+        return {"file": "agent", "lines": ["start ok\n", "Authorization: Bearer abc.def\n", "Quelle https://user:pw@example.test/pfad?token=1\n"][:lines]}
+
+    @app.get("/api/mcp/servers")
+    async def mcp_servers(profile: str | None = None):
+        profile_or_default(profile)
+        return {"servers": [{"name": "rag", "transport": "stdio", "url": "https://x.test/?key=geheim", "command": "rag-mcp", "args": ["--key", "geheim"],
+                             "env": {"RAG_API_KEY": "geheim"}, "enabled": True, "source": "config", "plugin": None}]}
+
+    @app.get("/api/dashboard/plugins/hub")
+    async def plugin_hub(profile: str | None = None):
+        profile_or_default(profile)
+        return {"plugins": [{"name": "disk-cleanup", "version": "1.0", "description": "Räumt auf.", "runtime_status": "enabled", "path": "/geheim/pfad"}]}
+
+    @app.get("/api/sessions/search")
+    async def sessions_search(q: str):
+        return {"results": [{"id": "s1", "session_id": "s1", "profile": "beta", "title": None, "snippet": f"Treffer für {q}"}]}
+
     @app.post("/api/providers/validate")
     async def validate(body: EnvBody):
         if body.value == "bad":

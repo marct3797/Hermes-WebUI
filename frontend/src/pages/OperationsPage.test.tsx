@@ -53,6 +53,15 @@ describe("Operations", () => {
     expect(screen.getByRole("heading", { name: "ready" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Verschieben" })).not.toBeInTheDocument();
   });
+  it("shows the assignee and version of dashboard-sourced entries", async () => {
+    response = { available: true, source: "dashboard", columns: ["todo"], tasks: [{ id: "t1", title: "Aufgabe", status: "todo", assignee: "worker" }], actions: [] };
+    const { unmount } = render(<OperationsPage section="kanban" host="server" />);
+    expect(await screen.findByText("Zugewiesen: worker")).toBeInTheDocument();
+    unmount();
+    response = { available: true, items: [{ id: "p", name: "plugin-p", status: "enabled", version: "1.2" }], actions: [] };
+    render(<OperationsPage section="manage" host="server" />);
+    expect(await screen.findByText(/enabled · Version 1\.2/)).toBeInTheDocument();
+  });
   it("uses actual daemon collection actions and displays native restrictions", async () => {
     response = { available: true, items: [{ id: "plugin-a", enabled: true }], actions: ["enable", "disable"], note: "Native Freigabe erforderlich" };
     render(<OperationsPage section="manage" host="server" />);

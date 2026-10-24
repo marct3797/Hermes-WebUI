@@ -14,7 +14,9 @@ async def fetch(request: Request, host: str, user: User, refresh: bool):
     try:
         result = await daemon(request, host).request("GET", "/v1/auth", params={"refresh": 1} if refresh else None)
     except HTTPException as exc:
-        return {"available": False, "reason": "Host-Dienst nicht eingerichtet" if exc.status_code == 503 else exc.detail}
+        reason = {503: "Host-Dienst nicht eingerichtet",
+                  404: "Der Host-Dienst ist veraltet und kennt den Anmeldestatus nicht. Mit deploy/install-hostd.sh aktualisieren."}.get(exc.status_code, exc.detail)
+        return {"available": False, "reason": reason}
     clis = result.get("clis") if isinstance(result.get("clis"), list) else []
     if refresh:
         for cli in clis:
