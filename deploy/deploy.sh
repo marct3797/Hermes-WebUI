@@ -39,6 +39,15 @@ for host in data.get("hosts", []):
             print(rt["api_key_env"])
 PY
 }
+agent_vars() { python3 - "$home/config/hosts.json" <<'PY'
+import json, sys
+for host in json.load(open(sys.argv[1])).get("hosts", []):
+    for rt in host.get("runtimes", []):
+        for a in rt.get("agents", []):
+            if isinstance(a, dict) and a.get("api_key_env"):
+                print(a["api_key_env"])
+PY
+}
 container="$(get HERMES_CONTAINER)"
 if [ -n "$container" ]; then
   for v in $(runtime_vars multiplex); do
@@ -54,6 +63,9 @@ need_any HERMES_WEBUI_OIDC_CLIENT_ID FORGEJO_OIDC_CLIENT_ID
 need_any HERMES_WEBUI_OIDC_CLIENT_SECRET FORGEJO_OIDC_CLIENT_SECRET
 need_any HERMES_WEBUI_OIDC_ALLOWED_SUB OIDC_ALLOWED_SUB
 for v in $(runtime_vars all); do [ -n "$(get "$v")" ] || missing="$missing $v"; done
+for v in $(agent_vars); do
+  [ -n "$(get "$v")" ] || echo "HINWEIS: $v fehlt in $envf; für dieses Profil gilt dann der Key der Runtime (bash deploy/profile-keys.sh trägt ihn ein)."
+done
 if [ -n "$missing" ]; then
   echo "FEHLT in $envf:$missing"
   echo "Eintragen (ohne Ausgabe der Werte), dann dieses Skript erneut starten."

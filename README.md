@@ -169,6 +169,8 @@ das Dashboard und seinen Token nie. Eingetragen wird es je Runtime in der `hosts
 
 ### hosts.json
 
+Zwei Vorlagen: `deploy/hosts.example.json` (Standard bei einer frischen Installation: ein Rechner, ein Agent `default`, Hermes-API auf `127.0.0.1:8642`, Key in `HERMES_KEY_LOCAL`) und `deploy/hosts.multiplex.example.json` (ein Gateway mit mehreren Profilen, eigener Key je Profil, Dashboard). Die Vorlage wird nie überschrieben, wenn `config/hosts.json` schon existiert.
+
 ```json
 { "hosts": [
   { "id": "server", "label": "Server", "kind": "local", "runtimes": [
@@ -222,7 +224,7 @@ die zuerst nur für das Gerät gelten (Browser-Speicher) und dort als Vorgabe f�
 
 Desktop-Hinweis und Ton bei wartenden Freigaben sind getrennte Opt-ins. Erst der Klick in den Einstellungen fragt nach der Browser-Erlaubnis. Die Meldungen gelten nur für von dieser geöffneten WebUI erkannte Freigaben (inklusive Räume), nicht für unsichtbare CLI-Läufe. Der Testton zeigt Browser-Sperren; nach einem Neuladen kann vor dem ersten Klick noch kein Ton laufen. Eine Bestätigung auszuschalten ersetzt nie eine Freigabe oder die serverseitigen Sicherheitsprüfungen.
 
-Nous Portal und OpenCode Zen gehören nicht zum angezeigten Anbieterangebot. Der zentrale Normalisierer entfernt ihre echten Dashboard-/Plugin-Einträge aus Kontingenten und Anbieterübersichten; OpenCode Go bleibt erhalten. Zugangsdaten dieser Produkte werden weder gelöscht noch umgeschrieben.
+**Anbieter ausblenden:** Standardmäßig zeigt die WebUI alle Anbieter, die das Dashboard meldet. Wer bestimmte Produkte nicht sehen will, trägt ihre Kennungen in `HERMES_WEBUI_HIDDEN_PROVIDERS` ein (kommagetrennt, z. B. `nous,opencode-zen`). Der Filter gilt für Anbieterübersicht, Modellauswahl und Kontingente; Zugangsdaten werden weder gelöscht noch umgeschrieben.
 
 ## Betrieb (hinter einem Reverse-Proxy)
 
@@ -242,6 +244,7 @@ Der Reverse-Proxy (Caddy, nginx, Traefik …) terminiert TLS und leitet an den B
 | `HERMES_WEBUI_AUDIT_FILE` | Audit-Log (Standard `audit.log`, Modus 0600) |
 | `HERMES_WEBUI_OIDC_ISSUER` | Adresse des OIDC-Anbieters (getestet mit Forgejo; Authorization Code mit PKCE ist Voraussetzung), z. B. `https://auth.example.com` |
 | `HERMES_WEBUI_OIDC_CLIENT_ID`, `HERMES_WEBUI_OIDC_CLIENT_SECRET` | OAuth2-Anwendung beim Anbieter (vertraulicher Client, Redirect `<PUBLIC_URL>/auth/callback`, Scopes `openid profile`) |
+| `HERMES_WEBUI_HIDDEN_PROVIDERS` | Anbieter-Kennungen, die diese Installation nicht zeigt (kommagetrennt); Standard: keine |
 | `HERMES_WEBUI_OIDC_ALLOWED_SUB` | Erlaubte Kennungen (`sub` des ID-Tokens), kommagetrennt |
 
 Ältere Namen gelten weiter als Alias: `FORGEJO_ISSUER`, `FORGEJO_OIDC_CLIENT_ID`, `FORGEJO_OIDC_CLIENT_SECRET`, `OIDC_ALLOWED_SUB`.

@@ -8,10 +8,6 @@ from __future__ import annotations
 
 from typing import Any
 
-# Diese Produkte gehören nicht zum Anbieterangebot der WebUI; OpenCode Go bleibt eigenständig.
-HIDDEN_PROVIDERS = frozenset({"nous", "opencode-zen"})
-
-
 def _rows(value: Any) -> list[dict[str, Any]]:
     return [r for r in value if isinstance(r, dict)] if isinstance(value, list) else []
 
@@ -30,7 +26,7 @@ def _num(v: Any) -> float:
     return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else 0.0
 
 
-def build_overview(env: Any, oauth: Any, analytics: Any, days: int) -> dict[str, Any]:
+def build_overview(env: Any, oauth: Any, analytics: Any, days: int, hidden: frozenset[str] = frozenset()) -> dict[str, Any]:
     groups: dict[str, dict[str, Any]] = {}
 
     def group(slug: str, label: str | None = None) -> dict[str, Any]:
@@ -74,7 +70,7 @@ def build_overview(env: Any, oauth: Any, analytics: Any, days: int) -> dict[str,
 
     out = []
     for g in groups.values():
-        if g["id"] in HIDDEN_PROVIDERS:
+        if g["id"] in hidden:
             continue
         g["configured"] = any(k["set"] for k in g["keys"]) or bool(g["oauth"] and g["oauth"]["logged_in"])
         g["used"] = bool(g["usage"] and g["usage"]["sessions"])
@@ -121,12 +117,12 @@ def build_matrix(profiles: list[dict[str, Any]], overviews: dict[str, dict[str, 
     return {"profiles": rows, "accounts": accounts}
 
 
-def normalize_models(options: Any) -> list[dict[str, Any]]:
+def normalize_models(options: Any, hidden: frozenset[str] = frozenset()) -> list[dict[str, Any]]:
     """`/api/model/options` des Dashboards: je Anbieter Name, ob angemeldet, ob aktuell und die Modelle."""
     out = []
     for p in _rows(options.get("providers") if isinstance(options, dict) else None):
         slug = str(p.get("slug") or "")
-        if not slug or slug in HIDDEN_PROVIDERS:
+        if not slug or slug in hidden:
             continue
         out.append({
             "slug": slug, "name": str(p.get("name") or slug), "current": bool(p.get("is_current")), "authenticated": bool(p.get("authenticated")),

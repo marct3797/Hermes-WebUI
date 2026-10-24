@@ -97,3 +97,28 @@ def test_add_host_writes_the_key_private(box):
     r = run(box, "add-host.sh", "box", "Box", "10.0.0.9", "--home", str(box.home), stdin="synthetic-key-0123456789\n")
     assert "HERMES_KEY_BOX gesetzt" in r.stdout, r.stdout + r.stderr
     assert_private(box)
+
+
+OIDC = "HERMES_WEBUI_OIDC_ISSUER=https://id.example\nHERMES_WEBUI_OIDC_CLIENT_ID=c\nHERMES_WEBUI_OIDC_CLIENT_SECRET=s\nHERMES_WEBUI_OIDC_ALLOWED_SUB=1\n"
+
+
+def test_fresh_install_starts_from_one_machine_and_one_agent(box):
+    """Der Standard ohne eigene Config ist ein Rechner mit einem Agent; jede dort genannte Key-Variable steht auch in webui.env."""
+    run(box, "deploy.sh", str(box.home))
+    hosts = json.loads((box.home / "config" / "hosts.json").read_text())["hosts"]
+    assert len(hosts) == 1 and len(hosts[0]["runtimes"]) == 1
+    rt = hosts[0]["runtimes"][0]
+    assert rt["agents"] == ["default"] and rt["multiplex"] is False and "dashboard" not in rt
+    env_names = {line.split("=", 1)[0] for line in (box.home / "webui.env").read_text().splitlines() if "=" in line and not line.startswith("#")}
+    assert rt["api_key_env"] in env_names
+
+
+def test_fleet_example_stays_available_for_multiplex_gateways():
+    fleet = json.loads((DEPLOY / "hosts.multiplex.example.json").read_text())["hosts"][0]["runtimes"][0]
+    assert fleet["multiplex"] is True and len(fleet["agents"]) > 1
+
+
+def test_deploy_warns_about_agent_keys_that_are_missing(box):
+    prepare(box, OIDC + "HERMES_KEY_X=a\n", agents=[{"id": "eta", "api_key_env": "HERMES_KEY_ETA"}])
+    r = run(box, "deploy.sh", str(box.home))
+    assert "HINWEIS" in r.stdout and "HERMES_KEY_ETA" in r.stdout and r.returncode == 0, r.stdout + r.stderr

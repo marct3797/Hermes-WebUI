@@ -159,14 +159,14 @@ async def _tolerated(coro):
 
 
 @router.get("/providers")
-async def providers_overview(target: Tgt, dash: Dash, days: int = Query(30, ge=1, le=365)):
+async def providers_overview(request: Request, target: Tgt, dash: Dash, days: int = Query(30, ge=1, le=365)):
     """Anbieter dieses Profils mit Keys (geschwärzt), Anmeldestatus und Nutzung der letzten `days` Tage."""
     name = target.agent.id
     env_task = asyncio.ensure_future(dash.env(name))
     (oauth, oauth_err), (usage, usage_err) = await asyncio.gather(_tolerated(dash.oauth_providers(name)), _tolerated(dash.model_analytics(name, days)))
     env = await upstream(env_task)
     warnings = [f"{what} nicht ladbar: {err}" for what, err in (("Anmeldestatus", oauth_err), ("Nutzung", usage_err)) if err]
-    return {**build_overview(env, oauth, usage, days), "warnings": warnings, **({"stale": True} if dash.stale else {})}
+    return {**build_overview(env, oauth, usage, days, request.app.state.settings.hidden_provider_set()), "warnings": warnings, **({"stale": True} if dash.stale else {})}
 
 
 class KeyIn(BaseModel):
@@ -215,9 +215,9 @@ SessionId = Annotated[str, Path(pattern=r"^[A-Za-z0-9_-]{8,128}$")]
 
 
 @router.get("/providers/models")
-async def provider_models(target: Tgt, dash: Dash):
+async def provider_models(request: Request, target: Tgt, dash: Dash):
     """Anbieter und Modelle, aus denen dieses Profil wählen kann (angemeldete zuerst, der aktuelle ganz oben)."""
-    providers = normalize_models(await upstream(dash.model_options(target.agent.id)))
+    providers = normalize_models(await upstream(dash.model_options(target.agent.id)), request.app.state.settings.hidden_provider_set())
     return {"providers": providers, **({"stale": True} if dash.stale else {})}
 
 
@@ -283,7 +283,7 @@ async def provider_matrix(request: Request, host: HostId, runtime: RuntimeId):
 
     async def one(name: str):
         (env, env_err), (oauth, _) = await asyncio.gather(_tolerated(dash.env(name)), _tolerated(dash.oauth_providers(name)))
-        return name, (build_overview(env, oauth, None, 0) if env is not None else None), env_err
+        return name, (build_overview(env, oauth, None, 0, request.app.state.settings.hidden_provider_set()) if env is not None else None), env_err
 
     gate = asyncio.Semaphore(4)  # die Abfragen je Profil laufen parallel, aber nicht alle auf einmal
 
@@ -316,7 +316,7 @@ async def _quota_of(request: Request, host: str, runtime: str, rt, name: str, re
         if e.status == 404 and e.detail == PLUGIN_MISSING:
             return failure("plugin_missing", PLUGIN_MISSING)
         return failure("dashboard_unavailable" if e.status in (503, 504) else "error", e.detail)
-    return normalize(body)
+    return normalize(body, hidden=request.app.state.settings.hidden_provider_set())
 
 
 @router.get("/quota")

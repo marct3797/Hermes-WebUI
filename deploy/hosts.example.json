@@ -1,27 +1,16 @@
 {
   "hosts": [
     {
-      "id": "server",
-      "label": "Server",
+      "id": "local",
+      "label": "Dieser Rechner",
       "kind": "local",
       "runtimes": [
         {
           "id": "hermes",
-          "base_url": "http://127.0.0.1:9121",
-          "api_key_env": "HERMES_KEY_SERVER",
-          "multiplex": true,
-          "dashboard": { "base_url": "http://127.0.0.1:9122", "token_env": "HERMES_DASHBOARD_TOKEN" },
-          "agents": [
-            { "id": "zeta", "api_key_env": "HERMES_KEY_ZETA" },
-            "default",
-            { "id": "delta", "api_key_env": "HERMES_KEY_DELTA" },
-            { "id": "epsilon", "api_key_env": "HERMES_KEY_EPSILON" },
-            { "id": "beta", "api_key_env": "HERMES_KEY_BETA" },
-            { "id": "gamma", "api_key_env": "HERMES_KEY_GAMMA" },
-            { "id": "alpha", "api_key_env": "HERMES_KEY_ALPHA" },
-            { "id": "eta", "api_key_env": "HERMES_KEY_ETA" },
-            { "id": "theta", "api_key_env": "HERMES_KEY_THETA" }
-          ]
+          "base_url": "http://127.0.0.1:8642",
+          "api_key_env": "HERMES_KEY_LOCAL",
+          "multiplex": false,
+          "agents": ["default"]
         }
       ]
     }

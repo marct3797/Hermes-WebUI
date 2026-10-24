@@ -119,6 +119,14 @@ def test_keys_are_required_for_the_overview(make):
     assert make(running=False).get(P).status_code == 503
 
 
+def test_hidden_providers_setting_reaches_the_routes(client):
+    ids = lambda: {p["id"] for p in client.get(P).json()["providers"]}
+    slugs = lambda: {p["slug"] for p in client.get(P + "/models").json()["providers"]}
+    assert "anthropic" in ids() and "anthropic" in slugs()
+    client.app.state.settings.hidden_providers = "anthropic"
+    assert "anthropic" not in ids() and "anthropic" not in slugs()
+
+
 def test_overview_without_dashboard_is_501(client):
     assert client.get("/bff/h/laptop/hermes/default/providers").status_code == 501
 

@@ -67,9 +67,15 @@ def test_dashboard_config_rejects_unusable_entries(dash_cfg):
 
 def test_shipped_configs_connect_the_container_dashboard(tmp_path):
     root = Path(__file__).resolve().parents[2]
-    for name in ("deploy/hosts.example.json", "backend/hosts.example.json"):
+    for name in ("deploy/hosts.multiplex.example.json", "backend/hosts.example.json"):
         cfg = parse_config(json.loads((root / name).read_text()), {"HERMES_DASHBOARD_TOKEN": "t"})["server"].runtimes[0]
         assert cfg.dashboard == DashboardCfg("http://127.0.0.1:9122", "t"), name
+
+
+def test_minimal_shipped_config_parses_and_needs_no_dashboard():
+    root = Path(__file__).resolve().parents[2]
+    host = parse_config(json.loads((root / "deploy/hosts.example.json").read_text()), {"HERMES_KEY_LOCAL": "k" * 16})["local"]
+    assert [a.id for a in host.runtimes[0].agents] == ["default"] and host.runtimes[0].dashboard is None
 
 
 def test_runtime_without_dashboard_has_none():
