@@ -45,8 +45,7 @@ export function BoardColumns({ columns, total, filtered, selected, dragId, onOpe
   const names = columns.map((c) => c.name);
   return (
     <div className="kb-board">
-      {[true, false].map((empty) => <div key={String(empty)} className={empty ? "kb-empty-columns" : "kb-columns"}>
-      {columns.filter((col) => (col.tasks.length === 0) === empty).map((col) => {
+      {columns.map((col) => {
         const shown = col.tasks.slice(0, limit[col.name] ?? PAGE);
         const ok = droppable(col.name);
         return (
@@ -63,7 +62,6 @@ export function BoardColumns({ columns, total, filtered, selected, dragId, onOpe
           </section>
         );
       })}
-      </div>)}
     </div>
   );
 }

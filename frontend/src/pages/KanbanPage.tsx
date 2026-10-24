@@ -132,7 +132,7 @@ function HostKanban({ host }: { host: string }) {
       {loading && !data && !error && <p role="status">Board wird geladen…</p>}
       {empty && <div className="panel-empty" role="status"><p>Keine Aufgaben, lege die erste an.</p><button type="button" className="btn btn-s btn-p" onClick={() => setDialog("task")}>Neue Aufgabe</button></div>}
       <div className={`kb-layout${open ? " has-panel" : ""}`}>
-        {data && !empty && <BoardColumns columns={columns} total={totals} filtered={filtered} selected={open} dragId={dragId} onOpen={setOpen} onMove={(id, to) => void move(id, to)} onDragId={setDragId} />}
+        {data && <BoardColumns columns={columns} total={totals} filtered={filtered} selected={open} dragId={dragId} onOpen={setOpen} onMove={(id, to) => void move(id, to)} onDragId={setDragId} />}
         {open && <TaskPanel key={`${open}:${rev}`} host={host} board={board} id={open} columns={statuses} assignees={names} allTasks={all} onClose={() => setOpen(undefined)} onChanged={() => void load().catch(() => undefined)} />}
       </div>
       {dialog === "task" && <NewTaskDialog assignees={names} tasks={all} onClose={() => setDialog(undefined)} onCreate={async (t) => {

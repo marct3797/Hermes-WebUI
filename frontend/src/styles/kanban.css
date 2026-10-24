@@ -5,10 +5,8 @@
 .kb-stat{margin:0}
 .kb-chips{align-items:center}
 .kb-layout{display:flex;gap:12px;align-items:flex-start;min-width:0}
-.kb-board{flex:1;min-width:0;display:flex;flex-direction:column;gap:12px}
-.kb-empty-columns{display:flex;flex-wrap:wrap;gap:8px}
-.kb-columns{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:12px;align-items:start}
-.kb-col{min-width:0;display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--s1)}
+.kb-board{flex:1;min-width:0;display:flex;gap:12px;align-items:flex-start;overflow-x:auto;padding-bottom:8px}
+.kb-col{flex:0 0 280px;min-width:0;display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--s1)}
 .kb-col.over{border-color:var(--crim);background:var(--s2)}
 .kb-col.nodrop{opacity:.55}
 .kb-colh{display:flex;justify-content:space-between;margin:0;font:600 12px/18px var(--sans);text-transform:uppercase;letter-spacing:.04em;color:var(--t2)}
@@ -44,9 +42,8 @@
   .kb-panel{position:fixed;inset:0;z-index:40;max-height:none;border-radius:0;flex-basis:auto;background:var(--s0)}
 }
 
-/* Leere Zustände bleiben als kompakte Drop-Ziele sichtbar; nur die Seite scrollt. */
-.kb-empty-columns .kb-col{flex:1 1 128px;max-width:none;margin:0}
-.kb-col.empty{min-width:0}
+/* Leere Spalten behalten ihren Platz in der Reihe, nur schmaler; das Board scrollt waagerecht, die Seite senkrecht. */
+.kb-col.empty{flex-basis:180px}
 .kb-col.empty .kb-colh{font-size:11px;letter-spacing:.02em}
 .kb-col.empty .kb-colh span:first-child{overflow-wrap:anywhere}
 .kb-col.empty .small,.kb-col.empty .empty{font-size:11px}
