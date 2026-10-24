@@ -1,5 +1,6 @@
 """Development-only host daemon; synthetic fixtures, never provider/model calls."""
 import base64
+import hashlib
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.responses import Response
@@ -14,6 +15,7 @@ def create_mock():
     app.state.calls = []
     app.state.terminals = {}
     app.state.files = {"README.md": b"fake development workspace\n", "report.pdf": b"%PDF-1.4\n"}
+    app.state.dirs = {"src"}
     app.state.enabled = True
     app.state.sources = []
     app.state.jobs = {}
@@ -76,12 +78,59 @@ def create_mock():
 
     @app.get("/v1/workspaces")
     async def workspaces():
-        return {"workspaces": [{"id": "repo", "label": "Repo"}]}
+        return {"workspaces": [{"id": "repo", "label": "Repo", "is_git": True}]}
+
+    def digest(data: bytes):
+        return hashlib.sha256(data).hexdigest()
 
     @app.get("/v1/files")
-    async def files(workspace: str, path: str = ""):
-        return {"workspace": workspace, "path": path, "entries": [],
-                "content": app.state.files.get(path, b"").decode(), "truncated": False}
+    async def files(workspace: str, path: str = "", full: bool = False):
+        if path in app.state.dirs or path == "":
+            prefix = path + "/" if path else ""
+            names = {p[len(prefix):].split("/")[0]: (p[len(prefix):].count("/") > 0) for p in app.state.files if p.startswith(prefix)}
+            names.update({d[len(prefix):].split("/")[0]: True for d in app.state.dirs if d.startswith(prefix) and d != path})
+            return {"workspace": workspace, "path": path, "entries": [
+                {"name": n, "path": prefix + n, "kind": "directory" if isdir else "file",
+                 "size": 0 if isdir else len(app.state.files[prefix + n]), "mtime": 1} for n, isdir in sorted(names.items())]}
+        if path not in app.state.files:
+            raise HTTPException(404)
+        data = app.state.files[path]
+        return {"workspace": workspace, "path": path, "entries": [], "content": data.decode(), "truncated": False,
+                "sha256": digest(data), "size": len(data), "editable": True, "mime": "text/plain", "mtime": 1}
+
+    @app.post("/v1/files/mkdir")
+    async def mkdir(request: Request):
+        data = await request.json()
+        if data["path"] in app.state.dirs or data["path"] in app.state.files:
+            raise HTTPException(409)
+        app.state.dirs.add(data["path"])
+        return {"ok": True, "path": data["path"]}
+
+    @app.put("/v1/files/write")
+    async def write(request: Request):
+        data = await request.json()
+        path, content = data["path"], data["content"].encode()
+        exists = path in app.state.files
+        if data.get("create"):
+            if exists:
+                raise HTTPException(409)
+        elif not exists:
+            raise HTTPException(404)
+        elif data.get("expected_sha256") != digest(app.state.files[path]):
+            raise HTTPException(409)
+        app.state.files[path] = content
+        return {"ok": True, "path": path, "sha256": digest(content), "size": len(content)}
+
+    @app.post("/v1/files/move")
+    async def move(request: Request):
+        data = await request.json()
+        src, dst = data["from"], data["to"]
+        if dst in app.state.files or dst in app.state.dirs:
+            raise HTTPException(409)
+        if src not in app.state.files:
+            raise HTTPException(404)
+        app.state.files[dst] = app.state.files.pop(src)
+        return {"ok": True, "from": src, "to": dst}
 
     @app.get("/v1/files/download")
     async def download(workspace: str, path: str):
@@ -99,7 +148,9 @@ def create_mock():
 
     @app.get("/v1/git")
     async def git(workspace: str):
-        return {"branch": "main", "status": "", "diff": "", "remotes": [], "truncated": False}
+        return {"branch": "main", "status": "", "diff": "", "remotes": [], "truncated": False,
+                "files": [{"path": "README.md", "state": "M"}], "log": [{"hash": "a" * 40, "subject": "Erster Stand",
+                "author": "Alpha", "date": "2026-01-01T00:00:00+00:00"}], "branches": [{"name": "main", "current": True}]}
 
     @app.get("/v1/search")
     async def search(q: str):
