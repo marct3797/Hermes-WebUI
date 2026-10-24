@@ -39,6 +39,7 @@ class RunInput:
     model: str | None = None
     images: tuple[str, ...] = ()  # Data-URLs, vom BFF bereits geprüft
     idempotency_key: str | None = None  # gleicher Schlüssel = derselbe Run, auch bei doppeltem Absenden
+    model_options: dict[str, Any] | None = None  # Hermes: {"reasoning": {"enabled", "effort"}}, vom BFF streng geprüft
 
 
 @dataclass(frozen=True)
