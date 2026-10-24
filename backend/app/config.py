@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     hosts_file: Path = Path("hosts.json")
     # UI-Einstellungen (Sigils, Packs, Shader), siehe ui.example.json. Fehlt die Datei, gelten Standardwerte.
     ui_file: Path | None = None
+    # Eigene Marktplatz-Quellen (marketplaces.json). Fehlt die Angabe, liegt die Datei neben ui.json, sonst neben hosts.json.
+    marketplaces_file: Path | None = None
     # Stand des Codes (Git-Kurz-Hash), vom Image gesetzt. Die Seitenleiste zeigt ihn: so sieht man nach einem Deploy, was wirklich läuft.
     build: str = ""
     # Gedächtnis-Anbieter (Hindsight …), siehe memory.example.json. Fehlt die Datei, ist die Seite Gedächtnis leer.

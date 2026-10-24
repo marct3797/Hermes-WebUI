@@ -1,0 +1,582 @@
+{
+ "skills": [
+  {
+   "name": "claude-code",
+   "description": "Delegate coding to Claude Code CLI (features, PRs).",
+   "category": "autonomous-ai-agents",
+   "enabled": true,
+   "usage": 0,
+   "provenance": "bundled"
+  },
+  {
+   "name": "codex",
+   "description": "Delegate coding to OpenAI Codex CLI (features, PRs).",
+   "category": "autonomous-ai-agents",
+   "enabled": true,
+   "usage": 0,
+   "provenance": "bundled"
+  }
+ ],
+ "skill_content": {
+  "name": "claude-code",
+  "content": "---\nname: claude-code\ndescription: \"Delegate coding to Claude Code CLI (features, PRs).\"\nversion: 2.2.1\nauthor: Hermes Agent + Teknium\nlicense: MIT\nplatforms: [linux, macos, windows]\nmetadata:\n  hermes:\n    tags: [Coding-Agent, Claude, Anthropic, Code-Review, Refactoring, PTY, Automation]\n    related_skills: [codex, hermes-agent, opencode]\n---\n\n# Claude Code — Hermes Orchestration Guide\n\nDelegate coding tasks to [Claude Code](https://code.claude.com/docs/en/cli-reference) (Anthropic's autonomous coding agent CLI) via the Hermes terminal. Claude Code v2.x can read files, write code, run shell commands, spawn subagents, and manage git workflows autonomously.\n\n## Prerequisites\n\n- **Install:** `",
+  "path": "/opt/example/skills/autonomous-ai-agents/claude-code/SKILL.md"
+ },
+ "hub_sources": {
+  "sources": [
+   {
+    "id": "official",
+    "label": "Official (Nous)",
+    "searchable": true
+   },
+   {
+    "id": "hermes-index",
+    "label": "Hermes Index",
+    "available": true,
+    "searchable": true
+   },
+   {
+    "id": "skills-sh",
+    "label": "skills.sh",
+    "searchable": false
+   },
+   {
+    "id": "well-known",
+    "label": "Well-Known",
+    "searchable": false
+   },
+   {
+    "id": "url",
+    "label": "Direct URL",
+    "searchable": true
+   },
+   {
+    "id": "github",
+    "label": "GitHub",
+    "rate_limited": false,
+    "searchable": false
+   },
+   {
+    "id": "clawhub",
+    "label": "ClawHub",
+    "searchable": false
+   },
+   {
+    "id": "lobehub",
+    "label": "LobeHub",
+    "searchable": false
+   },
+   {
+    "id": "browse-sh",
+    "label": "browse.sh",
+    "searchable": true
+   }
+  ],
+  "index_available": true,
+  "featured": [
+   {
+    "name": "1password",
+    "description": "Set up op CLI, sign in, and read or inject secrets.",
+    "source": "official",
+    "identifier": "official/security/1password",
+    "trust_level": "builtin",
+    "repo": "NousResearch/hermes-agent",
+    "tags": [
+     "security",
+     "secrets",
+     "1password",
+     "op",
+     "cli"
+    ]
+   },
+   {
+    "name": "3-statement-model",
+    "description": "Build integrated IS/BS/CF financial workbooks in Excel.",
+    "source": "official",
+    "identifier": "official/finance/3-statement-model",
+    "trust_level": "builtin",
+    "repo": "NousResearch/hermes-agent",
+    "tags": [
+     "finance",
+     "three-statement",
+     "income-statement",
+     "balance-sheet",
+     "cash-flow",
+     "excel",
+     "openpyxl",
+     "modeling"
+    ]
+   }
+  ],
+  "installed": {
+   "official/creative/ascii-art": {
+    "name": "ascii-art",
+    "trust_level": "builtin",
+    "scan_verdict": "backfilled"
+   },
+   "official/creative/comfyui": {
+    "name": "comfyui",
+    "trust_level": "builtin",
+    "scan_verdict": "backfilled"
+   }
+  }
+ },
+ "hub_search": {
+  "results": [
+   {
+    "name": "get-pr-review",
+    "description": "Extract a normalized JSON snapshot of a GitHub pull request — metadata, ordered review timeline, per-file diff annotations with inline review comments (outdated + resolved flags), and check-run / status-context results — primarily via the GitHub REST API with a rendered-HTML fallback for UI-only signals. Read-only.",
+    "source": "browse-sh",
+    "identifier": "browse-sh/github.com/get-pr-review-st0euo",
+    "trust_level": "community",
+    "repo": null,
+    "tags": [
+     "github",
+     "pull-request",
+     "code-review",
+     "read-only",
+     "rest-api",
+     "graphql"
+    ]
+   },
+   {
+    "name": "get-repo-metadata",
+    "description": "Given a GitHub repo reference (URL, owner/repo slug, deep tree/blob URL, or owner URL), return the repository's core metadata, latest release, license, language breakdown, top contributors, README, and health signals as structured JSON. Read-only.",
+    "source": "browse-sh",
+    "identifier": "browse-sh/github.com/get-repo-metadata-iglddk",
+    "trust_level": "community",
+    "repo": null,
+    "tags": [
+     "github",
+     "git",
+     "metadata",
+     "rest-api",
+     "developer-tools",
+     "read-only",
+     "open-source"
+    ]
+   }
+  ],
+  "source_counts": {
+   "url": 0,
+   "browse-sh": 9,
+   "hermes-index": 50,
+   "official": 0
+  },
+  "timed_out": [],
+  "installed": {
+   "official/creative/ascii-art": {
+    "name": "ascii-art",
+    "trust_level": "builtin",
+    "scan_verdict": "backfilled"
+   },
+   "official/creative/comfyui": {
+    "name": "comfyui",
+    "trust_level": "builtin",
+    "scan_verdict": "backfilled"
+   }
+  }
+ },
+ "hub_preview": {
+  "name": "get-pr-review",
+  "description": "Extract a normalized JSON snapshot of a GitHub pull request — metadata, ordered review timeline, per-file diff annotations with inline review comments (outdated + resolved flags), and check-run / status-context results — primarily via the GitHub REST API with a rendered-HTML fallback for UI-only signals. Read-only.",
+  "source": "browse-sh",
+  "identifier": "browse-sh/github.com/get-pr-review-st0euo",
+  "trust_level": "community",
+  "repo": null,
+  "tags": [
+   "github",
+   "pull-request",
+   "code-review",
+   "read-only",
+   "rest-api",
+   "graphql"
+  ],
+  "skill_md": "---\nname: get-pr-review\ntitle: GitHub Pull Request Review Extraction\ndescription: >-\n  Extract a normalized JSON snapshot of a GitHub pull request — metadata,\n  ordered review timeline, per-file diff annotations with inline review comments\n  (outdated + resolved flags), and check-run / status-context results —\n  primarily via the GitHub REST API with a rendered-HTML fallback for UI-only\n  signals. Read-only.\nwebsite: github.com\ncategory: developer-tools\ntags:\n  - github\n  - pull-request\n  - code-review\n  - read-only\n  - rest-api\n  - graphql\nsource: 'browserbase: agent-runtime 2026-05-18'\nupdat",
+  "files": [
+   "SKILL.md"
+  ]
+ },
+ "hub_scan": {
+  "name": "get-pr-review",
+  "identifier": "browse-sh/github.com/get-pr-review-st0euo",
+  "source": "browse-sh/github.com/get-pr-review-st0euo",
+  "trust_level": "community",
+  "verdict": "safe",
+  "summary": "get-pr-review: clean scan, no threats detected",
+  "policy": "allow",
+  "policy_reason": "Allowed (community source, safe verdict)",
+  "findings": [],
+  "severity_counts": {
+   "critical": 0,
+   "high": 0,
+   "medium": 0,
+   "low": 0
+  },
+  "tier1": null
+ },
+ "hub_official": {
+  "skills": [
+   {
+    "name": "agent-merge-conflict-arbiter",
+    "description": "Neutral arbiter for merge conflicts between two agents.",
+    "source": "official",
+    "identifier": "official/autonomous-ai-agents/agent-merge-conflict-arbiter",
+    "trust_level": "builtin",
+    "repo": "NousResearch/hermes-agent",
+    "tags": [
+     "Multi-Agent",
+     "Git",
+     "Merge-Conflict",
+     "Kanban",
+     "Arbitration"
+    ],
+    "category": "autonomous-ai-agents",
+    "installed": false
+   },
+   {
+    "name": "antigravity-cli",
+    "description": "Operate the Antigravity CLI (agy): plugins, auth, sandbox.",
+    "source": "official",
+    "identifier": "official/autonomous-ai-agents/antigravity-cli",
+    "trust_level": "builtin",
+    "repo": "NousResearch/hermes-agent",
+    "tags": [
+     "Coding-Agent",
+     "Antigravity",
+     "CLI",
+     "Auth",
+     "Plugins",
+     "Sandbox"
+    ],
+    "category": "autonomous-ai-agents",
+    "installed": false
+   }
+  ]
+ },
+ "mcp_servers": {
+  "servers": [
+   {
+    "name": "rag",
+    "transport": "stdio",
+    "url": null,
+    "command": "python3",
+    "args": [
+     "/opt/example/server.py"
+    ],
+    "env": {
+     "EXAMPLE_API_URL": "http...8000"
+    },
+    "auth": null,
+    "enabled": true,
+    "tools": null,
+    "source": "config",
+    "plugin": null
+   }
+  ]
+ },
+ "mcp_catalog": {
+  "entries": [
+   {
+    "name": "airtable",
+    "description": "Bases, tables, and records from your Airtable workspace.",
+    "connector_slug": "airtable",
+    "source": "https://support.airtable.com/articles/9897799762-using-the-airtable-mcp-server",
+    "transport": "http",
+    "auth_type": "oauth",
+    "required_env": [],
+    "command": null,
+    "args": [],
+    "url": "https://mcp.airtable.com/mcp",
+    "install_url": null,
+    "install_ref": null,
+    "bootstrap": [],
+    "default_enabled": null,
+    "post_install": "On first connection Hermes opens a browser to authorize with\nAirtable (or run `hermes mcp login airtable`). Approve access,\nthen restart the session so tools load.\n",
+    "suggest": {
+     "keywords": [
+      "airtable"
+     ],
+     "hosts": [
+      "airtable.com"
+     ],
+     "applications": [],
+     "examples": [],
+     "requires_app": false
+    },
+    "needs_install": false,
+    "installed": false,
+    "enabled": false
+   },
+   {
+    "name": "algolia",
+    "description": "Algolia search: indices, analytics, and settings (read-only).",
+    "connector_slug": null,
+    "source": "https://www.algolia.com/doc/guides/model-context-protocol/productivity-mcp",
+    "transport": "http",
+    "auth_type": "oauth",
+    "required_env": [],
+    "command": null,
+    "args": [],
+    "url": "https://mcp.algolia.com/mcp",
+    "install_url": null,
+    "install_ref": null,
+    "bootstrap": [],
+    "default_enabled": null,
+    "post_install": "On first connection Hermes opens a browser to authorize with\nAlgolia (or run `hermes mcp login algolia`). Approve access,\nthen restart the session so tools load.\n",
+    "suggest": {
+     "keywords": [
+      "algolia"
+     ],
+     "hosts": [
+      "algolia.com"
+     ],
+     "applications": [],
+     "examples": [],
+     "requires_app": false
+    },
+    "needs_install": false,
+    "installed": false,
+    "enabled": false
+   }
+  ],
+  "diagnostics": []
+ },
+ "plugin_catalog": {
+  "entries": [
+   {
+    "name": "0bull",
+    "repo": "https://github.com/0bull/agent-plugin",
+    "sha": "240890a71715375bc877b238491e414517e9d902",
+    "description": "Control real iPhones rented from 0bull (screenshots, on-screen text, taps, typing, device commands, recorded macros, an on-phone agent) and publish videos to TikTok and YouTube Shorts from them, throu",
+    "maintainer": "0bull",
+    "tier": "community",
+    "category": "tools",
+    "requires_hermes": "",
+    "subdir": "",
+    "docs_url": "https://github.com/0bull/agent-plugin#readme",
+    "version": "1.0.0",
+    "image": "",
+    "screenshots": [],
+    "readme": true,
+    "platforms": [],
+    "title": "",
+    "onboarding": false,
+    "capabilities": {
+     "provides_tools": [],
+     "provides_hooks": [],
+     "provides_middleware": [],
+     "requires_env": []
+    },
+    "known_issues": [],
+    "sha_short": "240890a",
+    "capability_summary": "0bull (community, maintained by 0bull) Control real iPhones rented from 0bull (screenshots, on-screen text, taps, typing, device commands, recorded macros, an on-phone agent) and publish videos to Tik",
+    "installed": false,
+    "installed_sha": null,
+    "update_available": false,
+    "runtime_status": null
+   },
+   {
+    "name": "aave-mcp",
+    "repo": "https://github.com/aave/skills",
+    "sha": "7132f6e952f9100f16577c33774a1e63948f7fab",
+    "description": "Aave V3 and V4 through Aave's official MCP server (Streamable HTTP at https://mcp.aave.com, no sign-in, no keys in config): live markets and rates on every chain Aave runs on, wallet positions and hea",
+    "maintainer": "Aave Labs",
+    "tier": "community",
+    "category": "tools",
+    "requires_hermes": ">=0.21.6",
+    "subdir": "plugins/mcp",
+    "docs_url": "https://github.com/aave/skills/tree/main/plugins/mcp",
+    "version": "1.0.0",
+    "image": "",
+    "screenshots": [],
+    "readme": true,
+    "platforms": [],
+    "title": "Aave",
+    "onboarding": false,
+    "capabilities": {
+     "provides_tools": [],
+     "provides_hooks": [],
+     "provides_middleware": [],
+     "requires_env": []
+    },
+    "known_issues": [],
+    "sha_short": "7132f6e",
+    "capability_summary": "aave-mcp (community, maintained by Aave Labs) Aave V3 and V4 through Aave's official MCP server (Streamable HTTP at https://mcp.aave.com, no sign-in, no keys in config): live markets and rates on ever",
+    "installed": false,
+    "installed_sha": null,
+    "update_available": false,
+    "runtime_status": null
+   }
+  ],
+  "removed": [
+   {
+    "name": "or-picker",
+    "repo": "",
+    "reason": "Folded into openrouter-picker. Installing the provider alone left the picker broken. Install openrouter-picker.",
+    "date": "2026-09-28"
+   }
+  ],
+  "generated_at": "2026-10-24T09:35:30.736213Z"
+ },
+ "plugin_hub": {
+  "plugins": [
+   {
+    "name": "browser-browser-use",
+    "version": "1.0.0",
+    "description": "Browser Use (https://browser-use.com) cloud browser backend. Supports both direct BROWSER_USE_API_KEY and the managed Nous tool gateway. Also powers the 'Nous Subscription' UX flow that bills usage to a Nous subscription.",
+    "source": "bundled",
+    "runtime_status": "enabled",
+    "has_dashboard_manifest": false,
+    "dashboard_manifest": null,
+    "path": "/opt/hermes/plugins/browser/browser_use",
+    "can_remove": false,
+    "can_update_git": false,
+    "auth_required": false,
+    "auth_command": "",
+    "user_hidden": false,
+    "removed_reason": null
+   },
+   {
+    "name": "browser-browserbase",
+    "version": "1.0.0",
+    "description": "Browserbase (https://browserbase.com) cloud browser backend. Requires BROWSERBASE_API_KEY + BROWSERBASE_PROJECT_ID. Supports stealth, proxies, and keep-alive sessions; auto-falls-back when paid features are unavailable.",
+    "source": "bundled",
+    "runtime_status": "enabled",
+    "has_dashboard_manifest": false,
+    "dashboard_manifest": null,
+    "path": "/opt/hermes/plugins/browser/browserbase",
+    "can_remove": false,
+    "can_update_git": false,
+    "auth_required": false,
+    "auth_command": "",
+    "user_hidden": false,
+    "removed_reason": null
+   }
+  ],
+  "orphan_dashboard_plugins": [
+   {
+    "name": "ai-usage-tracker",
+    "label": "AI Usage Tracker",
+    "description": "Live subscription-quota windows for every AI provider Hermes can route to, per profile",
+    "icon": "Graph",
+    "version": "1.0.2",
+    "tab": {
+     "path": "/ai-usage-tracker",
+     "position": "end"
+    },
+    "slots": [],
+    "entry": "dist/index.js",
+    "css": null,
+    "has_api": true,
+    "source": "user"
+   },
+   {
+    "name": "hermes-achievements",
+    "label": "Achievements",
+    "description": "Steam-style achievements for vibe coding and agentic Hermes workflows.",
+    "icon": "Star",
+    "version": "0.4.0",
+    "tab": {
+     "path": "/achievements",
+     "position": "after:analytics"
+    },
+    "slots": [],
+    "entry": "dist/index.js",
+    "css": "dist/style.css",
+    "has_api": true,
+    "source": "bundled"
+   },
+   {
+    "name": "kanban",
+    "label": "Kanban",
+    "description": "Multi-agent collaboration board — drag-drop cards across columns, read comment threads, see which profile is running what",
+    "icon": "Pacserver2",
+    "version": "1.0.0",
+    "tab": {
+     "path": "/kanban",
+     "position": "after:skills"
+    },
+    "slots": [],
+    "entry": "dist/index.js",
+    "css": "dist/style.css",
+    "has_api": true,
+    "source": "bundled"
+   }
+  ],
+  "providers": {
+   "memory_provider": "hindsight",
+   "memory_options": [
+    {
+     "name": "byterover",
+     "description": "ByteRover — persistent knowledge tree with tiered retrieval via the brv CLI.",
+     "available": false,
+     "configured": true,
+     "status": "unavailable",
+     "setup": {
+      "pip_dependencies": [],
+      "python_dependencies_declared": false,
+      "external_dependencies": [
+       {
+        "name": "brv",
+        "install": "curl -fsSL https://byterover.dev/install.sh | sh",
+        "check": "brv --version"
+       }
+      ],
+      "required_env": [],
+      "dependencies_installed": false
+     }
+    },
+    {
+     "name": "hindsight",
+     "description": "Hindsight — long-term memory with knowledge graph, entity resolution, and multi-strategy retrieval.",
+     "available": true,
+     "configured": true,
+     "status": "ready",
+     "setup": {
+      "pip_dependencies": [
+       "hindsight-client>=0.10.1,<1",
+       "hindsight-embed>=0.10.1,<1"
+      ],
+      "python_dependencies_declared": true,
+      "external_dependencies": [],
+      "required_env": [],
+      "dependencies_installed": true
+     }
+    },
+    {
+     "name": "holographic",
+     "description": "Holographic memory — local SQLite fact store with FTS5 search, trust scoring, and HRR-based compositional retrieval.",
+     "available": true,
+     "configured": true,
+     "status": "ready",
+     "setup": {
+      "pip_dependencies": [],
+      "python_dependencies_declared": false,
+      "external_dependencies": [],
+      "required_env": [],
+      "dependencies_installed": true
+     }
+    },
+    {
+     "name": "retaindb",
+     "description": "RetainDB — cloud memory API with hybrid search and 7 memory types.",
+     "available": false,
+     "configured": false,
+     "status": "needs_config",
+     "setup": {
+      "pip_dependencies": [],
+      "python_dependencies_declared": false,
+      "external_dependencies": [],
+      "required_env": [
+       "RETAINDB_API_KEY"
+      ],
+      "dependencies_installed": true
+     }
+    }
+   ],
+   "context_engine": "compressor",
+   "context_options": []
+  }
+ }
+}
