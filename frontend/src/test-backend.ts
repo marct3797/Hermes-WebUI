@@ -184,6 +184,7 @@ export type DashState = {
   polls: number; // wie oft die laufende Geräte-Anmeldung abgefragt wurde; ab der zweiten Abfrage ist sie bestätigt
   loginError: string | null; // lässt die Anmeldung scheitern
   config: Record<string, unknown>; // Werte der Hermes-Einstellungen (Punkt-Pfad → Wert)
+  msg: { available: boolean; enabled: Record<string, boolean>; env: Record<string, string>; gateway: { running: boolean; busy: boolean; sessions: number }; polls: number; applied: string[] }; // Messaging und Gateway
   tools: { available: boolean; enabled: Record<string, boolean>; keys: Record<string, string>; provider: Record<string, string>; model: string; installed: boolean }; // Werkzeug-Gruppen
 };
 
@@ -194,6 +195,12 @@ const TOOL_CATALOG = [
     { name: "Firecrawl Cloud", badge: "paid", status: "needs_keys", capabilities: ["search", "extract"], env: [{ key: "FIRECRAWL_API_KEY", prompt: "Firecrawl API key", url: "javascript:alert(1)" }] }] },
   { name: "image_gen", label: "Bilder", description: "Bilder erzeugen.", tools: ["image_generate"], providers: [{ name: "FAL.ai", badge: "paid", status: "needs_keys", env: [{ key: "FAL_KEY", prompt: "FAL API key" }] }] },
   { name: "computer_use", label: "Computer Use", description: "Bildschirm steuern.", tools: ["computer_use"], providers: [{ name: "Cua Driver", badge: "local", status: "needs_setup", post_setup: "cua_driver", env: [] }] },
+];
+const MSG_CATALOG = [
+  { id: "telegram", name: "Telegram", description: "Hermes über Telegram nutzen.", docs_url: "https://core.telegram.org/bots/features#botfather", vars: [
+    { key: "TELEGRAM_BOT_TOKEN", required: true, is_password: true, prompt: "Bot token", url: "https://t.me/BotFather" }, { key: "TELEGRAM_ALLOWED_USERS", required: false, is_password: false, is_list: true, prompt: "Allowed user IDs" }] },
+  { id: "discord", name: "Discord", description: "Hermes über Discord nutzen.", docs_url: "javascript:alert(1)", vars: [{ key: "DISCORD_BOT_TOKEN", required: true, is_password: true, prompt: "Bot token" }] },
+  { id: "slack", name: "Slack", description: "Hermes über Slack nutzen.", docs_url: null, vars: [{ key: "SLACK_BOT_TOKEN", required: true, is_password: true, prompt: "Bot token" }] },
 ];
 const stepUpBody = { detail: { code: "step_up_required", message: "Bitte erneut anmelden" } };
 const hashOf = (text: string) => `h${text.length}:${text.slice(0, 12)}`;
@@ -354,6 +361,57 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
   }
   if (rest === "/profile/description" && method === "PUT") { dash.description = String(body?.description).trim(); return json({ ok: true, description: dash.description }); }
   if (rest === "/profile/model" && method === "PUT") { dash.model = { provider: String(body?.provider), model: String(body?.model) }; return json({ ok: true, ...dash.model }); }
+  if (path.startsWith("/messaging") || path.startsWith("/gateway")) {
+    if (!dash.msg.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
+    const m = dash.msg;
+    const rows = () => MSG_CATALOG.map((p) => {
+      const configured = p.vars.filter((v) => v.required).every((v) => v.key in m.env);
+      const enabled = Boolean(m.enabled[p.id]);
+      return { id: p.id, name: p.name, description: p.description, docs_url: p.docs_url, enabled, configured, gateway_running: m.gateway.running, home_channel_set: false,
+        state: !enabled ? "disabled" : !configured ? "not_configured" : !m.gateway.running ? "gateway_stopped" : "connected", error_message: null,
+        env_vars: p.vars.map((v) => ({ ...v, is_set: v.key in m.env, ...(v.is_password ? {} : { value: m.env[v.key] ?? "" }) })) };
+    });
+    if (path === "/messaging" && method === "GET") return json({ platforms: rows() });
+    const put = /^\/messaging\/([a-z_]+)$/.exec(path);
+    if (put && method === "PUT") {
+      if (dash.stepUp) return json(stepUpBody, 401);
+      const entry = MSG_CATALOG.find((p) => p.id === put[1]);
+      if (!entry) return json({ detail: "Unbekannte Plattform" }, 404);
+      const env = (body?.env ?? {}) as Record<string, string>;
+      if (Object.values(env).includes("kein-token")) return json({ detail: "Das Dashboard meldet Fehler 400: Telegram bot token must be the complete token from @BotFather" }, 502);
+      Object.assign(m.env, env);
+      for (const k of (body?.clear_env ?? []) as string[]) delete m.env[k];
+      if (typeof body?.enabled === "boolean") m.enabled[entry.id] = body.enabled;
+      return json({ ok: true, platform: entry.id, needs_restart: true });
+    }
+    const test = /^\/messaging\/([a-z_]+)\/test$/.exec(path);
+    if (test && method === "POST") { const r = rows().find((x) => x.id === test[1])!; return json({ ok: r.state === "connected", state: r.state, message: `Zustand: ${r.state}` }); }
+    if (path === "/gateway" && method === "GET") return json({ running: m.gateway.running, state: m.gateway.running ? "running" : null, busy: m.gateway.busy, active_sessions: m.gateway.sessions, version: "0.22.5" });
+    const gw = /^\/gateway\/(start|stop|restart)$/.exec(path);
+    if (gw && method === "POST") {
+      if (dash.stepUp) return json(stepUpBody, 401);
+      if (gw[1] !== "start" && (m.gateway.busy || m.gateway.sessions) && !body?.confirm_interrupt) {
+        return json({ detail: { code: "interrupt_confirmation_required", message: `Das Gateway ist beschäftigt (${m.gateway.sessions} laufende Sitzung(en)). Der Neustart unterbricht sie.`, active_sessions: m.gateway.sessions, busy: m.gateway.busy } }, 409);
+      }
+      m.gateway.running = gw[1] !== "stop"; m.gateway.busy = false; m.gateway.sessions = 0;
+      return json({ ok: true, started: true, action: `gateway-${gw[1]}`, interrupted: Boolean(body?.confirm_interrupt) });
+    }
+    if (/^\/gateway\/actions\/gateway-(start|stop|restart)$/.test(path)) return json({ name: path.split("/").pop(), running: false, exit_code: 0, lines: ["Gateway gestartet"] });
+    if (path === "/messaging/telegram/onboarding" && method === "POST") {
+      if (dash.stepUp) return json(stepUpBody, 401);
+      m.polls = 0;
+      return json({ pairing_id: "pair_abc123", suggested_username: "hermes_test_bot", deep_link: "https://t.me/newbot/hermes/hermes_test_bot", expires_at: "2026-10-24T18:00:00Z" });
+    }
+    const tg = /^\/messaging\/telegram\/onboarding\/(pair_[a-z0-9]+)(\/apply)?$/.exec(path);
+    if (tg && method === "GET") { m.polls += 1; return json(m.polls < 2 ? { status: "waiting", expires_at: "2026-10-24T18:00:00Z" } : { status: "ready", bot_username: "hermes_test_bot", owner_user_id: "424242", expires_at: "2026-10-24T18:00:00Z" }); }
+    if (tg && tg[2] && method === "POST") {
+      if (dash.stepUp) return json(stepUpBody, 401);
+      const ids = (body?.allowed_user_ids ?? []) as string[];
+      m.env.TELEGRAM_BOT_TOKEN = "123456:SECRET-FROM-TELEGRAM"; m.env.TELEGRAM_ALLOWED_USERS = ids.join(","); m.enabled.telegram = true; m.applied = ids;
+      return json({ ok: true, platform: "telegram", bot_username: "hermes_test_bot", needs_restart: true, restart_started: false, restart_error: "Live sessions" });
+    }
+    if (tg && method === "DELETE") return json({ ok: true });
+  }
   const toolRows = () => TOOL_CATALOG.map((t) => ({ name: t.name, label: t.label, description: t.description, enabled: dash.tools.enabled[t.name], configured: !t.providers.length || t.providers.some((p) => (p.env as Array<{ key: string }>).every((v) => v.key in dash.tools.keys)), tools: t.tools }));
   const toolPath = /^\/tools(?:\/([a-z_]+)(?:\/(provider|env|model|models))?)?$/.exec(path);
   if (path === "/terminal-backends" && method === "GET") {
@@ -408,6 +466,7 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
     history: [], versions: {}, stepUp: false, keys: { ANTHROPIC_API_KEY: "sk-ant-geheim-1234" },
     loggedIn: new Set(["openai-codex"]), polls: 0, loginError: null,
     config: { model: "claude-test", "agent.service_tier": "normal", "agent.max_turns": 90, "display.streaming": true, fallback_providers: [], "web.api_key": null },
+    msg: { available: true, enabled: {}, env: {}, gateway: { running: false, busy: false, sessions: 0 }, polls: 0, applied: [] },
     tools: { available: true, enabled: { terminal: true, web: false, image_gen: true, computer_use: false }, keys: {}, provider: {}, model: "flux-2-pro", installed: false },
   };
   let runs = 0;

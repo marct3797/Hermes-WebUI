@@ -199,3 +199,11 @@ export type ToolModel = { id: string; display?: string; speed?: string; strength
 export type ToolModels = { name: string; has_models: boolean; provider?: string | null; models: ToolModel[]; current: string | null; default: string | null };
 export type TerminalBackend = { name: string; label?: string; description?: string; active?: boolean; status?: string; detail?: string };
 export type TerminalBackends = { active: string | null; backends: TerminalBackend[] };
+
+/** Messaging-Plattformen und Gateway (vom Dashboard). Geheimnisse haben nie einen Wert, nur `is_set`. */
+export type MsgVar = { key: string; required?: boolean; is_set: boolean; description?: string; prompt?: string; url?: string | null; is_password?: boolean; is_list?: boolean; advanced?: boolean; value?: string };
+export type MsgPlatform = { id: string; name: string; description?: string; docs_url?: string | null; enabled: boolean; configured: boolean; gateway_running?: boolean; state?: string | null; error_code?: string | null; error_message?: string | null; home_channel_set?: boolean; env_vars: MsgVar[] };
+export type GatewayState = { running: boolean; state: string | null; busy: boolean; active_sessions: number; version?: string | null };
+export type GatewayAction = { name: string; running: boolean; exit_code: number | null; lines: string[] };
+export type TelegramPairing = { pairing_id: string; suggested_username?: string; deep_link: string; expires_at?: string };
+export type TelegramPoll = { status: "waiting" | "ready"; bot_username?: string | null; owner_user_id?: string | null; expires_at?: string };

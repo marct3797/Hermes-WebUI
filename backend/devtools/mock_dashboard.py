@@ -47,6 +47,17 @@ TOOLSETS: dict[str, dict[str, Any]] = {
         {"name": "Cua Driver", "badge": "local", "tag": "macOS", "post_setup": "cua_driver", "env_vars": []}]},
 }
 
+# Messaging-Plattformen in der Form von GET /api/messaging/platforms (aus Hermes 0.22.5 gemessen, gekürzt auf drei).
+MESSAGING: dict[str, dict[str, Any]] = {
+    "telegram": {"name": "Telegram", "description": "Hermes über Telegram nutzen.", "docs_url": "https://core.telegram.org/bots/features#botfather", "env": [
+        {"key": "TELEGRAM_BOT_TOKEN", "required": True, "is_password": True, "prompt": "Bot token", "url": "https://t.me/BotFather"},
+        {"key": "TELEGRAM_ALLOWED_USERS", "required": False, "is_password": False, "is_list": True, "prompt": "Allowed user IDs"}]},
+    "discord": {"name": "Discord", "description": "Hermes über Discord nutzen.", "docs_url": "https://discord.com/developers", "env": [
+        {"key": "DISCORD_BOT_TOKEN", "required": True, "is_password": True, "prompt": "Bot token"}]},
+    "whatsapp": {"name": "WhatsApp", "description": "Hermes über WhatsApp nutzen.", "docs_url": "https://example.invalid/wa", "env": [
+        {"key": "WHATSAPP_ALLOWED_USERS", "required": False, "is_password": False, "is_list": True, "prompt": "Allowed numbers"}]},
+}
+
 OAUTH = [
     {"id": "anthropic", "name": "Anthropic", "flow": "pkce", "cli_command": "hermes auth add anthropic", "docs_url": None,
      "status": {"logged_in": False, "source": None, "source_label": None, "expires_at": None}},
@@ -133,6 +144,18 @@ class ToolEnvBody(BaseModel):
 class ToolModelBody(BaseModel):
     model: str
     provider: str | None = None
+    profile: str | None = None
+
+
+class MsgPlatformBody(BaseModel):
+    enabled: bool | None = None
+    env: dict[str, str] = {}
+    clear_env: list[str] = []
+    profile: str | None = None
+
+
+class TelegramApplyBody(BaseModel):
+    allowed_user_ids: list[str]
     profile: str | None = None
 
 
@@ -426,6 +449,141 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
     async def computer_use_grant():
         app.state.tool_calls.append(("POST", "/api/tools/computer-use/permissions/grant"))
         return {"ok": True, "pid": 1, "name": "computer-use-grant"}
+
+    app.state.gateway = {"running": False, "busy": False, "active_sessions": 0, "state": None}
+    app.state.gateway_calls = []  # (Pfad, Query) jedes Gateway-Aufrufs
+    app.state.msg_enabled = {}  # (Profil, Plattform) -> bool
+    app.state.env_locked = False  # wie eine gesperrte .env: Hermes antwortet ok, schreibt aber nichts
+    app.state.pairings = {}
+    app.state.action_lines = ["gateway start ok", "Authorization: Bearer abc.def.ghi", "token=sk-secret-1234567890"]
+
+    def platform_row(prof_name: str, prof: dict[str, Any], pid: str) -> dict[str, Any]:
+        spec = MESSAGING[pid]
+        enabled = app.state.msg_enabled.get((prof_name, pid), False)
+        configured = all(v["key"] in prof["env"] for v in spec["env"] if v["required"])
+        gw = app.state.gateway
+        state = "disabled" if not enabled else "not_configured" if not configured else "gateway_stopped" if not gw["running"] else "connected"
+        rows = []
+        for v in spec["env"]:
+            val = prof["env"].get(v["key"])
+            rows.append({"key": v["key"], "required": v["required"], "is_set": val is not None, "redacted_value": "«redacted:" + val[:4] + "...»" if val and v["is_password"] else None,
+                         "value": None if v["is_password"] else val or "", "description": v["prompt"], "prompt": v["prompt"], "help": "", "url": v.get("url"),
+                         "is_password": v["is_password"], "is_list": v.get("is_list", False), "advanced": False})
+        return {"id": pid, "name": spec["name"], "description": spec["description"], "docs_url": spec["docs_url"], "enabled": enabled, "configured": configured,
+                "gateway_running": gw["running"], "state": state, "error_code": None, "error_message": "Zugang: password=hunter2 abgelehnt" if pid == "discord" and enabled else None,
+                "updated_at": None, "home_channel": None, "ingress_url": None, "env_vars": rows, **({"whatsapp_setup": {"mode": "", "allowed_users_set": False, "home_channel_set": False}} if pid == "whatsapp" else {})}
+
+    @app.get("/api/status")
+    async def hermes_status(profile: str | None = None):
+        gw = app.state.gateway
+        return {"version": "0.22.5", "gateway_running": gw["running"], "gateway_state": gw["state"], "gateway_platforms": {}, "active_agents": gw["active_sessions"],
+                "gateway_busy": gw["busy"], "gateway_drainable": gw["busy"], "restart_drain_timeout": 0.0, "active_sessions": gw["active_sessions"], "install_id": "geheim-install-id",
+                "components": {"gateway": {"status": "ok" if gw["running"] else "degraded", "state": "running" if gw["running"] else "stopped"}}}
+
+    @app.get("/api/messaging/platforms")
+    async def messaging_platforms(profile: str | None = None):
+        prof = profile_or_default(profile)
+        return {"env_path": "/home/user/.hermes/.env", "gateway_start_command": "hermes gateway start", "platforms": [platform_row(profile or "default", prof, p) for p in MESSAGING]}
+
+    @app.put("/api/messaging/platforms/{pid}")
+    async def messaging_put(pid: str, body: MsgPlatformBody, profile: str | None = None):
+        name = body.profile or profile or "default"
+        prof = profile_or_default(name)
+        if pid not in MESSAGING:
+            raise HTTPException(404, "Unknown messaging platform")
+        allowed = {v["key"] for v in MESSAGING[pid]["env"]}
+        for value in body.env.values():
+            if value.startswith("echo:"):  # manche Plugin-Regeln nennen den abgelehnten Wert im Fehlertext
+                raise HTTPException(400, f"Invalid value {value}")
+        for key, value in {**body.env, **{k: "" for k in body.clear_env}}.items():
+            if key not in allowed:
+                raise HTTPException(400, f"{key} is not configurable for {MESSAGING[pid]['name']}")
+            if value.startswith("«redacted") or value == "***":
+                raise HTTPException(400, "Refusing to save a redacted credential preview")
+        if not app.state.env_locked:
+            for key, value in body.env.items():
+                if value.strip():
+                    prof["env"][key] = value.strip()
+            for key in body.clear_env:
+                prof["env"].pop(key, None)
+            if body.enabled is not None and not drop_writes:
+                app.state.msg_enabled[(name, pid)] = body.enabled
+        return {"ok": True, "platform": pid, "hot_served": False}
+
+    @app.post("/api/messaging/platforms/{pid}/test")
+    async def messaging_test(pid: str, profile: str | None = None):
+        row = platform_row(profile or "default", profile_or_default(profile), pid)
+        return {"ok": row["state"] == "connected", "state": row["state"], "message": f"Zustand: {row['state']}"}
+
+    def spawn(name: str, profile: str | None, **extra: Any) -> dict[str, Any]:
+        profile_or_default(profile)
+        app.state.gateway_calls.append((name, {"profile": profile, **extra}))
+        return {"ok": True, "pid": 4242, "name": name}
+
+    @app.post("/api/gateway/start")
+    async def gateway_start(profile: str | None = None):
+        app.state.gateway.update(running=True, state="running")
+        return spawn("gateway-start", profile)
+
+    @app.post("/api/gateway/stop")
+    async def gateway_stop(profile: str | None = None, interrupt: bool = False):
+        gw = app.state.gateway
+        if gw["active_sessions"] and not interrupt:
+            raise HTTPException(409, f"Refusing to stop the gateway: {gw['active_sessions']} live session(s) would be interrupted")
+        gw.update(running=False, state=None, active_sessions=0, busy=False)
+        return spawn("gateway-stop", profile, interrupt=interrupt)
+
+    @app.post("/api/gateway/restart")
+    async def gateway_restart(profile: str | None = None):
+        app.state.gateway.update(running=True, state="running", active_sessions=0, busy=False)
+        return spawn("gateway-restart", profile)
+
+    @app.get("/api/actions/{name}/status")
+    async def action_status(name: str, lines: int = 200):
+        if name not in ("gateway-start", "gateway-stop", "gateway-restart", "tools-post-setup"):
+            raise HTTPException(404, "Unknown action")
+        return {"name": name, "running": False, "exit_code": 0, "pid": 4242, "lines": app.state.action_lines[-lines:]}
+
+    @app.post("/api/messaging/telegram/onboarding/start")
+    async def tg_start(body: dict[str, Any]):
+        pid = "pair_abc123"
+        app.state.pairings[pid] = {"polls": 0, "bot_token": "123456:SECRET-BOT-TOKEN-FROM-TELEGRAM"}
+        return {"pairing_id": pid, "suggested_username": "hermes_test_bot", "deep_link": app.state.deep_link, "qr_payload": app.state.deep_link, "expires_at": "2026-10-24T18:00:00Z"}
+
+    app.state.deep_link = "https://t.me/newbot/hermes/hermes_test_bot"
+
+    @app.get("/api/messaging/telegram/onboarding/{pairing_id}")
+    async def tg_poll(pairing_id: str):
+        rec = app.state.pairings.get(pairing_id)
+        if rec is None:
+            raise HTTPException(404, "Telegram setup session was not found. Start a new setup.")
+        rec["polls"] += 1
+        if rec["polls"] < 2:
+            return {"status": "waiting", "expires_at": "2026-10-24T18:00:00Z"}
+        return {"status": "ready", "bot_username": "hermes_test_bot", "owner_user_id": "424242", "expires_at": "2026-10-24T18:00:00Z"}
+
+    @app.post("/api/messaging/telegram/onboarding/{pairing_id}/apply")
+    async def tg_apply(pairing_id: str, body: TelegramApplyBody, profile: str | None = None):
+        rec = app.state.pairings.get(pairing_id)
+        name = body.profile or profile or "default"
+        prof = profile_or_default(name)
+        if rec is None:
+            raise HTTPException(404, "Telegram setup session was not found. Start a new setup.")
+        if rec["polls"] < 2:
+            raise HTTPException(409, "Telegram setup is not ready yet.")
+        if not body.allowed_user_ids or not all(i.isdigit() for i in body.allowed_user_ids):
+            raise HTTPException(400, "Allowed Telegram user IDs must be numeric.")
+        prof["env"]["TELEGRAM_BOT_TOKEN"] = rec["bot_token"]
+        prof["env"]["TELEGRAM_ALLOWED_USERS"] = ",".join(body.allowed_user_ids)
+        app.state.msg_enabled[(name, "telegram")] = True
+        del app.state.pairings[pairing_id]
+        app.state.gateway_calls.append(("telegram-apply", {"profile": name}))
+        return {"ok": True, "platform": "telegram", "bot_username": "hermes_test_bot", "needs_restart": True, "restart_started": False, "restart_error": "Live sessions"}
+
+    @app.delete("/api/messaging/telegram/onboarding/{pairing_id}")
+    async def tg_cancel(pairing_id: str):
+        app.state.pairings.pop(pairing_id, None)
+        return {"ok": True}
 
     @app.get("/api/plugins/kanban/board")
     async def kanban_board(profile: str | None = None):

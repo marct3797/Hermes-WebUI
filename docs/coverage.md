@@ -19,17 +19,17 @@ Von 390 Routen (Modul, Methode, Pfad) nutzt das BFF 99 pfadgenau. Nach Modul, we
 
 | Modul | Routen | genutzt | Inhalt |
 |---|---:|---:|---|
-| `web_routers/ops.py` | 28 | 0 | Doctor, Backup, Import, Checkpoints, Hooks, Webhooks, Pairing, Gedächtnis zurücksetzen, Credential-Pool, Gateway start/stop |
+| `web_routers/ops.py` | 28 | 2 | Gateway start/stop (genutzt); Doctor, Backup, Import, Checkpoints, Hooks, Webhooks, Pairing, Gedächtnis zurücksetzen, Credential-Pool offen |
 | `web_routers/git.py` | 21 | 0 | Git im Dashboard (die WebUI nutzt dafür `hostd`) |
 | `web_routers/local_models.py` | 18 | 0 | lokale Modelle: Katalog, Hardware, Download, Server |
 | `web_routers/files.py` | 18 | 0 | Dateien im Dashboard (die WebUI nutzt dafür `hostd`) |
-| `web_routers/messaging.py` | 11 | 0 | Messaging-Plattformen: Liste, Konfiguration, Test, Telegram-/WhatsApp-Einrichtung |
+| `web_routers/messaging.py` | 11 | 7 | Messaging-Plattformen: Liste, Konfiguration, Test, Telegram-Einrichtung. **Nicht**: WhatsApp-Kopplung (4 Routen, QR-Code) |
 | `web_routers/audio.py` | 10 | 0 | Sprache: TTS, STT, Live-Sprachmodus |
-| `web_routers/actions.py` | 8 | 0 | Gateway neu starten/leeren/migrieren, Hermes-Update |
+| `web_routers/actions.py` | 8 | 2 | Gateway neu starten (genutzt), Aktions-Status (genutzt); **nicht**: leeren (Drain), migrieren, Hermes-Update |
 | `web_routers/chat_ws.py` | 5 | 0 | Terminal-Chat per WebSocket (die WebUI nutzt die Gateway-API) |
 | `web_routers/delegation.py` | 4 | 0 | Delegation: Routing, Backends, Modellzuordnung |
 | `web_routers/memory_providers.py` | 3 | 0 | Einrichtung der Hermes-Gedächtnis-Anbieter |
-| `web_routers/status.py` | 20 | 1 | Status, Gesundheit, Systemwerte, Curator, Lerngraph |
+| `web_routers/status.py` | 20 | 2 | Status (Gateway-Zustand genutzt), Gesundheit, Systemwerte, Curator, Lerngraph |
 | `web_routers/tools.py` | 12 | 8 | Toolsets, Anbieter, Keys, Modelle; **bewusst nicht**: Terminal-Backend setzen, `post-setup`, Computer-Use-Rechte, siehe unten |
 | `web_routers/models.py` | 7 | 1 | Hilfsmodelle, Mixture of Agents, empfohlenes Standardmodell |
 | `plugins/kanban` | 48 | 18 | Kanban |
@@ -62,8 +62,8 @@ Pfadgenau heißt: ein Pfad zählt als genutzt, auch wenn nur eine seiner Methode
 | Kanban | teilweise (18 von 48): Board, Aufgaben, Kommentare, Verknüpfungen. Fehlt: Anhänge, Zerlegen/Spezifizieren/Schätzen, Läufe prüfen und beenden, Worker, Boards importieren/exportieren/wechseln, Orchestrierung | `plugins/kanban` |
 | Hooks, Webhooks, Pairing | nicht abgebildet | `ops.py` |
 | Delegation, Subagenten | nicht als Seite (Felder im Editor) | `delegation.py` |
-| Messaging-Plattformen (35 in der Doku) | **nicht abgebildet**: weder Plattformliste noch Konfiguration noch Test | `messaging.py`: 0 von 11 |
-| Gateway-Betrieb (neu starten, leeren, migrieren) | nicht abgebildet | `actions.py`, `ops.py` |
+| Messaging-Plattformen (35 in der Doku, 32 im Dashboard 0.22.5) | **ja**: Liste mit Zustand, Variablen setzen/löschen (Tokens nie sichtbar), ein-/ausschalten, Verbindung prüfen, Telegram-Assistent. **Nicht**: WhatsApp koppeln (QR-Code), Heimatkanal setzen, Plattform-Plugins verwalten | `routes/messaging.py`, `MessagingPage.tsx`; `messaging.py`: 7 von 11 |
+| Gateway-Betrieb | teilweise: Zustand, starten, anhalten, neu starten (Unterbrechen nur nach Bestätigung), Protokoll des Befehls. **Nicht**: leeren (Drain), migrieren | `actions.py`: 2 von 8, `ops.py` |
 | Sprache (`Voice Mode`, `Text-to-Speech`) | nicht abgebildet | `audio.py`: 0 von 10 |
 | Browser, Vision, Bildgenerierung | Bild-Anhänge im Chat (bis zu 4 je Nachricht); der Rest nur über Einstellungsfelder | `routes/agents.py`, Schema |
 | Artefakte im Chat (`Deliverable Mode`) | nicht abgebildet | Gateway `/v1/artifacts/*` |
@@ -88,7 +88,7 @@ Pfadgenau heißt: ein Pfad zählt als genutzt, auch wenn nur eine seiner Methode
 ## Reihenfolge, die ich vorschlage
 
 **P1: ohne das ist es keine vollständige Oberfläche für Hermes**
-1. Messaging-Plattformen und Gateway-Betrieb (Liste, Konfiguration, Test, Start/Stopp/Neustart).
+1. ~~Messaging-Plattformen und Gateway-Betrieb~~ umgesetzt und gegen ein echtes Dashboard geprüft (`devtools/real/contract_messaging.py`). Offen daraus: WhatsApp-Kopplung (QR), Drain.
 2. ~~Werkzeuge konfigurieren und Werkzeug-Keys setzen~~ umgesetzt und gegen ein echtes Dashboard geprüft (`devtools/real/contract_tools.py`).
 3. Hermes-Gedächtnis: eingebautes `MEMORY.md`/`USER.md` und die Anbieter-Auswahl, statt nur Hindsight.
 4. Profil-Lebenszyklus: anlegen, löschen, umbenennen, Import/Export.
@@ -115,3 +115,13 @@ Aus dem Hermes-Quelltext (0.22.5, `hermes_cli/web_routers/tools.py`, `config_env
 - `POST .../post-setup` und `POST /api/tools/computer-use/permissions/grant` führen Installationen bzw. Systemdialoge aus. Nicht durchgereicht.
 - Beim Einschalten kann Hermes selbst eine Installation starten. Im Quelltext prüft es das nur für `cua_driver`; die WebUI verlangt deshalb für Anbieter mit `post_setup` und Status `needs_setup` eine ausdrückliche Zustimmung. Das ist ein bewusst zu weit gefasster Schutz: Bei `web` (Anbieter `ddgs`) fragt sie, obwohl Hermes dort nichts installiert.
 - Werkzeug-Keys können über die WebUI gesetzt, aber nicht gelöscht werden (Hermes überspringt leere Werte). Löschen geht im Hermes-Dashboard oder per `hermes config`.
+
+## Was bei Messaging und Gateway bewusst anders ist als in Hermes
+
+- **Neustart.** Hermes startet das Gateway über das Dashboard immer mit `--interrupt` neu und prüft nicht, ob Sitzungen laufen. Die WebUI liest vorher `active_sessions` und `gateway_busy` und verlangt bei laufenden Sitzungen eine ausdrückliche Bestätigung. Das ist ein Lesen-dann-Handeln (kurze Lücke zwischen Prüfung und Befehl).
+- **„Gestartet“ ist nicht „läuft“.** Hermes startet nur einen Prozess; die WebUI fragt danach Zustand und Protokoll ab, schwärzt Zeilen mit Geheimnissen und zeigt Exit-Code und die letzten Zeilen.
+- **Stilles Nichtschreiben.** Ist die `.env` gesperrt, antwortet Hermes `ok` und schreibt nichts (Quelltext: `env_write_refusal`). Das BFF liest zurück und meldet `502`, wenn Variable oder Schalter nicht angekommen sind.
+- **Telegram-Assistent.** Das Bot-Token bleibt im Dashboard-Prozess. Den Dienst von Nous (`setup.hermes-agent.nousresearch.com`) ruft Hermes selbst auf; **dieser Ablauf ist nicht gegen den echten Dienst getestet**, weil er einen Bot bei Telegram anlegen würde. Getestet sind BFF und Oberfläche gegen ein Mock-Dashboard, die Route-Formen gegen den Quelltext.
+- **Zustand nur im Dashboard-Prozess.** Telegram-Kopplungen leben im Speicher des Dashboards; ein Neustart des Dashboards beendet sie (die Oberfläche zeigt dann „abgelaufen“).
+- **Drain** (`POST /api/gateway/drain`) gilt für das Heimatverzeichnis des Dashboards, nicht für ein Profil. Bei mehreren Profilen wäre unklar, welches gemeint ist; deshalb nicht angeboten.
+- **WhatsApp** braucht den QR-Code der Kopplung, installiert ggf. npm-Pakete und startet einen Node-Prozess. Das bleibt bei der Hermes-CLI (`hermes whatsapp`), bis eine QR-Darstellung ohne fremden Dienst und mit Prüfung der Abhängigkeitslizenz entschieden ist.

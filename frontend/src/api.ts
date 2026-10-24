@@ -1,6 +1,6 @@
 import { invalidate } from "./dataCache";
 import { getPreferences } from "./preferences";
-import type { HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import type { GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string, public data?: Record<string, unknown>) {
@@ -108,6 +108,16 @@ export const api = {
   setToolProvider: (a: AgentRef, name: string, provider: string, capability?: "search" | "extract") => call<{ ok: boolean }>("PUT", `${base(a)}/tools/${encodeURIComponent(name)}/provider`, { provider, ...(capability ? { capability } : {}) }),
   setToolKeys: (a: AgentRef, name: string, env: Record<string, string>) => call<{ ok: boolean; saved: string[]; skipped: string[] }>("PUT", `${base(a)}/tools/${encodeURIComponent(name)}/env`, { env }),
   setToolModel: (a: AgentRef, name: string, model: string) => call<{ ok: boolean }>("PUT", `${base(a)}/tools/${encodeURIComponent(name)}/model`, { model }),
+  messaging: (a: AgentRef) => call<{ platforms: MsgPlatform[] }>("GET", `${base(a)}/messaging`),
+  saveMessaging: (a: AgentRef, id: string, body: { enabled?: boolean; env?: Record<string, string>; clear_env?: string[] }) => call<{ ok: boolean; needs_restart: boolean }>("PUT", `${base(a)}/messaging/${encodeURIComponent(id)}`, body),
+  testMessaging: (a: AgentRef, id: string) => call<{ ok: boolean; state: string | null; message: string; auth_posture?: string | null }>("POST", `${base(a)}/messaging/${encodeURIComponent(id)}/test`),
+  gateway: (a: AgentRef) => call<GatewayState>("GET", `${base(a)}/gateway`),
+  gatewayAction: (a: AgentRef, what: "start" | "stop" | "restart", confirmInterrupt = false) => call<{ ok: boolean; started: boolean; action: string; interrupted: boolean }>("POST", `${base(a)}/gateway/${what}`, what === "start" ? undefined : { confirm_interrupt: confirmInterrupt }),
+  gatewayLog: (a: AgentRef, name: string) => call<GatewayAction>("GET", `${base(a)}/gateway/actions/${encodeURIComponent(name)}`),
+  telegramStart: (a: AgentRef, botName?: string) => call<TelegramPairing>("POST", `${base(a)}/messaging/telegram/onboarding`, botName ? { bot_name: botName } : {}),
+  telegramPoll: (a: AgentRef, id: string) => call<TelegramPoll>("GET", `${base(a)}/messaging/telegram/onboarding/${encodeURIComponent(id)}`),
+  telegramApply: (a: AgentRef, id: string, allowedUserIds: string[]) => call<{ ok: boolean; bot_username: string | null; needs_restart: boolean; restart_started: boolean; restart_error: string | null }>("POST", `${base(a)}/messaging/telegram/onboarding/${encodeURIComponent(id)}/apply`, { allowed_user_ids: allowedUserIds }),
+  telegramCancel: (a: AgentRef, id: string) => call<{ ok: boolean }>("DELETE", `${base(a)}/messaging/telegram/onboarding/${encodeURIComponent(id)}`),
   saveHermesConfig: (a: AgentRef, changes: Record<string, unknown>) => call<{ ok: boolean; changed: string[] }>("PUT", `${base(a)}/config`, { changes }),
   soulVersion: (a: AgentRef, vid: string) => call<SoulVersion>("GET", `${base(a)}/soul/history/${id(vid)}`),
   restoreSoul: (a: AgentRef, vid: string) => call<SoulSaved & { content: string }>("POST", `${base(a)}/soul/restore`, { id: vid }),

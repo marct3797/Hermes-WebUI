@@ -62,6 +62,7 @@ const MODULES = [
   { module: "providers", label: "Keys & Nutzung", icon: "coin" },
   { module: "skills", label: "Skills", icon: "layers" },
   { module: "tools", label: "Werkzeuge", icon: "wrench" },
+  { module: "messaging", label: "Messaging", icon: "send" },
 ] as const;
 
 

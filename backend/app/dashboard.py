@@ -38,6 +38,19 @@ def digest(text: str) -> str:
 LOOPBACK_HINT = ("Das Dashboard auf 127.0.0.1 des Hosts lassen und per Tunnel (ssh -L) auf 127.0.0.1 dieses Rechners führen, "
                  "dann diese Adresse in hosts.json eintragen (README, „Dashboard auf einem anderen Rechner“).")
 
+
+def _submitted_strings(body: Any, depth: int = 0) -> set[str]:
+    """Alle Texte eines Anfragekörpers (auch verschachtelt), die in einer Fehlermeldung nichts zu suchen haben: Hermes nennt manchmal den abgelehnten Wert."""
+    if depth > 4:
+        return set()
+    if isinstance(body, str):
+        return {body} if len(body) >= 4 else set()
+    if isinstance(body, dict):
+        return {s for v in body.values() for s in _submitted_strings(v, depth + 1)}
+    if isinstance(body, list):
+        return {s for v in body for s in _submitted_strings(v, depth + 1)}
+    return set()
+
 class CacheCfg:
     """TTLs in Sekunden (per Umgebung überschreibbar, siehe Settings). Standard: Modelle 5 min, Profile und Env 20 s."""
 
@@ -86,11 +99,9 @@ class DashboardClient:
             if explain:  # Anmeldungen scheitern aus Gründen, die der Person helfen (Netz, abgelaufen, abgelehnt)
                 try:
                     d = res.json().get("detail")
-                    if isinstance(d, str) and isinstance(json_body, dict):
-                        for field in ("value", "api_key", "code"):
-                            secret = json_body.get(field)
-                            if isinstance(secret, str) and secret:
-                                d = d.replace(secret, "[REDACTED]")
+                    if isinstance(d, str):
+                        for secret in sorted(_submitted_strings(json_body), key=len, reverse=True):
+                            d = d.replace(secret, "[REDACTED]")
                     why = f": {d[:200]}" if isinstance(d, str) else ""
                 except (ValueError, AttributeError):
                     pass
