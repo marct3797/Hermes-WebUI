@@ -35,6 +35,9 @@ def digest(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
 
+LOOPBACK_HINT = ("Das Dashboard auf 127.0.0.1 des Hosts lassen und per Tunnel (ssh -L) auf 127.0.0.1 dieses Rechners führen, "
+                 "dann diese Adresse in hosts.json eintragen (README, „Dashboard auf einem anderen Rechner“).")
+
 class CacheCfg:
     """TTLs in Sekunden (per Umgebung überschreibbar, siehe Settings). Standard: Modelle 5 min, Profile und Env 20 s."""
 
@@ -70,8 +73,12 @@ class DashboardClient:
             raise UpstreamError(504, "Das Dashboard antwortet nicht") from e
         except httpx.HTTPError as e:
             raise UpstreamError(503, "Das Dashboard ist nicht erreichbar") from e
+        if 300 <= res.status_code < 400:
+            raise UpstreamError(502, f"Das Dashboard verlangt eine eigene Anmeldung (es lauscht nicht auf Loopback). {LOOPBACK_HINT}")
         if res.status_code in (401, 403):
-            raise UpstreamError(502, "Das Dashboard lehnt den Zugang ab (Token prüfen)")
+            raise UpstreamError(502, f"Das Dashboard lehnt den Zugang ab: Token prüfen. Lauscht es nicht auf Loopback, verlangt Hermes ab 0.22 eine eigene Anmeldung. {LOOPBACK_HINT}")
+        if res.status_code == 400 and "Invalid Host header" in res.text[:300]:
+            raise UpstreamError(502, f"Das Dashboard lehnt den Rechnernamen im Host-Header ab (Hermes ab 0.22 erlaubt nur 127.0.0.1 und localhost). {LOOPBACK_HINT}")
         if res.status_code == 404:
             raise UpstreamError(404, missing or "Das Dashboard kennt dieses Profil nicht")
         if res.status_code >= 400:

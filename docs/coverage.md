@@ -77,9 +77,9 @@ Pfadgenau heißt: ein Pfad zählt als genutzt, auch wenn nur eine seiner Methode
 
 ## Risiken für den Betrieb mit beliebigen Installationen
 
-1. **Dashboard auf einem anderen Rechner.** Hermes 0.22.5 schaltet eine Anmeldeschranke ein, sobald das Dashboard nicht auf Loopback lauscht (`hermes_cli/dashboard_auth/__init__.py`: „engages only when the dashboard binds to a non-loopback host without --insecure“). Dann verlangt jede Anfrage eine Sitzung oder ein Bearer-Token eines registrierten Anbieters. Die WebUI schickt nur den einfachen Sitzungs-Header `X-Hermes-Session-Token`. Wahrscheinlich genügt der bei einem entfernten Dashboard nicht. **Aus dem Quelltext gelesen, nicht an einem laufenden entfernten Dashboard geprüft.** `deploy/dashboard.sh` bindet auf Loopback und ist davon nicht betroffen.
-2. **Antwortformen.** Die Vertragstests stammen von Hermes 0.19 bis 0.21.6; gegen 0.22.5 sind nur die Pfade geprüft (`docs/compatibility.md`). Es gibt keine Matrix über mehrere Hermes-Versionen.
-3. **Run-Strom.** Hermes sendet `run.queued`, `run.stopping` und `run.interrupted` (`gateway/platforms/api_server_runs.py`). Der Adapter gibt sie als `unknown` weiter. Nicht geprüft, wie die Oberfläche ein Stromende ohne Abschlussereignis zeigt, etwa wenn ein Lauf nach einem Gateway-Neustart „queued“ bleibt.
+1. **Dashboard auf einem anderen Rechner.** Geprüft an einem echten Dashboard (0.22.5, Loopback): Hermes vergleicht den Rechnernamen im `Host`-Header (Port egal): `127.0.0.1`, `localhost` gehen, jeder andere Name liefert 400 „Invalid Host header“. Bindet das Dashboard nicht auf Loopback, schaltet Hermes eine Anmeldeschranke ein (Sitzung oder Bearer-Token eines Anbieters; `--insecure` ist wirkungslos, siehe `hermes dashboard --help`). Der Sitzungs-Header der WebUI genügt dann nicht. **Der unterstützte Weg ist Loopback plus Tunnel:** Dashboard auf `127.0.0.1` des Hosts lassen, per `ssh -N -L 127.0.0.1:19119:127.0.0.1:9119 <benutzer>@<host>` auf den WebUI-Rechner führen und `http://127.0.0.1:19119` eintragen (`add-host.sh --dashboard-url`). Die WebUI meldet die drei Fälle (falscher Rechnername, eigene Anmeldung verlangt, Token abgelehnt) jetzt mit diesem Ausweg. Nicht getestet: die Antwort der Schranke selbst an einer nicht-loopback gebundenen Instanz (aus dem Quelltext gelesen: 401 oder Weiterleitung auf `/login`; beides ist abgefangen).
+2. **Antwortformen.** Die Lese-Routen sind gegen echte Antworten von 0.22.5 getestet (`tests/test_contract_hermes_0_22_5.py`, Fixture aus einem Sandbox-Dashboard). Nicht aufgenommen sind Schreib-Routen und Zustände mit Daten (laufende Sitzungen, eingerichtete Anbieter, Zeitpläne): das frische Sandbox-HOME hat keine. Es gibt weiterhin keine Matrix über mehrere Hermes-Versionen.
+3. **Run-Strom.** Korrektur: `run.stopping` und `run.interrupted` sind Lauf-*Status* (`GET /v1/runs/{id}`), keine Stromereignisse; `runStore.ts` behandelt sie beim Nachfragen (Zeilen 154 bis 172). Nur `run.queued` kommt als Ereignis (als `unknown`), danach setzt die Wiederaufnahme per Statusabfrage fort. Aus dem Quelltext gelesen, nicht mit einem laufenden Gateway-Neustart geprüft.
 4. **Verwaltete Konfiguration.** Hermes kennt „Managed Scope“ (vom Administrator festgelegte, nicht änderbare Werte). Wie der Einstellungs-Editor ein abgelehntes Feld zeigt, ist nicht getestet.
 5. **Oberfläche nur auf Deutsch.** `lang="de"`, alle Texte im Code, keine Übersetzungsschicht. Für ein öffentliches Projekt ist das eine Einschränkung; die englische README ersetzt sie nicht.
 6. **Keine Prüfung im echten Browser** für die Seiten „Kanban“ und „Hermes-Einstellungen“ (nur jsdom).
@@ -93,8 +93,8 @@ Pfadgenau heißt: ein Pfad zählt als genutzt, auch wenn nur eine seiner Methode
 3. Hermes-Gedächtnis: eingebautes `MEMORY.md`/`USER.md` und die Anbieter-Auswahl, statt nur Hindsight.
 4. Profil-Lebenszyklus: anlegen, löschen, umbenennen, Import/Export.
 5. Betrieb: Status/Gesundheit, Doctor, Backup, Update-Prüfung.
-6. Dashboard-Anmeldeschranke für entfernte Hosts klären und gegen ein echtes Dashboard testen.
-7. Vertragstests gegen 0.22.5 neu aufnehmen; Run-Strom-Ereignisse abbilden.
+6. ~~Dashboard-Anmeldeschranke für entfernte Hosts~~ geklärt und gegen ein echtes Dashboard geprüft (Punkt 1 oben): Tunnel statt Adresse.
+7. ~~Vertragstests gegen 0.22.5~~ für die Lese-Routen aufgenommen; Run-Strom war falsch eingeschätzt (Punkt 3 oben).
 
 **P2**
 8. Modelle: eigene Endpunkte, Credential-Pools, lokale Modelle, Hilfsmodelle, Mixture of Agents, Delegation.

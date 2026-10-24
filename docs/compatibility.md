@@ -9,7 +9,7 @@ Was die WebUI von einer Hermes-Installation braucht, und was davon geprüft ist.
 |---|---|
 | Hermes-Quelltext, gegen den die Pfade geprüft sind | Hermes Agent v0.22.5 (2026.9.24), Commit `bf0203a794a07aac3ff764972ab9087baa4e4f4e` |
 | Ergebnis | 73 von 73 Hermes-Pfaden, die das BFF aufruft, kommen dort vor (Gateway 16, Dashboard 44, Kanban-Plugin 13) |
-| Antwortformen (Vertragstests) | aufgenommen und kommentiert gegen Hermes 0.19 bis 0.21.6 (siehe `docs/contract-tests.md`, Kommentare in `backend/app/adapters/hermes.py`); **gegen 0.22.5 nicht neu aufgenommen** |
+| Antwortformen (Vertragstests) | Lese-Routen des Dashboards gegen echte Antworten von 0.22.5 (`tests/fixtures/real/hermes_0_22_5_dashboard.json`, `tests/test_contract_hermes_0_22_5.py`); der Rest aufgenommen gegen Hermes 0.19 bis 0.21.6 (siehe `docs/contract-tests.md`). Gateway-API und Schreib-Routen **nicht neu aufgenommen** |
 
 Nachprüfen, ohne uns zu glauben:
 

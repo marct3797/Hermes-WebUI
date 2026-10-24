@@ -193,3 +193,15 @@ def test_settings_written_by_the_wizard_are_accepted_by_the_server(tmp_path, ser
     for k, v in setup.read_env(tmp_path / "w" / "webui.env").items():
         monkeypatch.setenv(k, v)
     assert_auth_configured(Settings())
+
+
+def test_dashboard_url_with_a_foreign_host_name_is_warned_about(tmp_path, server):
+    answers = fresh_answers(server)
+    answers[3] = "http://dashboard.example.test:9119"
+    code, _, out = drive(tmp_path / "w", answers + ["j"], [GATEWAY_KEY, DASH_TOKEN, CLIENT_SECRET])
+    assert "Tunnel" in out and "127.0.0.1" in out
+
+
+def test_loopback_dashboard_url_gets_no_warning(tmp_path, server):
+    code, _, out = drive(tmp_path / "w", fresh_answers(server), [GATEWAY_KEY, DASH_TOKEN, CLIENT_SECRET])
+    assert "Tunnel" not in out

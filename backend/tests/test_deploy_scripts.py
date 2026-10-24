@@ -122,3 +122,25 @@ def test_deploy_warns_about_agent_keys_that_are_missing(box):
     prepare(box, OIDC + "HERMES_KEY_X=a\n", agents=[{"id": "eta", "api_key_env": "HERMES_KEY_ETA"}])
     r = run(box, "deploy.sh", str(box.home))
     assert "HINWEIS" in r.stdout and "HERMES_KEY_ETA" in r.stdout and r.returncode == 0, r.stdout + r.stderr
+
+
+def test_add_host_dashboard_url_wins_over_port_and_is_written_as_given(box):
+    prepare(box, OIDC)
+    r = run(box, "add-host.sh", "box", "Box", "10.0.0.9", "--home", str(box.home), "--dashboard-url", "http://127.0.0.1:19119",
+            stdin="synthetic-key-0123456789\ndash-token-0123456789\n")
+    assert r.returncode == 0, r.stdout + r.stderr
+    rt = next(h for h in json.loads((box.home / "config" / "hosts.json").read_text())["hosts"] if h["id"] == "box")["runtimes"][0]
+    assert rt["dashboard"]["base_url"] == "http://127.0.0.1:19119" and rt["dashboard"]["token_env"] == "HERMES_DASHBOARD_TOKEN_BOX"
+
+
+@pytest.mark.parametrize("url", ["ftp://127.0.0.1:1", "http://", "127.0.0.1:19119", "http://127.0.0.1:19119/pfad"])
+def test_add_host_rejects_a_malformed_dashboard_url(box, url):
+    prepare(box, OIDC)
+    r = run(box, "add-host.sh", "box", "Box", "10.0.0.9", "--home", str(box.home), "--dashboard-url", url, stdin="k\n")
+    assert r.returncode != 0 and "Dashboard-URL" in r.stdout + r.stderr
+
+
+def test_add_host_dashboard_port_on_a_remote_address_warns_that_hermes_refuses_it(box):
+    prepare(box, OIDC)
+    r = run(box, "add-host.sh", "box", "Box", "10.0.0.9", "--home", str(box.home), "--dashboard-port", "9119", stdin="synthetic-key-0123456789\ndash-token-0123456789\n")
+    assert "Tunnel" in r.stdout and "--dashboard-url" in r.stdout

@@ -143,6 +143,9 @@ def main(argv: list[str] | None = None, ask=input, secret=getpass.getpass, out=p
         dashboard = {}
         if yes("Dashboard (`hermes dashboard`) anbinden? Es liefert SOUL, Einstellungen, Keys, Skills, Zeitpläne", True):
             dash_url = text("Dashboard-URL", DASHBOARD_DEFAULT, http_host, "Erwartet wird http:// oder https:// mit Rechnername.")
+            if urlparse(dash_url).hostname not in ("127.0.0.1", "localhost", "::1"):
+                out("  Hinweis: Hermes ab 0.22 lehnt andere Rechnernamen im Host-Header ab und verlangt sonst eine eigene Anmeldung. Das Dashboard auf 127.0.0.1\n"
+                    "  des Hosts lassen und per Tunnel erreichen (ssh -N -L 127.0.0.1:19119:127.0.0.1:9119 <benutzer>@<host>), dann hier http://127.0.0.1:19119 eintragen.")
             dash_token = secret("Dashboard-Token (leer = keiner, genügt auf Loopback): ")
             dashboard = {"dashboard": {"base_url": dash_url, **({"token_env": "HERMES_DASHBOARD_TOKEN"} if dash_token else {})}}
         template = json.loads((HERE / "hosts.example.json").read_text())

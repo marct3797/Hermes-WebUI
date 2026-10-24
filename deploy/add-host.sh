@@ -3,9 +3,13 @@
 #     bash deploy/add-host.sh <kennung> "<Anzeigename>" <adresse> [Optionen]
 #       --port N              Port der Hermes-API (Standard 8642)
 #       --profile NAME        Profil auf diesem Host, mehrfach möglich (Standard: default; mehrere = Multiplex-Gateway)
-#       --dashboard-port N    Port des Hermes-Dashboards dort (für Anbieter, SOUL und Profile); fragt zusätzlich den Dashboard-Token
+#       --dashboard-url URL   Adresse des Dashboards, wie die WebUI sie erreicht, z. B. http://127.0.0.1:19119 (Tunnel, siehe unten); fragt den Token
+#       --dashboard-port N    Kurzform für http://<adresse>:N. Hermes ab 0.22 lässt so nur Loopback zu: für einen anderen Rechner --dashboard-url mit Tunnel
 #       --home ORDNER         Zielordner der WebUI (Standard ~/hermes-webui)
-# Beispiel (zweiter Rechner im VPN):  bash deploy/add-host.sh laptop "Laptop" 100.64.3.4 --dashboard-port 9119
+# Beispiel (zweiter Rechner im VPN):  bash deploy/add-host.sh laptop "Laptop" 100.64.3.4 --dashboard-url http://127.0.0.1:19119
+# Dashboard auf einem anderen Rechner: Hermes (ab 0.22) prüft den Host-Header und verlangt bei jeder anderen Bindung als Loopback eine eigene
+# Anmeldung. Darum das Dashboard dort auf 127.0.0.1 lassen und von diesem Rechner aus tunneln:
+#     ssh -N -L 127.0.0.1:19119:127.0.0.1:9119 <benutzer>@<adresse>
 # Ergänzt config/hosts.json um einen Eintrag (kind "remote"), fragt den API_SERVER_KEY des Hosts still ab (oder liest ihn von
 # stdin, Dashboard-Token als zweite Zeile) und legt ihn als HERMES_KEY_<KENNUNG> in webui.env ab. Danach: bash deploy/deploy.sh.
 # Bestehende Einträge bleiben unberührt, eine vorhandene Kennung wird nie überschrieben, nichts wird gelöscht. Einzige Ausnahme:
@@ -18,11 +22,12 @@ usage() { awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' 
 umask 077   # webui.env.new entsteht nie für andere lesbar
 [ $# -ge 3 ] || usage
 id="$1"; label="$2"; addr="$3"; shift 3
-port=8642; dash_port=""; home="$HOME/hermes-webui"; profiles=()
+port=8642; dash_port=""; dash_url=""; home="$HOME/hermes-webui"; profiles=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --port) port="${2:?--port braucht eine Zahl}"; shift 2 ;;
     --profile) profiles+=("${2:?--profile braucht einen Namen}"); shift 2 ;;
+    --dashboard-url) dash_url="${2:?--dashboard-url braucht eine Adresse}"; shift 2 ;;
     --dashboard-port) dash_port="${2:?--dashboard-port braucht eine Zahl}"; shift 2 ;;
     --home) home="${2:?--home braucht einen Ordner}"; shift 2 ;;
     -h|--help) usage 0 ;;
@@ -35,6 +40,7 @@ done
 [[ "$addr" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "Adresse: Hostname oder IP ohne Schema und Port (war: $addr)"; exit 2; }
 [[ "$port" =~ ^[0-9]{2,5}$ ]] || { echo "Port ungültig: $port"; exit 2; }
 [ -z "$dash_port" ] || [[ "$dash_port" =~ ^[0-9]{2,5}$ ]] || { echo "Dashboard-Port ungültig: $dash_port"; exit 2; }
+[ -z "$dash_url" ] || [[ "$dash_url" =~ ^https?://[A-Za-z0-9._-]+(:[0-9]{2,5})?$ ]] || { echo "Dashboard-URL ungültig: nur http(s)://Name oder Adresse[:Port], ohne Pfad (war: $dash_url)"; exit 2; }
 for p in "${profiles[@]}"; do [[ "$p" =~ ^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$ ]] || { echo "Profilname ungültig: $p"; exit 2; }; done
 
 cfg="$home/config/hosts.json"; envf="$home/webui.env"
@@ -44,7 +50,7 @@ up="$(printf '%s' "$id" | tr 'a-z-' 'A-Z_')"
 key_var="HERMES_KEY_$up"; tok_var="HERMES_DASHBOARD_TOKEN_$up"
 
 # Eintrag zuerst prüfen und anlegen; die Werte kommen erst danach dran, damit eine abgelehnte Kennung nichts hinterlässt.
-export ADD_ID="$id" ADD_LABEL="$label" ADD_ADDR="$addr" ADD_PORT="$port" ADD_DASH="$dash_port" ADD_KEYVAR="$key_var" ADD_TOKVAR="$tok_var" ADD_PROFILES="${profiles[*]}"
+export ADD_ID="$id" ADD_LABEL="$label" ADD_ADDR="$addr" ADD_PORT="$port" ADD_DASH="$dash_port" ADD_DASH_URL="$dash_url" ADD_KEYVAR="$key_var" ADD_TOKVAR="$tok_var" ADD_PROFILES="${profiles[*]}"
 python3 - "$cfg" <<'PY'
 import json, os, shutil, sys
 path = sys.argv[1]
@@ -53,14 +59,14 @@ hosts = cfg.setdefault("hosts", [])
 known = next((h for h in hosts if h.get("id") == os.environ["ADD_ID"]), None)
 if known is not None:
     rt = next((r for r in known.get("runtimes", []) if r.get("id") == "hermes"), None)
-    if os.environ["ADD_DASH"] and rt is not None and "dashboard" not in rt:
-        rt["dashboard"] = {"base_url": f"http://{known.get('address') or os.environ['ADD_ADDR']}:{os.environ['ADD_DASH']}", "token_env": os.environ["ADD_TOKVAR"]}
+    if (os.environ["ADD_DASH"] or os.environ["ADD_DASH_URL"]) and rt is not None and "dashboard" not in rt:
+        rt["dashboard"] = {"base_url": os.environ["ADD_DASH_URL"] or f"http://{known.get('address') or os.environ['ADD_ADDR']}:{os.environ['ADD_DASH']}", "token_env": os.environ["ADD_TOKVAR"]}
         shutil.copy2(path, path + ".bak")
         with open(path + ".new", "w") as f:
             json.dump(cfg, f, indent=2, ensure_ascii=False)
             f.write("\n")
         os.replace(path + ".new", path)
-        print(f"hosts.json: Dashboard für {os.environ['ADD_ID']} ergänzt (Port {os.environ['ADD_DASH']}).")
+        print(f"hosts.json: Dashboard für {os.environ['ADD_ID']} ergänzt ({rt['dashboard']['base_url']}).")
         sys.exit(3)
     print(f"hosts.json: Host {os.environ['ADD_ID']} steht schon da, der Eintrag bleibt; nur der Key wird neu gesetzt.")
     sys.exit(4)
@@ -72,8 +78,8 @@ runtime = {
     "multiplex": len(profiles) > 1,
     "agents": profiles,
 }
-if os.environ["ADD_DASH"]:
-    runtime["dashboard"] = {"base_url": f"http://{os.environ['ADD_ADDR']}:{os.environ['ADD_DASH']}", "token_env": os.environ["ADD_TOKVAR"]}
+if os.environ["ADD_DASH"] or os.environ["ADD_DASH_URL"]:
+    runtime["dashboard"] = {"base_url": os.environ["ADD_DASH_URL"] or f"http://{os.environ['ADD_ADDR']}:{os.environ['ADD_DASH']}", "token_env": os.environ["ADD_TOKVAR"]}
 hosts.append({"id": os.environ["ADD_ID"], "label": os.environ["ADD_LABEL"], "kind": "remote", "address": os.environ["ADD_ADDR"], "runtimes": [runtime]})
 shutil.copy2(path, path + ".bak")
 tmp = path + ".new"
@@ -101,6 +107,11 @@ set_var() {  # set_var NAME  (Wert von stdin)
   { grep -v "^$1=" "$envf.bak"; printf '%s=%s\n' "$1" "$val"; } > "$envf.new" && chmod 600 "$envf.new" && mv "$envf.new" "$envf"
 }
 
+if [ -n "$dash_port" ] && [ -z "$dash_url" ] && [[ ! "$addr" =~ ^(127\.0\.0\.1|localhost)$ ]]; then
+  echo "Hinweis: Hermes ab 0.22 lehnt den Host-Header $addr und jede Bindung außer Loopback ohne eigene Anmeldung ab. Für einen anderen Rechner per Tunnel:"
+  echo "  ssh -N -L 127.0.0.1:19119:127.0.0.1:$dash_port <benutzer>@$addr      und dann   --dashboard-url http://127.0.0.1:19119"
+fi
+
 key=""
 if [ "$status" -eq 0 ] || [ "$status" -eq 4 ]; then
   key="$(ask "API_SERVER_KEY von $label")"
@@ -109,7 +120,7 @@ if [ "$status" -eq 0 ] || [ "$status" -eq 4 ]; then
   echo "webui.env: $key_var gesetzt (Länge ${#key})."
   [ "${#key}" -ge 16 ] || echo "Hinweis: Hermes startet seinen API-Server nicht mit einem Key unter 16 Zeichen. Stimmt der Wert?"
 fi
-if [ -n "$dash_port" ]; then
+if [ -n "$dash_port$dash_url" ]; then
   tok="$(ask "Dashboard-Token von $label")"
   if [ -n "$tok" ]; then printf '%s' "$tok" | set_var "$tok_var"; echo "webui.env: $tok_var gesetzt (Länge ${#tok})."
   else echo "Kein Dashboard-Token eingegeben: $tok_var fehlt noch."; fi
