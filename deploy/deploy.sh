@@ -3,6 +3,7 @@
 #     bash deploy/deploy.sh [Zielordner]          (Standard: ~/hermes-webui)
 # Idempotent. Löscht nichts, überschreibt keine vorhandene Config und gibt keine Geheimnisse aus.
 # Zielordner: config/ (hosts.json, ui.json, Sigils), data/ (Audit-Log), webui.env (chmod 600).
+umask 077   # Verzeichnisse und Dateien mit Geheimnissen nie für andere lesbar, auch nicht kurzzeitig
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 home="${1:-$HOME/hermes-webui}"
 envf="$home/webui.env"

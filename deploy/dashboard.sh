@@ -5,6 +5,7 @@
 # einmal erzeugt und als HERMES_DASHBOARD_TOKEN in webui.env abgelegt, nie ausgegeben. Eintrag "dashboard" in config/hosts.json
 # kommt hinzu, falls er fehlt (Sicherung: hosts.json.bak). Löscht nichts. Mehrfach ausführbar: läuft das Dashboard schon, passiert nichts.
 # Das Dashboard läuft als Prozess im Container und endet mit ihm: nach einem Neustart des Containers das Skript erneut starten.
+umask 077   # webui.env.new entsteht nie für andere lesbar
 home="${1:-$HOME/hermes-webui}"
 envf="$home/webui.env"
 hosts="$home/config/hosts.json"

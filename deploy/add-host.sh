@@ -15,6 +15,7 @@
 # Sicherungen: hosts.json.bak, webui.env.bak. Werte werden weder ausgegeben noch als Argument weitergereicht.
 usage() { awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"; exit "${1:-2}"; }
 
+umask 077   # webui.env.new entsteht nie für andere lesbar
 [ $# -ge 3 ] || usage
 id="$1"; label="$2"; addr="$3"; shift 3
 port=8642; dash_port=""; home="$HOME/hermes-webui"; profiles=()
