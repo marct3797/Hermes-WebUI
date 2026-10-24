@@ -56,7 +56,9 @@ class Settings(BaseSettings):
 
     session_idle_s: int = 12 * 3600
     session_max_s: int = 7 * 24 * 3600
-    # Riskante Aktionen verlangen eine Anmeldung, die höchstens so alt ist.
+    # Riskante Aktionen verlangen eine Anmeldung, die höchstens so alt ist. `HERMES_WEBUI_STEP_UP=off` schaltet das ab
+    # (sinnvoll, wenn die WebUI nur in einem privaten Netz erreichbar ist und die Anmeldung selbst genügt).
+    step_up: bool = True
     step_up_s: int = 600
 
     audit_file: Path = Path("audit.log")

@@ -139,3 +139,15 @@ def test_git_conflict_from_an_old_daemon_is_shown_as_no_repository(ops):
     assert c.get("/bff/h/plain/_git", params={"workspace": "repo"}).json()["repository"] is False
     daemon.state.fail = 503
     assert c.get("/bff/h/plain/_git", params={"workspace": "repo"}).status_code == 503
+
+
+def test_step_up_can_be_switched_off(ops):
+    c, _daemon = ops
+    sessions = c.app.state.sessions
+    sessions.get(c.cookies.get(SESSION_COOKIE)).auth_time = 0  # Anmeldung lange her
+    body = {"cli": "codex", "workspace": "repo"}
+    assert c.post("/bff/h/plain/_terminals", json=body).status_code == 401
+    assert c.get("/bff/me").json()["fresh"] is False
+    c.app.state.settings.step_up = False
+    assert c.post("/bff/h/plain/_terminals", json=body).status_code == 200
+    assert c.get("/bff/me").json()["fresh"] is True
