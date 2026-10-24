@@ -89,7 +89,9 @@ PY
 "$venv/bin/python" -m hostd.discover --config "$config" --hermes-home "$HOME/.hermes"
 if [[ "$start" == yes ]]; then
   systemctl --user daemon-reload
-  systemctl --user enable --now hermes-hostd.service
+  systemctl --user enable hermes-hostd.service
+  # restart statt enable --now: ein laufender Dienst startet sonst nicht mit dem neuen Code (offene Terminals enden dabei).
+  systemctl --user restart hermes-hostd.service
   systemctl --user is-active hermes-hostd.service
 else
   printf '%s\n' 'Not started. Review config, then systemctl --user daemon-reload && systemctl --user enable --now hermes-hostd.service'
