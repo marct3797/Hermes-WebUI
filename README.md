@@ -218,6 +218,12 @@ die zuerst nur für das Gerät gelten (Browser-Speicher) und dort als Vorgabe f�
 - Es ändert sich nur der Teil, den die Seite bearbeitet: unbekannte Schlüssel und andere Profile bleiben, der Stand davor liegt als `ui.json.bak` daneben, geschrieben wird atomar. Eine Datei, die kein gültiges JSON ist, wird nie überschrieben (409).
 - Neue SVG-Dateien gehen als Text an das BFF, werden wie beim Laden bereinigt und landen als `sigils/<profil>-<kurzhash>.svg`; bei einem Fehler wird nichts geändert. Jede Änderung steht im Audit-Log (`ui.profile`, `ui.shader`), ohne Namen oder Inhalte.
 
+### Hermes-Einstellungen eines Profils
+
+Die Seite „Hermes-Einstellungen“ (unter dem Agent) zeigt alle Felder, die das Dashboard der Installation beschreibt, nach Bereichen
+und mit Suche. Sie braucht ein angebundenes Dashboard und eine frische Anmeldung zum Speichern. Geheimnisse (Keys, Tokens,
+Passwörter) verwaltest du weiter unter „Keys & Nutzung“. Details und Grenzen: [docs/compatibility.md](docs/compatibility.md).
+
 ### Persönliche Einstellungen
 
 `/settings` enthält Chat-Verhalten (Enter-Senden, am Verlaufende bleiben, Freigaben bestätigen), kompakte Listen, 12-/24-Stunden-Zeit und reduzierte Bewegung. Denkaufwand und Standard-Arbeitsordner werden je konfiguriertem Host gewählt. Diese Vorgaben liegen nur im Browser (`hermes.preferences`), nicht in der Server- oder Agent-Konfiguration. Die bestehende Aufwandwahl je Agent bleibt vorrangig; die Arbeitsordnerauswahl nutzt nur vom Host-Dienst freigegebene Ordner.
@@ -267,6 +273,10 @@ bash deploy/deploy.sh          # legt ~/hermes-webui/{config,data,webui.env} an 
 - Reverse-Proxy: Beispiel in `deploy/Caddyfile.snippet` (SSE ohne Pufferung, bei nginx `proxy_buffering off`).
 - Rauchtest durch das BFF ohne Login: ein Wegwerf-Container mit `HERMES_WEBUI_ENV=dev`, `AUTH_MODE=none` auf `127.0.0.1:8421`, dann `python backend/devtools/smoke_bff.py --agent delta`.
 - Aktualisieren: Branch holen, `bash deploy/deploy.sh` erneut.
+
+## Kompatibilität
+
+Welche Hermes-Version, welche Bausteine, welche Funktion in welchem Stand: [docs/compatibility.md](docs/compatibility.md).
 
 ## Lizenz
 
