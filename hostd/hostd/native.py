@@ -85,7 +85,8 @@ def run(argv, *, cwd, env=None, timeout=8, limit=LIMIT):
         process.stdout.close()
 
 
-def git(root):
+def git(root, mode='all', count=1):
+    """mode: all (HEAD gegen Arbeitsbaum, Standard), diff (Arbeitsbaum gegen Index), staged (Index gegen HEAD), log (letzte `count` Commits)."""
     root = Path(root)
     if root.is_symlink() or not (root / '.git').is_dir() or (root / '.git').is_symlink():
         return {'repository': False, 'reason': 'Kein Git-Repository in diesem Arbeitsordner'}
@@ -107,7 +108,7 @@ def git(root):
     # Only individually validated tracked files enter diff; secrets never enter the output pipe.
     _, cut, head_code = run(prefix + ['rev-parse', '--verify', '--quiet', 'HEAD'], cwd=root)
     truncated |= cut
-    comparison = ['HEAD'] if head_code == 0 else ['--cached']
+    comparison = {'diff': [], 'staged': ['--cached']}.get(mode) if mode in ('diff', 'staged') else ['HEAD'] if head_code == 0 else ['--cached']
     names = call('diff', '--no-ext-diff', '--no-textconv', '--name-only', '-z', *comparison, '--').split('\x00')
     safe = []
     for name in names:
@@ -122,6 +123,10 @@ def git(root):
             truncated = True
             break
     diff = call('diff', '--no-ext-diff', '--no-textconv', '--no-color', *comparison, '--', *safe) if safe else ''
+    if mode == 'log':  # nur Kopfzeilen und Dateinamen: Patches alter Commits koennten Geheimnisse enthalten
+        n = max(1, min(int(count), 10))
+        log = call('log', f'-{n}', '--stat=100', '--no-color', '--no-ext-diff', '--format=%h %ad %s', '--date=short') if head_code == 0 else ''
+        return {'mode': mode, 'branch': redact(branch), 'log': redact(log), 'truncated': truncated}
     remotes = []
     for line in call('remote', '-v').splitlines():
         fields = line.split()
@@ -151,7 +156,7 @@ def git(root):
     for line in call('for-each-ref', '--format=%(HEAD)%(refname:short)', 'refs/heads').splitlines():
         if line:
             branches.append({'name': redact(line[1:]), 'current': line[0] == '*'})
-    return {'branch': redact(branch), 'status': status, 'diff': redact(diff), 'files': changed, 'log': log,
+    return {'mode': mode, 'branch': redact(branch), 'status': status, 'diff': redact(diff), 'files': changed, 'log': log,
             'branches': branches, 'remotes': remotes, 'truncated': truncated}
 
 

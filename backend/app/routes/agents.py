@@ -10,7 +10,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from ..adapters import RunInput, UpstreamError
 from ..auth import User, current_user, fresh_user
@@ -175,12 +175,27 @@ async def fork_session(request: Request, target: Tgt, session_id: ObjId, user: U
 
 
 # --- Runs -------------------------------------------------------------------------------
+Effort = Literal["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"]
+
+
+class Reasoning(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    enabled: bool | None = None
+    effort: Effort | None = None
+
+
+class ModelOptions(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    reasoning: Reasoning | None = None
+
+
 class RunRequest(BaseModel):
     text: str = Field(min_length=1, max_length=100_000)
     session_id: str | None = Field(default=None, pattern=OBJ_ID_RE.pattern)
     model: str | None = Field(default=None, max_length=200)
     images: list[str] = Field(default_factory=list, max_length=4)
     idempotency_key: str | None = Field(default=None, pattern=OBJ_ID_RE.pattern)
+    model_options: ModelOptions | None = None
 
 
 @router.post("/runs", status_code=202)
@@ -191,10 +206,12 @@ async def start_run(request: Request, target: Tgt, req: RunRequest, user: User =
     request.app.state.limiter.check(f"{user.id}:{target.label}")
     info = await upstream(target.adapter.start_run(target.agent.id, RunInput(
         text=req.text, session_id=req.session_id, model=req.model, images=tuple(req.images), idempotency_key=req.idempotency_key,
+        model_options=req.model_options.model_dump(exclude_none=True) or None if req.model_options else None,
     )))
     # Nie den Inhalt loggen, nur Umfang und Ziel.
     audit(request, user, "run.start", target, session=info.session_id or req.session_id, run=info.run_id,
-          chars=len(req.text), images=len(req.images), model=req.model)
+          chars=len(req.text), images=len(req.images), model=req.model,
+          effort=req.model_options.reasoning.effort if req.model_options and req.model_options.reasoning else None)
     return {"run_id": info.run_id, "session_id": info.session_id}
 
 

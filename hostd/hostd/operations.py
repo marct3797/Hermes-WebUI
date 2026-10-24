@@ -1,5 +1,6 @@
 """Operations router; mount inside the daemon's bearer/origin boundary."""
 from pathlib import Path
+from typing import Literal
 from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
@@ -102,8 +103,8 @@ def upload(request: Request, body: Upload):
 
 
 @router.get('/git')
-def git(request: Request, workspace: str):
-    return native.git(workspace_root(request, workspace))
+def git(request: Request, workspace: str, mode: Literal['all', 'diff', 'staged', 'log'] = 'all', n: int = Query(1, ge=1, le=10)):
+    return native.git(workspace_root(request, workspace), mode, n)
 
 
 @router.get('/search')

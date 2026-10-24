@@ -1,4 +1,5 @@
 import { useCallback, useEffect } from "react";
+import type { Reasoning } from "./composerLogic";
 import { initialState } from "./chatReducer";
 import { convKey } from "./runStore";
 import { useRunSnapshot, useRunStore } from "./runs";
@@ -16,18 +17,20 @@ export function useChat({ agent, sessionId, model, onSession }: Opts) {
   const snap = useRunSnapshot();
   const key = agent ? convKey(agent, sessionId) : undefined;
   const state = (key ? snap.convs.get(key)?.state : undefined) ?? initialState;
+  /** Aufwand der letzten Anfrage dieser Unterhaltung (für die Beschriftung an der Antwort). */
+  const reasoning = key ? snap.convs.get(key)?.reasoning : undefined;
 
   // Session oder Agent gewechselt: Verlauf laden, falls diese Unterhaltung noch unbekannt ist.
   useEffect(() => {
     if (agent) store.open(agent, sessionId);
   }, [store, agent, sessionId]);
 
-  const send = useCallback(async (text: string, images: string[]) => {
-    if (agent) await store.send(agent, sessionId, text, images, { model, onSession });
+  const send = useCallback(async (text: string, images: string[], reasoning?: Reasoning) => {
+    if (agent) await store.send(agent, sessionId, text, images, { model, reasoning, onSession });
   }, [store, agent, sessionId, model, onSession]);
 
   const steer = useCallback(async (text: string) => { if (key) await store.steer(key, text); }, [store, key]);
-  const enqueue = useCallback((text: string, images: string[]) => { if (key) store.enqueue(key, text, images); }, [store, key]);
+  const enqueue = useCallback((text: string, images: string[], reasoning?: Reasoning) => { if (key) store.enqueue(key, text, images, reasoning); }, [store, key]);
   const dropQueued = useCallback((id: string) => { if (key) store.dropQueued(key, id); }, [store, key]);
   const sendQueued = useCallback((id: string) => { if (key) store.sendQueued(key, id); }, [store, key]);
   const stop = useCallback(async () => { if (key) await store.stop(key); }, [store, key]);
@@ -36,5 +39,5 @@ export function useChat({ agent, sessionId, model, onSession }: Opts) {
   const reconnect = useCallback(() => { if (key) store.reconnect(key); }, [store, key]);
   const continueInFork = useCallback(() => { if (key) void store.continueInFork(key, onSession); }, [store, key, onSession]);
 
-  return { state, send, steer, enqueue, dropQueued, sendQueued, stop, decide, answer, reconnect, continueInFork };
+  return { state, reasoning, send, steer, enqueue, dropQueued, sendQueued, stop, decide, answer, reconnect, continueInFork };
 }

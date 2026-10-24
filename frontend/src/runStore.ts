@@ -1,5 +1,6 @@
 import { ApiError, api as realApi } from "./api";
 import { chatReducer, historyItems, initialState, type Action } from "./chatReducer";
+import { modelOptions, type Reasoning } from "./composerLogic";
 import { agentKey } from "./router";
 import { TERMINAL_EVENTS, type AgentRef, type ChatState, type Decision, type StreamEvent } from "./types";
 
@@ -20,6 +21,8 @@ export type Conv = {
   state: ChatState;
   /** Modell der letzten Auswahl; vorgemerkte Nachrichten gehen damit los. */
   model?: string;
+  /** Letzter Denk-Aufwand dieser Unterhaltung; vorgemerkte Nachrichten gehen damit los. */
+  reasoning?: Reasoning;
   /** Verlauf konnte nicht geladen werden: beim nächsten Öffnen erneut versuchen. */
   stale?: boolean;
   touched: number;
@@ -31,7 +34,7 @@ export type LogEntry = { id: string; at: number; agent: AgentRef; text: string }
 export type Snapshot = { convs: ReadonlyMap<string, Conv>; log: readonly LogEntry[]; dismissed: ReadonlySet<string> };
 
 type Deps = { api: typeof realApi; eventSource: (url: string) => EventSource; storage?: Storage };
-type SendOpts = { model?: string; onSession?: (sessionId: string) => void };
+type SendOpts = { model?: string; reasoning?: Reasoning; onSession?: (sessionId: string) => void };
 type Source = { es: EventSource; holder: { key: string }; finished: boolean };
 
 const MAX_CONVS = 40;
@@ -228,11 +231,13 @@ export function createRunStore(deps: Deps = { api: realApi, eventSource: (u) => 
 
   async function send(agent: AgentRef, sessionId: string | undefined, text: string, images: string[], opts: SendOpts = {}) {
     let key = ensure(agent, sessionId).key;
-    patch(key, { model: opts.model });
+    patch(key, { model: opts.model, reasoning: opts.reasoning });
     dispatch(key, { type: "user-sent", text, images });
     try {
       // Der Schlüssel macht ein doppeltes Absenden (zweimal getippt, Wiederholung bei schlechtem Netz) zu einem einzigen Run.
-      const run = await api.startRun(agent, { text, session_id: sessionId, model: opts.model, images: images.length ? images : undefined, idempotency_key: idempotencyKey() });
+      // Ohne Auswahl entfällt model_options ganz: der Agent nutzt seinen eigenen Standard.
+      const body = { text, session_id: sessionId, model: opts.model, images: images.length ? images : undefined, idempotency_key: idempotencyKey(), model_options: modelOptions(opts.reasoning) };
+      const run = await api.startRun(agent, body);
       if (run.session_id && run.session_id !== sessionId) {
         key = rekey(key, run.session_id);
         opts.onSession?.(run.session_id);
@@ -253,7 +258,7 @@ export function createRunStore(deps: Deps = { api: realApi, eventSource: (u) => 
     const item = conv?.state.queued.find((q) => q.id === id);
     if (!conv || !item) return;
     dispatch(key, { type: "queue-remove", id });
-    void send(conv.agent, conv.sessionId, item.text, item.images, { model: conv.model });
+    void send(conv.agent, conv.sessionId, item.text, item.images, { model: conv.model, reasoning: conv.reasoning });
   }
 
   queueMicrotask(() => {
@@ -306,7 +311,7 @@ export function createRunStore(deps: Deps = { api: realApi, eventSource: (u) => 
 
     send,
     sendQueued,
-    enqueue: (key: string, text: string, images: string[]) => dispatch(key, { type: "queue-add", text, images }),
+    enqueue: (key: string, text: string, images: string[], reasoning?: Reasoning) => { patch(key, { reasoning }); dispatch(key, { type: "queue-add", text, images }); },
     dropQueued: (key: string, id: string) => dispatch(key, { type: "queue-remove", id }),
 
     /** Nachricht in den laufenden Run einschieben (Steer). */
@@ -360,7 +365,7 @@ export function createRunStore(deps: Deps = { api: realApi, eventSource: (u) => 
         const forkKey = convKey(conv.agent, session_id);
         putConv({ key: forkKey, agent: conv.agent, sessionId: session_id, state: { ...initialState, items: historyItems(await api.messages(conv.agent, session_id)) }, model: conv.model, touched: Date.now() });
         onSession(session_id);
-        await send(conv.agent, session_id, last.text, last.images, { model: conv.model, onSession });
+        await send(conv.agent, session_id, last.text, last.images, { model: conv.model, reasoning: conv.reasoning, onSession });
       } catch (e) {
         dispatch(key, { type: "notice", error: `Fork nicht möglich: ${(e as Error).message}`, code: "session_locked" });
       }

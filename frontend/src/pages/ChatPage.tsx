@@ -4,9 +4,10 @@ import { Icon } from "../components/Icon";
 import { Link } from "../components/Link";
 import { Sigil } from "../components/Sigil";
 import { AgentCard, UserMessage, groupTurns, runLabelOf } from "../components/chat/Convo";
-import { Dock } from "../components/chat/Dock";
+import { Composer } from "../components/chat/Composer";
 import { Inspector } from "../components/chat/Inspector";
 import { STATUS_LABEL } from "../components/Status";
+import { reasoningLabel, type Reasoning } from "../composerLogic";
 import { fmtClock, fmtCount } from "../format";
 import { isEditable } from "../keys";
 import { agentPath, navigate } from "../router";
@@ -112,10 +113,10 @@ export function ChatPage({ agent, label, runtimeLabel, sessionId }: Props) {
     if (selTool === id) setOpenTool(openTool === id ? undefined : id);
     else { setSelTool(id); setOpenTool(id); }
   };
-  const send = (text: string, images: string[], mode?: SendMode) => {
-    if (!busy) void chat.send(text, images);
+  const send = (text: string, images: string[], mode?: SendMode, reasoning?: Reasoning) => {
+    if (!busy) void chat.send(text, images, reasoning);
     else if (mode === "steer") void chat.steer(text);
-    else chat.enqueue(text, images);
+    else chat.enqueue(text, images, reasoning);
   };
 
   const runTag = !status ? null
@@ -172,7 +173,7 @@ export function ChatPage({ agent, label, runtimeLabel, sessionId }: Props) {
             )}
             {turns.map((t, i) => t.kind === "user"
               ? <UserMessage key={t.item.id} m={t.item} />
-              : <AgentCard key={t.items[0].id} items={t.items} name={label} sigil={sigilFor(sigils, agent)} model={model ?? defaultModel}
+              : <AgentCard key={t.items[0].id} items={t.items} name={label} sigil={sigilFor(sigils, agent)} model={model ?? defaultModel} effort={i === lastAgentTurn && chat.reasoning ? reasoningLabel(chat.reasoning) : undefined}
                   runLabel={i === lastAgentTurn ? runLabelOf(state.runId) : undefined} live={i === lastAgentTurn && busy} busy={busy}
                   selTool={selTool} openTool={openTool} onPickTool={pickTool}
                   onDecide={(id, d) => void chat.decide(id, d)} onAnswer={(id, a, cid) => void chat.answer(id, a, cid)} />)}
@@ -189,8 +190,8 @@ export function ChatPage({ agent, label, runtimeLabel, sessionId }: Props) {
         </div>
 
         <div className="dockwrap">
-          <Dock busy={busy} disabled={!canSend} name={label} models={models} model={model ?? ""} defaultModel={defaultModel} onModel={setModel}
-            canSteer={canSteer} queued={state.queued} onSend={send} onStop={() => void chat.stop()}
+          <Composer agent={agent} busy={busy} disabled={!canSend} name={label} models={models} model={model ?? ""} defaultModel={defaultModel} onModel={setModel}
+            canSteer={canSteer} queued={state.queued} onSend={send} onStop={() => void chat.stop()} onNew={() => navigate(agentPath(agent, "chat"))}
             onSendQueued={chat.sendQueued} onDropQueued={chat.dropQueued} />
           <div className="dockw"><div className="tkrail" aria-label="Status">
             {tokens != null && <span className="cnt"><Icon name="layers" size={12} /><b>{fmtCount(tokens)}</b> tok</span>}
