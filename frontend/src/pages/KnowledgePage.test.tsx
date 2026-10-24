@@ -139,7 +139,7 @@ describe("Wissen", () => {
     fireEvent.click(await screen.findByText("Text einspeisen"));
     fireEvent.change(screen.getByLabelText("Titel"), { target: { value: "Neue Notiz" } });
     fireEvent.change(screen.getByLabelText("Text"), { target: { value: "Hallo" } });
-    expect(screen.getByText("5 / 20.000 Zeichen")).toBeInTheDocument();
+    expect(screen.getByText("5 / 1.048.576 Zeichen")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Einspeisen" }));
     expect(await screen.findByText("Eingespeist als manual:neue-notiz.")).toBeInTheDocument();
     expect(h.calls.find((c) => c.url.endsWith("/ingest"))?.body).toEqual({ title: "Neue Notiz", text: "Hallo" });
@@ -150,11 +150,11 @@ describe("Wissen", () => {
     expect(await screen.findByText(/schon ein Dokument mit der Kennung manual:neue-notiz/)).toBeInTheDocument();
   });
 
-  it("blocks ingest above 20000 characters", async () => {
+  it("blocks ingest above 1 MiB of characters", async () => {
     await open();
     fireEvent.click(await screen.findByText("Text einspeisen"));
     fireEvent.change(screen.getByLabelText("Titel"), { target: { value: "T" } });
-    fireEvent.change(screen.getByLabelText("Text"), { target: { value: "x".repeat(20001) } });
+    fireEvent.change(screen.getByLabelText("Text"), { target: { value: "x".repeat(1_048_577) } });
     expect(screen.getByRole("button", { name: "Einspeisen" })).toBeDisabled();
   });
 
@@ -199,11 +199,14 @@ describe("Wissen in der Navigation", () => {
     history.pushState(null, "", "/");
     render(<App />);
     const side = await screen.findByRole("complementary", { name: "Navigation" });
+    fireEvent.click(await within(side).findByRole("button", { name: /^Wissen/ }));
     await within(side).findByRole("link", { name: /Gedächtnis/ });
-    expect(within(side).queryByRole("link", { name: /Wissen/ })).toBeNull();
+    expect(within(side).queryByRole("link", { name: "Wissen" })).toBeNull();
     cleanup();
     installBackend(["gamma"], ["runs"], {}, undefined, [RAG]);
     render(<App />);
-    expect(await within(await screen.findByRole("complementary", { name: "Navigation" })).findByRole("link", { name: /Wissen/ })).toHaveAttribute("href", "/knowledge");
+    const side2 = await screen.findByRole("complementary", { name: "Navigation" });
+    fireEvent.click(await within(side2).findByRole("button", { name: /^Wissen/ }));
+    expect(await within(side2).findByRole("link", { name: "Wissen" })).toHaveAttribute("href", "/knowledge");
   });
 });

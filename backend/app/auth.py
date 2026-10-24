@@ -117,7 +117,7 @@ async def current_user(request: Request) -> User:
 async def fresh_user(request: Request, user: User = Depends(current_user)) -> User:
     """Step-up: riskante Aktionen verlangen eine Anmeldung, die höchstens `step_up_s` alt ist."""
     settings: Settings = request.app.state.settings
-    if settings.auth_mode == "none":
+    if settings.auth_mode == "none" or not settings.step_up:
         return user
     if not is_fresh(request):
         raise HTTPException(401, {"code": "step_up_required", "message": "Bitte erneut anmelden"})
@@ -126,7 +126,7 @@ async def fresh_user(request: Request, user: User = Depends(current_user)) -> Us
 
 def is_fresh(request: Request) -> bool:
     settings: Settings = request.app.state.settings
-    if settings.auth_mode == "none":
+    if settings.auth_mode == "none" or not settings.step_up:
         return True
     sess = session_of(request)
     return sess is not None and sess.auth_time is not None and 0 <= request.app.state.sessions.now() - sess.auth_time <= settings.step_up_s

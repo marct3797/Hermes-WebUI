@@ -348,3 +348,72 @@ def test_cli_auth_routes(operations_client):
     c.cookies.clear()
     assert c.get(BASE + "/_cli-auth").status_code == 401
     assert c.post(BASE + "/_cli-auth/refresh").status_code in (401, 403)
+
+
+def test_file_edit_mkdir_move_roundtrip_and_audit_without_content(operations_client):
+    c, daemon, app, session = operations_client
+    listing = c.get(BASE + "/_files", params={"workspace": "repo"}).json()["entries"]
+    assert {(e["name"], e["kind"]) for e in listing} >= {("src", "directory"), ("README.md", "file")}
+    read = c.get(BASE + "/_files", params={"workspace": "repo", "path": "README.md", "full": "true"}).json()
+    assert read["editable"] is True and len(read["sha256"]) == 64
+    assert any(call["query"].find("full=true") >= 0 for call in daemon.state.calls)
+    saved = c.put(BASE + "/_files/write", json={"workspace": "repo", "path": "README.md", "content": "GEHEIMER-INHALT",
+                  "expected_sha256": read["sha256"]})
+    assert saved.status_code == 200 and daemon.state.files["README.md"] == b"GEHEIMER-INHALT"
+    stale = c.put(BASE + "/_files/write", json={"workspace": "repo", "path": "README.md", "content": "x", "expected_sha256": read["sha256"]})
+    assert stale.status_code == 409 and "geändert" in stale.json()["detail"]
+    assert daemon.state.files["README.md"] == b"GEHEIMER-INHALT"
+    assert c.put(BASE + "/_files/write", json={"workspace": "repo", "path": "neu.txt", "content": "", "create": True}).status_code == 200
+    assert c.put(BASE + "/_files/write", json={"workspace": "repo", "path": "neu.txt", "content": "", "create": True}).status_code == 409
+    assert c.post(BASE + "/_files/mkdir", json={"workspace": "repo", "path": "docs"}).status_code == 200
+    assert c.post(BASE + "/_files/mkdir", json={"workspace": "repo", "path": "docs"}).status_code == 409
+    moved = c.post(BASE + "/_files/move", json={"workspace": "repo", "from": "neu.txt", "to": "docs-neu.txt"})
+    assert moved.status_code == 200 and "docs-neu.txt" in daemon.state.files and "neu.txt" not in daemon.state.files
+    assert c.post(BASE + "/_files/move", json={"workspace": "repo", "from": "nix.txt", "to": "y.txt"}).status_code == 404
+    audit = app.state.settings.audit_file.read_text()
+    for action in ("workspace.write", "workspace.mkdir", "workspace.move"):
+        assert action in audit
+    assert "GEHEIMER-INHALT" not in audit and "README.md" not in audit and "path_len" in audit
+
+
+@pytest.mark.parametrize("method,suffix,body", [
+    ("post", "/_files/mkdir", {"workspace": "repo", "path": "../x"}),
+    ("post", "/_files/mkdir", {"workspace": "repo", "path": ".git"}),
+    ("put", "/_files/write", {"workspace": "repo", "path": "/etc/x", "content": "x"}),
+    ("put", "/_files/write", {"workspace": "repo", "path": ".env", "content": "x", "create": True}),
+    ("put", "/_files/write", {"workspace": "repo", "path": "a", "content": "x", "expected_sha256": "nope"}),
+    ("put", "/_files/write", {"workspace": "repo", "path": "a", "content": "x" * 1048577}),
+    ("put", "/_files/write", {"workspace": "repo", "path": "a", "content": "x", "extra": 1}),
+    ("post", "/_files/move", {"workspace": "repo", "from": "a", "to": "../b"}),
+    ("post", "/_files/move", {"workspace": "repo", "from": "a/../c", "to": "b"}),
+    ("post", "/_files/move", {"workspace": "repo", "source": "a", "to": "b"}),
+])
+def test_file_writes_validate_before_upstream(operations_client, method, suffix, body):
+    c, daemon, *_ = operations_client
+    assert getattr(c, method)(BASE + suffix, json=body).status_code == 422
+    assert not daemon.state.calls
+
+
+@pytest.mark.parametrize("method,suffix,body", [
+    ("post", "/_files/mkdir", {"workspace": "repo", "path": "d"}),
+    ("put", "/_files/write", {"workspace": "repo", "path": "a.txt", "content": "x", "create": True}),
+    ("post", "/_files/move", {"workspace": "repo", "from": "a", "to": "b"}),
+])
+def test_file_writes_need_fresh_auth_and_login(operations_client, method, suffix, body):
+    c, daemon, app, session = operations_client
+    session.auth_time -= app.state.settings.step_up_s + 1
+    assert getattr(c, method)(BASE + suffix, json=body).status_code == 401
+    c.cookies.clear()
+    assert getattr(c, method)(BASE + suffix, json=body).status_code == 401
+    assert not daemon.state.calls
+
+
+def test_git_details_and_hostd_error_texts(operations_client):
+    c, daemon, *_ = operations_client
+    git = c.get(BASE + "/_git", params={"workspace": "repo"}).json()
+    assert git["files"] == [{"path": "README.md", "state": "M"}] and git["log"][0]["subject"] == "Erster Stand"
+    assert git["branches"] == [{"name": "main", "current": True}]
+    assert c.get(BASE + "/_workspaces").json()["workspaces"][0]["is_git"] is True
+    daemon.state.fail = 403  # Pfadverbot des Host-Dienstes ist kein Token-Problem
+    denied = c.get(BASE + "/_files", params={"workspace": "repo", "path": "x"})
+    assert denied.status_code == 403 and "freigegeben" in denied.json()["detail"]

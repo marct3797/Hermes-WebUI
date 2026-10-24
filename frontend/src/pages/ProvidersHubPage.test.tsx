@@ -23,9 +23,9 @@ beforeEach(() => resetRedirect());
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("Anbieter-Hauptseite", () => {
-  it("is a main page in the navigation, next to Gedächtnis", async () => {
+  it("is reachable in the Betrieb group of the navigation", async () => {
     await open();
-    const nav = within(screen.getByRole("navigation", { name: "Übersicht" }));
+    const nav = within(screen.getByRole("navigation", { name: "Bereiche" }));
     expect(nav.getByRole("link", { name: "Anbieter" })).toHaveAttribute("href", "/providers");
     expect(nav.getByRole("link", { name: "Anbieter" })).toHaveAttribute("aria-current", "page");
   });

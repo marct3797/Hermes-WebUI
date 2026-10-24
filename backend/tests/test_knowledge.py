@@ -234,7 +234,7 @@ def test_delete_does_not_assume_the_answer_shape(make):
 # --- Validierung, Auth, Fehler -----------------------------------------------------------------------
 @pytest.mark.parametrize("path,body", [
     ("search", {"query": ""}), ("search", {"query": "x" * 501}), ("search", {"query": "x", "top_k": 0}), ("search", {"query": "x", "top_k": 21}),
-    ("ingest", {"title": "", "text": "x"}), ("ingest", {"title": "x" * 121, "text": "x"}), ("ingest", {"title": "t", "text": ""}), ("ingest", {"title": "t", "text": "x" * 20001}),
+    ("ingest", {"title": "", "text": "x"}), ("ingest", {"title": "x" * 121, "text": "x"}), ("ingest", {"title": "t", "text": ""}), ("ingest", {"title": "t", "text": "x" * 1_048_577}),
     ("ingest", {"title": "t\n", "text": "x", "source": "a\x00b"}), ("delete", {"sync_id": ""}), ("delete", {"sync_id": "x" * 301}), ("delete", {"sync_id": "a\x07b"}),
 ])
 def test_validation(make, path, body):
@@ -244,7 +244,7 @@ def test_validation(make, path, body):
 def test_limits_accepted_at_the_edge(make):
     c = make()
     assert c.post(f"{K}/rag/search", json={"query": "x" * 500, "top_k": 20}).status_code == 200
-    assert c.post(f"{K}/rag/ingest", json={"title": "t" * 120, "text": "x" * 20000}).status_code == 200
+    assert c.post(f"{K}/rag/ingest", json={"title": "t" * 120, "text": "x" * 1_048_576}).status_code == 200
 
 
 def test_unknown_provider_and_bad_id(make):

@@ -56,7 +56,7 @@ describe("App-Shell", () => {
     const laptop = within(side).getByRole("region", { name: "Laptop" });
     expect(within(laptop).getByText("remote")).toBeInTheDocument();
     expect(within(laptop).getByText(/Host-Dienst nicht verbunden/)).toBeInTheDocument();
-    for (const name of ["Cockpit", "Inbox", "Hosts"]) expect(within(side).getByRole("link", { name })).toBeInTheDocument();
+    for (const name of ["Cockpit", "Inbox", "Räume"]) expect(within(side).getByRole("link", { name })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Alle Agents" })).toBeInTheDocument();
   });
 

@@ -17,6 +17,11 @@ import "./styles/soul.css";
 import "./styles/providers.css";
 import "./styles/operations.css";
 import "./styles/workspace.css";
+import "./styles/kanban.css";
+import "./styles/ext.css";
+import "./styles/composer.css";
+import "./styles/files.css";
+import "./styles/ops2.css";
 import "./styles/mobile.css";
 
 createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);

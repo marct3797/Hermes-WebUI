@@ -176,6 +176,7 @@ describe("Gedächtnis", () => {
     ({ calls } = installBackend());
     history.pushState(null, "", "/");
     render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: /^Wissen/ }));
     fireEvent.click(await screen.findByRole("link", { name: /Gedächtnis/ }));
     await screen.findByRole("heading", { name: "Gedächtnis", level: 1 });
     expect(location.pathname).toBe("/memory");

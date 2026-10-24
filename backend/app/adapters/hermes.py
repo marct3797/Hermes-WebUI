@@ -161,6 +161,8 @@ class HermesAdapter(RuntimeAdapter):
             body["session_id"] = req.session_id
         if req.model:
             body["model"] = req.model
+        if req.model_options:  # POST /v1/runs wertet es über _request_agent_overrides aus
+            body["model_options"] = req.model_options
         # Mit gleichem Schlüssel liefert Hermes denselben Run zurück (`replayed`), statt ihn zweimal zu starten.
         headers = {"Idempotency-Key": req.idempotency_key} if req.idempotency_key else None
         data = await self._request("POST", agent, "/v1/runs", json=body, extra_headers=headers)

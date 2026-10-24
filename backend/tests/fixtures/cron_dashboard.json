@@ -1,0 +1,395 @@
+{
+ "jobs": [
+  {
+   "id": "d935fe014c20",
+   "name": "db-check",
+   "prompt": "",
+   "skills": [],
+   "skill": null,
+   "model": null,
+   "provider": null,
+   "base_url": null,
+   "script": "db-health.sh",
+   "no_agent": true,
+   "monitor_script": null,
+   "monitor_url": null,
+   "monitor_state": null,
+   "context_from": null,
+   "schedule": {
+    "kind": "cron",
+    "expr": "30 4 * * *",
+    "display": "30 4 * * *"
+   },
+   "schedule_display": "30 4 * * *",
+   "repeat": {
+    "times": null,
+    "completed": 19
+   },
+   "enabled": true,
+   "state": "scheduled",
+   "paused_at": null,
+   "paused_reason": null,
+   "created_at": "2026-10-08T00:12:28.371652+00:00",
+   "next_run_at": "2026-10-25T04:30:00+00:00",
+   "last_run_at": "2026-10-24T04:30:10.182930+00:00",
+   "last_status": "ok",
+   "last_error": null,
+   "last_delivery_error": null,
+   "last_delivery_unverified": null,
+   "failure_streak": 0,
+   "deliver": "local",
+   "origin": null,
+   "enabled_toolsets": null,
+   "workdir": null,
+   "fire_claim": null,
+   "last_dispatch": {
+    "scheduled_at": "2026-10-24T04:30:00+00:00",
+    "dispatched_at": "2026-10-24T04:30:01.543307+00:00",
+    "lateness_seconds": 1.5,
+    "kind": "on_time"
+   },
+   "latest_execution": {
+    "id": "5974b373788043e0b194aa0c0978e6ee",
+    "job_id": "d935fe014c20",
+    "source": "builtin",
+    "process_id": "77fac12324f940788142298695c48781",
+    "pid": 231,
+    "process_started_at": 11836979,
+    "status": "completed",
+    "handoff_pending": 0,
+    "handoff_started_at": null,
+    "claimed_at": "2026-10-24T04:30:01.707739+00:00",
+    "started_at": "2026-10-24T04:30:03.278919+00:00",
+    "finished_at": "2026-10-24T04:30:10.197982+00:00",
+    "error": null,
+    "delivery_outcome": "suppressed",
+    "scheduled_instant": "2026-10-24T04:30:00+00:00",
+    "progress_at": null
+   },
+   "profile": "alpha",
+   "profile_name": "alpha",
+   "is_default_profile": false,
+   "scheduler_heartbeat_age_s": 29.7413010597229
+  },
+  {
+   "id": "dcba8b738849",
+   "name": "tagescheck",
+   "prompt": "Pruefe den Dienst und fasse das Ergebnis kurz zusammen.",
+   "skills": [],
+   "skill": null,
+   "model": null,
+   "provider": null,
+   "base_url": null,
+   "script": null,
+   "no_agent": false,
+   "monitor_script": null,
+   "monitor_url": null,
+   "monitor_state": null,
+   "context_from": null,
+   "schedule": {
+    "kind": "cron",
+    "expr": "30 3 * * *",
+    "display": "30 3 * * *"
+   },
+   "schedule_display": "30 3 * * *",
+   "repeat": {
+    "times": null,
+    "completed": 18
+   },
+   "enabled": true,
+   "state": "scheduled",
+   "paused_at": null,
+   "paused_reason": null,
+   "created_at": "2026-10-08T01:13:01.007501+00:00",
+   "next_run_at": "2026-10-25T03:30:00+00:00",
+   "last_run_at": "2026-10-24T03:31:04.958684+00:00",
+   "last_status": "ok",
+   "last_error": null,
+   "last_delivery_error": null,
+   "last_delivery_unverified": null,
+   "failure_streak": 0,
+   "deliver": "local",
+   "origin": null,
+   "enabled_toolsets": null,
+   "workdir": null,
+   "fire_claim": null,
+   "last_dispatch": {
+    "scheduled_at": "2026-10-24T03:30:00+00:00",
+    "dispatched_at": "2026-10-24T03:30:01.363204+00:00",
+    "lateness_seconds": 1.4,
+    "kind": "on_time"
+   },
+   "last_failure": {
+    "at": "2026-10-19T03:30:29.873785+00:00",
+    "detail": "RuntimeError: HTTP 401: This API key has expired. Create a new API key in OpenCode Console and replace it in your client or secret store. Signing in again will not renew this key."
+   },
+   "latest_execution": {
+    "id": "7e5bec08afc440d9910f195d7f27167c",
+    "job_id": "dcba8b738849",
+    "source": "builtin",
+    "process_id": "77fac12324f940788142298695c48781",
+    "pid": 231,
+    "process_started_at": 11836979,
+    "status": "completed",
+    "handoff_pending": 0,
+    "handoff_started_at": null,
+    "claimed_at": "2026-10-24T03:30:01.512553+00:00",
+    "started_at": "2026-10-24T03:30:03.958270+00:00",
+    "finished_at": "2026-10-24T03:31:04.987414+00:00",
+    "error": null,
+    "delivery_outcome": "delivered",
+    "scheduled_instant": "2026-10-24T03:30:00+00:00",
+    "progress_at": null
+   },
+   "profile": "alpha",
+   "profile_name": "alpha",
+   "is_default_profile": false,
+   "scheduler_heartbeat_age_s": 29.7413010597229
+  },
+  {
+   "id": "0123456789ab",
+   "name": "wochenbericht",
+   "prompt": "Pruefe den Dienst und fasse das Ergebnis kurz zusammen.",
+   "skills": [
+    "plan"
+   ],
+   "skill": null,
+   "model": null,
+   "provider": null,
+   "base_url": null,
+   "script": null,
+   "no_agent": false,
+   "monitor_script": null,
+   "monitor_url": null,
+   "monitor_state": null,
+   "context_from": null,
+   "schedule": {
+    "kind": "interval",
+    "minutes": 30,
+    "display": "every 30m"
+   },
+   "schedule_display": "30 3 * * *",
+   "repeat": {
+    "times": null,
+    "completed": 18
+   },
+   "enabled": false,
+   "state": "paused",
+   "paused_at": null,
+   "paused_reason": "Neu angelegt, bitte bewusst aktivieren",
+   "created_at": "2026-10-08T01:13:01.007501+00:00",
+   "next_run_at": null,
+   "last_run_at": null,
+   "last_status": null,
+   "last_error": null,
+   "last_delivery_error": null,
+   "last_delivery_unverified": null,
+   "failure_streak": 0,
+   "deliver": "local",
+   "origin": null,
+   "enabled_toolsets": null,
+   "workdir": null,
+   "fire_claim": null,
+   "last_dispatch": {
+    "scheduled_at": "2026-10-24T03:30:00+00:00",
+    "dispatched_at": "2026-10-24T03:30:01.363204+00:00",
+    "lateness_seconds": 1.4,
+    "kind": "on_time"
+   },
+   "last_failure": {
+    "at": "2026-10-19T03:30:29.873785+00:00",
+    "detail": "RuntimeError: HTTP 401: This API key has expired. Create a new API key in OpenCode Console and replace it in your client or secret store. Signing in again will not renew this key."
+   },
+   "latest_execution": null,
+   "profile": "alpha",
+   "profile_name": "alpha",
+   "is_default_profile": false,
+   "scheduler_heartbeat_age_s": 29.7413010597229
+  }
+ ],
+ "runs": {
+  "runs": [
+   {
+    "id": "cron_output:d935fe014c20:2026-10-24_04-30-10",
+    "title": "COMPLETED · # Cron Job: db-health **Job ID:** d935fe014c20 **Run Time:** 2026-10-24 04:30:10 **Mode:** no_agent (script) **Status:** silent (empty output)",
+    "preview": "# Cron Job: db-health **Job ID:** d935fe014c20 **Run Time:** 2026-10-24 04:30:10 **Mode:** no_agent (script) **Status:** silent (empty output)",
+    "source": "cron_output",
+    "started_at": 1792816210.0,
+    "last_active": 1792816210.0,
+    "ended_at": 1792816210.0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "message_count": 0,
+    "tool_call_count": 0,
+    "model": null,
+    "cwd": null,
+    "archived": false,
+    "is_active": false
+   },
+   {
+    "id": "cron_output:d935fe014c20:2026-10-23_04-30-08",
+    "title": "COMPLETED · # Cron Job: db-health **Job ID:** d935fe014c20 **Run Time:** 2026-10-23 04:30:08 **Mode:** no_agent (script) **Status:** silent (empty output)",
+    "preview": "# Cron Job: db-health **Job ID:** d935fe014c20 **Run Time:** 2026-10-23 04:30:08 **Mode:** no_agent (script) **Status:** silent (empty output)",
+    "source": "cron_output",
+    "started_at": 1792729808.0,
+    "last_active": 1792729808.0,
+    "ended_at": 1792729808.0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "message_count": 0,
+    "tool_call_count": 0,
+    "model": null,
+    "cwd": null,
+    "archived": false,
+    "is_active": false
+   },
+   {
+    "id": "cron_output:d935fe014c20:2026-10-22_04-30-44",
+    "title": "FAILED · # Cron Job: db-check Fehler beim Lauf",
+    "preview": "# Cron Job: db-check Fehler beim Lauf",
+    "source": "cron_output",
+    "started_at": 1792643444.0,
+    "last_active": 1792643444.0,
+    "ended_at": 1792643444.0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "message_count": 0,
+    "tool_call_count": 0,
+    "model": null,
+    "cwd": null,
+    "archived": false,
+    "is_active": false
+   }
+  ],
+  "limit": 3
+ },
+ "targets": {
+  "targets": [
+   {
+    "id": "local",
+    "name": "Local (save only)",
+    "home_target_set": true,
+    "home_env_var": null
+   },
+   {
+    "id": "bot-chat:alpha",
+    "name": "Bot Chat (alpha)",
+    "home_target_set": true,
+    "home_env_var": null
+   }
+  ]
+ },
+ "blueprints": {
+  "blueprints": [
+   {
+    "key": "morning-brief",
+    "title": "Morning briefing",
+    "description": "A short daily briefing: today's calendar, weather, and anything urgent waiting on you.",
+    "category": "daily",
+    "tags": [
+     "daily",
+     "briefing"
+    ],
+    "fields": [
+     {
+      "name": "time",
+      "type": "time",
+      "label": "What time?",
+      "default": "08:00",
+      "options": [],
+      "optional": false,
+      "strict": true,
+      "help": "24h local time, e.g. 08:00"
+     },
+     {
+      "name": "deliver",
+      "type": "enum",
+      "label": "Where to deliver?",
+      "default": "origin",
+      "options": [
+       "origin",
+       "local",
+       "bot-chat:default",
+       "bot-chat:alpha"
+      ],
+      "optional": false,
+      "strict": false,
+      "help": "origin = the chat you set this up from (or your configured home channel when created from the dashboard); local = save only, no message; or any connected platform name"
+     }
+    ],
+    "source": "builtin",
+    "plugin": null,
+    "schedule": "{minute} {hour} * * *",
+    "scheduleHuman": "daily at 08:00",
+    "command": "/blueprint morning-brief time=08:00 deliver=origin",
+    "appUrl": "hermes://blueprint/morning-brief?time=08%3A00&deliver=origin"
+   },
+   {
+    "key": "important-mail",
+    "title": "Important-mail monitor",
+    "description": "Check your inbox periodically and ping you ONLY about mail that actually needs attention.",
+    "category": "email",
+    "tags": [
+     "email",
+     "monitor"
+    ],
+    "fields": [
+     {
+      "name": "interval_min",
+      "type": "enum",
+      "label": "How often?",
+      "default": "30",
+      "options": [
+       "15",
+       "30",
+       "60"
+      ],
+      "optional": false,
+      "strict": true,
+      "help": "minutes between checks"
+     },
+     {
+      "name": "criteria",
+      "type": "text",
+      "label": "Only notify me if the mail…",
+      "default": "needs a reply today, is from my manager or family, or mentions a deadline",
+      "options": [],
+      "optional": false,
+      "strict": true,
+      "help": ""
+     },
+     {
+      "name": "deliver",
+      "type": "enum",
+      "label": "Where to deliver?",
+      "default": "origin",
+      "options": [
+       "origin",
+       "local",
+       "bot-chat:default",
+       "bot-chat:alpha"
+      ],
+      "optional": false,
+      "strict": false,
+      "help": "origin = the chat you set this up from (or your configured home channel when created from the dashboard); local = save only, no message; or any connected platform name"
+     }
+    ],
+    "source": "builtin",
+    "plugin": null,
+    "schedule": "*/{interval_min} * * * *",
+    "scheduleHuman": "every 30 minutes",
+    "command": "/blueprint important-mail interval_min=30 criteria=\"needs a reply today, is from my manager or family, or mentions a deadline\" deliver=origin",
+    "appUrl": "hermes://blueprint/important-mail?interval_min=30&criteria=needs+a+reply+today%2C+is+from+my+manager+or+family%2C+or+mentions+a+deadline&deliver=origin"
+   }
+  ]
+ },
+ "logs": {
+  "file": "agent",
+  "lines": [
+   "2026-10-24 03:30:04,691 INFO [cron_x] agent.run: Lauf gestartet\n",
+   "2026-10-24 03:30:31,549 WARNING [cron_x] agent.tool_executor: Tool terminal returned error (0.29s)\n",
+   "2026-10-24 03:31:00,000 ERROR [cron_x] cron.scheduler: Zustellung fehlgeschlagen\n",
+   "2026-10-24 03:31:01,000 INFO [cron_x] agent.run: Zugang https://user:pw@example.com/pfad?token=1\n"
+  ]
+ }
+}

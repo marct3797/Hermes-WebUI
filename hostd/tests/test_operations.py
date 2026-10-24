@@ -24,7 +24,7 @@ def setup(tmp_path):
 
 def test_files_roundtrip_and_pdf(setup):
     client, root, _, _ = setup
-    assert client.get('/v1/workspaces').json() == {'workspaces': [{'id': 'w', 'label': 'Work'}]}
+    assert client.get('/v1/workspaces').json() == {'workspaces': [{'id': 'w', 'label': 'Work', 'is_git': False}]}
     for name, data in [('hello.txt', b'hello'), ('document.pdf', b'%PDF-1.7\x00test')]:
         result = client.post('/v1/files/upload', json={'workspace': 'w', 'path': name,
                             'content_base64': base64.b64encode(data).decode()})
@@ -268,3 +268,27 @@ def test_dataclass_settings_and_bounded_preview(setup):
     (root / 'big.txt').write_text('x' * 100000)
     data = client.get('/v1/files?workspace=w&path=big.txt').json()
     assert data['truncated'] and len(data['content']) <= 65536
+
+
+def test_git_modes_split_staged_unstaged_and_log(setup):
+    client, root, _, _ = setup
+    def git(*args):
+        return subprocess.run(['git', *args], cwd=root, check=True, capture_output=True)
+    git('init')
+    git('config', 'user.name', 'Synthetic')
+    git('config', 'user.email', 'test@example.invalid')
+    (root / 'a.txt').write_text('one\n')
+    (root / 'b.txt').write_text('one\n')
+    git('add', '.')
+    git('commit', '-m', 'erster Stand')
+    (root / 'a.txt').write_text('staged-change\n')
+    git('add', 'a.txt')
+    (root / 'b.txt').write_text('unstaged-change\n')
+    staged = client.get('/v1/git', params={'workspace': 'w', 'mode': 'staged'}).json()
+    assert staged['mode'] == 'staged' and 'staged-change' in staged['diff'] and 'unstaged-change' not in staged['diff']
+    plain = client.get('/v1/git', params={'workspace': 'w', 'mode': 'diff'}).json()
+    assert 'unstaged-change' in plain['diff'] and 'staged-change\n' not in plain['diff'].replace('unstaged-change', '')
+    log = client.get('/v1/git', params={'workspace': 'w', 'mode': 'log', 'n': 3}).json()
+    assert 'erster Stand' in log['log'] and 'diff' not in log
+    assert client.get('/v1/git', params={'workspace': 'w', 'mode': 'log', 'n': 11}).status_code == 422
+    assert client.get('/v1/git', params={'workspace': 'w', 'mode': 'x'}).status_code == 422

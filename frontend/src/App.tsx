@@ -22,6 +22,11 @@ const RoomPage = lazy(() => import("./pages/RoomPage").then(m => ({ default: m.R
 const RoomsPage = lazy(() => import("./pages/RoomsPage").then(m => ({ default: m.RoomsPage })));
 const SettingsPage = lazy(() => import("./pages/SettingsPage").then(m => ({ default: m.SettingsPage })));
 const SystemPage = lazy(() => import("./pages/SystemPage").then(m => ({ default: m.SystemPage })));
+const KanbanPage = lazy(() => import("./pages/KanbanPage").then(m => ({ default: m.KanbanPage })));
+const JobsPage = lazy(() => import("./pages/JobsPage").then(m => ({ default: m.JobsPage })));
+const LogsPage = lazy(() => import("./pages/LogsPage").then(m => ({ default: m.LogsPage })));
+const ExtensionsPage = lazy(() => import("./pages/ExtensionsPage").then(m => ({ default: m.ExtensionsPage })));
+const MarketplacePage = lazy(() => import("./pages/MarketplacePage").then(m => ({ default: m.MarketplacePage })));
 const OperationsPage = lazy(() => import("./pages/OperationsPage").then(m => ({ default: m.OperationsPage })));
 const TerminalPage = lazy(() => import("./pages/TerminalPage").then(m => ({ default: m.TerminalPage })));
 const WorkspacePage = lazy(() => import("./pages/WorkspacePage").then(m => ({ default: m.WorkspacePage })));
@@ -68,6 +73,11 @@ export function App() {
                 case "room": return <RoomPage key={page.id} roomId={page.id} />;
                 case "agent": return <AgentPage page={page} />;
                 case "operations": return <OperationsPage section={page.section} host={page.host} />;
+                case "kanban": return <KanbanPage host={page.host} />;
+                case "jobs": return <JobsPage host={page.host} />;
+                case "logs": return <LogsPage host={page.host} />;
+                case "extensions": return <ExtensionsPage host={page.host} />;
+                case "marketplace": return <MarketplacePage host={page.host} />;
                 case "terminal": return <TerminalPage host={page.host} />;
                 case "workspace": return <WorkspacePage host={page.host} />;
                 case "notfound": return <NotFoundPage />;

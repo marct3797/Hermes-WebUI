@@ -3,6 +3,7 @@ import { fmtClock, fmtDuration, fmtTime, toolIcon } from "../../format";
 import type { Decision, Item, SendMode } from "../../types";
 import { useNow } from "../../useNow";
 import { Icon } from "../Icon";
+import { MessageBody } from "./ContextChips";
 import { Markdown } from "../Markdown";
 import { Sigil } from "../Sigil";
 import type { SigilConfig } from "../../types";
@@ -43,7 +44,7 @@ export function UserMessage({ m }: { m: Message }) {
       {m.images.length > 0 && (
         <div className="thumbs">{m.images.map((src, i) => <img key={i} src={src} alt={`Anhang ${i + 1}`} />)}</div>
       )}
-      <p className="plain">{m.text}</p>
+      <MessageBody text={m.text} />
     </article>
   );
 }
@@ -203,6 +204,8 @@ type AgentProps = {
   name: string;
   sigil?: SigilConfig;
   model?: string;
+  /** Aufwand-Beschriftung der letzten Anfrage (z. B. „Hoch“), damit nachvollziehbar bleibt, womit geantwortet wurde. */
+  effort?: string;
   runLabel?: string;
   live: boolean;
   busy: boolean;
@@ -221,6 +224,7 @@ export function AgentCard(p: AgentProps) {
         <Sigil name={p.name} config={p.sigil} size="xs" />
         <span style={{ fontWeight: 600, fontSize: 13 }}>{p.name}</span>
         {p.model && <span className="tag tag-m tag-act">{p.model}</span>}
+        {p.effort && <span className="tag tag-m">Aufwand: {p.effort}</span>}
         <span className="mono t3" style={{ marginLeft: "auto", fontSize: 10.5 }}>{[first ? fmtTime(first) : "", p.runLabel].filter(Boolean).join(" · ")}</span>
       </div>
       {p.items.map((i, idx) => {

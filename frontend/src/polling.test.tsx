@@ -128,6 +128,7 @@ describe("Seitenwechsel", () => {
     render(<App />);
     await waitFor(() => expect(calls.filter((c) => c.url.endsWith("/sessions")).length).toBeGreaterThanOrEqual(2));
     const seen = () => calls.filter((c) => /^\/bff\/(hosts|ui)$|\/(gamma|eta)\/sessions$/.test(c.url)).length;
+    fireEvent.click(await screen.findByRole("button", { name: /Betrieb/ }));
     fireEvent.click(screen.getAllByRole("link", { name: "System" })[0]);
     await screen.findByRole("heading", { name: "System", level: 1 });
     const mid = seen();

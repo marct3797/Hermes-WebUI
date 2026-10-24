@@ -26,4 +26,26 @@ describe("Sidebar", () => {
     render(<App />);
     expect(await screen.findByText("Stand 3f5c30c")).toBeInTheDocument();
   });
+
+  it("keeps chats up front and folds the rest into groups that remember their state", async () => {
+    history.pushState(null, "", "/");
+    localStorage.removeItem("hermes-nav-groups");
+    render(<App />);
+    const nav = await screen.findByRole("navigation", { name: "Bereiche" });
+    const header = within(nav).getByRole("button", { name: /Arbeit/ });
+    expect(header).toHaveAttribute("aria-expanded", "false");
+    expect(within(nav).queryByRole("link", { name: "Kanban" })).not.toBeInTheDocument();
+    header.click();
+    expect(await within(nav).findByRole("link", { name: "Kanban" })).toHaveAttribute("href", "/kanban");
+    expect(JSON.parse(localStorage.getItem("hermes-nav-groups") ?? "{}").work).toBe(true);
+  });
+
+  it("opens the group of the current page on its own", async () => {
+    history.pushState(null, "", "/marketplace");
+    localStorage.removeItem("hermes-nav-groups");
+    render(<App />);
+    const nav = await screen.findByRole("navigation", { name: "Bereiche" });
+    expect(within(nav).getByRole("button", { name: /Erweiterungen/ })).toHaveAttribute("aria-expanded", "true");
+    expect(within(nav).getByRole("link", { name: "Marktplatz" })).toHaveAttribute("aria-current", "page");
+  });
 });
