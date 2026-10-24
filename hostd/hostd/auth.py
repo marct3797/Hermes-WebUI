@@ -8,7 +8,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-TTL, MIN_REFRESH, TIMEOUT, MAX_OUTPUT = 60, 10, 15, 65536
+MIN_REFRESH, TIMEOUT, MAX_OUTPUT = 10, 15, 65536
 ANSI = re.compile(r'\x1b\[[0-9;?]*[ -/]*[@-~]')
 
 # CLI-ID -> feste Argumente; die ausfuehrbare Datei ist die konfigurierte (gleiche wie im Terminal).
@@ -119,19 +119,22 @@ class AuthChecker:
             entry['reason'] = 'Statusbefehl nicht ausfuehrbar'
         return entry
 
-    async def one(self, cli, refresh=False):
+    async def one(self, cli):
         key = cli['id']
         async with self.locks.setdefault(key, asyncio.Lock()):
             cached = self.cache.get(key)
-            age = time.monotonic() - cached[0] if cached else None
-            if cached and age < (MIN_REFRESH if refresh else TTL):
+            if cached and time.monotonic() - cached[0] < MIN_REFRESH:
                 return cached[1]
             entry = await self._check(cli)
             self.cache[key] = (time.monotonic(), entry)
             return entry
 
     async def all(self, refresh=False):
-        return await asyncio.gather(*(self.one(cli, refresh) for cli in self.settings.clis))
+        if refresh:
+            return await asyncio.gather(*(self.one(cli) for cli in self.settings.clis))
+        # Nur lesen: ein Statusbefehl kann das Betriebssystem zum Entsperren des Schluesselbunds auffordern, darum nie beim Seitenaufruf.
+        return [self.cache[cli['id']][1] if cli['id'] in self.cache else
+                dict(id=cli['id'], state='unknown', method=None, checked_at=None, reason='Noch nicht geprüft') for cli in self.settings.clis]
 
     def cached_state(self, cli_id):
         """Nicht blockierend fuer /v1/info: None, solange nicht geprueft oder unklar."""

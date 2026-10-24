@@ -20,6 +20,7 @@ export function CliDot({ entry }: { entry: CliAuthEntry }) {
 function Badge({ entry }: { entry: CliAuthEntry }) {
   if (entry.state === "signed_in") return <span className="tag tag-m">ANGEMELDET{entry.method ? ` · ${entry.method}` : ""}</span>;
   if (entry.state === "signed_out") return <span className="tag tag-e">ABGEMELDET</span>;
+  if (entry.checked_at === null) return <span className="tag" title="Wird nur auf Klick geprüft, nie beim Öffnen der Seite">NICHT GEPRÜFT</span>;
   return <span className="tag" title={entry.reason ?? undefined}>UNBEKANNT{entry.reason ? ` · ${entry.reason}` : ""}</span>;
 }
 
@@ -43,6 +44,7 @@ function HostClis({ host }: { host: HostInfo }) {
       {(loaded.error || error) && <p className="hint error" role="alert">Anmeldestatus nicht ladbar: {error ?? loaded.error}</p>}
       {data && !data.available && <p className="hint">{data.reason ?? "Host-Dienst nicht eingerichtet"}</p>}
       {data?.available && !data.clis?.length && <p className="hint">Keine CLI im Host-Dienst eingetragen.</p>}
+      {data?.clis?.some((c) => c.checked_at === null) && <p className="hint">Der Anmeldestatus wird nie automatisch abgefragt (ein Statusbefehl kann den Schlüsselbund des Systems öffnen). „Prüfen“ liest ihn aus.</p>}
       <ul className="col" style={{ gap: 8, listStyle: "none", padding: 0, margin: 0 }}>
         {data?.clis?.map((c) => (
           <li key={c.id} className="col" style={{ gap: 4 }}>

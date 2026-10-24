@@ -408,7 +408,8 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
       return json({ available: true, reason: null, clis: [
         { id: "codex", state: "signed_in", method: "ChatGPT", checked_at: "2026-01-01T00:00:00+00:00", reason: null },
         { id: "claude", state: refreshed ? "signed_in" : "signed_out", method: refreshed ? "claude.ai" : null, checked_at: "2026-01-01T00:00:00+00:00", reason: null },
-        { id: "opencode", state: "unknown", method: null, checked_at: "2026-01-01T00:00:00+00:00", reason: "Zeitueberschreitung (15 s)" }] });
+        { id: "opencode", state: "unknown", method: null, checked_at: "2026-01-01T00:00:00+00:00", reason: "Zeitueberschreitung (15 s)" },
+        { id: "agy", state: refreshed ? "signed_in" : "unknown", method: refreshed ? "OAuth" : null, checked_at: refreshed ? "2026-01-01T00:00:00+00:00" : null, reason: refreshed ? null : "Noch nicht geprüft" }] });
     }
     const qm = quota.mode;
     if (url === "/bff/quota/summary") return json(quotaSummary(agents, qm));

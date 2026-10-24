@@ -176,7 +176,7 @@ export type ModelProvider = { slug: string; name: string; current: boolean; auth
 export type OAuthStart = { session_id: string; flow?: string; user_code?: string; verification_url?: string; auth_url?: string; expires_in?: number; poll_interval?: number };
 export type OAuthPoll = { session_id: string; status: "pending" | "approved" | "error" | "expired" | string; error_message: string | null; expires_at: number | null };
 
-export type CliAuthEntry = { id: string; state: "signed_in" | "signed_out" | "unknown"; method: string | null; checked_at: string; reason: string | null };
+export type CliAuthEntry = { id: string; state: "signed_in" | "signed_out" | "unknown"; method: string | null; checked_at: string | null; reason: string | null };
 export type CliAuth = { available: boolean; reason: string | null; clis?: CliAuthEntry[] };
 /** Restkontingente (BFF, aus dem Dashboard-Plugin ai-usage-tracker). */
 export type QuotaWindow = { label: string; used_percent: number | null; remaining_percent: number | null; reset_at: string | null; reset_in_s: number | null; detail: string | null };
