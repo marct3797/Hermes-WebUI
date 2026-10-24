@@ -33,8 +33,8 @@ const NAV = [
   { to: "/memory", label: "Gedächtnis", icon: "memory" },
   { to: "/knowledge", label: "Wissen", icon: "file" },
   { to: "/providers", label: "Anbieter", icon: "coin" },
-  { to: "/manage", label: "Erweiterungen", icon: "wrench" },
-  { to: "/marketplaces", label: "Quellen", icon: "layers" },
+  { to: "/extensions", label: "Erweiterungen", icon: "wrench" },
+  { to: "/marketplace", label: "Marktplatz", icon: "layers" },
   { to: "/logs", label: "Logs", icon: "layers" },
   { to: "/system", label: "System", icon: "shield" },
 ];

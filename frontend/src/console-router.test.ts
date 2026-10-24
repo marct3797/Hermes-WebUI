@@ -2,9 +2,13 @@ import { describe, expect, it } from "vitest";
 import { parsePath } from "./router";
 
 describe("agent console navigation", () => {
-  it.each(["kanban", "jobs", "logs", "manage", "marketplaces", "search"])("resolves %s without a placeholder", (section) => {
-    expect(parsePath(`/${section}`)).toEqual({ name: "operations", section });
-    expect(parsePath(`/${section}/laptop`)).toEqual({ name: "operations", section, host: "laptop" });
+  it("resolves the search section", () => {
+    expect(parsePath("/search")).toEqual({ name: "operations", section: "search" });
+    expect(parsePath("/search/laptop")).toEqual({ name: "operations", section: "search", host: "laptop" });
+  });
+  it.each([["kanban", "kanban"], ["jobs", "jobs"], ["logs", "logs"], ["extensions", "extensions"], ["manage", "extensions"], ["marketplace", "marketplace"], ["marketplaces", "marketplace"]])("resolves /%s to the %s page", (path, name) => {
+    expect(parsePath(`/${path}`)).toEqual({ name });
+    expect(parsePath(`/${path}/laptop`)).toEqual({ name, host: "laptop" });
   });
   it.each(["terminal", "workspace"])("resolves host %s", (name) => {
     expect(parsePath(`/hosts/laptop/${name}`)).toEqual({ name, host: "laptop" });

@@ -143,6 +143,12 @@ class DashboardClient:
             raise UpstreamError(502, f"Das Dashboard liefert {what} in unbekannter Form")
         return [r for r in rows if isinstance(r, dict)]
 
+    async def request(self, method: str, path: str, *, body: Any = None, params: dict[str, str] | None = None,
+                      missing: str | None = None) -> Any:
+        """Öffentlicher Durchgriff auf eine Dashboard-Route (Pakete bauen darauf ihre festen, validierten Routen).
+        Fehlertexte des Dashboards werden mitgegeben, damit Eingabefehler (z. B. ungültiger Skill-Name) sichtbar werden."""
+        return await self._call(method, path, json_body=body, params=params, missing=missing, explain=True)
+
     # Nur lesende Host-Daten (Kanban, Logs, MCP, Plugins, Suche): Ersatzquelle, wenn der Host-Dienst sie nicht liefern kann.
     async def kanban_board(self, name: str) -> Any:
         return await self._call("GET", "/api/plugins/kanban/board", params={"profile": name}, missing="Kanban ist auf diesem Dashboard nicht verfügbar")
