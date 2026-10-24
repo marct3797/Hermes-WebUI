@@ -292,3 +292,27 @@ def test_git_modes_split_staged_unstaged_and_log(setup):
     assert 'erster Stand' in log['log'] and 'diff' not in log
     assert client.get('/v1/git', params={'workspace': 'w', 'mode': 'log', 'n': 11}).status_code == 422
     assert client.get('/v1/git', params={'workspace': 'w', 'mode': 'x'}).status_code == 422
+
+
+def test_native_settings_survive_load_and_reach_the_app(tmp_path, monkeypatch):
+    """Die Betriebsfelder aus OPERATIONS.md muessen die produktive Config passieren (Settings.load -> create_app)."""
+    import json
+    from hostd.config import Settings
+    from hostd.main import create_app
+    monkeypatch.setenv('HERMES_HOSTD_TOKEN', 't' * 40)
+    cfg = tmp_path / 'c.json'
+    cfg.write_text(json.dumps({'hermes_command': ['/opt/hermes/bin/hermes'], 'native_python': '/opt/hermes/bin/python',
+                               'native_source': '/opt/hermes/source', 'reviewed_catalog': []}))
+    settings = Settings.load(cfg)
+    app = create_app(settings)
+    assert app.state.settings.hermes_command == ['/opt/hermes/bin/hermes']
+    assert (app.state.settings.native_python, app.state.settings.native_source) == ('/opt/hermes/bin/python', '/opt/hermes/source')
+    assert app.state.settings.reviewed_catalog == []
+
+
+@pytest.mark.parametrize('field,bad', [('hermes_command', 'hermes'), ('hermes_command', ['']), ('native_python', 5),
+                                       ('native_source', ['x']), ('reviewed_catalog', 'x')])
+def test_native_settings_reject_wrong_types(field, bad):
+    from hostd.config import Settings
+    with pytest.raises(ValueError):
+        Settings.from_dict({field: bad})
