@@ -27,6 +27,14 @@ class OidcError(Exception):
     """Anmeldung nicht möglich. Die Meldung ist für Logs gedacht, nicht für den Browser."""
 
 
+def step_up_proof(meta: dict) -> str:
+    """Wie belegt der Anbieter die erneute Anmeldung? auth_time | prompt_login_only (wirbt claims_supported ohne auth_time) | unknown."""
+    supported = meta.get("claims_supported")
+    if not isinstance(supported, list):
+        return "unknown"
+    return "auth_time" if "auth_time" in supported else "prompt_login_only"
+
+
 def authentication_time(claims: dict[str, Any], now: float) -> float | None:
     value = claims.get("auth_time")
     if isinstance(value, (int, float)) and not isinstance(value, bool) and 0 < value <= now:

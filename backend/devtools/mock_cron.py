@@ -122,6 +122,7 @@ def create_mock() -> FastAPI:
 
     @app.delete("/api/cron/jobs/{job_id}")
     async def delete(job_id: str, profile: str | None = None):
+        failing("delete")
         job_of(profile, job_id)
         del store(profile)[job_id]
         return {"ok": True}

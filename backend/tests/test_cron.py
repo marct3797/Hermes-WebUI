@@ -145,7 +145,12 @@ def test_blueprint_instantiate_ends_paused(env):
     assert env.post(f"{CRON}/blueprints", json={"blueprint": "gibts-nicht", "values": {}}).status_code == 404
     env.dash.state.fail = {"pause": 500}
     r = env.post(f"{CRON}/blueprints", json={"blueprint": "morning-brief", "values": {}})
-    assert r.status_code == 502 and "aktiv" in r.json()["detail"]
+    # Pausieren scheitert: der eben angelegte Job wird wieder entfernt, es bleibt nichts Aktives zurück
+    assert r.status_code == 502 and "entfernt" in r.json()["detail"] and "aktiv" not in r.json()["detail"]
+    assert writes(env.dash)[-1][:2] == ("DELETE", f"/api/cron/jobs/{[c for c in writes(env.dash) if c[1].endswith('/pause')][-1][1].split('/')[-2]}")
+    env.dash.state.fail = {"pause": 500, "delete": 500}
+    r = env.post(f"{CRON}/blueprints", json={"blueprint": "morning-brief", "values": {}})
+    assert r.status_code == 502 and "aktiv" in r.json()["detail"]  # auch das Entfernen scheitert: der Job wird mit Kennung gemeldet
     assert env.post(f"{CRON}/blueprints", json={"blueprint": "../x", "values": {}}).status_code == 422
 
 
@@ -193,3 +198,12 @@ def test_log_view_truncates_to_the_byte_limit_and_keeps_the_newest():
     assert log_view({"lines": []})["lines"] == []
     with pytest.raises(ValueError):
         log_view({"lines": "kein array"})
+
+
+def test_unregistered_profile_is_refused_before_any_dashboard_call(env):
+    before = len(env.dash.state.calls)
+    assert env.get("/bff/h/ct/_cron/ghost/schedules").status_code == 404
+    assert env.post("/bff/h/ct/_cron/ghost/schedules", json={"schedule": "30m", "prompt": "x"}).status_code == 404
+    assert env.get("/bff/h/ct/_cron/ghost/skill-names").status_code == 404
+    assert len(env.dash.state.calls) == before  # nichts erreichte das Dashboard
+    assert env.get(f"{CRON}/schedules").status_code == 200  # registriertes Profil bleibt nutzbar

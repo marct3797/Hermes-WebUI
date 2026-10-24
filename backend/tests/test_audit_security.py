@@ -203,3 +203,25 @@ def test_access_filter_preserves_parameterized_log_format(message, args):
 
 
 
+
+
+@pytest.mark.parametrize("discovery,proof", [
+    ({"claims_supported": ["sub", "iss", "aud", "exp", "iat", "auth_time"]}, "auth_time"),
+    ({"claims_supported": ["sub", "iss", "aud", "exp", "iat"]}, "prompt_login_only"),
+    ({}, "unknown"),                                                              # ohne claims_supported bleibt es fail-closed
+])
+def test_security_endpoint_says_whether_freshness_is_provable(web, idp, discovery, proof):
+    if discovery is not None:
+        idp.discovery_overrides = discovery
+    idp.claims = {"auth_time": 1_000_000.0}
+    assert do_login(web, idp).status_code == 303
+    body = web.get("/bff/security").json()
+    assert body["step_up"] == {"enabled": True, "window_s": 600, "proof": proof}
+
+
+def test_security_endpoint_reports_off_and_needs_login(web, idp):
+    assert web.get("/bff/security").status_code == 401
+    idp.claims = {"auth_time": 1_000_000.0}
+    assert do_login(web, idp).status_code == 303
+    web.app.state.settings.step_up = False
+    assert web.get("/bff/security").json()["step_up"] == {"enabled": False, "window_s": 600, "proof": "off"}

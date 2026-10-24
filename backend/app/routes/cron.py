@@ -12,7 +12,7 @@ from .. import cron as C
 from ..adapters import UpstreamError
 from ..auth import User, current_user, fresh_user
 from ..registry import AGENT_RE, ID_RE
-from ._dash import dash, host_dash
+from ._dash import check_profile, dash, host_dash
 from .agents import to_http
 
 router = APIRouter(prefix="/bff", dependencies=[Depends(current_user)])
@@ -119,12 +119,19 @@ async def instantiate(request: Request, host: Host, profile: Profile, req: C.Ins
     try:  # Vorlagen starten aktiv: sofort pausieren, damit neu = pausiert bleibt
         job = C.job_view(await dash(request, host, "POST", f"/api/cron/jobs/{job['id']}/pause", params={"profile": profile}, missing=NOT_FOUND))
     except HTTPException as e:
-        raise HTTPException(502, f"Zeitplan {job['id']} wurde angelegt, ließ sich aber nicht pausieren und ist aktiv: {e.detail}") from e
+        # shortcut: Fenster zwischen Anlegen und Pausieren, weil der Dashboard-Endpunkt für Vorlagen kein "paused" kennt; ersetzen, sobald er es kennt
+        try:
+            await dash(request, host, "DELETE", f"/api/cron/jobs/{job['id']}", params={"profile": profile}, missing=NOT_FOUND)
+        except HTTPException:
+            raise HTTPException(502, f"Zeitplan {job['id']} wurde angelegt, ließ sich aber weder pausieren noch entfernen und ist aktiv: {e.detail}") from e
+        _audit(request, user, "cron.delete", host, profile, job["id"])
+        raise HTTPException(502, f"Zeitplan {job['id']} ließ sich nicht pausieren und wurde wieder entfernt: {e.detail}") from e
     return job
 
 
 @router.get(BASE + "/skill-names")
 async def skill_names(request: Request, host: Host, profile: Profile):
+    check_profile(request, host, profile)
     try:
         rows = await host_dash(request, host).skills(profile)
     except UpstreamError as e:

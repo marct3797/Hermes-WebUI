@@ -171,7 +171,7 @@ async def create_task(request: Request, host: HostId, body: NewTask, board: Boar
     if body.status not in ("todo", "ready", "triage"):
         raise HTTPException(422, "Neue Aufgaben starten in triage, todo oder ready")
     payload = {"title": body.title, "body": body.body or None, "assignee": body.assignee or None, "priority": body.priority,
-               "parents": body.parents, "triage": body.status == "triage"}
+               "parents": body.parents, "triage": body.status in ("triage", "todo")}  # todo zuerst als triage: ein ready-Zwischenzustand würde dispatcht
     raw = await dash(request, host, "POST", f"{P}/tasks", body=payload, params=_bp(board), missing=MISSING)
     raw = raw if isinstance(raw, dict) else {}
     task = raw.get("task") if isinstance(raw.get("task"), dict) else {}

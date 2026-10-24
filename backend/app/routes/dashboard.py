@@ -277,7 +277,9 @@ async def provider_matrix(request: Request, host: HostId, runtime: RuntimeId):
     except UpstreamError as e:
         return {"available": False, "reason": e.detail, **empty}
     configured = {a.id for a in rt.agents}
-    profiles = [p for p in profiles if p.get("name") in configured] or profiles  # die in der Config geführten Profile; sonst alle
+    profiles = [p for p in profiles if p.get("name") in configured]  # nur die in der Config geführten Profile
+    if not profiles:
+        return {"available": False, "reason": "Das Dashboard kennt keines der konfigurierten Profile", **empty}
 
     async def one(name: str):
         (env, env_err), (oauth, _) = await asyncio.gather(_tolerated(dash.env(name)), _tolerated(dash.oauth_providers(name)))

@@ -502,3 +502,10 @@ def test_all_routes_need_login_and_writes_need_fresh_login(tmp_path, make_settin
             assert r.status_code == 401 and r.json()["detail"]["code"] == "step_up_required", (url, r.text)
         session.auth_time = app.state.sessions.now()
         assert c.post(f"{E}/mcp/rag/test").status_code == 200
+
+
+def test_unregistered_profile_is_refused_for_extensions(ext):
+    c, dash, reg, _ = ext
+    assert c.get("/bff/h/ct/_ext/ghost/skill-list").status_code == 404
+    assert c.post("/bff/h/ct/_ext/ghost/skills", json={"name": "delta", "category": "beispiel", "content": SKILL}).status_code == 404
+    assert c.get(f"{E}/skill-list").status_code == 200
