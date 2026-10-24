@@ -43,7 +43,7 @@ class HostdClient:
     def __init__(self, cfg: HostdCfg, http: httpx.AsyncClient):
         self.cfg, self.http = cfg, http
 
-    async def request(self, method: str, path: str, *, params=None, body=None, download=False) -> Any:
+    async def request(self, method: str, path: str, *, params=None, body=None, download=False, messages=None) -> Any:
         limit = DOWNLOAD_LIMIT if download else JSON_LIMIT
         try:
             async with self.http.stream(method, self.cfg.base_url + path,
@@ -51,6 +51,8 @@ class HostdClient:
                     params=params, json=body, follow_redirects=False) as response:
                 if not 200 <= response.status_code < 300:
                     status = response.status_code
+                    if messages and status in messages:  # Dateifehler des Host-Dienstes verständlich durchreichen (auch 403)
+                        raise HTTPException(status, messages[status])
                     raise HTTPException(502 if status in (401, 403) or status < 400 else status,
                                         f"Host-Dienst antwortet mit HTTP {status}")
                 data = bytearray()

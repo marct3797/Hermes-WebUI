@@ -1,1 +1,31 @@
 /* files: Stile des Arbeitspakets */
+.ft{list-style:none;margin:8px 0 0;padding:0;max-height:50dvh;overflow:auto}
+.ft li{margin:0}
+.ft-row{display:flex;align-items:center;gap:6px;width:100%;min-height:32px;padding:4px 8px;border:0;background:none;color:var(--t1);font:13px var(--sans);text-align:left;overflow-wrap:anywhere;cursor:pointer;border-radius:4px}
+.ft-row:hover{background:var(--s2)}
+.ft-row.on{background:var(--s2);box-shadow:inset 2px 0 0 var(--crim)}
+.ft-note{padding:6px 8px;font-size:13px}
+.ft-crumbs{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 8px}
+.ft-actions{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.ft-actions input[type=file]{display:none}
+.ws-hint{margin-top:12px;font-size:12px}
+.ws-hint pre{white-space:pre-wrap;word-break:break-all}
+.ws-form{display:flex;flex-direction:column;gap:10px}
+.ws-form label{display:flex;flex-direction:column;gap:6px}
+.ed{display:flex;flex-direction:column;gap:8px;min-width:0}
+.ed-bar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px}
+.ed-name{overflow-wrap:anywhere}
+.ed-body{display:flex;border:1px solid var(--line);border-radius:4px;background:var(--s2);height:clamp(260px,52dvh,640px);min-width:0}
+.ed-gutter{flex:none;min-width:3.5ch;padding:8px 6px;text-align:right;color:var(--t3);font:12px/1.6 var(--mono);white-space:pre;overflow:hidden;user-select:none;border-right:1px solid var(--line)}
+.ed-text{flex:1;min-width:0;padding:8px;border:0;outline:0;resize:none;background:transparent;color:var(--t1);font:12px/1.6 var(--mono);white-space:pre;overflow:auto;tab-size:4}
+.ed-text:focus{box-shadow:inset 0 0 0 1px var(--crim)}
+.git-split{display:grid;grid-template-columns:minmax(160px,1fr) minmax(0,3fr);gap:12px;margin-top:8px}
+.git-list{list-style:none;margin:0;padding:0;max-height:40dvh;overflow:auto}
+.git-state{flex:none;min-width:3.2ch;color:var(--t3);font-size:11px}
+.git-diff{min-width:0}
+@media(max-width:767px){.git-split{grid-template-columns:minmax(0,1fr)}.ft-row{min-height:44px}}
+.term-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.term-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:var(--radius,6px)}
+.term-row.on{border-color:var(--crim)}
+.term-row .btn{min-height:36px}
+@media(max-width:767px){.term-row .btn{min-height:44px}}

@@ -65,14 +65,15 @@ describe("F2 Workspace ohne Git", () => {
   it("zeigt neutralen Hinweis und leeren Ordner ohne Anmelde-Rat", async () => {
     setup(200);
     render(<WorkspacePage host="server" />);
-    expect(await screen.findByText("Kein Git-Repository in diesem Arbeitsordner")).toBeInTheDocument();
-    expect(await screen.findByText("Dieser Arbeitsordner ist leer.")).toBeInTheDocument();
+    expect(await screen.findByText(/Kein Git-Repository in diesem Arbeitsordner/)).toBeInTheDocument();
+    expect(await screen.findByText(/Dieser Arbeitsordner ist leer\./)).toBeInTheDocument();
     expect(screen.queryByText(/frisch anmelden/)).toBeNull();
   });
-  it("Anmelde-Rat nur bei 401/403", async () => {
+  it("zeigt Git-Fehler mit dem Grund des BFF, ohne den Rest der Seite zu blockieren", async () => {
     setup(409); render(<WorkspacePage host="server" />);
-    expect(await screen.findByText("Anfrage fehlgeschlagen (409).")).toBeInTheDocument();
+    expect(await screen.findByText("x")).toBeInTheDocument();
+    expect(await screen.findByText(/Dieser Arbeitsordner ist leer\./)).toBeInTheDocument();
     cleanup(); setup(403); render(<WorkspacePage host="server" />);
-    expect(await screen.findByText(/403\); ggf. frisch anmelden/)).toBeInTheDocument();
+    expect(await screen.findByText("x")).toBeInTheDocument();
   });
 });

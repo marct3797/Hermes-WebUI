@@ -127,8 +127,32 @@ def git(root):
         fields = line.split()
         if len(fields) >= 2 and fields[-1] == '(fetch)':
             remotes.append({'name': redact(fields[0]), 'url': redact(fields[1])})
-    return {'branch': redact(branch), 'status': status, 'diff': redact(diff),
-            'remotes': remotes, 'truncated': truncated}
+    changed = []
+    entries = call('status', '--porcelain=v1', '-z', '--untracked-files=normal').split('\x00')
+    index = 0
+    while index < len(entries) and len(changed) < 500:
+        entry = entries[index]
+        index += 1
+        if len(entry) < 4:
+            continue
+        code, name = entry[:2], entry[3:]
+        if code[0] in 'RC':
+            index += 1  # -z: der alte Name folgt als eigener Eintrag
+        if any(forbidden(p) for p in Path(name).parts):
+            continue
+        changed.append({'path': redact(name), 'state': code.strip() or '?'})
+    log = []
+    if head_code == 0:
+        for line in call('log', '-20', '--no-color', '--format=%H%x1f%s%x1f%an%x1f%aI%x1e').split('\x1e'):
+            fields = line.strip().split('\x1f')
+            if len(fields) == 4:
+                log.append({'hash': fields[0], 'subject': redact(fields[1]), 'author': redact(fields[2]), 'date': fields[3]})
+    branches = []
+    for line in call('for-each-ref', '--format=%(HEAD)%(refname:short)', 'refs/heads').splitlines():
+        if line:
+            branches.append({'name': redact(line[1:]), 'current': line[0] == '*'})
+    return {'branch': redact(branch), 'status': status, 'diff': redact(diff), 'files': changed, 'log': log,
+            'branches': branches, 'remotes': remotes, 'truncated': truncated}
 
 
 def unavailable(reason):

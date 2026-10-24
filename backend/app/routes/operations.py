@@ -230,8 +230,10 @@ async def workspaces(request: Request, host: HostId, _user: User = Depends(curre
 
 
 @router.get("/h/{host}/_files")
-async def files(request: Request, host: HostId, workspace: Workspace, path: str = "", _user: User = Depends(current_user)):
-    return await daemon(request, host).request("GET", "/v1/files", params={"workspace": workspace, "path": safe_path(path)})
+async def files(request: Request, host: HostId, workspace: Workspace, path: str = "", full: bool = False,
+                _user: User = Depends(current_user)):
+    params = {"workspace": workspace, "path": safe_path(path), **({"full": "true"} if full else {})}
+    return await daemon(request, host).request("GET", "/v1/files", params=params, messages=FILE_ERRORS)
 
 
 @router.get("/h/{host}/_files/download")
@@ -251,6 +253,65 @@ async def download(request: Request, host: HostId, workspace: Workspace, path: s
 async def upload(request: Request, host: HostId, body: Upload, user: User = Depends(fresh_user)):
     result = await daemon(request, host).request("POST", "/v1/files/upload", body=body.model_dump())
     record(request, user, "workspace.upload", host)
+    return result
+
+
+FILE_ERRORS = {403: "Pfad oder Datei ist nicht freigegeben", 404: "Datei oder Ordner nicht gefunden",
+               409: "Konflikt: Ziel existiert oder die Datei hat sich geändert", 413: "Datei größer als 1 MiB",
+               415: "Keine Textdatei", 422: "Ungültige Eingabe"}
+
+
+class FileTarget(StrictModel):
+    workspace: str = Field(pattern=ID_RE.pattern)
+    path: str = Field(min_length=1, max_length=1024)
+
+    @field_validator("path")
+    @classmethod
+    def validate_path(cls, value):
+        return safe_path(value)
+
+
+class FileWrite(FileTarget):
+    content: str = Field(max_length=UPLOAD_LIMIT)
+    expected_sha256: str | None = Field(None, pattern=r"^[0-9a-f]{64}$")
+    create: bool = False
+
+
+class FileMove(StrictModel):
+    workspace: str = Field(pattern=ID_RE.pattern)
+    source: str = Field(min_length=1, max_length=1024, alias="from")
+    target: str = Field(min_length=1, max_length=1024, alias="to")
+
+    @field_validator("source", "target")
+    @classmethod
+    def validate_path(cls, value):
+        return safe_path(value)
+
+
+def record_file(request, user: User, action: str, host: str, workspace: str, *paths: str):
+    # Nie Inhalt: nur Workspace-ID und Pfadlängen.
+    request.app.state.audit.record(action, user=user.id, target=host, workspace=workspace, path_len=[len(p) for p in paths])
+
+
+@router.post("/h/{host}/_files/mkdir")
+async def mkdir(request: Request, host: HostId, body: FileTarget, user: User = Depends(fresh_user)):
+    result = await daemon(request, host).request("POST", "/v1/files/mkdir", body=body.model_dump(), messages=FILE_ERRORS)
+    record_file(request, user, "workspace.mkdir", host, body.workspace, body.path)
+    return result
+
+
+@router.put("/h/{host}/_files/write")
+async def write_file(request: Request, host: HostId, body: FileWrite, user: User = Depends(fresh_user)):
+    result = await daemon(request, host).request("PUT", "/v1/files/write", body=body.model_dump(exclude_none=True), messages=FILE_ERRORS)
+    record_file(request, user, "workspace.write", host, body.workspace, body.path)
+    return result
+
+
+@router.post("/h/{host}/_files/move")
+async def move_file(request: Request, host: HostId, body: FileMove, user: User = Depends(fresh_user)):
+    result = await daemon(request, host).request("POST", "/v1/files/move",
+                body={"workspace": body.workspace, "from": body.source, "to": body.target}, messages=FILE_ERRORS)
+    record_file(request, user, "workspace.move", host, body.workspace, body.source, body.target)
     return result
 
 

@@ -24,7 +24,7 @@ def setup(tmp_path):
 
 def test_files_roundtrip_and_pdf(setup):
     client, root, _, _ = setup
-    assert client.get('/v1/workspaces').json() == {'workspaces': [{'id': 'w', 'label': 'Work'}]}
+    assert client.get('/v1/workspaces').json() == {'workspaces': [{'id': 'w', 'label': 'Work', 'is_git': False}]}
     for name, data in [('hello.txt', b'hello'), ('document.pdf', b'%PDF-1.7\x00test')]:
         result = client.post('/v1/files/upload', json={'workspace': 'w', 'path': name,
                             'content_base64': base64.b64encode(data).decode()})

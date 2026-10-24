@@ -101,6 +101,30 @@ means the action's outcome is unknown, not that it was rolled back.
   is returned. HTTP responses redact secret-bearing diff/log lines, key blocks
   and URL userinfo/query/fragment (including SSH URLs).
 
+### Write paths (0.3.0)
+
+All stay inside the configured workspace (descriptor-relative, `O_NOFOLLOW`, same
+denylist as above). There is no delete endpoint.
+
+- `POST /v1/files/mkdir {workspace,path}`: one directory, parents must exist, mode 0700, 409 if present.
+- `PUT /v1/files/write {workspace,path,content,expected_sha256?,create?}`: UTF-8 text, at most 1 MiB
+  (bytes), no NUL/control bytes (415). Overwrite requires `expected_sha256` (422 without, 409 on mismatch,
+  checked again right before the swap); written to a hidden temp file in the same directory, fsync, `rename`;
+  mode kept. `create:true` creates only (link-based, 409 if present). Returns `{sha256,size}`.
+- `POST /v1/files/move {workspace,from,to}`: rename/move inside the workspace; 409 if the target exists, never
+  through symlinks. Files use link+unlink (atomic no-overwrite); directories check then rename (small race).
+- `GET /v1/files[?full=true]`: entries carry `kind,size,mtime`; file reads carry `sha256`, `size`, `editable`
+  (false above 1 MiB). `full=true` returns up to 1 MiB for the editor, otherwise the 64 KiB preview.
+- `GET /v1/git` adds `files` (`{path,state}` from `status --porcelain`, untracked included), `log` (last 20:
+  hash, subject, author, date) and `branches`; still read-only and redacted.
+- `GET /v1/workspaces` returns `{id,label,is_git}` (no path). Write bodies: 7 MB limit on `/v1/files/write`.
+
+### Adding a workspace
+
+`python -m hostd.workspaces add --config CONFIG --id ID --path /abs/dir [--label TEXT]` (also `list`; no
+`remove`). Validated like `Settings.from_dict`, `/` and the home directory itself are refused, existing IDs are
+never overwritten (exit 3). Restart hostd afterwards. The installer takes `--workspace ID=/abs/dir[:Label]` (repeatable).
+
 The operator must allowlist **project directories, not a home directory or a
 credential directory**. A filename denylist cannot identify a secret pasted into
 an innocuously named source file. Similarly, redaction is conservative pattern
