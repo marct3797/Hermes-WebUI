@@ -1,6 +1,6 @@
 """Runtime-Adapter: eine Schnittstelle für Hermes, OpenCode, Claude Code und Antigravity.
 
-Ein Adapter gehört zu einer Runtime auf einem Host (z. B. Hermes auf hikari) und kennt alle Pfade,
+Ein Adapter gehört zu einer Runtime auf einem Host (z. B. Hermes auf server) und kennt alle Pfade,
 Feldnamen und Eventnamen dieser Runtime. Nach außen liefert er das gemeinsame Ereignisformat
 (`app/events.py`). Was eine Runtime nicht kann, meldet sie als Fähigkeit (`features`) und wirft bei
 Aufruf `Unsupported`; das UI blendet es dann aus.

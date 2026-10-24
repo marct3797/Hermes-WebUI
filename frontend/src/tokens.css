@@ -1,5 +1,5 @@
 /* Look A "Obsidian Crimson": alle Farben, Schriften und Radien der App stehen nur hier.
-   Quelle: Design-Entwurf v2 (hermes.css, abgenommen von Marc). Die Stylesheets in styles/ nutzen nur diese Tokens.
+   Quelle: Design-Entwurf v2 (hermes.css). Die Stylesheets in styles/ nutzen nur diese Tokens.
    Kein Glas-Blur, keine CDN-Dateien. Crimson heißt Aktion oder Aufmerksamkeit, nie Dekoration. */
 :root{
   /* Flächen */

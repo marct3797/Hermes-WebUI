@@ -38,14 +38,14 @@ def events_of(client, info, base=BASE):
 def test_hosts_overview(client):
     data = client.get("/bff/hosts").json()
     hosts = {h["id"]: h for h in data["hosts"]}
-    assert list(hosts) == ["hikari", "keyless", "down", "laptop"]
-    hikari = hosts["hikari"]
-    assert hikari["status"] == "online" and hikari["kind"] == "local"
-    rt = hikari["runtimes"][0]
+    assert list(hosts) == ["server", "keyless", "down", "laptop"]
+    server = hosts["server"]
+    assert server["status"] == "online" and server["kind"] == "local"
+    rt = server["runtimes"][0]
     assert rt["id"] == "hermes" and rt["version"] == "0.20.4-mock" and rt["status"] == "online"
     # ungültiger Agent-Name entfällt, Anzeigename aus der Config bleibt erhalten
-    assert [a["id"] for a in rt["agents"]] == ["default", "omoikane", "ghost", "sora"]
-    assert rt["agents"][-1]["label"] == "Sora"
+    assert [a["id"] for a in rt["agents"]] == ["default", "beta", "ghost", "eta"]
+    assert rt["agents"][-1]["label"] == "Eta"
     assert hosts["down"]["status"] == "unreachable" and hosts["down"]["detail"]
     laptop = hosts["laptop"]
     assert laptop["status"] == "unreachable" and laptop["kind"] == "remote" and "laptop.test:8642" in laptop["detail"]
@@ -72,7 +72,7 @@ def test_broken_config_keeps_last_good_and_reports(client, hosts_file):
     hosts_file.write_text("{kaputt")
     os.utime(hosts_file, (time.time() + 5, time.time() + 5))
     data = client.get("/bff/hosts").json()
-    assert [h["id"] for h in data["hosts"]][0] == "hikari"
+    assert [h["id"] for h in data["hosts"]][0] == "server"
     assert "ungültig" in data["config_error"]
 
 
@@ -94,7 +94,7 @@ def test_agent_status_online_with_features(client):
 
 @pytest.mark.parametrize("path,state", [
     ("/bff/h/keyless/hermes/default", "auth_error"),
-    ("/bff/h/hikari/hermes/ghost", "gone"),
+    ("/bff/h/server/hermes/ghost", "gone"),
     ("/bff/h/down/hermes/default", "unreachable"),
     ("/bff/h/laptop/hermes/default", "unreachable"),
 ])
@@ -110,13 +110,13 @@ def test_calls_to_a_host_that_is_off_report_502_with_its_address(client):
 
 
 def test_unknown_targets_404(client):
-    for path in ("/bff/h/nope/hermes/default", "/bff/h/hikari/opencode/default", "/bff/h/hikari/hermes/unbekannt"):
+    for path in ("/bff/h/nope/hermes/default", "/bff/h/server/opencode/default", "/bff/h/server/hermes/unbekannt"):
         assert client.get(f"{path}/sessions").status_code == 404
 
 
 def test_invalid_path_segments_rejected(client):
-    assert client.get("/bff/h/HIKARI/hermes/default/status").status_code == 422
-    assert client.get("/bff/h/hikari/hermes/..%2Fx/status").status_code in (404, 422)
+    assert client.get("/bff/h/SERVER/hermes/default/status").status_code == 422
+    assert client.get("/bff/h/server/hermes/..%2Fx/status").status_code in (404, 422)
     assert client.get(f"{BASE}/runs/..%2F..%2Fsecret").status_code in (404, 422)
     assert client.get(f"{BASE}/sessions/a%2Fb/messages").status_code in (404, 422)
 
@@ -128,7 +128,7 @@ def test_upstream_auth_failure_is_502_for_browser(client):
 def test_profiles_are_isolated(client):
     run(client, "nur default")
     assert len(client.get(f"{BASE}/sessions").json()["data"]) == 1
-    assert client.get("/bff/h/hikari/hermes/omoikane/sessions").json()["data"] == []
+    assert client.get("/bff/h/server/hermes/beta/sessions").json()["data"] == []
 
 
 # --- Runs und Ereignisse -------------------------------------------------------------------------
@@ -276,14 +276,6 @@ def test_validation(client):
     assert client.post(f"{BASE}/runs", json={"text": "x", "images": [ok]}).status_code == 202
 
 
-# --- Alte Links ---------------------------------------------------------------------------------
-def test_legacy_profile_links_redirect(client):
-    r = client.get("/p/raiden/chat/abc", follow_redirects=False)
-    assert r.status_code == 308 and r.headers["location"] == "/h/hikari/hermes/raiden/chat/abc"
-    assert client.get("/p/raiden", follow_redirects=False).headers["location"] == "/h/hikari/hermes/raiden/chat"
-    assert client.get("/p/..%2Fx", follow_redirects=False).status_code in (404, 422)
-
-
 # --- Diagnose-Ring --------------------------------------------------------------------------------
 def by_id(report):
     return {c["id"]: c for c in report["checks"]}
@@ -305,7 +297,7 @@ def test_diagnose_checks_history_with_tool_results(client):
 def test_diagnose_reports_an_unreachable_agent_without_failing(client):
     report = client.get("/bff/h/down/hermes/default/diagnose").json()
     assert report["status"] == "fail" and [c["id"] for c in report["checks"]] == ["health"]
-    assert client.get("/bff/h/hikari/hermes/ghost/diagnose").json()["status"] == "fail"
+    assert client.get("/bff/h/server/hermes/ghost/diagnose").json()["status"] == "fail"
 
 
 def test_diagnose_run_test_completes_a_real_run(client):
@@ -358,7 +350,7 @@ def test_skills_and_toolsets_are_passed_through(client):
 
 def test_skills_of_an_offline_host_is_502_and_unknown_agent_404(client):
     assert client.get("/bff/h/laptop/hermes/default/skills").status_code == 502
-    assert client.get("/bff/h/hikari/hermes/ghost/toolsets").status_code == 404
+    assert client.get("/bff/h/server/hermes/ghost/toolsets").status_code == 404
 
 
 def test_me_reports_the_build_when_one_is_set(make_settings):

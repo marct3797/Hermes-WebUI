@@ -103,9 +103,9 @@ def test_mentions_cope_with_trailing_punctuation():
 
 
 def test_mentions_read_umlauts_and_trailing_honorifics():
-    names = {"jörg": "h/hermes/joerg", "sora": "h/hermes/sora"}
+    names = {"jörg": "h/hermes/joerg", "eta": "h/hermes/eta"}
     assert parse_mentions("@Jörg, schau mal", names) == ["h/hermes/joerg"]
-    assert parse_mentions("@Sora-san bitte, oder @sora_bot", names) == ["h/hermes/sora"]
+    assert parse_mentions("@Eta-san bitte, oder @eta_bot", names) == ["h/hermes/eta"]
     assert parse_mentions("@user-feedback", names) == []  # Reservierte Wörter werden nicht aus Anhängseln erraten
     assert parse_mentions("@all-hands", names) == []
 
@@ -246,7 +246,7 @@ async def test_user_mention_holds_the_room_and_flags_it():
 
 
 async def test_a_member_mentioned_together_with_the_user_still_gets_its_turn():
-    """Echter Fall aus Hikari: „@bert prüf das, ich fasse es für @user zusammen“ beendete den Raum, bevor Bert dran war."""
+    """Echter Fall aus Server: „@bert prüf das, ich fasse es für @user zusammen“ beendete den Raum, bevor Bert dran war."""
     def script(agent, prompt, n):
         if agent == "anna":
             return "@bert prüf das bitte, ich fasse es dann für @user zusammen." if n == 1 else "Danke Bert, dann fasse ich zusammen."
@@ -269,10 +269,10 @@ async def test_the_user_alone_still_stops_the_room_at_once():
 
 
 def test_prompt_names_speakers_by_display_name_not_agent_id():
-    names = {"sora": "h/hermes/default", "default": "h/hermes/default", "bert": "h/hermes/bert"}
-    p = build_prompt("Raum", "Bert", ["Sora"], [{"author": "h/hermes/default", "text": "Hi"}], names, labels={"h/hermes/default": "Sora"})
-    assert "Sora: Hi" in p and "default: Hi" not in p
-    assert "sora: Hi" in build_prompt("Raum", "Bert", ["Sora"], [{"author": "h/hermes/default", "text": "Hi"}], names)  # ohne labels: Anzeigename, nie die Kennung
+    names = {"eta": "h/hermes/default", "default": "h/hermes/default", "bert": "h/hermes/bert"}
+    p = build_prompt("Raum", "Bert", ["Eta"], [{"author": "h/hermes/default", "text": "Hi"}], names, labels={"h/hermes/default": "Eta"})
+    assert "Eta: Hi" in p and "default: Hi" not in p
+    assert "eta: Hi" in build_prompt("Raum", "Bert", ["Eta"], [{"author": "h/hermes/default", "text": "Hi"}], names)  # ohne labels: Anzeigename, nie die Kennung
 
 
 def test_prompt_asks_for_user_mentions_only_when_stuck():
@@ -477,13 +477,13 @@ async def test_a_mention_with_an_honorific_still_hands_over_to_the_member():
 # --- Routen --------------------------------------------------------------------------------------
 @pytest.fixture
 def client(make_settings, tmp_path):
-    transport = RouterTransport({"hermes.test": httpx.ASGITransport(app=create_mock(wait_for_user=False, delay=0, profiles=("default", "omoikane", "sora")))})
+    transport = RouterTransport({"hermes.test": httpx.ASGITransport(app=create_mock(wait_for_user=False, delay=0, profiles=("default", "beta", "eta")))})
     with TestClient(create_app(make_settings(rooms_db=tmp_path / "rooms.db"), transport=transport)) as c:
         c.headers.update(HDR)
         yield c
 
 
-M = [{"host": "hikari", "runtime": "hermes", "agent": "default"}, {"host": "hikari", "runtime": "hermes", "agent": "omoikane"}]
+M = [{"host": "server", "runtime": "hermes", "agent": "default"}, {"host": "server", "runtime": "hermes", "agent": "beta"}]
 
 
 def wait_idle(client, rid, timeout=10.0):
@@ -500,15 +500,15 @@ def test_a_room_through_the_api_with_real_agents_from_the_mock(client):
     r = client.post("/bff/rooms", json={"name": "Runde", "members": M})
     assert r.status_code == 201
     room = r.json()
-    assert [m["key"] for m in room["members"]] == ["hikari/hermes/default", "hikari/hermes/omoikane"]
+    assert [m["key"] for m in room["members"]] == ["server/hermes/default", "server/hermes/beta"]
     rid = room["id"]
     assert client.post(f"/bff/rooms/{rid}/messages", json={"text": "Hallo ihr zwei"}).status_code == 202
     done = wait_idle(client, rid)
     texts = [(m["author"], m["kind"]) for m in done["messages"]]
-    assert texts == [("user", "message"), ("hikari/hermes/default", "message"), ("hikari/hermes/omoikane", "message")]
+    assert texts == [("user", "message"), ("server/hermes/default", "message"), ("server/hermes/beta", "message")]
     assert "Mock-Antwort" in done["messages"][1]["text"]
     listed = client.get("/bff/rooms").json()["rooms"]
-    assert [r["id"] for r in listed] == [rid] and listed[0]["last_message"]["author"] == "hikari/hermes/omoikane"
+    assert [r["id"] for r in listed] == [rid] and listed[0]["last_message"]["author"] == "server/hermes/beta"
 
 
 def test_room_input_is_validated(client):
@@ -516,12 +516,12 @@ def test_room_input_is_validated(client):
     assert one.status_code == 422
     dup = client.post("/bff/rooms", json={"name": "x", "members": [M[0], M[0]]})
     assert dup.status_code == 422 and "nur einmal" in dup.json()["detail"]
-    unknown = client.post("/bff/rooms", json={"name": "x", "members": [M[0], {"host": "hikari", "runtime": "hermes", "agent": "geist"}]})
+    unknown = client.post("/bff/rooms", json={"name": "x", "members": [M[0], {"host": "server", "runtime": "hermes", "agent": "geist"}]})
     assert unknown.status_code == 404
-    evil = client.post("/bff/rooms", json={"name": "x", "members": [M[0], {"host": "hikari", "runtime": "hermes", "agent": "../etc"}]})
+    evil = client.post("/bff/rooms", json={"name": "x", "members": [M[0], {"host": "server", "runtime": "hermes", "agent": "../etc"}]})
     assert evil.status_code == 422
     assert client.post("/bff/rooms", json={"name": "", "members": M}).status_code == 422
-    seven = client.post("/bff/rooms", json={"name": "x", "members": [{"host": "hikari", "runtime": "hermes", "agent": f"a{i}"} for i in range(7)]})
+    seven = client.post("/bff/rooms", json={"name": "x", "members": [{"host": "server", "runtime": "hermes", "agent": f"a{i}"} for i in range(7)]})
     assert seven.status_code == 422
 
 
@@ -560,7 +560,7 @@ def test_the_event_stream_starts_with_the_room_state(client):
 def test_open_asks_are_part_of_the_room_the_list_and_the_stream_state(client):
     rid = client.post("/bff/rooms", json={"name": "Runde", "members": M}).json()["id"]
     assert client.get(f"/bff/rooms/{rid}").json()["asks"] == []
-    client.app.state.rooms.engine._track_ask(rid, "hikari/hermes/default", "run-9", APPROVAL)
+    client.app.state.rooms.engine._track_ask(rid, "server/hermes/default", "run-9", APPROVAL)
     room = client.get(f"/bff/rooms/{rid}").json()
     assert [(a["run_id"], a["kind"], a["command"]) for a in room["asks"]] == [("run-9", "approval", "rm -rf build")]
     assert client.get("/bff/rooms").json()["rooms"][0]["asks"] == room["asks"]

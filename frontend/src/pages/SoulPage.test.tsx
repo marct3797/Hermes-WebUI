@@ -5,11 +5,11 @@ import { page, resetRedirect } from "../api";
 import { installBackend } from "../test-backend";
 
 let backend: ReturnType<typeof installBackend>;
-const OLD = "Du bist Raiden.\nDu antwortest knapp.\n";
+const OLD = "Du bist Gamma.\nDu antwortest knapp.\n";
 
 async function open() {
-  backend = installBackend(["raiden"]);
-  history.pushState(null, "", "/h/hikari/hermes/raiden/soul");
+  backend = installBackend(["gamma"]);
+  history.pushState(null, "", "/h/server/hermes/gamma/soul");
   render(<App />);
   await screen.findByRole("heading", { name: "SOUL & Profil", level: 1 });
   return (await screen.findByLabelText("Inhalt von SOUL.md")) as HTMLTextAreaElement;
@@ -27,7 +27,7 @@ describe("SOUL & Profil", () => {
     expect(ta.value).toBe(OLD);
     expect(screen.getByText(`${OLD.length} / 100 Zeichen`)).toBeInTheDocument();
     expect(save()).toBeDisabled();
-    type(ta, "Du bist Raiden.\nDu antwortest ausführlich.\n");
+    type(ta, "Du bist Gamma.\nDu antwortest ausführlich.\n");
     fireEvent.click(screen.getByRole("button", { name: "Änderungen ansehen" }));
     const diff = screen.getByRole("region", { name: "Änderungen gegenüber dem gespeicherten Stand" });
     expect(within(diff).getByText("Du antwortest knapp.")).toBeInTheDocument();
@@ -36,7 +36,7 @@ describe("SOUL & Profil", () => {
     fireEvent.click(save());
     await screen.findByText(/Gespeichert\. Der bisherige Text liegt im Verlauf/);
     expect(writes()).toHaveLength(1);
-    expect(writes()[0].body).toEqual({ content: "Du bist Raiden.\nDu antwortest ausführlich.\n", base: `h${OLD.length}:Du bist Raid` });
+    expect(writes()[0].body).toEqual({ content: "Du bist Gamma.\nDu antwortest ausführlich.\n", base: `h${OLD.length}:Du bist Gamm` });
     expect(save()).toBeDisabled();
     expect(within(screen.getByRole("region", { name: "Verlauf" })).getByText(`vor Änderung · ${OLD.length} Zeichen`)).toBeInTheDocument();
   });
@@ -121,10 +121,10 @@ describe("SOUL & Profil", () => {
   });
 
   it("explains how to connect the dashboard when there is none", async () => {
-    backend = installBackend(["raiden"]);
+    backend = installBackend(["gamma"]);
     backend.dash.available = false;
     backend.dash.reason = "Für diese Runtime ist kein Dashboard eingerichtet";
-    history.pushState(null, "", "/h/hikari/hermes/raiden/soul");
+    history.pushState(null, "", "/h/server/hermes/gamma/soul");
     render(<App />);
     expect(await screen.findByRole("heading", { name: "Dashboard nicht angebunden" })).toBeInTheDocument();
     expect(screen.getByText("Für diese Runtime ist kein Dashboard eingerichtet")).toBeInTheDocument();
@@ -150,10 +150,10 @@ describe("SOUL & Profil", () => {
   });
 
   it("is reachable from the chat's session column and the host overview", async () => {
-    backend = installBackend(["raiden"]);
-    history.pushState(null, "", "/h/hikari/hermes/raiden");
+    backend = installBackend(["gamma"]);
+    history.pushState(null, "", "/h/server/hermes/gamma");
     render(<App />);
-    fireEvent.click(await screen.findByRole("link", { name: "SOUL von raiden" }));
+    fireEvent.click(await screen.findByRole("link", { name: "SOUL von gamma" }));
     await screen.findByRole("heading", { name: "SOUL & Profil", level: 1 });
   });
 });

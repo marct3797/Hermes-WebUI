@@ -18,6 +18,6 @@ ENV HERMES_WEBUI_STATIC_DIR=/srv/static
 # Git-Stand des Builds (deploy.sh setzt ihn); die WebUI zeigt ihn in der Seitenleiste.
 ARG BUILD_ID=""
 ENV HERMES_WEBUI_BUILD=$BUILD_ID
-# Mit network_mode: host (Hikari) gilt dieser Port direkt auf dem Host; nur Loopback, davor liegt Caddy.
+# Mit network_mode: host (Server) gilt dieser Port direkt auf dem Host; nur Loopback, davor liegt Caddy.
 ENV WEBUI_HOST=127.0.0.1 WEBUI_PORT=8420
 CMD ["sh", "-c", "exec uvicorn app.main:app_factory --factory --no-server-header --host \"$WEBUI_HOST\" --port \"$WEBUI_PORT\""]

@@ -1,7 +1,7 @@
 """Auth-Schicht. Alle /bff-Routen hängen an `current_user`.
 
 Modus "none": nur Entwicklung, Start in prod wird verweigert.
-Modus "oidc": Forgejo als OAuth2/OIDC-Anbieter (Ablauf in `oidc.py`, Routen in `routes/auth.py`).
+Modus "oidc": ein OIDC-Anbieter (getestet mit Forgejo) (Ablauf in `oidc.py`, Routen in `routes/auth.py`).
 Das BFF hält die Sitzung serverseitig; der Browser bekommt nur eine zufällige Sitzungs-ID im Cookie
 (`__Host-`, HttpOnly, Secure, SameSite=Strict). Tokens des Anbieters gelangen nie in den Browser.
 """
@@ -40,7 +40,7 @@ class Session:
 
 
 class SessionStore:
-    """Sitzungen im Speicher. Ein Neustart des BFF meldet ab, die Anmeldung über Forgejo ist schnell."""
+    """Sitzungen im Speicher. Ein Neustart des BFF meldet ab, die erneute Anmeldung ist schnell."""
 
     def __init__(self, idle_s: int, max_s: int, clock: Callable[[], float] = time.time):
         self.idle_s, self.max_s, self._clock = idle_s, max_s, clock
@@ -83,17 +83,17 @@ def assert_auth_configured(settings: Settings) -> None:
     if settings.auth_mode == "oidc":
         missing = [
             name for name, ok in {
-                "FORGEJO_ISSUER": settings.oidc_issuer,
-                "FORGEJO_OIDC_CLIENT_ID": settings.oidc_client_id,
-                "FORGEJO_OIDC_CLIENT_SECRET": settings.oidc_client_secret.get_secret_value(),
-                "OIDC_ALLOWED_SUB": settings.allowed_subs(),
+                "HERMES_WEBUI_OIDC_ISSUER": settings.oidc_issuer,
+                "HERMES_WEBUI_OIDC_CLIENT_ID": settings.oidc_client_id,
+                "HERMES_WEBUI_OIDC_CLIENT_SECRET": settings.oidc_client_secret.get_secret_value(),
+                "HERMES_WEBUI_OIDC_ALLOWED_SUB": settings.allowed_subs(),
                 "HERMES_WEBUI_PUBLIC_URL": settings.public_url,
             }.items() if not ok
         ]
         if missing:
             raise RuntimeError("OIDC unvollständig konfiguriert: " + ", ".join(missing))
         if settings.env == "prod":
-            for name, url in (("FORGEJO_ISSUER", settings.oidc_issuer), ("HERMES_WEBUI_PUBLIC_URL", settings.public_url)):
+            for name, url in (("HERMES_WEBUI_OIDC_ISSUER", settings.oidc_issuer), ("HERMES_WEBUI_PUBLIC_URL", settings.public_url)):
                 if urlparse(url).scheme != "https":
                     raise RuntimeError(f"{name} muss in prod https verwenden")
     if settings.env == "prod" and "*" in settings.host_list():

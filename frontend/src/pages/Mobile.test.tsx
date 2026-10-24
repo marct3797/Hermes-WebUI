@@ -7,13 +7,13 @@ import { FakeEventSource, emit, installBackend } from "../test-backend";
 const sidebar = () => screen.findByRole("complementary", { name: "Navigation" });
 const bar = async () => within(await screen.findByRole("navigation", { name: "Hauptnavigation" }));
 
-beforeEach(() => { resetRedirect(); installBackend(["raiden", "sora"]); });
+beforeEach(() => { resetRedirect(); installBackend(["gamma", "eta"]); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 async function openApproval() {
-  history.pushState(null, "", "/h/hikari/hermes/raiden/chat");
+  history.pushState(null, "", "/h/server/hermes/gamma/chat");
   render(<App />);
-  const box = await screen.findByPlaceholderText("Nachricht an raiden…");
+  const box = await screen.findByPlaceholderText("Nachricht an gamma…");
   await waitFor(() => expect(screen.getByRole("button", { name: "Senden" })).toBeDisabled());
   fireEvent.change(box, { target: { value: "räum auf" } });
   fireEvent.click(screen.getByRole("button", { name: "Senden" }));
@@ -46,7 +46,7 @@ describe("Handy: Tab-Leiste", () => {
     expect(await sidebar()).not.toHaveClass("open");
     fireEvent.click((await bar()).getByRole("button", { name: "Chats" }));
     expect(await sidebar()).toHaveClass("open");
-    expect(within(await sidebar()).getByRole("link", { name: /^raiden/ })).toBeInTheDocument();
+    expect(within(await sidebar()).getByRole("link", { name: /^gamma/ })).toBeInTheDocument();
   });
 
   it("opens a sheet with Hosts and Darstellung through Mehr, and closes it with Escape or when going somewhere", async () => {
@@ -69,9 +69,9 @@ describe("Handy: Tab-Leiste", () => {
   });
 
   it("is not part of the chat view, which has its own back button and drawer", async () => {
-    history.pushState(null, "", "/h/hikari/hermes/raiden/chat");
+    history.pushState(null, "", "/h/server/hermes/gamma/chat");
     render(<App />);
-    await screen.findByPlaceholderText("Nachricht an raiden…");
+    await screen.findByPlaceholderText("Nachricht an gamma…");
     expect(screen.queryByRole("navigation", { name: "Hauptnavigation" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Agents und Sessions öffnen" }));
     expect(await sidebar()).toHaveClass("open");

@@ -14,22 +14,17 @@ describe("router", () => {
   });
 
   it("parses /h/<host>/<runtime>/<agent>/<modul>/<id>", () => {
-    expect(parsePath("/h/hikari/hermes/raiden/chat/sess_1")).toEqual({
-      name: "agent", ref: { host: "hikari", runtime: "hermes", agent: "raiden" }, module: "chat", sessionId: "sess_1",
+    expect(parsePath("/h/server/hermes/gamma/chat/sess_1")).toEqual({
+      name: "agent", ref: { host: "server", runtime: "hermes", agent: "gamma" }, module: "chat", sessionId: "sess_1",
     });
     expect(parsePath("/h/laptop/claude-code/hermes-webui")).toMatchObject({ ref: { runtime: "claude-code", agent: "hermes-webui" }, module: "chat" });
-    expect(parsePath("/h/hikari/hermes")).toEqual({ name: "notfound" });
+    expect(parsePath("/h/server/hermes")).toEqual({ name: "notfound" });
   });
 
   it("round-trips agent paths with special characters", () => {
-    const ref = { host: "hikari", runtime: "hermes", agent: "a b" };
+    const ref = { host: "server", runtime: "hermes", agent: "a b" };
     const page = parsePath(agentPath(ref, "chat", "id/1"));
     expect(page).toMatchObject({ name: "agent", ref, sessionId: "id/1" });
-  });
-
-  it("redirects old /p/<profil> links to hikari/hermes", () => {
-    expect(parsePath("/p/raiden/chat/abc")).toEqual({ name: "redirect", to: "/h/hikari/hermes/raiden/chat/abc" });
-    expect(parsePath("/p/raiden")).toEqual({ name: "redirect", to: "/h/hikari/hermes/raiden/chat" });
   });
 
   it("does not crash on broken percent encoding", () => {

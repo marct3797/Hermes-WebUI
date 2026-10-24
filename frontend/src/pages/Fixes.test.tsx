@@ -5,7 +5,7 @@ import { WorkspacePage } from "./WorkspacePage";
 import { editableSchedule, scheduleText, text } from "../components/operations/http";
 import jobs from "../fixtures/real/real_jobs_list.json";
 
-const PROFILES = ["default", "benzai", "inari", "raiden", "kaito", "mira", "sora", "tenjin", "yuki"];
+const PROFILES = ["default", "zeta", "delta", "gamma", "kaito", "mira", "eta", "operator", "yuki"];
 vi.mock("../hosts", () => ({ useHosts: () => ({ hosts: [{ id: "laptop", label: "Laptop", runtimes: [{ id: "hermes", agents: PROFILES.map((id) => ({ id, label: id })) }] }] }) }));
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
@@ -59,20 +59,20 @@ describe("F1 Zeitpläne in echter Form", () => {
 
 describe("F2 Workspace ohne Git", () => {
   const setup = (gitStatus: number, entries: unknown[] = []) => vi.stubGlobal("fetch", vi.fn(async (url: string) => json(
-    url.includes("_workspaces") ? { workspaces: [{ id: "hikari", label: "Hikari" }] }
+    url.includes("_workspaces") ? { workspaces: [{ id: "server", label: "Server" }] }
       : url.includes("_git") ? (gitStatus === 200 ? { repository: false, reason: "Kein Git-Repository in diesem Arbeitsordner" } : { detail: "x" })
         : { entries }, url.includes("_git") ? gitStatus : 200)));
   it("zeigt neutralen Hinweis und leeren Ordner ohne Anmelde-Rat", async () => {
     setup(200);
-    render(<WorkspacePage host="hikari" />);
+    render(<WorkspacePage host="server" />);
     expect(await screen.findByText("Kein Git-Repository in diesem Arbeitsordner")).toBeInTheDocument();
     expect(await screen.findByText("Dieser Arbeitsordner ist leer.")).toBeInTheDocument();
     expect(screen.queryByText(/frisch anmelden/)).toBeNull();
   });
   it("Anmelde-Rat nur bei 401/403", async () => {
-    setup(409); render(<WorkspacePage host="hikari" />);
+    setup(409); render(<WorkspacePage host="server" />);
     expect(await screen.findByText("Anfrage fehlgeschlagen (409).")).toBeInTheDocument();
-    cleanup(); setup(403); render(<WorkspacePage host="hikari" />);
+    cleanup(); setup(403); render(<WorkspacePage host="server" />);
     expect(await screen.findByText(/403\); ggf. frisch anmelden/)).toBeInTheDocument();
   });
 });

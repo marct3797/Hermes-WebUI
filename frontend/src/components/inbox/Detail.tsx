@@ -96,7 +96,7 @@ function Approval({ need, sigils, now }: Props & { need: Extract<Need, { kind: "
         </div>
         <span className="hint">
           Die Anfrage erlischt nach {Math.round(a.timeoutS / 60)} Minuten.
-          {a.choices.includes("always") && " „Immer erlauben“ verlangt eine Forgejo-Bestätigung."}
+          {a.choices.includes("always") && " „Immer erlauben“ verlangt eine frische Anmeldung."}
         </span>
       </div>
     </>

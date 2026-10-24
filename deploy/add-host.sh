@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# Bindet einen weiteren Hermes-Host an die WebUI an (Laptop, zweiter Server, beliebig viele). Läuft als tenjin auf Hikari:
+# Bindet einen weiteren Hermes-Host an die WebUI an (Laptop, zweiter Server, beliebig viele). Läuft auf dem Server der WebUI:
 #     bash deploy/add-host.sh <kennung> "<Anzeigename>" <adresse> [Optionen]
 #       --port N              Port der Hermes-API (Standard 8642)
 #       --profile NAME        Profil auf diesem Host, mehrfach möglich (Standard: default; mehrere = Multiplex-Gateway)
 #       --dashboard-port N    Port des Hermes-Dashboards dort (für Anbieter, SOUL und Profile); fragt zusätzlich den Dashboard-Token
 #       --home ORDNER         Zielordner der WebUI (Standard ~/hermes-webui)
-# Beispiel (Laptop im Tailnet):  bash deploy/add-host.sh laptop "Laptop" 100.100.3.4 --dashboard-port 9119
+# Beispiel (zweiter Rechner im VPN):  bash deploy/add-host.sh laptop "Laptop" 100.64.3.4 --dashboard-port 9119
 # Ergänzt config/hosts.json um einen Eintrag (kind "remote"), fragt den API_SERVER_KEY des Hosts still ab (oder liest ihn von
 # stdin, Dashboard-Token als zweite Zeile) und legt ihn als HERMES_KEY_<KENNUNG> in webui.env ab. Danach: bash deploy/deploy.sh.
 # Bestehende Einträge bleiben unberührt, eine vorhandene Kennung wird nie überschrieben, nichts wird gelöscht. Einzige Ausnahme:
 # steht der Host schon da, ergänzt `--dashboard-port` ein fehlendes Dashboard; ohne diese Option wird nur der Key neu gesetzt.
 # Der Key lässt sich ohne Abtippen übergeben (Zeile von stdin), etwa vom Laptop aus:
-#     sed -n 's/^API_SERVER_KEY=//p' ~/.hermes/.env | tail -n 1 | ssh tenjin@100.100.1.1 "bash -c 'cd ~/Hermes-WebUI && bash deploy/add-host.sh laptop Laptop 100.100.3.4'"
+#     sed -n 's/^API_SERVER_KEY=//p' ~/.hermes/.env | tail -n 1 | ssh <benutzer>@<webui-server> "bash -c 'cd ~/Hermes-WebUI && bash deploy/add-host.sh laptop Laptop 100.64.3.4'"
 # Sicherungen: hosts.json.bak, webui.env.bak. Werte werden weder ausgegeben noch als Argument weitergereicht.
 usage() { awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"; exit "${1:-2}"; }
 

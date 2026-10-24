@@ -1,6 +1,6 @@
 """Minimaler Hermes-API-Server-Ersatz für Entwicklung und Tests.
 
-Spricht die Formen, die Hermes 0.21.6 auf Hikari tatsächlich liefert (Memory `hermes-api-real-0-21-6`): reine
+Spricht die Formen, die Hermes 0.21.6 in einer echten Instanz tatsächlich liefert: reine
 `data:`-Frames ohne `event:`-Zeile, Eventname im JSON-Feld `event`, `POST /v1/runs` ohne `session_id` (steht im
 Lauf-Status), Listen als `{object, data[], has_more}`, Verlauf mit `tool_calls` und Rolle `tool`, Fähigkeiten
 als `features`-Flags, Modelle als `providers[]`. `tool.completed` trägt keine Ausgabe: die steht erst im Verlauf.
@@ -28,7 +28,7 @@ VERSION = "0.20.4-mock"
 
 def create_mock(
     wait_for_user: bool = True, delay: float = 0.03, require_key: bool = True,
-    profiles: tuple[str, ...] = ("default", "omoikane"), multiplex: bool = True, with_steer: bool = True,
+    profiles: tuple[str, ...] = ("default", "beta"), multiplex: bool = True, with_steer: bool = True,
     broken_lists: bool = False,
 ) -> FastAPI:
     app = FastAPI()

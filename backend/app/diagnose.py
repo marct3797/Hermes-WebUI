@@ -3,7 +3,7 @@
 Die Prüfungen laufen über die Adapter-Schnittstelle, kennen also keine Hermes-Routen. Sie lesen nur; der Lauftest
 ist die Ausnahme und legt eine kurze Session an (Löschen ist im Projekt verboten, sie bleibt in der Liste).
 Jede Prüfung liefert `ok`, `warn` (läuft, aber anders als erwartet) oder `fail`. So zeigt sich eine Abweichung der
-Hermes-API sofort, nicht erst, wenn Marc im Chat etwas vermisst.
+Hermes-API sofort, nicht erst, wenn im Chat etwas fehlt.
 """
 from __future__ import annotations
 

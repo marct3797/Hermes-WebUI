@@ -6,7 +6,7 @@ import { installBackend, roomOf } from "../test-backend";
 
 let env: ReturnType<typeof installBackend>;
 
-async function open(agents = ["raiden", "sora", "kaze"]) {
+async function open(agents = ["gamma", "eta", "epsilon"]) {
   env = installBackend(agents);
   history.pushState(null, "", "/rooms");
   render(<App />);
@@ -23,22 +23,22 @@ describe("Räume", () => {
   });
 
   it("lists rooms with last message and flags the ones that wait or work", async () => {
-    env = installBackend(["raiden", "sora"]);
+    env = installBackend(["gamma", "eta"]);
     env.rooms.push(
-      roomOf("111111111111", "Planung", ["raiden", "sora"], { needs_user: true, last_message: { seq: 3, author: "hikari/hermes/sora", kind: "message", text: "Darf ich löschen?", mentions: ["user"], at: 1_792_000_000 } }),
-      roomOf("222222222222", "Ruhig", ["raiden", "sora"], { running: true }),
+      roomOf("111111111111", "Planung", ["gamma", "eta"], { needs_user: true, last_message: { seq: 3, author: "server/hermes/eta", kind: "message", text: "Darf ich löschen?", mentions: ["user"], at: 1_792_000_000 } }),
+      roomOf("222222222222", "Ruhig", ["gamma", "eta"], { running: true }),
     );
     history.pushState(null, "", "/rooms");
     render(<App />);
     const card = await screen.findByRole("link", { name: /Planung/ });
     expect(within(card).getByText("BRAUCHT DICH")).toBeInTheDocument();
-    expect(within(card).getByText("sora: Darf ich löschen?")).toBeInTheDocument();
+    expect(within(card).getByText("eta: Darf ich löschen?")).toBeInTheDocument();
     expect(within(screen.getByRole("link", { name: /Ruhig/ })).getByText("LÄUFT")).toBeInTheDocument();
     expect(screen.getByText("2 aktiv · 1 brauchen dich")).toBeInTheDocument();
   });
 
   it("asks for the archive only when told to", async () => {
-    await open(["raiden"]);
+    await open(["gamma"]);
     fireEvent.click(screen.getByRole("button", { name: "Archiv" }));
     await screen.findByText("Nichts archiviert");
     expect(env.calls.some((c) => c.url === "/bff/rooms?archived=true")).toBe(true);
@@ -52,14 +52,14 @@ describe("Räume", () => {
     expect(within(form).queryByText("default")).not.toBeInTheDocument(); // der Laptop ist nicht erreichbar
     expect(create).toBeDisabled();
     fireEvent.change(within(form).getByPlaceholderText(/Planungsrunde/), { target: { value: "Runde" } });
-    fireEvent.click(within(form).getByRole("checkbox", { name: /raiden/ }));
+    fireEvent.click(within(form).getByRole("checkbox", { name: /gamma/ }));
     expect(create).toBeDisabled();
-    fireEvent.click(within(form).getByRole("checkbox", { name: /sora/ }));
+    fireEvent.click(within(form).getByRole("checkbox", { name: /eta/ }));
     expect(create).toBeEnabled();
     fireEvent.click(create);
     await waitFor(() => expect(location.pathname).toBe("/rooms/abcabcabcabc"));
     const post = env.calls.find((c) => c.method === "POST" && c.url === "/bff/rooms");
-    expect(post?.body).toEqual({ name: "Runde", members: [{ host: "hikari", runtime: "hermes", agent: "raiden" }, { host: "hikari", runtime: "hermes", agent: "sora" }] });
+    expect(post?.body).toEqual({ name: "Runde", members: [{ host: "server", runtime: "hermes", agent: "gamma" }, { host: "server", runtime: "hermes", agent: "eta" }] });
   });
 
   it("is reachable from the sidebar", async () => {

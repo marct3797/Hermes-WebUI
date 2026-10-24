@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from app.redaction import FRAGMENT, RedactionMiddleware, redact_fragments
 
 REAL = Path(__file__).parent / "fixtures" / "real"
-MATRIX = (REAL / "real_provider_matrix_hikari.json").read_text()
+MATRIX = (REAL / "real_provider_matrix_server.json").read_text()
 PROVIDERS = (REAL / "real_providers_laptop_default.json").read_text()
 STREAM = 'data: {"key": "«redacted:oc_s...87r9»"}\n\n'
 
@@ -19,14 +19,14 @@ STREAM = 'data: {"key": "«redacted:oc_s...87r9»"}\n\n'
 def client():
     app = FastAPI()
     app.add_middleware(RedactionMiddleware)
-    app.get("/bff/h/hikari/_provider-matrix")(lambda: JSONResponse(json.loads(MATRIX)))
+    app.get("/bff/h/server/_provider-matrix")(lambda: JSONResponse(json.loads(MATRIX)))
     app.get("/bff/h/laptop/hermes/default/providers")(lambda: JSONResponse(json.loads(PROVIDERS), headers={"X-Keep": "1"}))
     app.get("/bff/h/laptop/stream")(lambda: StreamingResponse(iter([STREAM]), media_type="text/event-stream"))
     app.get("/other")(lambda: JSONResponse({"k": "«redacted:abcd...wxyz»"}))
     return TestClient(app)
 
 
-@pytest.mark.parametrize("path,source", [("/bff/h/hikari/_provider-matrix", MATRIX), ("/bff/h/laptop/hermes/default/providers", PROVIDERS)])
+@pytest.mark.parametrize("path,source", [("/bff/h/server/_provider-matrix", MATRIX), ("/bff/h/laptop/hermes/default/providers", PROVIDERS)])
 def test_real_fixtures_lose_every_fragment(client, path, source):
     assert FRAGMENT.search(source) and re.search(r"«redacted:[^»]+\.\.\.", source)  # die Fixture enthält wirklich Fragmente
     body = client.get(path).text

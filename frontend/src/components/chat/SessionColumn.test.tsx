@@ -19,7 +19,7 @@ const SESSIONS: SessionSummary[] = [
   { id: "d", title: "Nightly Lint", updatedAt: now, source: "cron" },
 ];
 
-const AGENT: AgentRef = { host: "hikari", runtime: "hermes", agent: "raiden" };
+const AGENT: AgentRef = { host: "server", runtime: "hermes", agent: "gamma" };
 
 /** Ein Run in Session „a“, der auf eine Freigabe wartet. */
 async function waitingRun() {
@@ -36,7 +36,7 @@ function mount(sessionId?: string, store = createRunStore()) {
   render(
     <RunsProvider store={store}>
       <ShellContext.Provider value={{ openMenu: () => undefined, sessions: SESSIONS, sessionsLoading: false, refreshSessions: () => undefined }}>
-        <SessionColumn agent={AGENT} label="raiden" runtimeLabel="Hermes" sessionId={sessionId} />
+        <SessionColumn agent={AGENT} label="gamma" runtimeLabel="Hermes" sessionId={sessionId} />
       </ShellContext.Provider>
     </RunsProvider>,
   );
@@ -87,7 +87,7 @@ describe("SessionColumn: Aktionen und Nachladen", () => {
     render(
       <RunsProvider store={createRunStore()}>
         <ShellContext.Provider value={{ openMenu: () => undefined, sessions: SESSIONS, sessionsLoading: false, refreshSessions: () => undefined, ...extra }}>
-          <SessionColumn agent={AGENT} label="raiden" runtimeLabel="Hermes" sessionId="a" />
+          <SessionColumn agent={AGENT} label="gamma" runtimeLabel="Hermes" sessionId="a" />
         </ShellContext.Provider>
       </RunsProvider>,
     );

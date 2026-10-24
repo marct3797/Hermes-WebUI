@@ -12,7 +12,7 @@ let redirecting = false;
 /** Seitenwechsel mit Neuladen (Anmeldung, Abmeldung). Ein Objekt, damit Tests es ersetzen können. */
 export const page = { assign: (url: string) => location.assign(url) };
 
-/** Sitzung abgelaufen: einmal zu Forgejo, danach zurück auf die aktuelle Seite. */
+/** Sitzung abgelaufen: einmal zum Anmeldedienst, danach zurück auf die aktuelle Seite. */
 export function toLogin(stepUp = false) {
   if (redirecting) return;
   redirecting = true;

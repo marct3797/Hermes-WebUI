@@ -6,16 +6,16 @@ const sigil = (container: HTMLElement) => container.querySelector(".sg") as HTML
 
 describe("Sigil", () => {
   it("uses initials and a name-derived hue without config", () => {
-    const { container } = render(<Sigil name="omoikane" />);
+    const { container } = render(<Sigil name="beta" />);
     const el = sigil(container);
     expect(el).toHaveClass("ini");
-    expect(el).toHaveAttribute("data-i", "OM");
-    expect(el.style.getPropertyValue("--id")).toBe(`oklch(.82 .12 ${hashHue("omoikane")})`);
+    expect(el).toHaveAttribute("data-i", "BE");
+    expect(el.style.getPropertyValue("--id")).toBe(`oklch(.82 .12 ${hashHue("beta")})`);
   });
 
   it("keeps the same hue for the same name", () => {
-    expect(hashHue("raiden")).toBe(hashHue("raiden"));
-    expect(hashHue("raiden")).not.toBe(hashHue("kaze"));
+    expect(hashHue("gamma")).toBe(hashHue("gamma"));
+    expect(hashHue("gamma")).not.toBe(hashHue("epsilon"));
   });
 
   it("renders neutral glyphs as a mask of the built-in icon", () => {
@@ -28,13 +28,13 @@ describe("Sigil", () => {
   });
 
   it("falls back to initials for an unknown neutral glyph", () => {
-    const { container } = render(<Sigil name="kaze" config={{ type: "glyph", glyph: "neutral/gibtsnicht" }} />);
+    const { container } = render(<Sigil name="epsilon" config={{ type: "glyph", glyph: "neutral/gibtsnicht" }} />);
     expect(sigil(container)).toHaveClass("ini");
   });
 
   it("loads pack glyphs and custom SVGs only from the BFF sigil paths", () => {
-    const ok = render(<Sigil name="a" config={{ type: "glyph", glyph: "japan/raiden", src: "/bff/ui/glyphs/japan/raiden.svg" }} />);
-    expect(sigil(ok.container).style.getPropertyValue("--g")).toBe('url("/bff/ui/glyphs/japan/raiden.svg")');
+    const ok = render(<Sigil name="a" config={{ type: "glyph", glyph: "japan/gamma", src: "/bff/ui/glyphs/japan/gamma.svg" }} />);
+    expect(sigil(ok.container).style.getPropertyValue("--g")).toBe('url("/bff/ui/glyphs/japan/gamma.svg")');
     const own = render(<Sigil name="a" config={{ type: "svg", src: "/bff/ui/sigils/mein-symbol.svg" }} />);
     expect(sigil(own.container).style.getPropertyValue("--g")).toBe('url("/bff/ui/sigils/mein-symbol.svg")');
     // fremde Adresse oder Anführungszeichen: nicht als Maske verwenden

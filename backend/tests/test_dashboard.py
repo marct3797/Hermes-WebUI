@@ -14,7 +14,7 @@ from devtools.mock_dashboard import TOKEN, create_mock as create_dashboard
 from devtools.mock_hermes import create_mock
 from tests.conftest import BASE, HDR, RouterTransport, hosts_config
 
-OMO = BASE.replace("/default", "/omoikane")
+OMO = BASE.replace("/default", "/beta")
 OLD = "Du bist ein hilfsbereiter Assistent.\n"
 
 
@@ -67,8 +67,8 @@ def test_dashboard_config_rejects_unusable_entries(dash_cfg):
 
 def test_shipped_configs_connect_the_container_dashboard(tmp_path):
     root = Path(__file__).resolve().parents[2]
-    for name in ("deploy/hosts.json", "backend/hosts.example.json"):
-        cfg = parse_config(json.loads((root / name).read_text()), {"HERMES_DASHBOARD_TOKEN": "t"})["hikari"].runtimes[0]
+    for name in ("deploy/hosts.example.json", "backend/hosts.example.json"):
+        cfg = parse_config(json.loads((root / name).read_text()), {"HERMES_DASHBOARD_TOKEN": "t"})["server"].runtimes[0]
         assert cfg.dashboard == DashboardCfg("http://127.0.0.1:9122", "t"), name
 
 
@@ -80,7 +80,7 @@ def test_runtime_without_dashboard_has_none():
 def test_status_reports_profile_data(client):
     body = client.get(f"{OMO}/dashboard").json()
     assert body["available"] is True and body["reason"] is None
-    assert body["profile"] == {"name": "omoikane", "model": "claude-test", "provider": "anthropic", "description": "",
+    assert body["profile"] == {"name": "beta", "model": "claude-test", "provider": "anthropic", "description": "",
                                "description_auto": False, "skill_count": 12, "gateway_running": False, "has_env": True}
 
 
@@ -120,7 +120,7 @@ def test_read_soul(client):
 
 
 def test_read_soul_of_profile_without_file(client):
-    body = client.get(f"{BASE.replace('/default', '/sora')}/soul").json()
+    body = client.get(f"{BASE.replace('/default', '/eta')}/soul").json()
     assert body["content"] == "" and body["exists"] is False
 
 
@@ -130,7 +130,7 @@ def test_soul_unavailable_without_dashboard(client):
 
 
 def test_soul_of_unknown_profile_is_404(client, dash):
-    del dash.state.profiles["omoikane"]
+    del dash.state.profiles["beta"]
     assert client.get(f"{OMO}/soul").status_code == 404
 
 
@@ -156,9 +156,9 @@ def test_unchanged_text_is_a_no_op(client, tmp_path):
 
 
 def test_write_to_profile_without_soul_has_nothing_to_back_up(client, dash):
-    r = client.put(f"{BASE.replace('/default', '/sora')}/soul", json={"content": "Erste Fassung"})
+    r = client.put(f"{BASE.replace('/default', '/eta')}/soul", json={"content": "Erste Fassung"})
     assert r.json()["changed"] is True and r.json()["history"] == []
-    assert dash.state.profiles["sora"]["soul"] == "Erste Fassung"
+    assert dash.state.profiles["eta"]["soul"] == "Erste Fassung"
 
 
 def test_changed_in_the_meantime_gives_409_and_writes_nothing(client, dash):
@@ -215,7 +215,7 @@ def test_restore_of_unknown_version_is_404(client):
 def test_description_is_trimmed_and_audited(client, dash, tmp_path):
     r = client.put(f"{OMO}/profile/description", json={"description": "  Bewahrt Wissen  "})
     assert r.json() == {"ok": True, "description": "Bewahrt Wissen"}
-    assert dash.state.profiles["omoikane"]["description"] == "Bewahrt Wissen"
+    assert dash.state.profiles["beta"]["description"] == "Bewahrt Wissen"
     assert audit_lines(tmp_path)[-1]["action"] == "profile.description"
     assert client.put(f"{OMO}/profile/description", json={"description": "x" * 501}).status_code == 422
 
@@ -223,7 +223,7 @@ def test_description_is_trimmed_and_audited(client, dash, tmp_path):
 def test_model_change(client, dash, tmp_path):
     r = client.put(f"{OMO}/profile/model", json={"provider": "openrouter", "model": "anthropic/claude-sonnet"})
     assert r.json() == {"ok": True, "provider": "openrouter", "model": "anthropic/claude-sonnet"}
-    assert dash.state.profiles["omoikane"]["model"] == "anthropic/claude-sonnet"
+    assert dash.state.profiles["beta"]["model"] == "anthropic/claude-sonnet"
     entry = audit_lines(tmp_path)[-1]
     assert entry["action"] == "profile.model" and entry["detail"]["model"] == "anthropic/claude-sonnet"
 
@@ -234,7 +234,7 @@ def test_model_change_validates_input(client, body):
 
 
 def test_unknown_profile_is_404_for_writes(client, dash):
-    del dash.state.profiles["omoikane"]
+    del dash.state.profiles["beta"]
     assert client.put(f"{OMO}/profile/description", json={"description": "x"}).status_code == 404
     assert client.put(f"{OMO}/profile/model", json={"provider": "p", "model": "m"}).status_code == 404
 
@@ -257,18 +257,18 @@ async def test_client_maps_transport_and_status_errors():
 
 def test_history_dedupes_sorts_and_survives_damaged_files(tmp_path):
     h = SoulHistory(tmp_path / "souls")
-    first = h.add("hikari", "hermes", "default", "eins", "vor Änderung")
-    assert h.add("hikari", "hermes", "default", "eins", "vor Änderung") == first  # identisch zum neuesten: kein neuer Eintrag
-    h.add("hikari", "hermes", "default", "zwei", "vor Änderung")
-    folder = tmp_path / "souls" / "hikari__hermes__default"
+    first = h.add("server", "hermes", "default", "eins", "vor Änderung")
+    assert h.add("server", "hermes", "default", "eins", "vor Änderung") == first  # identisch zum neuesten: kein neuer Eintrag
+    h.add("server", "hermes", "default", "zwei", "vor Änderung")
+    folder = tmp_path / "souls" / "server__hermes__default"
     (folder / "20000101T000000000000.json").write_text("{kaputt")
     (folder / "notes.txt").write_text("fremd")
-    entries = h.entries("hikari", "hermes", "default")
+    entries = h.entries("server", "hermes", "default")
     assert [e["chars"] for e in entries] == [4, 4] and entries[0]["id"] > entries[1]["id"]
-    assert h.get("hikari", "hermes", "default", entries[0]["id"])["content"] == "zwei"
-    assert h.get("hikari", "hermes", "default", "20000101T000000000000") is None
-    assert h.get("hikari", "hermes", "default", "../x") is None
-    assert h.entries("hikari", "hermes", "anderer") == []  # je Agent getrennt
+    assert h.get("server", "hermes", "default", entries[0]["id"])["content"] == "zwei"
+    assert h.get("server", "hermes", "default", "20000101T000000000000") is None
+    assert h.get("server", "hermes", "default", "../x") is None
+    assert h.entries("server", "hermes", "anderer") == []  # je Agent getrennt
     assert stat.S_IMODE(folder.stat().st_mode) == 0o700 and stat.S_IMODE((folder / f"{first}.json").stat().st_mode) == 0o600
 
 

@@ -4,7 +4,7 @@ import { api } from "./api";
 import { useSessions } from "./shell";
 import type { AgentRef } from "./types";
 
-const AGENT: AgentRef = { host: "hikari", runtime: "hermes", agent: "raiden" };
+const AGENT: AgentRef = { host: "server", runtime: "hermes", agent: "gamma" };
 const row = (n: number, extra: Record<string, unknown> = {}) => ({ id: `s${n}`, title: `Chat ${n}`, last_active: 1_000 - n, ...extra });
 
 afterEach(() => vi.restoreAllMocks());

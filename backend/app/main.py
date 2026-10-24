@@ -31,7 +31,7 @@ from .static import FingerprintedFiles
 
 
 # Unter dieser Adresse lief früher eine andere Anwendung mit Service Worker. Er bleibt im Browser registriert, fängt
-# Anfragen ab und scheitert an der Weiterleitung zu Forgejo. Diese Datei ersetzt ihn beim nächsten Update-Check:
+# Anfragen ab und scheitert an der Weiterleitung zur Anmeldung. Diese Datei ersetzt ihn beim nächsten Update-Check:
 # sie hat keinen fetch-Handler, leert die Caches, meldet sich ab und lädt offene Fenster neu.
 RETIRE_SERVICE_WORKER = """\
 self.addEventListener("install", () => self.skipWaiting());
@@ -50,7 +50,7 @@ def create_app(
     transport: httpx.AsyncBaseTransport | None = None,
     oidc_transport: httpx.AsyncBaseTransport | None = None,
 ) -> FastAPI:
-    """`transport` ersetzt die Verbindung zu den Runtimes, `oidc_transport` die zu Forgejo (für Tests)."""
+    """`transport` ersetzt die Verbindung zu den Runtimes, `oidc_transport` die zum OIDC-Anbieter (für Tests)."""
     settings = settings or get_settings()
     assert_auth_configured(settings)
     # OAuth-Codes dürfen nie in Betriebslogs landen; idempotent für wiederholte App-Erzeugung in Tests.
@@ -126,15 +126,6 @@ def create_app(
     @app.get("/healthz", include_in_schema=False)
     async def healthz():
         return {"ok": True}
-
-    # Alte Links /p/<profil>/… zeigen auf den Standard-Host und Hermes.
-    @app.get("/p/{profile}", include_in_schema=False)
-    @app.get("/p/{profile}/{rest:path}", include_in_schema=False)
-    async def legacy_profile_link(profile: str, rest: str = ""):
-        if not AGENT_RE.match(profile):
-            raise HTTPException(404)
-        tail = f"/{rest}" if rest else "/chat"
-        return RedirectResponse(f"/h/{settings.legacy_host}/hermes/{profile}{tail}", status_code=308)
 
     static = settings.static_dir
     if static and Path(static).is_dir():

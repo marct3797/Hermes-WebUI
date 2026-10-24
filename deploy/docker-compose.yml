@@ -1,5 +1,5 @@
-# WebUI (BFF + Frontend) auf Hikari. Aufruf aus diesem Ordner:  docker compose up -d --build
-# network_mode: host, weil das Container-Gateway nur auf 127.0.0.1:9121 lauscht. Das BFF selbst bindet ebenfalls nur Loopback.
+# WebUI (BFF + Frontend). Aufruf aus diesem Ordner:  docker compose up -d --build
+# network_mode: host, damit das BFF ein Hermes-Gateway erreicht, das nur auf 127.0.0.1 lauscht. Das BFF selbst bindet ebenfalls nur Loopback.
 services:
   webui:
     build:
@@ -10,9 +10,9 @@ services:
     image: hermes-webui:local
     container_name: hermes-webui
     network_mode: host
-    # Der Docker-Daemon auf Hikari setzt öffentliche DNS-Server; git.thiel.digital (Forgejo, OIDC) löst nur im Tailnet auf.
+    # Optional: WEBUI_EXTRA_HOST="name:ip" in webui.env, wenn der OIDC-Anbieter nur in einem privaten Netz auflösbar ist.
     extra_hosts:
-      - "git.thiel.digital:100.100.1.1"
+      - "${WEBUI_EXTRA_HOST:-localhost.invalid:127.0.0.1}"
     restart: unless-stopped
     user: "${WEBUI_UID:-1000}:${WEBUI_GID:-1000}"
     env_file: ${WEBUI_HOME:-.}/webui.env

@@ -65,7 +65,7 @@ def parse_mentions(text: str, names: dict[str, str]) -> list[str]:
         name = raw.lower().rstrip("-_")
         hit = "all" if name in ("all", "alle") else "user" if name == "user" else names.get(name)
         if hit is None and name not in ("all", "alle", "user"):
-            # „@sora-san“ oder „@sora_bot“: ein Anhängsel nach - oder _ ändert nicht, wer gemeint ist
+            # „@eta-san“ oder „@eta_bot“: ein Anhängsel nach - oder _ ändert nicht, wer gemeint ist
             hit = names.get(re.split(r"[-_]", name, maxsplit=1)[0])
         if hit and hit not in out:
             out.append(hit)

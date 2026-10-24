@@ -8,7 +8,7 @@ import type { UiConfig } from "../types";
 let calls: ReturnType<typeof installBackend>["calls"];
 
 async function open(ui: Partial<UiConfig> = {}) {
-  ({ calls } = installBackend(["raiden"], undefined, { ui: { backgroundShader: { enabled: true, strength: 1.6, speed: 1 } }, ...ui }));
+  ({ calls } = installBackend(["gamma"], undefined, { ui: { backgroundShader: { enabled: true, strength: 1.6, speed: 1 } }, ...ui }));
   history.pushState(null, "", "/settings");
   render(<App />);
   await screen.findByRole("heading", { name: "Darstellung", level: 1 });
@@ -80,7 +80,7 @@ describe("Darstellung", () => {
   });
 
   it("is reachable from the sidebar", async () => {
-    installBackend(["raiden"]);
+    installBackend(["gamma"]);
     history.pushState(null, "", "/");
     render(<App />);
     fireEvent.click(await screen.findByRole("link", { name: "Darstellung" }));

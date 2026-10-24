@@ -14,7 +14,7 @@
         "hue": "auto"
       }
     },
-    "hikari/hermes/helper": {
+    "server/hermes/helper": {
       "sigil": {
         "type": "initials",
         "text": "HE",

@@ -203,7 +203,7 @@ def test_plugin_actions_fixed_argv_and_readback(setup, monkeypatch):
 def test_real_native_kanban_api_on_synthetic_db(setup):
     from pathlib import Path
     client, _, profile, app = setup
-    source = Path('/home/marct/.hermes/hermes-agent')
+    source = Path('/home/user/.hermes/hermes-agent')
     import sys
     python = Path(sys.executable)
     if not (source / 'hermes_cli' / 'kanban_db.py').exists():
@@ -243,7 +243,7 @@ def test_git_without_repository_is_200_with_reason(setup):
 def test_real_native_plugin_listing_on_temporary_profile(setup):
     from pathlib import Path
     client, _, _, app = setup
-    binary = Path('/home/marct/.local/bin/hermes')
+    binary = Path('/home/user/.local/bin/hermes')
     if not binary.exists():
         pytest.skip('Local Hermes CLI unavailable')
     app.state.settings['hermes_command'] = [str(binary)]

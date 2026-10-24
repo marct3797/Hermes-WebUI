@@ -53,7 +53,7 @@ def test_rate_limit(make_settings):
     with TestClient(app) as c:
         c.headers["X-Requested-With"] = "hermes-webui"
         codes = [c.post(f"{BASE}/runs", json={"text": "x"}).status_code for _ in range(3)]
-        other = c.post("/bff/h/hikari/hermes/omoikane/runs", json={"text": "x"}).status_code
+        other = c.post("/bff/h/server/hermes/beta/runs", json={"text": "x"}).status_code
     assert codes == [202, 202, 429] and other == 202  # Limit gilt je Agent
 
 
@@ -67,7 +67,7 @@ def test_audit_log_records_actions_without_content(client, tmp_path):
     lines = [json.loads(l) for l in raw.splitlines()]
     assert [l["action"] for l in lines] == ["run.start", "run.stop"]  # Freigabe scheiterte (409) und steht nicht drin
     start = lines[0]
-    assert start["user"] == "dev" and start["target"] == "hikari/hermes/default" and start["detail"]["chars"] == len(secret_prompt)
+    assert start["user"] == "dev" and start["target"] == "server/hermes/default" and start["detail"]["chars"] == len(secret_prompt)
     assert start["detail"]["run"] == info["run_id"] and start["ts"].endswith("Z")
     assert secret_prompt not in raw and "dev-key" not in raw
 
@@ -107,7 +107,7 @@ def static_client(make_settings, tmp_path):
 
 
 def test_spa_routes_fall_back_to_index(static_client):
-    for path in ("/", "/inbox", "/hosts", "/h/hikari/hermes/raiden/chat/abc"):
+    for path in ("/", "/inbox", "/hosts", "/h/server/hermes/gamma/chat/abc"):
         r = static_client.get(path)
         assert r.status_code == 200 and "<title>Hermes</title>" in r.text and r.headers["cache-control"] == "no-cache"
     assert static_client.get("/assets/app.js").status_code == 200

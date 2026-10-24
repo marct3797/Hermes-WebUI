@@ -11,7 +11,7 @@
    "error": null
   },
   {
-   "name": "benzai",
+   "name": "zeta",
    "model": "muse-spark-1.3-contributor",
    "provider": "opencode-go",
    "default": false,
@@ -19,7 +19,7 @@
    "error": null
   },
   {
-   "name": "inari",
+   "name": "delta",
    "model": "muse-spark-1.3-contributor",
    "provider": "opencode-go",
    "default": false,
@@ -41,42 +41,42 @@
      "via": null,
      "detail": null
     },
-    "benzai": {
+    "zeta": {
      "configured": false,
      "via": null,
      "detail": null
     },
-    "inari": {
+    "delta": {
      "configured": false,
      "via": null,
      "detail": null
     },
-    "kaze": {
+    "epsilon": {
      "configured": false,
      "via": null,
      "detail": null
     },
-    "omoikane": {
+    "beta": {
      "configured": false,
      "via": null,
      "detail": null
     },
-    "raiden": {
+    "gamma": {
      "configured": false,
      "via": null,
      "detail": null
     },
-    "ryujin": {
+    "alpha": {
      "configured": false,
      "via": null,
      "detail": null
     },
-    "sora": {
+    "eta": {
      "configured": false,
      "via": null,
      "detail": null
     },
-    "yume": {
+    "theta": {
      "configured": false,
      "via": null,
      "detail": null
@@ -96,42 +96,42 @@
      "via": null,
      "detail": null
     },
-    "benzai": {
+    "zeta": {
      "configured": false,
      "via": null,
      "detail": null
     },
-    "inari": {
+    "delta": {
      "configured": false,
      "via": null,
      "detail": null
     },
-    "kaze": {
+    "epsilon": {
      "configured": false,
      "via": null,
      "detail": null
     },
-    "omoikane": {
+    "beta": {
      "configured": false,
      "via": null,
      "detail": null
     },
-    "raiden": {
+    "gamma": {
      "configured": false,
      "via": null,
      "detail": null
     },
-    "ryujin": {
+    "alpha": {
      "configured": false,
      "via": null,
      "detail": null
     },
-    "sora": {
+    "eta": {
      "configured": false,
      "via": null,
      "detail": null
     },
-    "yume": {
+    "theta": {
      "configured": false,
      "via": null,
      "detail": null
@@ -151,42 +151,42 @@
      "via": "key",
      "detail": "«redacted:sk-m...kEzh»"
     },
-    "benzai": {
+    "zeta": {
      "configured": true,
      "via": "key",
      "detail": "«redacted:oc_s...Xgf7»"
     },
-    "inari": {
+    "delta": {
      "configured": true,
      "via": "key",
      "detail": "«redacted:oc_s...Xgf7»"
     },
-    "kaze": {
+    "epsilon": {
      "configured": true,
      "via": "key",
      "detail": "«redacted:oc_s...Xgf7»"
     },
-    "omoikane": {
+    "beta": {
      "configured": true,
      "via": "key",
      "detail": "«redacted:oc_s...Xgf7»"
     },
-    "raiden": {
+    "gamma": {
      "configured": true,
      "via": "key",
      "detail": "«redacted:oc_s...Xgf7»"
     },
-    "ryujin": {
+    "alpha": {
      "configured": true,
      "via": "key",
      "detail": "«redacted:oc_s...Xgf7»"
     },
-    "sora": {
+    "eta": {
      "configured": true,
      "via": "key",
      "detail": "«redacted:oc_s...Xgf7»"
     },
-    "yume": {
+    "theta": {
      "configured": true,
      "via": "key",
      "detail": "«redacted:oc_s...Xgf7»"

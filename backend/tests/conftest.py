@@ -10,7 +10,7 @@ from devtools.mock_dashboard import create_mock as create_dashboard
 from devtools.mock_hermes import API_KEY, create_mock
 
 HDR = {"X-Requested-With": "hermes-webui"}
-BASE = "/bff/h/hikari/hermes/default"
+BASE = "/bff/h/server/hermes/default"
 
 
 class RouterTransport(httpx.AsyncBaseTransport):
@@ -28,14 +28,14 @@ class RouterTransport(httpx.AsyncBaseTransport):
 
 def hosts_config(key: str = API_KEY) -> dict:
     return {"hosts": [
-        {"id": "hikari", "label": "Hikari", "kind": "local", "runtimes": [
+        {"id": "server", "label": "Server", "kind": "local", "runtimes": [
             {"id": "hermes", "base_url": "http://hermes.test", "api_key": key, "multiplex": True, "dashboard": {"base_url": "http://dashboard.test"},
-             "agents": ["default", "omoikane", "ghost", "../evil", {"id": "sora", "label": "Sora"}]}]},
+             "agents": ["default", "beta", "ghost", "../evil", {"id": "eta", "label": "Eta"}]}]},
         {"id": "keyless", "label": "Falscher Key", "kind": "local", "runtimes": [
             {"id": "hermes", "base_url": "http://hermes.test", "api_key": "wrong", "multiplex": True, "agents": ["default"]}]},
         {"id": "down", "label": "Aus", "kind": "local", "runtimes": [
             {"id": "hermes", "base_url": "http://down.test", "api_key": key, "multiplex": True, "agents": ["default"]}]},
-        {"id": "laptop", "label": "Laptop", "kind": "remote", "address": "100.100.3.4", "runtimes": [
+        {"id": "laptop", "label": "Laptop", "kind": "remote", "address": "100.64.3.4", "runtimes": [
             {"id": "hermes", "base_url": "http://laptop.test:8642", "api_key": key, "multiplex": False, "agents": ["default"]}]},
     ]}
 
@@ -58,7 +58,7 @@ def make_settings(hosts_file, tmp_path):
 
 @pytest.fixture
 def mock():
-    return create_mock(wait_for_user=False, delay=0, profiles=("default", "omoikane", "sora"))
+    return create_mock(wait_for_user=False, delay=0, profiles=("default", "beta", "eta"))
 
 
 @pytest.fixture

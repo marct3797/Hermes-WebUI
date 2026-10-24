@@ -1,17 +1,17 @@
 {
   "hosts": [
     {
-      "id": "hikari",
-      "label": "Hikari",
+      "id": "server",
+      "label": "Server",
       "kind": "local",
       "runtimes": [
         {
           "id": "hermes",
           "base_url": "http://127.0.0.1:9121",
-          "api_key_env": "HERMES_KEY_HIKARI",
+          "api_key_env": "HERMES_KEY_SERVER",
           "multiplex": true,
           "dashboard": { "base_url": "http://127.0.0.1:9122", "token_env": "HERMES_DASHBOARD_TOKEN" },
-          "agents": ["benzai", "default", "inari", "kaze", "omoikane", "raiden", "ryujin", "sora", "yume"]
+          "agents": ["zeta", "default", "delta", "epsilon", "beta", "gamma", "alpha", "eta", "theta"]
         }
       ]
     },
@@ -19,7 +19,7 @@
       "id": "laptop",
       "label": "Laptop",
       "kind": "remote",
-      "address": "100.100.3.4",
+      "address": "100.64.3.4",
       "runtimes": [
         {
           "id": "hermes",

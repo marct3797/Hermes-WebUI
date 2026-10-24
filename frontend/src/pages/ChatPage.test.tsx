@@ -7,9 +7,9 @@ import { FakeEventSource, emit, installBackend } from "../test-backend";
 let posted: ReturnType<typeof installBackend>["posted"];
 
 async function startRun(text = "Prüfe die Tests") {
-  history.pushState(null, "", "/h/hikari/hermes/raiden/chat");
+  history.pushState(null, "", "/h/server/hermes/gamma/chat");
   render(<App />);
-  const box = await screen.findByPlaceholderText("Nachricht an raiden…");
+  const box = await screen.findByPlaceholderText("Nachricht an gamma…");
   await waitFor(() => expect(screen.getByRole("button", { name: "Senden" })).toBeDisabled());
   fireEvent.change(box, { target: { value: text } });
   fireEvent.click(screen.getByRole("button", { name: "Senden" }));
@@ -17,14 +17,14 @@ async function startRun(text = "Prüfe die Tests") {
   return text;
 }
 
-beforeEach(() => { resetRedirect(); ({ posted } = installBackend(["raiden"])); });
+beforeEach(() => { resetRedirect(); ({ posted } = installBackend(["gamma"])); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("Chat", () => {
   it("sends a run, streams the answer and shows the tool in the inspector", async () => {
     await startRun();
     expect(posted("/runs")[0].body).toMatchObject({ text: "Prüfe die Tests" });
-    expect(FakeEventSource.all[0].url).toBe("/bff/h/hikari/hermes/raiden/runs/run_1/events");
+    expect(FakeEventSource.all[0].url).toBe("/bff/h/server/hermes/gamma/runs/run_1/events");
     expect(screen.getByRole("article", { name: "Du" })).toHaveTextContent("Prüfe die Tests");
 
     emit({ type: "reasoning.delta", text: "Erst lesen\n\nDann laufen lassen" });

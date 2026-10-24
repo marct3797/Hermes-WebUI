@@ -84,7 +84,7 @@ def test_full_login_flow_and_cookie_flags(web, idp):
     low = cookie.lower()
     assert "httponly" in low and "secure" in low and "samesite=strict" in low and "path=/" in low and "domain" not in low
     me = web.get("/bff/me").json()
-    assert me["user"] == {"id": "42", "name": "marc"} and me["auth_mode"] == "oidc" and me["fresh"] is True
+    assert me["user"] == {"id": "42", "name": "alex"} and me["auth_mode"] == "oidc" and me["fresh"] is True
     assert web.get("/bff/hosts").status_code == 200
 
 
@@ -166,7 +166,7 @@ def test_wrong_client_secret_fails(web, idp, make_settings):
 
 
 @pytest.mark.parametrize("value,expected", [
-    ("/h/hikari/hermes/default/chat/x?y=1", "/h/hikari/hermes/default/chat/x?y=1"),
+    ("/h/server/hermes/default/chat/x?y=1", "/h/server/hermes/default/chat/x?y=1"),
     ("//evil.example", "/"), ("https://evil.example", "/"), ("/\\evil.example", "/"), ("evil", "/"), ("/a\nb", "/"),
 ])
 def test_next_parameter_is_sanitized(value, expected):
@@ -275,11 +275,11 @@ def test_session_store_unit():
 
 # --- Konfiguration -------------------------------------------------------------------------------
 def test_env_names_from_architecture_are_read(monkeypatch):
-    for k, v in {"FORGEJO_ISSUER": "https://git.thiel.digital", "FORGEJO_OIDC_CLIENT_ID": "abc",
+    for k, v in {"FORGEJO_ISSUER": "https://git.example.com", "FORGEJO_OIDC_CLIENT_ID": "abc",
                  "FORGEJO_OIDC_CLIENT_SECRET": "s3", "OIDC_ALLOWED_SUB": "1, 2"}.items():
         monkeypatch.setenv(k, v)
     s = Settings(_env_file=None)
-    assert s.oidc_issuer == "https://git.thiel.digital" and s.oidc_client_id == "abc"
+    assert s.oidc_issuer == "https://git.example.com" and s.oidc_client_id == "abc"
     assert s.oidc_client_secret.get_secret_value() == "s3" and s.allowed_subs() == {"1", "2"}
     assert "s3" not in repr(s)
 
