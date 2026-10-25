@@ -78,7 +78,7 @@ export const GUIDE: GuideEntry[] = [
     configurePath: "messaging", configureLabel: N_("Zu Messaging"), panel: "gateway",
     run: async (a) => {
       const r = await api.gateway(a);
-      return { ok: r.running, text: r.running ? t("Gateway läuft ({n} Sitzungen)", { n: r.active_sessions }) : t("Gateway steht") };
+      return { ok: r.running, text: r.running ? t("Gateway läuft ({n} Sitzungen)", { n: r.active_sessions }) : t("läuft nicht") };
     },
   },
   {
