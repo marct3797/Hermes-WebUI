@@ -625,8 +625,8 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
     const status = (n: string) => (n === "byterover" ? "unavailable" : h.keySet ? "ready" : "needs_config");
     if (path === "/hermes-memory" && method === "GET") {
       return json({ active: h.active, files: h.files, providers: [
-        { name: "byterover", description: "ByteRover, Wissensbaum.", status: "unavailable", configured: false, available: false, required_env: [], missing: [{ name: "brv", install: "curl -fsSL https://byterover.dev/install.sh | sh" }] },
-        { name: "retaindb", description: "RetainDB, Cloud-Gedächtnis.", status: status("retaindb"), configured: h.keySet, available: true, required_env: ["RETAINDB_API_KEY"], missing: [] }] });
+        { name: "byterover", label: "ByteRover", docs_url: "https://byterover.dev/docs", description: "ByteRover, Wissensbaum.", status: "unavailable", configured: false, available: false, required_env: [], missing: [{ name: "brv", install: "curl -fsSL https://byterover.dev/install.sh | sh" }] },
+        { name: "retaindb", label: "RetainDB", docs_url: "https://retaindb.com/docs", description: "RetainDB, Cloud-Gedächtnis.", status: status("retaindb"), configured: h.keySet, available: true, required_env: ["RETAINDB_API_KEY"], missing: [] }] });
     }
     if (path === "/hermes-memory/provider" && method === "PUT") { h.active = String(body?.provider); return json({ ok: true, active: h.active }); }
     if (path === "/hermes-memory/reset" && method === "POST") {
@@ -635,10 +635,13 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
     }
     const prov = /^\/hermes-memory\/providers\/(byterover|retaindb)$/.exec(path);
     if (prov && method === "GET") {
-      return json({ name: prov[1], fields: prov[1] === "retaindb" ? [
-        { key: "api_key", label: "Api Key", kind: "secret", description: "RetainDB API key", required: true, is_set: h.keySet, options: [], url: "https://retaindb.com" },
-        { key: "project", label: "Project", kind: "text", description: "Projekt", is_set: Boolean(h.project), options: [], value: h.project },
-        { key: "mode", label: "Mode", kind: "select", description: "Modus", is_set: true, options: [{ value: "fast" }, { value: "deep" }], value: h.mode }] : [
+      return json({ name: prov[1], label: prov[1] === "retaindb" ? "RetainDB" : "ByteRover", docs_url: prov[1] === "retaindb" ? "https://retaindb.com/docs" : "https://byterover.dev/docs", fields: prov[1] === "retaindb" ? [
+        { key: "api_key", label: "Api Key", kind: "secret", description: "RetainDB API key", info: "Key aus der RetainDB-Konsole", group: "Zugang", inline: true, required: true, is_set: h.keySet, options: [] },
+        { key: "project", label: "Project", kind: "text", description: "Projekt", group: "Zugang", inline: true, required: false, is_set: Boolean(h.project), options: [], value: h.project },
+        { key: "mode", label: "Mode", kind: "select", description: "Modus", group: "Verhalten", required: false, is_set: true, options: [{ value: "fast", label: "schnell", description: "Schnelle Treffer" }, { value: "deep", label: "tief", description: "Gründliche Suche" }], value: h.mode },
+        { key: "cache", label: "Cache", kind: "bool", description: "Treffer zwischenspeichern", group: "Verhalten", required: false, is_set: true, options: [], value: true },
+        { key: "budget", label: "Budget", kind: "number", description: "Höchstzahl Treffer", group: "Verhalten", required: false, is_set: true, options: [], value: 5 },
+        { key: "mapping", label: "Mapping", kind: "json", description: "Feldzuordnung", group: "Verhalten", required: false, is_set: true, options: [], value: "{\"titel\": \"name\"}" }] : [
         { key: "auto_extract", label: "Auto Extract", kind: "select", description: "Automatisch", is_set: true, options: [{ value: "true" }, { value: "false" }], value: "true" }] });
     }
     if (prov && method === "PUT") {
