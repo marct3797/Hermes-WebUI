@@ -32,13 +32,14 @@ export default function SessionsAdminPage({ agent }: { agent: AgentRef }) {
   const [typedPrune, setTypedPrune] = useState("");
   const [typedEmpty, setTypedEmpty] = useState("");
   const [done, setDone] = useState("");
+  const [loadErr, setLoadErr] = useState("");
   const { run, notes, busy } = useAction();
 
   const load = useCallback(async () => {
     const [s, e] = await Promise.all([api.saStats(agent), api.saEmpty(agent)]);
     setStats(s); setEmpty(e.count);
   }, [agent]);
-  useEffect(() => { void load().catch(() => undefined); }, [load]);
+  useEffect(() => { load().catch((e) => setLoadErr((e as Error).message)); }, [load]);
 
   const n = Number(days);
   const daysOk = Number.isFinite(n) && n >= 1 && n <= 3650; // 0 Tage träfe alles
@@ -46,6 +47,7 @@ export default function SessionsAdminPage({ agent }: { agent: AgentRef }) {
     <article>
       <PageHead title="Sitzungen verwalten" sub={stats ? `${stats.total} Sitzungen, ${stats.messages} Nachrichten` : "lädt …"} />
       {notes}
+      {loadErr && <p className="banner" role="alert">{loadErr}</p>}
       {done && <p role="status">{done}</p>}
       <section aria-label="Aufräumen">
         <h2>Alte Sitzungen aufräumen</h2>

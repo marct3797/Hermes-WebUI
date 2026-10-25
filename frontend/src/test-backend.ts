@@ -188,7 +188,8 @@ export type DashState = {
   hm: { available: boolean; active: string; files: { memory: number; user: number }; keySet: boolean; project: string; mode: string }; // Hermes-Gedächtnis
   tools: { available: boolean; enabled: Record<string, boolean>; keys: Record<string, string>; provider: Record<string, string>; model: string; installed: boolean }; // Werkzeug-Gruppen
   ac: { pending: Array<{ platform: string; request_id: string; user_id: string; user_name: string }>; approved: Array<{ platform: string; user_id: string; user_name: string }>; hooksOn: boolean; hooks: Array<{ name: string; enabled: boolean }> };
-  sa: { sessions: Array<{ id: string; ageDays: number; messages: number; active?: boolean }> };
+  mdDown?: boolean; mdFresh: boolean; // frische Installation: noch kein Anbieter, kein Modell (gültige, leere Antworten)
+  sa: { down?: boolean; sessions: Array<{ id: string; ageDays: number; messages: number; active?: boolean }> };
   ep: { backend: string; endpoints: Array<{ id: string; name: string; base_url: string; model: string; hasKey: boolean }>; current: string };
   lcProfiles: string[]; lcActive: string; // Profil-Lebenszyklus: Namen als Text, nie Serverpfade
 };
@@ -450,7 +451,9 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
   if (path.startsWith("/hermes-models")) {
     if (!dash.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
     if (method !== "GET" && dash.stepUp) return json(stepUpBody, 401);
-    if (path === "/hermes-models/info" && method === "GET") return json({ provider: "anthropic", model: "claude-test", context_window: 200000, capabilities: { supports_tools: true } });
+    if (dash.mdDown && method === "GET") return json({ detail: "Das Dashboard liefert Modell-Info in unbekannter Form" }, 502);
+    if (path === "/hermes-models/info" && method === "GET") return json(dash.mdFresh ? { provider: "", model: "", configured: false, context_window: 0, capabilities: {} } : { provider: "anthropic", model: "claude-test", configured: true, context_window: 200000, capabilities: { supports_tools: true } });
+    if (path === "/hermes-models/options" && method === "GET" && dash.mdFresh) return json({ providers: [], current: { provider: "", model: "" } });
     if (path === "/hermes-models/options" && method === "GET") return json({ providers: [{ slug: "anthropic", name: "Anthropic", models: ["claude-test", "claude-small"], authenticated: true }], current: { provider: "anthropic", model: "claude-test" } });
     if (path === "/hermes-models/recommended-default" && method === "GET") return json({ provider: "anthropic", model: "claude-test" });
     if (path === "/hermes-models/auxiliary" && method === "GET") return json({ main: { provider: "anthropic", model: "claude-test" }, tasks: [{ task: "coding", provider: "auto", model: "" }] });
@@ -459,7 +462,7 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
       if (String(body?.scope) !== "main" && String(body?.scope) !== "auxiliary") return json({ detail: [{ loc: ["body", "scope"], msg: "muss main oder auxiliary sein" }] }, 422);
       if (!String(body?.model ?? "").trim()) return json({ detail: [{ loc: ["body", "model"], msg: "leer ist kein Modell" }] }, 422);
       if (/opus|o1|o3|gpt-5|claude-teuer/i.test(String(body?.model ?? "")) && !body?.confirm_expensive_model) return json({ ok: false, confirm_required: true, confirm_message: "Teures Modell: bitte bestätigen." });
-      return json({ ok: true, provider: String(body?.provider), model: String(body?.model).trim() });
+      dash.mdFresh = false; return json({ ok: true, provider: String(body?.provider), model: String(body?.model).trim() });
     }
     return json({ detail: "Unbekannte Modell-Route" }, 404);
   }
@@ -496,6 +499,7 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
   if (path.startsWith("/hermes-sessions")) {
     if (!dash.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
     const sa = dash.sa;
+    if (sa.down) return json({ detail: "Session store is not initialized. Start this profile's gateway to initialize it." }, 503);
     if (method !== "GET" && dash.stepUp) return json(stepUpBody, 401);
     const hit = (days: number) => sa.sessions.filter((s) => s.ageDays > days && !s.active);
     const empties = () => sa.sessions.filter((s) => s.messages === 0 && !s.active);
@@ -638,6 +642,7 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
     hm: { available: true, active: "", files: { memory: 120, user: 45 }, keySet: false, project: "", mode: "fast" },
     tools: { available: true, enabled: { terminal: true, web: false, image_gen: true, computer_use: false }, keys: {}, provider: {}, model: "flux-2-pro", installed: false },
     ac: { pending: [{ platform: "telegram", request_id: "req-1", user_id: "42", user_name: "Anna" }], approved: [{ platform: "telegram", user_id: "7", user_name: "Bob" }], hooksOn: false, hooks: [] },
+    mdFresh: false,
     sa: { sessions: [{ id: "a1", ageDays: 200, messages: 3 }, { id: "a2", ageDays: 100, messages: 2 }, { id: "a3", ageDays: 1, messages: 4 }, { id: "e1", ageDays: 5, messages: 0 }, { id: "act", ageDays: 300, messages: 1, active: true }] },
     ep: { backend: "default", endpoints: [], current: "" },
     lcProfiles: [...agents], lcActive: agents[0] ?? "gamma",

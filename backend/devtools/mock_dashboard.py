@@ -408,25 +408,37 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
     @app.get("/api/model/options")
     async def model_options(profile: str | None = None):
         cur = profile_or_default(profile)
+        if cur.get("malformed"):
+            return {"foo": 1}
+        if cur.get("no_providers"):  # frische Installation (Hermes 0.22.5): gueltige, aber leere Antwort
+            return {"providers": [], "current": {"provider": cur["provider"], "model": cur["model"]}}
         return {"providers": [{**p, "is_current": p["slug"] == cur["provider"], "is_user_defined": False, "total_models": len(p["models"]), "source": "hermes"} for p in MODEL_PROVIDERS],
                 "current": {"provider": cur["provider"], "model": cur["model"]}}
 
     @app.get("/api/model/info")
     async def model_info(profile: str | None = None):
         cur = profile_or_default(profile)
-        return {"provider": cur["provider"], "model": cur["model"], "auto_context_length": 200000,
+        if cur.get("malformed"):
+            return {"foo": 1}
+        return {"provider": cur["provider"], "model": cur["model"], "auto_context_length": 200000 if cur["model"] else 0,
                 "config_context_length": 0, "effective_context_length": 200000,
                 "capabilities": {"supports_tools": True, "supports_vision": False, "supports_reasoning": False,
                                  "context_window": 200000, "max_output_tokens": 8192}}
 
     @app.get("/api/model/recommended-default")
     async def model_recommended(profile: str | None = None):
-        profile_or_default(profile)
+        cur = profile_or_default(profile)
+        if cur.get("malformed"):
+            return {"foo": 1}
+        if cur.get("no_providers"):
+            return {"provider": "", "model": "", "free_tier": None}
         return {"provider": "anthropic", "model": "claude-test"}
 
     @app.get("/api/model/auxiliary")
     async def model_auxiliary(profile: str | None = None):
         cur = profile_or_default(profile)
+        if cur.get("malformed"):
+            return {"foo": 1}
         return {"main": {"provider": cur["provider"], "model": cur["model"]},
                 "tasks": [{"task": "coding", "provider": "auto", "model": "", "base_url": "", "reasoning_effort": None},
                           {"task": "vision", "provider": "auto", "model": "", "base_url": "", "reasoning_effort": None}]}

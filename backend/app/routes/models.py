@@ -2,7 +2,8 @@
 
 Lesen ist frei. Schreiben braucht eine frische Anmeldung plus Rate-Limit und wird auditiert. Das Dashboard schreibt sofort
 in config.yaml und gilt nur für neue Sitzungen — deshalb:
-- leere/Provider-freie Antworten sind 502 (kein stilles „kein Modell"),
+- falsch geformte Antworten sind 502; gültige, aber leere Antworten einer frischen Installation (noch kein Anbieter/Modell) sind Daten
+  (`configured: false`), sonst bräche die Seite genau dort, wo man das erste Modell wählt [gegen Hermes 0.22.5 geprüft],
 - teure Modelle brauchen `confirm_expensive_model` (der erste Versuch antwortet mit `confirm_required`, ändert nichts),
 - MoA braucht benannte Presets mit Referenzmodellen,
 - die Empfehlung wird gegen die Auswahl geprüft (kein Hinzufügen erfundener Modelle),
@@ -52,13 +53,13 @@ def _known_models(opts: Any) -> set[str]:
 @router.get("/hermes-models/info")
 async def model_info(target: Tgt, dash: Dash):
     body = await _read(dash, target.agent.id, "/api/model/info")
-    if not isinstance(body, dict) or not body.get("provider") or not body.get("model"):
+    if not isinstance(body, dict) or not isinstance(body.get("provider"), str) or not isinstance(body.get("model"), str):
         raise HTTPException(502, "Das Dashboard liefert Modell-Info in unbekannter Form")
     ctx = body.get("context_window")
     if not isinstance(ctx, int):
         auto = body.get("auto_context_length")
         ctx = auto if isinstance(auto, int) else 0
-    return {"provider": body["provider"], "model": body["model"], "context_window": ctx,
+    return {"provider": body["provider"], "model": body["model"], "configured": bool(body["provider"] and body["model"]), "context_window": ctx,
             "capabilities": body.get("capabilities") if isinstance(body.get("capabilities"), dict) else {}}
 
 
@@ -66,7 +67,7 @@ async def model_info(target: Tgt, dash: Dash):
 async def model_options(target: Tgt, dash: Dash):
     body = await _read(dash, target.agent.id, "/api/model/options")
     provs = body.get("providers") if isinstance(body, dict) else None
-    if not isinstance(provs, list) or not provs:
+    if not isinstance(provs, list):
         raise HTTPException(502, "Das Dashboard liefert die Modellauswahl in unbekannter Form")
     return {"providers": provs, "current": body.get("current") if isinstance(body.get("current"), dict) else {}}
 
@@ -74,12 +75,14 @@ async def model_options(target: Tgt, dash: Dash):
 @router.get("/hermes-models/recommended-default")
 async def model_recommended(target: Tgt, dash: Dash):
     rec = await _read(dash, target.agent.id, "/api/model/recommended-default")
-    if not isinstance(rec, dict) or not rec.get("provider") or not rec.get("model"):
+    if not isinstance(rec, dict) or not isinstance(rec.get("provider"), str) or not isinstance(rec.get("model"), str):
         raise HTTPException(502, "Das Dashboard liefert die Modellempfehlung in unbekannter Form")
+    if not rec["provider"] and not rec["model"]:  # nichts zu empfehlen (kein Anbieter eingerichtet)
+        return {"provider": "", "model": "", "available": False}
     opts = await _read(dash, target.agent.id, "/api/model/options")
     if rec["model"] not in _known_models(opts):
         raise HTTPException(502, "Die Empfehlung nennt ein Modell, das nicht in der Auswahl steht")
-    return {"provider": rec["provider"], "model": rec["model"]}
+    return {"provider": rec["provider"], "model": rec["model"], "available": True}
 
 
 @router.get("/hermes-models/auxiliary")
@@ -87,7 +90,7 @@ async def model_auxiliary(target: Tgt, dash: Dash):
     body = await _read(dash, target.agent.id, "/api/model/auxiliary")
     tasks = body.get("tasks") if isinstance(body, dict) else None
     main = body.get("main") if isinstance(body, dict) else None
-    if not isinstance(tasks, list) or not tasks or not isinstance(main, dict) or not main.get("model"):
+    if not isinstance(tasks, list) or not tasks or not isinstance(main, dict) or not isinstance(main.get("model"), str):
         raise HTTPException(502, "Das Dashboard liefert die Hilfsmodelle in unbekannter Form")
     return {"main": main, "tasks": tasks}
 

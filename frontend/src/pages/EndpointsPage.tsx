@@ -34,13 +34,14 @@ export default function EndpointsPage({ agent }: { agent: AgentRef }) {
   const [form, setForm] = useState({ name: "", base_url: "", model: "", api_key: "" });
   const [check, setCheck] = useState<EpValidate | null>(null);
   const [typed, setTyped] = useState<Record<string, string>>({});
+  const [loadErr, setLoadErr] = useState("");
   const { run, notes, busy } = useAction();
 
   const load = useCallback(async () => {
     const [d, l, m] = await Promise.all([api.epDelegation(agent), api.epList(agent), api.epLocal(agent)]);
     setDel(d); setList(l); setLocal(m);
   }, [agent]);
-  useEffect(() => { void load().catch(() => undefined); }, [load]);
+  useEffect(() => { load().catch((e) => setLoadErr((e as Error).message)); }, [load]);
 
   const urlOk = BAD_URL.test(form.base_url.trim());
   const complete = urlOk && form.name.trim() && form.model.trim();
@@ -50,6 +51,7 @@ export default function EndpointsPage({ agent }: { agent: AgentRef }) {
     <article>
       <PageHead title="Eigene Endpunkte" sub={del ? `Delegation: ${del.configured}` : "lädt …"} />
       {notes}
+      {loadErr && <p className="banner" role="alert">{loadErr}</p>}
       <section aria-label="Delegation">
         <h2>Delegation</h2>
         {del?.blocked_reason && <p className="banner" role="alert">{del.blocked_reason}</p>}

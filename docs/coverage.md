@@ -132,3 +132,15 @@ Aus dem Hermes-Quelltext (0.22.5, `hermes_cli/web_routers/tools.py`, `config_env
 - Zurücksetzen löscht ohne Papierkorb und ohne Sicherung. Die WebUI verlangt, den Zielnamen einzutippen, und liest danach die Größen zurück. Daten externer Anbieter bleiben unberührt (so Hermes).
 - Der Anbieter-Setup von Hermes führt Befehle der Anbieter-Manifeste mit Shell aus (z. B. `curl -fsSL https://byterover.dev/install.sh | sh`), mit der Umgebung des Dashboards. Das reicht die WebUI nicht durch; sie nennt nur, welches Programm fehlt und wie man es auf dem Rechner selbst installiert.
 - Hermes setzt beim Speichern der Anbieter-Felder den Anbieter aktiv, sobald er bereit ist. Ist er nicht bereit, sind die Werte trotzdem gespeichert, und die WebUI zeigt die Fehlermeldung von Hermes.
+
+## P2 gegen ein echtes Dashboard geprüft (`devtools/real/contract_p2_bff.py`, Sandbox-HOME, 31 von 31)
+
+Das echte BFF gegen das echte Hermes-Dashboard 0.22.5. Befunde, die der Mock nicht gezeigt hat:
+
+- **Frische Installation**: `model/info`, `options`, `recommended-default` liefern gültige, aber leere Antworten (kein Anbieter, kein Modell). Das BFF meldet das als Daten (`configured: false`, `available: false`), die Seite erklärt „Noch kein Anbieter eingerichtet“. Falsch geformte Antworten bleiben 502.
+- **`POST /api/model/set`** lehnt Anbieter ohne Schlüssel/Anmeldung selbst ab („is not connected“); das BFF reicht den Text durch und schreibt nichts. Erfolgspfad live über einen eigenen Endpunkt als verbundenen Anbieter belegt, Rücklesen bestätigt.
+- **Eigene Endpunkte**: Schlüssel erscheint nie in einer Antwort (nur `has_api_key`), Metadaten-URL wird vor Hermes abgewiesen, Löschen nur mit eingetippter ID.
+- **Sitzungen**: ein Dashboard ohne gestartetes Gateway antwortet 503 „Session store is not initialized“. Das BFF reicht den Text durch, die Seite zeigt ihn.
+
+**Nicht live belegt** (nur Mock + Quelltext): Erfolgspfade von Aufräumen, Mehrfach-Löschen, Leere löschen und Export (der Sitzungsspeicher der Sandbox ließ sich ohne laufendes Gateway nicht befüllen; `sessions/import` verlangt Client-Versionsabgleich), Webhook anlegen/umschalten/löschen und Pairing freigeben/sperren (brauchen eingeschaltete Webhook-Plattform bzw. eine echte Anfrage; Einschalten startet das Gateway neu).
+

@@ -42,4 +42,25 @@ describe("Modelle", () => {
     await screen.findByRole("heading", { name: "Modelle", level: 1 });
     expect(sent("GET", "/hermes-models/info")).toHaveLength(1);
   });
+
+  it("explains a fresh install instead of failing, and blocks picking before a provider exists", async () => {
+    backend = installBackend(["gamma"]);
+    backend.dash.mdFresh = true;
+    history.pushState(null, "", "/h/server/hermes/gamma/modelle");
+    render(<App />);
+    await screen.findByRole("heading", { name: "Modelle", level: 1 });
+    await screen.findByText(/Noch kein Anbieter eingerichtet/);
+    expect(screen.getByText(/Noch kein Hauptmodell eingestellt/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Modell"), { target: { value: "irgendwas" } });
+    expect(screen.getByRole("button", { name: "Modell übernehmen" })).toBeDisabled();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("shows why the models cannot be read instead of staying empty", async () => {
+    backend = installBackend(["gamma"]);
+    backend.dash.mdDown = true;
+    history.pushState(null, "", "/h/server/hermes/gamma/modelle");
+    render(<App />);
+    expect((await screen.findByRole("alert")).textContent).toContain("unbekannter Form");
+  });
 });

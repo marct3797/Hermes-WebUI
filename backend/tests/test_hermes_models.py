@@ -86,3 +86,38 @@ def test_moa_write_needs_presets_and_reads_back(env):
     r = env.put(f"{H}/moa", json=good)
     assert r.status_code == 200
     assert env.get(f"{H}/moa").json()["active_preset"] == "d"
+
+
+def fresh_install(env):
+    p = env.dash.state.profiles["default"]
+    p["provider"], p["model"], p["no_providers"] = "", "", True
+
+
+def test_fresh_install_without_model_is_data_not_an_error(env):
+    fresh_install(env)  # echtes Dashboard 0.22.5 ohne Anbieter: gültige, aber leere Antworten
+    info = env.get(f"{H}/info")
+    assert info.status_code == 200 and info.json()["configured"] is False and info.json()["model"] == ""
+    assert env.get(f"{H}/options").json()["providers"] == []
+    rec = env.get(f"{H}/recommended-default")
+    assert rec.status_code == 200 and rec.json()["available"] is False
+    aux = env.get(f"{H}/auxiliary")
+    assert aux.status_code == 200 and aux.json()["main"]["model"] == "" and aux.json()["tasks"]
+
+
+def test_configured_install_reports_configured(env):
+    assert env.get(f"{H}/info").json()["configured"] is True
+    assert env.get(f"{H}/recommended-default").json()["available"] is True
+
+
+def test_wrong_shape_is_still_a_502(env):
+    env.dash.state.profiles["default"]["malformed"] = True
+    assert env.get(f"{H}/info").status_code == 502
+    assert env.get(f"{H}/options").status_code == 502
+    assert env.get(f"{H}/recommended-default").status_code == 502
+    assert env.get(f"{H}/auxiliary").status_code == 502
+
+
+def test_set_on_a_fresh_install_reads_back(env):
+    fresh_install(env)
+    r = env.post(f"{H}/set", json={"scope": "main", "provider": "anthropic", "model": "claude-test"})
+    assert r.status_code == 200 and env.get(f"{H}/info").json()["configured"] is True

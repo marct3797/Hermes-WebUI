@@ -78,4 +78,13 @@ describe("Sitzungen verwalten", () => {
     type("Leere bestätigen", "0");
     expect(screen.getByRole("button", { name: "Leere löschen" })).toBeDisabled();
   });
+
+  it("shows why the store cannot be read instead of loading forever", async () => {
+    backend = installBackend(["gamma"]);
+    backend.dash.sa.down = true;
+    history.pushState(null, "", "/h/server/hermes/gamma/sitzungen-verwalten");
+    render(<App />);
+    await screen.findByRole("heading", { name: "Sitzungen verwalten", level: 1 });
+    expect((await screen.findByRole("alert")).textContent).toContain("Session store is not initialized");
+  });
 });

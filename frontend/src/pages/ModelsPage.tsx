@@ -33,6 +33,7 @@ export default function ModelsPage({ agent }: { agent: AgentRef }) {
   const [provider, setProvider] = useState("");
   const [model, setModel] = useState("");
   const [confirmMsg, setConfirmMsg] = useState("");
+  const [loadErr, setLoadErr] = useState("");
   const { run, notes, busy } = useAction();
 
   const load = useCallback(async () => {
@@ -40,7 +41,7 @@ export default function ModelsPage({ agent }: { agent: AgentRef }) {
     setInfo(i); setOpts(o); setAux(a); setMoa(m);
     setProvider(i.provider); setModel(i.model);
   }, [agent]);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { load().catch((e) => setLoadErr((e as Error).message)); }, [load]);
 
   const known = new Set<string>((opts?.providers ?? []).flatMap((p) => p.models));
   const save = () => run(async () => {
@@ -57,11 +58,15 @@ export default function ModelsPage({ agent }: { agent: AgentRef }) {
 
   return (
     <article>
-      <PageHead title="Modelle" sub={`${info ? `${info.provider} / ${info.model}` : "lädt …"}`} />
+      <PageHead title="Modelle" sub={info ? (info.configured ? `${info.provider} / ${info.model}` : "noch kein Modell eingestellt") : "lädt …"} />
       {notes}
+      {loadErr && <p className="banner" role="alert">{loadErr}</p>}
+      {opts && opts.providers.length === 0 && <p className="banner" role="status">Noch kein Anbieter eingerichtet. Hinterlege zuerst unter „Anbieter“ einen Schlüssel oder melde dich an, dann erscheint hier die Modellauswahl.</p>}
       <section aria-label="Hauptmodell">
         <h2>Hauptmodell</h2>
-        {info && <p>Aktiv: <strong>{info.provider} / {info.model}</strong> (Kontext: {info.context_window.toLocaleString("de-DE")})</p>}
+        {info && (info.configured
+          ? <p>Aktiv: <strong>{info.provider} / {info.model}</strong> (Kontext: {info.context_window.toLocaleString("de-DE")})</p>
+          : <p>Noch kein Hauptmodell eingestellt.</p>)}
         <label>Anbieter <input aria-label="Anbieter" value={provider} onChange={(e) => setProvider(e.target.value)} /></label>
         <label>Modell <input aria-label="Modell" value={model} onChange={(e) => setModel(e.target.value)} list="md-models" /></label>
         <datalist id="md-models">{[...known].map((m) => <option key={m} value={m} />)}</datalist>

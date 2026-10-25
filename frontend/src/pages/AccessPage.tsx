@@ -31,13 +31,14 @@ export default function AccessPage({ agent }: { agent: AgentRef }) {
   const [events, setEvents] = useState("");
   const [secret, setSecret] = useState<{ name: string; url: string; secret: string } | null>(null);
   const [typed, setTyped] = useState<Record<string, string>>({});
+  const [loadErr, setLoadErr] = useState("");
   const { run, notes, busy } = useAction();
 
   const load = useCallback(async () => {
     const [p, h] = await Promise.all([api.acPairing(agent), api.acHooks(agent)]);
     setPairing(p); setHooks(h);
   }, [agent]);
-  useEffect(() => { void load().catch(() => undefined); }, [load]);
+  useEffect(() => { load().catch((e) => setLoadErr((e as Error).message)); }, [load]);
 
   const nameOk = /^[a-z0-9][a-z0-9_-]{0,63}$/.test(name.trim().toLowerCase().replace(/ /g, "-"));
   const evList = events.split(",").map((e) => e.trim()).filter(Boolean);
@@ -45,6 +46,7 @@ export default function AccessPage({ agent }: { agent: AgentRef }) {
     <article>
       <PageHead title="Zugang und Webhooks" sub={pairing ? `${pairing.pending.length} offene Anfragen, ${pairing.approved.length} freigegeben` : "lädt …"} />
       {notes}
+      {loadErr && <p className="banner" role="alert">{loadErr}</p>}
       <section aria-label="Pairing">
         <h2>Freigaben</h2>
         <h3>Offene Anfragen</h3>
