@@ -15,7 +15,7 @@ cd backend
 python -m devtools.check_upstream /pfad/zu/hermes-agent --coverage
 ```
 
-Von 390 Routen (Modul, Methode, Pfad) nutzt das BFF 202 pfadgenau. Nach Modul, wenig genutzte zuerst:
+Von 390 Routen (Modul, Methode, Pfad) nutzt das BFF 203 pfadgenau. Nach Modul, wenig genutzte zuerst:
 
 | Modul | Routen | genutzt | Inhalt |
 |---|---:|---:|---|
@@ -29,8 +29,8 @@ Von 390 Routen (Modul, Methode, Pfad) nutzt das BFF 202 pfadgenau. Nach Modul, w
 | `web_routers/chat_ws.py` | 5 | 0 | Terminal-Chat per WebSocket (die WebUI nutzt die Gateway-API) |
 | `web_routers/delegation.py` | 4 | 2 | Delegation: Routing lesen, Backend wählen (genutzt); **nicht**: Modellzuordnung und Profil-Routen schreiben |
 | `web_routers/memory_providers.py` | 3 | 2 | Felder lesen/schreiben (genutzt); **bewusst nicht**: `POST .../setup` (führt `curl \| sh` aus) |
-| `web_routers/status.py` | 20 | 11 | Status, Systemwerte, Curator (pausieren/starten), Lerngraph (lesen/bearbeiten/löschen); **nicht**: Host-Identität, Gesundheit, SSH-Besitz, Portal |
-| `web_routers/tools.py` | 12 | 8 | Toolsets, Anbieter, Keys, Modelle; **bewusst nicht**: Terminal-Backend setzen, `post-setup`, Computer-Use-Rechte, siehe unten |
+| `web_routers/status.py` | 20 | 11 | Status, Systemwerte, Curator (pausieren/starten), Lerngraph (lesen/bearbeiten/löschen, Skills werden archiviert), Computer-Use-Status; **nicht**: Host-Identität, Gesundheit, SSH-Besitz, Portal |
+| `web_routers/tools.py` | 12 | 9 | Toolsets, Anbieter, Keys, Modelle; **bewusst nicht**: Terminal-Backend setzen, `post-setup`, Computer-Use-Rechte, siehe unten |
 | `web_routers/models.py` | 7 | 7 | Hauptmodell, Auswahl, Hilfsmodelle, Mixture of Agents, empfohlenes Standardmodell (alle genutzt) |
 | `plugins/kanban` | 48 | 27 | Kanban inkl. Diagnose, Worker, Lauf beenden, Dispatch (erst Vorschau), Schätzen, Spezifizieren, Board wechseln; **nicht**: Anhänge, Export/Import, Zerlegen |
 | `web_routers/profiles.py` | 20 | 10 | Profile anlegen, löschen, umbenennen, exportieren, importieren |
@@ -153,14 +153,22 @@ Schlüssel-Pools, Sprache, System, Curator, Lerngraph, Darstellung, Datenschutz,
 - **Schlüssel-Pools**: der Schlüssel kommt nie zurück, nur die letzten vier Zeichen; Entfernen nur für `manual`-Einträge und nur mit eingetipptem Anbieternamen.
 - **Achievements**: 60 Erfolge in der Sandbox, geheime erscheinen als „???“.
 
-**Nicht live belegt** (nur Mock + Quelltext): Lerngraph lesen/bearbeiten/löschen (der Graph der frischen Sandbox ist leer), Curator-Lauf (verbraucht Tokens), Achievements zurücksetzen und neu scannen, Metrik-Senden (schickt Daten weg), Dispatch mit Start, Lauf beenden, Schätzen und Spezifizieren (brauchen ein Hilfsmodell).
+**Nicht live belegt** (nur Mock + Quelltext): Curator-Lauf (verbraucht Tokens), Achievements zurücksetzen und neu scannen, Metrik-Senden (schickt Daten weg), Dispatch mit Start, Lauf beenden, Schätzen und Spezifizieren (brauchen ein Hilfsmodell).
 
 ## P3: bewusst nicht gebaut
 
-- **Artefakte** (`POST /v1/artifacts/upload`, `GET /v1/artifacts/download/{id}` der Gateway-API): Hermes bietet sie, die WebUI bildet sie **noch nicht** ab. Offen, nicht abgelehnt.
-- **Computer Use**: Status (`GET /api/tools/computer-use/status`) und Berechtigungen gibt es; die Rechte vergibt die WebUI bewusst nicht (Betriebssystem-Berechtigung), der Status ist **noch nicht** angezeigt.
+- **Artefakte** (`POST /v1/artifacts/upload`, `GET /v1/artifacts/download/{id}` der Gateway-API): bewusst nicht. Im Quelltext (`gateway/platforms/api_server.py`, `_artifact_route_prelude`) gibt es sie nur bei `browser.extension_control.enabled`; sie sind der Transportweg der Hermes-Browsererweiterung (Zugriff über einen aus dem API-Schlüssel abgeleiteten Principal, Download einmalig, nur Typen aus einer Erlaubnisliste). Es ist kein Datei-Feature für Nutzer.
+- **Computer Use**: nur der Status (`GET /api/tools/computer-use/status`) wird angezeigt. Die Rechte-Vergabe (`POST .../permissions/grant`, nur macOS) bleibt aus; Serverpfade (`source`, `detail`) gehen nicht an den Browser.
 - **Pets**: im Quelltext nur als CLI-Unterbefehl (`hermes pets`) gefunden, keine Dashboard- oder Gateway-Route; die WebUI bildet es nicht ab.
 - **Eigene Theme-Dateien**: nicht geprüft, ob Hermes dafür eine Route anbietet.
 - **`host/identity`, `health/*`, `ssh/ownership`, `portal`, `ops/dump`, `ops/debug-share`, `ops/config-migrate`**: Anbindung des Desktop-Clients bzw. Upload von Diagnosedaten an einen Fremddienst.
 - **Sprache**: `voice-config`, Live-Sitzungen und WebSockets (Dauerverbindungen, Schlüsselauslieferung).
 - **Lerngraph**: als Liste mit Verbindungsanzahl, nicht als gezeichneter Graph.
+
+## Lerngraph gegen ein echtes Dashboard (`devtools/real/contract_learning_bff.py`, Sandbox-HOME, 17 von 17)
+
+Der Graph einer frischen Installation ist leer: Knoten sind nur Skills mit Lernsignal (vom Agenten angelegt oder benutzt) und Einträge des Gedächtnisses. Das Skript legt in der Sandbox einen Skill und zwei Einträge an, bearbeitet und löscht sie über das BFF und räumt alles wieder auf. Befunde, die der Mock nicht gezeigt hat:
+
+- **Die ID eines Gedächtnis-Eintrags trägt einen Fingerabdruck seines Textes** (`memory:memory:0:8001e0be9bd2`). Nach dem Bearbeiten gilt eine neue ID; das Rücklesen mit der alten ID lieferte 404, obwohl gespeichert war. Das BFF findet den Eintrag jetzt über Quelle und Nummer wieder, meldet die neue ID, und die Seite folgt ihr.
+- **Löschen eines Skills heißt in Hermes Archivieren** (Ordner `skills/.archive/<name>`, mit der Hermes-CLI zurückholbar). Die Seite sagt das und beschriftet den Knopf entsprechend; Erinnerungen werden wirklich gelöscht.
+- Ein Skill mit ungültigem Frontmatter wird von Hermes abgelehnt (400); das BFF reicht den Text durch und schreibt nichts.

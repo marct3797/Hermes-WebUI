@@ -38,7 +38,7 @@ USED: dict[str, list[str]] = {
         "/api/sessions/stats", "/api/sessions/empty/count", "/api/sessions/empty", "/api/sessions/prune", "/api/sessions/bulk-delete", "/api/sessions/{}/export",
         "/api/pairing", "/api/pairing/approve", "/api/pairing/revoke", "/api/webhooks", "/api/webhooks/enable", "/api/webhooks/{}", "/api/webhooks/{}/enabled",
         "/api/credentials/pool", "/api/credentials/pool/{}/{}", "/api/audio/voice-live/status", "/api/audio/speak", "/api/audio/transcribe",
-        "/api/system/stats", "/api/curator", "/api/curator/paused", "/api/curator/run", "/api/learning/graph", "/api/learning/node",
+        "/api/system/stats", "/api/tools/computer-use/status", "/api/curator", "/api/curator/paused", "/api/curator/run", "/api/learning/graph", "/api/learning/node",
         "/api/dashboard/themes", "/api/dashboard/theme", "/api/dashboard/font", "/api/egress/status", "/api/shared-metrics/consent",
         "/api/mcp/servers/{}", "/api/mcp/servers/{}/test", "/api/mcp/servers/{}/auth", "/api/mcp/servers/{}/enabled", "/api/mcp/oauth/flows/{}",
         "/api/dashboard/agent-plugins/{}", "/api/dashboard/agent-plugins/{}/enable", "/api/dashboard/agent-plugins/{}/disable", "/api/dashboard/agent-plugins/{}/update",

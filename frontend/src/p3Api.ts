@@ -11,6 +11,7 @@ export type Pool = { providers: Array<{ provider: string; entries: PoolEntry[] }
 export type VoiceStatus = { mode: string; available: boolean; reason: string };
 // System, Curator, Lerngraph
 export type SystemStats = { hermes_version?: string; hostname?: string; system?: string; arch?: string; python_version?: string; cpu_count?: number; cpu_percent?: number; uptime_seconds?: number; memory?: Record<string, number>; disk?: Record<string, number> };
+export type ComputerUse = { platform: string; platform_supported: boolean; installed: boolean; version: string | null; ready: boolean | null; checks: Array<{ name: string; ok: boolean | null }>; error: string | null };
 export type Curator = { enabled: boolean; paused: boolean; interval_hours: number | null; last_run_at: number | null; min_idle_hours: number | null; stale_after_days: number | null; archive_after_days: number | null };
 export type CuratorLog = { running: boolean; exit_code: number | null; log: string };
 export type LNode = { id: string; label: string; kind: string; category: string; use_count: number; state: string; pinned: boolean };
@@ -29,13 +30,14 @@ export const p3 = {
   speak: (a: AgentRef, text: string) => call<{ data_url: string; mime_type: string; provider: string }>("POST", `${base(a)}/hermes-voice/speak`, { text }),
   transcribe: (a: AgentRef, data_url: string, mime_type?: string) => call<{ transcript: string; provider: string }>("POST", `${base(a)}/hermes-voice/transcribe`, { data_url, ...(mime_type ? { mime_type } : {}) }),
   system: (a: AgentRef) => call<SystemStats>("GET", `${base(a)}/hermes-system`),
+  computerUse: (a: AgentRef) => call<ComputerUse>("GET", `${base(a)}/hermes-computer-use`),
   curator: (a: AgentRef) => call<Curator>("GET", `${base(a)}/hermes-curator`),
   curatorPause: (a: AgentRef, paused: boolean) => call<{ ok: boolean }>("PUT", `${base(a)}/hermes-curator/paused`, { paused }),
   curatorRun: (a: AgentRef) => call<{ started: boolean }>("POST", `${base(a)}/hermes-curator/run`, { confirm_archive: true }),
   curatorLog: (a: AgentRef) => call<CuratorLog>("GET", `${base(a)}/hermes-curator/run`),
   graph: (a: AgentRef) => call<LGraph>("GET", `${base(a)}/hermes-learning`),
   node: (a: AgentRef, id: string) => call<LNodeDetail>("GET", `${base(a)}/hermes-learning/node?id=${q(id)}`),
-  nodeSave: (a: AgentRef, id: string, content: string) => call<{ ok: boolean }>("PUT", `${base(a)}/hermes-learning/node`, { id, content }),
+  nodeSave: (a: AgentRef, id: string, content: string) => call<{ ok: boolean; id: string }>("PUT", `${base(a)}/hermes-learning/node`, { id, content }),
   nodeDelete: (a: AgentRef, id: string) => call<{ ok: boolean }>("DELETE", `${base(a)}/hermes-learning/node?id=${q(id)}&confirm=${q(id)}`),
   appearance: (a: AgentRef) => call<Appearance>("GET", `${base(a)}/hermes-appearance`),
   theme: (a: AgentRef, name: string) => call<{ ok: boolean }>("PUT", `${base(a)}/hermes-appearance/theme`, { name }),

@@ -35,14 +35,37 @@ describe("Lerngraph", () => {
     await waitFor(() => expect((screen.getByLabelText("Knoteninhalt") as HTMLTextAreaElement).value).toBe("# Skill A neu"));
   });
 
+  it("keeps following a memory after saving, because its id changes with its text", async () => {
+    await open(GO, "Lerngraph");
+    fireEvent.click(await screen.findByRole("button", { name: "memory:memory:0:aaaaaaaaaaaa" }));
+    await screen.findByLabelText("Knoteninhalt");
+    type("Knoteninhalt", "Neuer Text");
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect((screen.getByLabelText("Knoteninhalt") as HTMLTextAreaElement).value).toBe("Neuer Text"));
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByRole("button", { name: "memory:memory:0:aaaaaaaaaaaa" })).toBeNull(); // die Liste zeigt die neue ID
+    expect(sent("GET", "/hermes-learning/node").at(-1)?.url).not.toContain("aaaaaaaaaaaa");
+  });
+
+  it("calls deleting a skill archiving, as Hermes does, and a memory deleting", async () => {
+    await open(GO, "Lerngraph");
+    fireEvent.click(await screen.findByRole("button", { name: "skill-a" }));
+    await screen.findByRole("button", { name: "Skill archivieren" });
+    expect(screen.getByText(/ins Archiv, statt ihn zu löschen/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Erinnerung löschen" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "memory:memory:0:aaaaaaaaaaaa" }));
+    await screen.findByRole("button", { name: "Erinnerung löschen" });
+    expect(screen.queryByText(/ins Archiv, statt ihn zu löschen/)).toBeNull();
+  });
+
   it("deletes a node only after typing its id", async () => {
     await open(GO, "Lerngraph");
-    fireEvent.click(await screen.findByRole("button", { name: "mem:1" }));
+    fireEvent.click(await screen.findByRole("button", { name: "memory:memory:0:aaaaaaaaaaaa" }));
     await screen.findByLabelText("Knoten-ID zum Löschen");
-    expect(screen.getByRole("button", { name: "Knoten löschen" })).toBeDisabled();
-    type("Knoten-ID zum Löschen", "mem:1");
-    fireEvent.click(screen.getByRole("button", { name: "Knoten löschen" }));
-    await waitFor(() => expect(screen.queryByRole("button", { name: "mem:1" })).toBeNull());
-    expect(sent("DELETE", "/hermes-learning/node")[0].url).toContain("confirm=mem%3A1");
+    expect(screen.getByRole("button", { name: "Erinnerung löschen" })).toBeDisabled();
+    type("Knoten-ID zum Löschen", "memory:memory:0:aaaaaaaaaaaa");
+    fireEvent.click(screen.getByRole("button", { name: "Erinnerung löschen" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "memory:memory:0:aaaaaaaaaaaa" })).toBeNull());
+    expect(sent("DELETE", "/hermes-learning/node")[0].url).toContain("confirm=memory%3Amemory%3A0%3Aaaaaaaaaaaa");
   });
 });

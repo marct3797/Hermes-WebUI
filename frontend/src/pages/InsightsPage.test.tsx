@@ -23,6 +23,29 @@ describe("System und Datenschutz", () => {
     await screen.findByText(/läuft; Intervall 168 Std/);
   });
 
+  it("shows the computer use state and its checks, and offers no way to grant rights", async () => {
+    await open(GO, "System und Datenschutz");
+    await screen.findByText(/Bereit\. cua 1\.0/);
+    expect(screen.getByRole("list", { name: "Prüfungen" }).textContent).toContain("display: fehlgeschlagen");
+    expect(screen.queryByRole("button", { name: /Berechtigung|erteilen|grant/i })).toBeNull();
+  });
+
+  it("does not call it ready when the dashboard says it is not", async () => {
+    backend = installBackend(["gamma"]);
+    backend.dash.p3.cuNotReady = true;
+    history.pushState(null, "", GO);
+    render(<App />);
+    await screen.findByText(/Nicht bereit\./);
+  });
+
+  it("says plainly when computer use is not installed", async () => {
+    backend = installBackend(["gamma"]);
+    backend.dash.p3.cuMissing = true;
+    history.pushState(null, "", GO);
+    render(<App />);
+    await screen.findByText(/Nicht installiert\./);
+  });
+
   it("only starts the curator after the user ticks the confirmation", async () => {
     await open(GO, "System und Datenschutz");
     const start = await screen.findByRole("button", { name: "Curator jetzt starten" });

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { p3, type Appearance, type Curator, type CuratorLog, type Privacy, type SystemStats } from "../p3Api";
+import { p3, type Appearance, type ComputerUse, type Curator, type CuratorLog, type Privacy, type SystemStats } from "../p3Api";
 import { PageHead } from "../components/PageHead";
 import { useAction } from "../components/useAction";
 import type { AgentRef } from "../types";
@@ -12,6 +12,7 @@ export default function InsightsPage({ agent }: { agent: AgentRef }) {
     <article>
       <PageHead title="System und Datenschutz" sub="Kennzahlen, Curator, Darstellung des Hermes-Dashboards und Datenschutz" />
       <SystemBox agent={agent} />
+      <ComputerUseBox agent={agent} />
       <CuratorBox agent={agent} />
       <AppearanceBox agent={agent} />
       <PrivacyBox agent={agent} />
@@ -32,6 +33,25 @@ function SystemBox({ agent }: { agent: AgentRef }) {
         <li>{s.cpu_count ?? "?"} Kerne, Auslastung {s.cpu_percent ?? "?"} %</li>
         <li>Arbeitsspeicher {gb(s.memory?.used)} von {gb(s.memory?.total)}, Datenträger {gb(s.disk?.used)} von {gb(s.disk?.total)}</li>
       </ul>}
+    </section>
+  );
+}
+
+function ComputerUseBox({ agent }: { agent: AgentRef }) {
+  const [c, setC] = useState<ComputerUse | null>(null);
+  const [e, setE] = useState("");
+  useEffect(() => { p3.computerUse(agent).then(setC).catch((x) => setE(err(x))); }, [agent]);
+  const state = !c ? "" : !c.platform_supported ? "Diese Plattform wird nicht unterstützt." : !c.installed ? "Nicht installiert." : c.ready === true ? "Bereit." : c.ready === false ? "Nicht bereit." : "Bereitschaft unbekannt.";
+  return (
+    <section aria-label="Computer Use">
+      <h2>Computer Use</h2>
+      <p className="muted">Nur Status. Berechtigungen vergibst du am Rechner selbst (auf macOS in den Systemeinstellungen).</p>
+      {e && <p className="banner" role="alert">{e}</p>}
+      {c && <>
+        <p>{state}{c.version ? ` ${c.version}` : ""}</p>
+        {c.error && <p className="banner">{c.error}</p>}
+        {c.checks.length > 0 && <ul aria-label="Prüfungen">{c.checks.map((k) => <li key={k.name}>{k.name}: {k.ok === true ? "in Ordnung" : k.ok === false ? "fehlgeschlagen" : "unbekannt"}</li>)}</ul>}
+      </>}
     </section>
   );
 }

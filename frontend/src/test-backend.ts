@@ -193,7 +193,7 @@ export type DashState = {
   ep: { backend: string; endpoints: Array<{ id: string; name: string; base_url: string; model: string; hasKey: boolean }>; current: string };
   lcProfiles: string[]; lcActive: string; // Profil-Lebenszyklus: Namen als Text, nie Serverpfade
   p3: { pool: Array<{ provider: string; entries: Array<{ index: number; label: string; source: string; token_tail: string }> }>; voiceOn: boolean; paused: boolean; nodes: Record<string, string>; theme: string; font: string;
-    metrics: { enabled: boolean; send: boolean; decided: boolean; managed: boolean }; unlocked: boolean; workers: Array<{ run_id: number; task_id: string }>; spawnNone?: boolean; stale?: boolean; };
+    metrics: { enabled: boolean; send: boolean; decided: boolean; managed: boolean }; unlocked: boolean; workers: Array<{ run_id: number; task_id: string }>; spawnNone?: boolean; stale?: boolean; cuMissing?: boolean; cuNotReady?: boolean; };
 };
 
 const TOOL_CATALOG = [
@@ -468,7 +468,7 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
     }
     return json({ detail: "Unbekannte Modell-Route" }, 404);
   }
-  if (/^\/hermes-(credentials|voice|system|curator|learning|appearance|privacy)/.test(path)) {
+  if (/^\/hermes-(credentials|voice|system|computer-use|curator|learning|appearance|privacy)/.test(path)) {
     if (!dash.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
     const x = dash.p3;
     if (method !== "GET" && dash.stepUp) return json(stepUpBody, 401);
@@ -487,16 +487,22 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
     if (path === "/hermes-voice/speak" && method === "POST") return json({ data_url: "data:audio/mpeg;base64,AAAA", mime_type: "audio/mpeg", provider: "edge" });
     if (path === "/hermes-voice/transcribe" && method === "POST") return json({ transcript: "Hallo Welt", provider: "whisper" });
     if (path === "/hermes-system") return json({ hermes_version: "0.22.5", system: "Linux", arch: "x86_64", python_version: "3.14", cpu_count: 8, cpu_percent: 5, memory: { used: 4 * 1024 ** 3, total: 16 * 1024 ** 3 }, disk: { used: 100 * 1024 ** 3, total: 500 * 1024 ** 3 } });
+    if (path === "/hermes-computer-use") return json(x.cuMissing ? { platform: "linux", platform_supported: true, installed: false, version: null, ready: null, checks: [], error: null } : { platform: "linux", platform_supported: true, installed: true, version: "cua 1.0", ready: !x.cuNotReady, checks: [{ name: "driver", ok: true }, { name: "display", ok: false }], error: null });
     if (path === "/hermes-curator" && method === "GET") return json({ enabled: true, paused: x.paused, interval_hours: 168, last_run_at: null, min_idle_hours: 2, stale_after_days: 30, archive_after_days: 90 });
     if (path === "/hermes-curator/paused") { x.paused = Boolean(body?.paused); return json({ ok: true, paused: x.paused }); }
     if (path === "/hermes-curator/run" && method === "POST") return body?.confirm_archive ? json({ started: true, name: "curator-run" }) : json({ detail: "confirm_archive=true senden" }, 422);
     if (path === "/hermes-curator/run") return json({ running: false, exit_code: 0, log: "Curator fertig" });
-    if (path === "/hermes-learning") return json({ nodes: Object.keys(x.nodes).map((id) => ({ id, label: id, kind: id.startsWith("mem:") ? "memory" : "skill", category: "", use_count: 2, state: "", pinned: false })), edges: Object.keys(x.nodes).length > 1 ? [{ source: "skill-a", target: "mem:1" }] : [] });
+    if (path === "/hermes-learning") return json({ nodes: Object.keys(x.nodes).map((id) => ({ id, label: id, kind: id.startsWith("memory:") ? "memory" : "skill", category: "", use_count: 2, state: "", pinned: false })), edges: Object.keys(x.nodes).filter((k) => k.startsWith("memory:")).slice(0, 1).map((k) => ({ source: "skill-a", target: k })) });
     if (path === "/hermes-learning/node") {
       const id = qs.get("id") ?? "";
-      if (method === "GET") return id in x.nodes ? json({ id, kind: "skill", label: id, content: x.nodes[id] }) : json({ detail: "Diesen Knoten gibt es nicht" }, 404);
+      if (method === "GET") return id in x.nodes ? json({ id, kind: id.startsWith("memory:") ? "memory" : "skill", label: id, content: x.nodes[id] }) : json({ detail: "Diesen Knoten gibt es nicht" }, 404);
       if (method === "DELETE") { if (qs.get("confirm") !== id) return json({ detail: "Löschen: die Knoten-ID zur Bestätigung eingeben" }, 422); delete x.nodes[id]; return json({ ok: true }); }
-      if (method === "PUT") { x.nodes[String(body?.id)] = String(body?.content); return json({ ok: true }); }
+      if (method === "PUT") {
+        const old = String(body?.id), text = String(body?.content);
+        const now = old.startsWith("memory:") ? `${old.split(":").slice(0, 3).join(":")}:${text.length.toString(16).padStart(12, "0")}` : old; // wie Hermes: Fingerabdruck des Textes steckt in der ID
+        x.nodes = Object.fromEntries(Object.entries(x.nodes).map(([k, v]) => (k === old ? [now, text] : [k, v])));
+        return json({ ok: true, id: now });
+      }
     }
     if (path === "/hermes-appearance" && method === "GET") return json({ themes: [{ name: "default", label: "Default", description: "" }, { name: "midnight", label: "Midnight", description: "" }], active: x.theme, font: x.font, fonts: ["theme", "inter"] });
     if (path === "/hermes-appearance/theme") { x.theme = String(body?.name); return json({ ok: true }); }
@@ -688,7 +694,7 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
     ep: { backend: "default", endpoints: [], current: "" },
     lcProfiles: [...agents], lcActive: agents[0] ?? "gamma",
     p3: { pool: [{ provider: "openrouter", entries: [{ index: 1, label: "privat", source: "manual", token_tail: "abcd" }, { index: 2, label: "aus .env", source: "env:OPENROUTER_API_KEY", token_tail: "wxyz" }] }], voiceOn: true, paused: false,
-      nodes: { "skill-a": "# Skill A", "mem:1": "Merke dir das" }, theme: "default", font: "theme", metrics: { enabled: false, send: false, decided: false, managed: false }, unlocked: true, workers: [{ run_id: 7, task_id: "t_1" }] },
+      nodes: { "skill-a": "# Skill A", "memory:memory:0:aaaaaaaaaaaa": "Merke dir das" }, theme: "default", font: "theme", metrics: { enabled: false, send: false, decided: false, managed: false }, unlocked: true, workers: [{ run_id: 7, task_id: "t_1" }] },
   };
   let runs = 0;
   const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });

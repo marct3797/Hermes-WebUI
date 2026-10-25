@@ -46,6 +46,19 @@ async def system(target: Tgt, dash: Dash):
     return out
 
 
+# ---- Computer Use: nur Status. Die Rechte-Vergabe (macOS) bleibt aus; `source` und `detail` zeigen Serverpfade und fehlen deshalb ----
+@router.get("/hermes-computer-use")
+async def computer_use(target: Tgt, dash: Dash):
+    b = await upstream(dash.request("GET", "/api/tools/computer-use/status", params={"profile": target.agent.id}))
+    if not isinstance(b, dict) or not isinstance(b.get("installed"), bool) or not isinstance(b.get("checks"), list):
+        raise HTTPException(502, "Das Dashboard liefert den Computer-Use-Status in unbekannter Form")
+    ready = b.get("ready")
+    return {"platform": str(b.get("platform", ""))[:20], "platform_supported": bool(b.get("platform_supported")), "installed": b["installed"],
+            "version": redact(str(b["version"]))[:120] if isinstance(b.get("version"), str) else None, "ready": ready if isinstance(ready, bool) else None,
+            "checks": [{"name": str(c.get("name", ""))[:60], "ok": c.get("ok") if isinstance(c.get("ok"), bool) else None} for c in b["checks"][:20] if isinstance(c, dict)],
+            "error": redact(str(b["error"]))[:300] if b.get("error") else None}
+
+
 # ---- Curator ----
 async def _curator(dash: Dash, agent: str) -> dict[str, Any]:
     b = await upstream(dash.request("GET", "/api/curator", params={"profile": agent}))
@@ -148,10 +161,17 @@ async def node_edit(request: Request, target: Tgt, dash: Dash, req: NodeIn, user
     if not req.content.strip():
         raise HTTPException(422, "Inhalt: leer")
     await upstream(dash.request("PUT", "/api/learning/node", body={"id": nid, "content": req.content}, params={"profile": target.agent.id}, missing="Diesen Knoten gibt es nicht"))
-    if (await _node(dash, target.agent.id, nid))["content"].strip() != req.content.strip():
+    now = nid
+    if nid.startswith("memory:"):  # die ID einer Erinnerung trägt den Fingerabdruck ihres Textes: nach dem Speichern gilt eine neue, gleiche Quelle und Nummer
+        prefix = ":".join(nid.split(":")[:3]) + ":"
+        same = [n["id"] for n in (await learning_graph(target, dash))["nodes"] if n["id"].startswith(prefix)]
+        if len(same) != 1:
+            raise HTTPException(502, "Das Dashboard hat die Erinnerung nicht wiedergefunden")
+        now = same[0]
+    if (await _node(dash, target.agent.id, now))["content"].strip() != req.content.strip():
         raise HTTPException(502, "Das Dashboard hat den Inhalt nicht übernommen")
     audit(request, user, "learning.edit", target, node=nid, length=len(req.content))
-    return {"ok": True, "id": nid}
+    return {"ok": True, "id": now}
 
 
 @router.delete("/hermes-learning/node")

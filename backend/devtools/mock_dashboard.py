@@ -8,6 +8,7 @@ Start: uvicorn devtools.mock_dashboard:app --port 9122
 """
 from __future__ import annotations
 
+import hashlib
 import time
 
 import os
@@ -972,6 +973,16 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
                 "cpu_count": 8, "cpu_percent": 5.0, "memory": {"total": 100, "used": 40}, "disk": {"total": 1000, "used": 500}, "uptime_seconds": 1234,
                 "env": {"OPENROUTER_API_KEY": "sk-LEAK-env"}, "home": "/home/someone/.hermes"}
 
+    @app.get("/api/tools/computer-use/status")
+    async def computer_use(profile: str | None = None):
+        bad = profile_or_default(profile).get("cu_bad")
+        if bad == "checks":
+            return {"platform": "linux", "installed": True, "checks": "kaputt"}
+        if bad:
+            return {"unexpected": True}
+        return {"platform": "linux", "platform_supported": True, "installed": True, "version": "cua 1.0 sk-LEAK-version", "ready": True, "can_grant": False, "source": "/home/someone/bin/cua",
+                "checks": [{"name": "driver", "ok": True, "detail": "läuft /home/someone/bin"}], "error": None, "accessibility": None, "screen_recording": None}
+
     @app.get("/api/curator")
     async def curator_get(profile: str | None = None):
         c = profile_or_default(profile).setdefault("curator", {"paused": False})
@@ -993,9 +1004,9 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
         n = prof.get("graph_n")
         if n:
             return {"nodes": [{"id": f"s{i}", "label": f"s{i}", "kind": "skill"} for i in range(n)], "edges": [], "clusters": {}}
-        nodes = prof.setdefault("nodes", {"skill-a": "# Skill A\nText", "mem:1": "Merke dir das"})
-        return {"nodes": [{"id": k, "label": k, "kind": "memory" if k.startswith("mem:") else "skill", "path": "/home/x/skills/" + k} for k in nodes],
-                "edges": [{"source": "skill-a", "target": "mem:1"}] if len(nodes) > 1 else [], "clusters": {"general": 1}}
+        nodes = prof.setdefault("nodes", {"skill-a": "# Skill A\nText", "memory:memory:0:aaaaaaaaaaaa": "Merke dir das"})
+        return {"nodes": [{"id": k, "label": k, "kind": "memory" if k.startswith("memory:") else "skill", "path": "/home/x/skills/" + k} for k in nodes],
+                "edges": [{"source": "skill-a", "target": k} for k in nodes if k.startswith("memory:")][:1], "clusters": {"general": 1}}
 
     @app.get("/api/learning/graph")
     async def learning_graph(profile: str | None = None):
@@ -1003,23 +1014,29 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
 
     @app.get("/api/learning/node")
     async def learning_node(id: str, profile: str | None = None):
-        nodes = profile_or_default(profile).setdefault("nodes", {"skill-a": "# Skill A\nText", "mem:1": "Merke dir das"})
+        nodes = profile_or_default(profile).setdefault("nodes", {"skill-a": "# Skill A\nText", "memory:memory:0:aaaaaaaaaaaa": "Merke dir das"})
         if id not in nodes:
             raise HTTPException(404, f"skill '{id}' not found")
-        return {"ok": True, "kind": "memory" if id.startswith("mem:") else "skill", "id": id, "label": id, "content": nodes[id]}
+        return {"ok": True, "kind": "memory" if id.startswith("memory:") else "skill", "id": id, "label": id, "content": nodes[id]}
 
     @app.put("/api/learning/node")
     async def learning_edit(body: dict[str, Any], profile: str | None = None):
-        nodes = profile_or_default(profile).setdefault("nodes", {"skill-a": "# Skill A\nText", "mem:1": "Merke dir das"})
+        nodes = profile_or_default(profile).setdefault("nodes", {"skill-a": "# Skill A\nText", "memory:memory:0:aaaaaaaaaaaa": "Merke dir das"})
         if body.get("id") not in nodes:
             raise HTTPException(404, "not found")
         if not drop_writes:
-            nodes[body["id"]] = body.get("content", "")
+            nid, text = body["id"], body.get("content", "")
+            if nid.startswith("memory:"):  # wie Hermes: die ID trägt den Fingerabdruck des Inhalts, der Eintrag behält seinen Platz
+                new = ":".join(nid.split(":")[:3]) + ":" + hashlib.sha1(text.encode()).hexdigest()[:12]
+                items = [(new if k == nid else k, text if k == nid else v) for k, v in nodes.items() if not (k == nid and profile_or_default(profile).get("vanish"))]
+                nodes.clear(); nodes.update(items)
+            else:
+                nodes[nid] = text
         return {"ok": True}
 
     @app.delete("/api/learning/node")
     async def learning_delete(body: dict[str, Any], profile: str | None = None):
-        nodes = profile_or_default(profile).setdefault("nodes", {"skill-a": "# Skill A\nText", "mem:1": "Merke dir das"})
+        nodes = profile_or_default(profile).setdefault("nodes", {"skill-a": "# Skill A\nText", "memory:memory:0:aaaaaaaaaaaa": "Merke dir das"})
         if body.get("id") not in nodes:
             raise HTTPException(404, "not found")
         if not drop_writes:

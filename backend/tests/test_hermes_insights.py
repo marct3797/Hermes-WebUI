@@ -32,6 +32,20 @@ def test_system_shows_figures_but_no_env_path_or_key_fields(env):
     assert "sk-LEAK" not in r.text and "env" not in r.json() and "home" not in r.json()
 
 
+# ---- Computer Use (nur Status; Rechte vergibt die WebUI nie) ----
+def test_computer_use_status_is_read_only_and_slim(env):
+    r = env.get(f"{S}/hermes-computer-use")
+    assert r.status_code == 200 and r.json()["installed"] is True and r.json()["ready"] is True and r.json()["platform"] == "linux"
+    assert [c["name"] for c in r.json()["checks"]] == ["driver"] and "sk-LEAK" not in r.text and "/home/someone" not in r.text
+    assert env.post(f"{S}/hermes-computer-use/grant").status_code in (404, 405)  # keine Rechte-Vergabe
+
+
+def test_computer_use_status_with_wrong_shape_is_502(env):
+    for bad in (True, "checks"):
+        env.dash.state.profiles["default"]["cu_bad"] = bad
+        assert env.get(f"{S}/hermes-computer-use").status_code == 502
+
+
 # ---- Curator ----
 def test_curator_status_then_pause_needs_fresh_and_reads_back(env):
     assert env.get(f"{S}/hermes-curator").json()["paused"] is False
@@ -61,7 +75,7 @@ def test_curator_run_needs_fresh_and_explicit_confirmation(env):
 # ---- Lerngraph ----
 def test_learning_graph_is_capped_and_slim(env):
     r = env.get(f"{S}/hermes-learning")
-    assert r.status_code == 200 and {n["id"] for n in r.json()["nodes"]} >= {"skill-a", "mem:1"} and r.json()["edges"]
+    assert r.status_code == 200 and {n["id"] for n in r.json()["nodes"]} >= {"skill-a", "memory:memory:0:aaaaaaaaaaaa"} and r.json()["edges"]
     assert "path" not in r.text
     env.dash.state.profiles["default"]["graph_n"] = 700
     assert len(env.get(f"{S}/hermes-learning").json()["nodes"]) == 500
@@ -90,6 +104,28 @@ def test_learning_node_read_edit_delete_guards(env):
     assert env.request("DELETE", f"{S}/hermes-learning/node", params={"id": "skill-a"}).status_code == 422
     assert env.request("DELETE", f"{S}/hermes-learning/node", params={"id": "skill-a", "confirm": "skill-a"}).status_code == 200
     assert env.get(f"{S}/hermes-learning/node", params={"id": "skill-a"}).status_code == 404
+
+
+def _memory_id(env):
+    return next(n["id"] for n in env.get(f"{S}/hermes-learning").json()["nodes"] if n["id"].startswith("memory:"))
+
+
+def test_editing_a_memory_node_follows_its_new_id(env):
+    # Hermes: die ID einer Erinnerung enthält den Fingerabdruck ihres Textes und ändert sich mit ihm (live gemessen)
+    old = _memory_id(env)
+    r = env.put(f"{S}/hermes-learning/node", json={"id": old, "content": "Neuer Text"})
+    assert r.status_code == 200 and r.json()["id"] != old and r.json()["id"].startswith("memory:memory:0:")
+    assert env.get(f"{S}/hermes-learning/node", params={"id": r.json()["id"]}).json()["content"] == "Neuer Text"
+    assert env.get(f"{S}/hermes-learning/node", params={"id": old}).status_code == 404
+
+
+def test_a_memory_edit_that_is_dropped_is_502(lossy):
+    assert lossy.put(f"{S}/hermes-learning/node", json={"id": _memory_id(lossy), "content": "Neuer Text"}).status_code == 502
+
+
+def test_a_memory_that_vanishes_after_saving_is_a_502_not_a_404(env):
+    env.dash.state.profiles["default"]["vanish"] = True
+    assert env.put(f"{S}/hermes-learning/node", json={"id": _memory_id(env), "content": "Neuer Text"}).status_code == 502
 
 
 def test_learning_edit_and_delete_that_are_dropped_are_502(lossy):

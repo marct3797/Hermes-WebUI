@@ -35,9 +35,10 @@ export default function LearningPage({ agent }: { agent: AgentRef }) {
       {open && <section aria-label="Knoten bearbeiten">
         <h2>{open.label || open.id}</h2>
         <textarea aria-label="Knoteninhalt" rows={14} maxLength={100000} value={draft} onChange={(e) => setDraft(e.target.value)} />
-        <button type="button" disabled={busy || !draft.trim() || draft === open.content} onClick={() => void run(async () => { await p3.nodeSave(agent, open.id, draft); const d = await p3.node(agent, open.id); setOpen(d); setDraft(d.content); await load(); })}>Speichern</button>
-        <label>Zum Löschen die ID eintippen <input aria-label="Knoten-ID zum Löschen" placeholder={open.id} value={typed} onChange={(e) => setTyped(e.target.value)} /></label>
-        <button type="button" disabled={busy || typed !== open.id} onClick={() => void run(async () => { await p3.nodeDelete(agent, open.id); setOpen(null); await load(); })}>Knoten löschen</button>
+        <button type="button" disabled={busy || !draft.trim() || draft === open.content} onClick={() => void run(async () => { const saved = await p3.nodeSave(agent, open.id, draft); const d = await p3.node(agent, saved.id); setOpen(d); setDraft(d.content); await load(); })}>Speichern</button>
+        {open.kind === "skill" && <p className="muted">Hermes legt einen Skill ins Archiv, statt ihn zu löschen; zurückholen geht mit der Hermes-CLI.</p>}
+        <label>Zur Bestätigung die ID eintippen <input aria-label="Knoten-ID zum Löschen" placeholder={open.id} value={typed} onChange={(e) => setTyped(e.target.value)} /></label>
+        <button type="button" disabled={busy || typed !== open.id} onClick={() => void run(async () => { await p3.nodeDelete(agent, open.id); setOpen(null); await load(); })}>{open.kind === "skill" ? "Skill archivieren" : "Erinnerung löschen"}</button>
       </section>}
     </article>
   );
