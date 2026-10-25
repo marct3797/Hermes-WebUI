@@ -22,6 +22,7 @@ export type Page =
   | { name: "providers" }
   | { name: "rooms" }
   | { name: "room"; id: string }
+  | { name: "guide" }
   | { name: "agent"; ref: AgentRef; module: string; sessionId?: string }
   | { name: "notfound" };
 
@@ -50,6 +51,7 @@ export function parsePath(pathname: string): Page {
     if (head === "providers" && rest.length === 0) return { name: "providers" };
     if (head === "rooms" && rest.length === 0) return { name: "rooms" };
     if (head === "rooms" && rest.length === 1) return { name: "room", id: dec(rest[0]) };
+    if (head === "guide" && rest.length === 0) return { name: "guide" };
     if (head === "h" && rest.length >= 3) {
       const [host, runtime, agent, module = "chat", sessionId] = rest.map(dec);
       return { name: "agent", ref: { host, runtime, agent }, module, sessionId };
