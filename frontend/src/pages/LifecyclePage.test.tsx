@@ -111,6 +111,15 @@ describe("Profil-Lebenszyklus & Betrieb", () => {
     expect(sent("POST", "/hermes-profiles/import").length).toBe(0);
   });
 
+  it("shows the shared-filesystem error banner on a denied profile import", async () => {
+    await open((b) => { b.dash.kbImportFail = "NOT_SHARED Die Datei liegt nicht im Dateisystem der WebUI"; });
+    const ops = await screen.findByRole("region", { name: "Import" });
+    const data = new File(["PK-test"], "profil.tar.gz", { type: "application/gzip" });
+    fireEvent.change(within(ops).getByLabelText("Archivdatei (.tar.gz, .tgz, .zip)"), { target: { files: [data] } });
+    fireEvent.click(within(ops).getByRole("button", { name: "Importieren" }));
+    expect(await within(ops).findByRole("alert")).toHaveTextContent("NOT_SHARED");
+  });
+
   it("offers no update, no migrate, no dump, no debug share", async () => {
     await open();
     await screen.findByRole("region", { name: "Profile" });

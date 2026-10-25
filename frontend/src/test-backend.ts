@@ -191,9 +191,9 @@ export type DashState = {
   mdDown?: boolean; mdFresh: boolean; // frische Installation: noch kein Anbieter, kein Modell (gültige, leere Antworten)
   sa: { down?: boolean; sessions: Array<{ id: string; ageDays: number; messages: number; active?: boolean }> };
   ep: { backend: string; endpoints: Array<{ id: string; name: string; base_url: string; model: string; hasKey: boolean }>; current: string };
-  lcProfiles: string[]; lcActive: string; // Profil-Lebenszyklus: Namen als Text, nie Serverpfade
+  lcProfiles: string[]; lcActive: string; kbImportFail?: string | null; // Profil-Lebenszyklus: Namen als Text, nie Serverpfade
   p3: { pool: Array<{ provider: string; entries: Array<{ index: number; label: string; source: string; token_tail: string }> }>; voiceOn: boolean; paused: boolean; nodes: Record<string, string>; theme: string; font: string;
-    metrics: { enabled: boolean; send: boolean; decided: boolean; managed: boolean }; unlocked: boolean; workers: Array<{ run_id: number; task_id: string }>; spawnNone?: boolean; stale?: boolean; cuMissing?: boolean; cuNotReady?: boolean; old501?: string; };
+    metrics: { enabled: boolean; send: boolean; decided: boolean; managed: boolean }; unlocked: boolean; workers: Array<{ run_id: number; task_id: string }>;    spawnNone?: boolean; stale?: boolean; cuMissing?: boolean; cuNotReady?: boolean; old501?: string; kbImportFail?: string | null; };
 };
 
 const TOOL_CATALOG = [
@@ -433,6 +433,7 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
       return json({ ok: true, name: String(body?.name), setup: "Einrichtung: hermes setup" });
     }
     if (path === "/hermes-profiles/import" && method === "POST") {
+      if (dash.kbImportFail) return json({ detail: dash.kbImportFail }, 502);
       if (!(init?.body instanceof FormData)) return json({ detail: "Nur hochgeladene Archive, kein Serverpfad" }, 422);
       if (!dash.lcProfiles.includes("rueck")) dash.lcProfiles.push("rueck");
       return json({ ok: true, name: "rueck" });
@@ -812,7 +813,10 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
           store.atts = (store.atts ?? []).filter((a) => a.id !== Number(adm[1])); return json({ ok: true, deleted: Number(adm[1]) });
         }
         if (/\/boards\/[^/]+\/export$/.test(sub) && method === "POST") return json({ archive: "x.tar.gz" });
-        if (sub === "/boards/import" && method === "POST") return init?.body instanceof FormData ? json({ ok: true, board: "importiert" }, 201) : json({ detail: "archiv" }, 422);
+        if (sub === "/boards/import" && method === "POST") {
+          if (x.kbImportFail) return json({ detail: x.kbImportFail }, 502);
+          return init?.body instanceof FormData ? json({ ok: true, board: "importiert" }, 201) : json({ detail: "archiv" }, 422);
+        }
         if (/\/boards\/[^/]+$/.test(sub) && method === "DELETE") return json({ ok: true, board: "alpha" });
         if (sub === "/dispatch") return json({ dry_run: Boolean(bd?.dry_run), spawned: x.spawnNone ? [] : ["t_1"], promoted: [] });
       }

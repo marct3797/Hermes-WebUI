@@ -102,4 +102,13 @@ describe("Kanban Diagnose und Betrieb", () => {
     await screen.findByText("Archiviert: default");
     expect(changed).toEqual(["x"]);
   });
+
+  it("shows the shared-filesystem error banner on a denied board import", async () => {
+    backend = installBackend(["gamma"]); backend.dash.p3.kbImportFail = "NOT_SHARED Die Datei liegt nicht im Dateisystem der WebUI";
+    render(<KanbanAdminPanel host="server" board="default" onChanged={() => undefined} onImported={() => undefined} />);
+    const file = new File(["PK-test"], "b.tar.gz", { type: "application/gzip" });
+    fireEvent.change(screen.getByLabelText("Archivdatei"), { target: { files: [file] } });
+    await screen.findByRole("alert");
+    expect(screen.getByRole("alert")).toHaveTextContent("NOT_SHARED");
+  });
 });
