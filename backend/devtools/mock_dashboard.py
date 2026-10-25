@@ -135,6 +135,22 @@ class ModelBody(BaseModel):
     provider: str
     model: str
 
+class ProfileCreateBody(BaseModel):
+    name: str
+    description: Any = None
+    clone_from: Any = None
+    clone_channels: bool = False
+
+class ProfileRenameBody(BaseModel):
+    new_name: str
+
+class ConfirmBody(BaseModel):
+    confirm: str = ""
+
+class ActiveBody(BaseModel):
+    name: str
+
+
 class ToolToggleBody(BaseModel):
     enabled: bool
     profile: str | None = None
@@ -224,6 +240,100 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
             for n, p in state.items()
         ]}
 
+    app.state.profiles.setdefault("beta", {"soul": "# Beta\n", "provider": "nous", "model": "claude-test", "description": "", "description_auto": True, "env": {}, "memory": {"active": "", "files": {"memory": 10, "user": 0}, "cfg": {}, "installed": set()}, "channels": False, "gateway_running": False})
+    app.state.profile_calls = []  # (Methode, Pfad, Name); Import per Pfad darf nie darin vorkommen
+    app.state.action_logs = {}
+
+    @app.get("/api/profiles/active")
+    async def profiles_active():
+        return {"active": "default", "current": "default"}
+
+    @app.post("/api/profiles/active")
+    async def profiles_active_set(body: ActiveBody):
+        profile(body.name)
+        return {"ok": True, "active": body.name}
+
+    @app.post("/api/profiles")
+    async def profiles_create(body: ProfileCreateBody):
+        if body.name in state:
+            raise HTTPException(400, "exists")
+        if str(body.clone_from or "") and str(body.clone_from) not in state:
+            raise HTTPException(404, "Quelle fehlt")
+        src = state.get(str(body.clone_from)) if body.clone_from else None
+        created = {("POST-mit-clone_channels_wahr" if body.clone_channels else "plain"): True}
+        app.state.profile_calls.append((("POST-mit-clone_channels_wahr") if body.clone_channels else "POST", "/api/profiles", body.name))
+        state[body.name] = {"soul": (src or {}).get("soul"), "provider": "nous", "model": "claude-test", "description": "", "description_auto": True, "env": {}, "memory": {"active": "", "files": {"memory": 0, "user": 0}, "cfg": {}, "installed": set()}, "created": created}
+        if src is not None and bool(body.clone_channels):
+            state[body.name]["channels"] = True
+        return {"ok": True, "name": body.name}
+
+    @app.patch("/api/profiles/{name}")
+    async def profiles_rename(name: str, body: ProfileRenameBody):
+        p = profile(name)
+        state[body.new_name] = p
+        del state[name]
+        return {"ok": True, "name": body.new_name}
+
+    @app.delete("/api/profiles/{name}")
+    async def profiles_delete(name: str, body: ConfirmBody | None = None):
+        p = profile(name)
+        stopped = bool(p.get("gateway_running"))
+        del state[name]
+        return {"ok": True, "gateway_stopped": stopped}
+
+    @app.post("/api/profiles/{name}/export")
+    async def profiles_export(name: str):
+        profile(name)
+        return {"ok": True, "archive": f"/opt/data/exports/{name}-20261024.tar.gz"}
+
+    @app.post("/api/profiles/import")
+    async def profiles_import(request: Request):
+        ctype = request.headers.get("content-type") or ""
+        if ctype.startswith("multipart/form-data"):
+            form = await request.form()
+            up = form.get("archive")
+            data = await up.read() if up is not None and not isinstance(up, str) else b""
+            if not data[:2] == b"PK":
+                raise HTTPException(422, "Nur Profil-Archive (.tar.gz/.zip)")
+            name = str(form.get("name") or "rueck")
+            state[name] = {"soul": None, "provider": "nous", "model": "claude-test", "description": "", "description_auto": True, "env": {}, "memory": {"active": "", "files": {"memory": 0, "user": 0}, "cfg": {}, "installed": set()}}
+            return {"ok": True, "name": name}
+        body = await request.json()
+        arch = body.get("archive")
+        if not isinstance(arch, str) or not arch.strip():
+            raise HTTPException(400, "archive fehlt")
+        import tempfile as _tf
+        if not arch.startswith(_tf.gettempdir() + "/"):
+            raise HTTPException(422, "Nur Uploads ueber das BFF (temp-Datei), keine freien Pfade")
+        name = str(body.get("name") or "rueck")
+        state[name] = {"soul": None, "provider": "nous", "model": "claude-test", "description": "", "description_auto": True, "env": {}, "memory": {"active": "", "files": {"memory": 0, "user": 0}, "cfg": {}, "installed": set()}}
+        return {"ok": True, "name": name}  # BFF meldet temp-Pfade; profile_calls bleibt leer als Beleg dafuer
+
+    @app.get("/api/profiles/{name}/setup-command")
+    async def profiles_setup(name: str):
+        profile(name)
+        return {"command": "hermes setup"}
+
+    @app.post("/api/ops/doctor")
+    async def ops_doctor():
+        from datetime import datetime, timezone
+        app.state.action_logs.setdefault("doctor", f"fertig {datetime.now(timezone.utc).isoformat()}")
+        return {"ok": True, "action": "doctor"}
+
+    # 1. Fassung (Lifecycle): /api/actions/{name}/status mit Schwärzung, weil Hermes dort Binär- und Geheimnismüll liefern kann.
+
+    @app.post("/api/ops/backup")
+    async def ops_backup():
+        return {"ok": True, "archive": "/opt/data/exports/backup-beta-test.zip"}
+
+    @app.get("/api/health")
+    async def dash_health():
+        return {"ok": True, "uptime_s": 42}
+
+    @app.get("/api/hermes/update/check")
+    async def update_check():
+        return {"current": "mock-1", "available": None}
+
     @app.get("/api/profiles/{name}/soul")
     async def get_soul(name: str):
         soul = profile(name)["soul"]
@@ -240,6 +350,7 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
     async def put_description(name: str, body: DescriptionBody):
         p = profile(name)
         p["description"], p["description_auto"] = body.description.strip(), False
+        app.state.profile_calls.append(("PUT", f"/api/profiles/{name}/description", body.description.strip()))
         return {"ok": True, "description": p["description"], "description_auto": False}
 
     @app.put("/api/profiles/{name}/model")
@@ -498,7 +609,7 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
     @app.get("/api/status")
     async def hermes_status(profile: str | None = None):
         gw = app.state.gateway
-        return {"version": "0.22.5", "gateway_running": gw["running"], "gateway_state": gw["state"], "gateway_platforms": {}, "active_agents": gw["active_sessions"],
+        return {"version": "0.22.5", "profile": "default", "ok": True, "gateway_running": gw["running"], "gateway_state": gw["state"], "gateway_platforms": {}, "active_agents": gw["active_sessions"],
                 "gateway_busy": gw["busy"], "gateway_drainable": gw["busy"], "restart_drain_timeout": 0.0, "active_sessions": gw["active_sessions"], "install_id": "geheim-install-id",
                 "components": {"gateway": {"status": "ok" if gw["running"] else "degraded", "state": "running" if gw["running"] else "stopped"}}}
 
@@ -562,8 +673,10 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
 
     @app.get("/api/actions/{name}/status")
     async def action_status(name: str, lines: int = 200):
-        if name not in ("gateway-start", "gateway-stop", "gateway-restart", "tools-post-setup"):
+        if name not in ("gateway-start", "gateway-stop", "gateway-restart", "tools-post-setup", "doctor"):
             raise HTTPException(404, "Unknown action")
+        if name == "doctor":
+            return {"name": name, "running": False, "exit_code": 0, "log": app.state.action_logs.get(name, "")}
         return {"name": name, "running": False, "exit_code": 0, "pid": 4242, "lines": app.state.action_lines[-lines:]}
 
     @app.post("/api/messaging/telegram/onboarding/start")

@@ -58,6 +58,7 @@ function readOpen(): Record<string, boolean> {
 // Bereiche eines Hermes-Agents: stehen unter dem gewählten Agent, damit man sie nicht erst in einer Icon-Leiste suchen muss.
 const MODULES = [
   { module: "soul", label: "SOUL & Profil", icon: "spark" },
+  { module: "lebenszyklus", label: "Profile & Betrieb", icon: "server" },
   { module: "config", label: "Hermes-Einstellungen", icon: "sliders" },
   { module: "providers", label: "Keys & Nutzung", icon: "coin" },
   { module: "skills", label: "Skills", icon: "layers" },

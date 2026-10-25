@@ -1,6 +1,6 @@
 import { invalidate } from "./dataCache";
 import { getPreferences } from "./preferences";
-import type { HmField, HmOverview, GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import type { LcCreated, LcList, HmField, HmOverview, GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string, public data?: Record<string, unknown>) {
@@ -169,4 +169,18 @@ export const api = {
   stopRoom: (rid: string) => call<{ stopped: boolean }>("POST", `/bff/rooms/${id(rid)}/stop`, {}),
   roomEventsUrl: (rid: string) => `/bff/rooms/${id(rid)}/events`,
   eventsUrl: (a: AgentRef, rid: string) => `${base(a)}/runs/${id(rid)}/events`,
+  lcList: (a: AgentRef) => call<LcList>("GET", `${base(a)}/hermes-profiles`),
+  lcCreate: (a: AgentRef, body: { name: string; clone_from?: string; description?: string; clone_channels?: boolean }) => call<LcCreated>("POST", `${base(a)}/hermes-profiles`, body),
+  lcRename: (a: AgentRef, name: string, new_name: string) => call<{ ok: boolean; name: string }>("PATCH", `${base(a)}/hermes-profiles/${id(name)}`, { new_name }),
+  lcDelete: (a: AgentRef, name: string, confirm: string) => call<{ ok: boolean }>("DELETE", `${base(a)}/hermes-profiles/${id(name)}`, { confirm }),
+  lcSetActive: (a: AgentRef, name: string) => call<{ ok: boolean }>("POST", `${base(a)}/hermes-profiles/active`, { name }),
+  lcBackup: (a: AgentRef, confirm: string) => call<{ ok: boolean; archive: string }>("POST", `${base(a)}/hermes-ops/backup`, { confirm }),
+  lcDoctor: (a: AgentRef) => call<{ ok: boolean; name: string }>("POST", `${base(a)}/hermes-ops/doctor`, {}),
+  lcDoctorLog: (a: AgentRef) => call<{ name: string; lines: string[] }>("GET", `${base(a)}/hermes-ops/actions/doctor`),
+  lcImport: async (a: AgentRef, file: File, name?: string): Promise<{ ok: boolean; name: string }> => {
+    const f = new FormData(); f.append("archive", file, file.name); if (name) f.append("name", name);
+    const res = await fetch(`${base(a)}/hermes-profiles/import`, { method: "POST", headers: { "X-Requested-With": "hermes-webui" }, body: f, credentials: "same-origin" });
+    if (!res.ok) { let detail = res.statusText; try { const j = await res.json(); detail = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail ?? j); } catch { /* kein JSON */ } throw new ApiError(res.status, detail); }
+    return await res.json() as { ok: boolean; name: string };
+  },
 };

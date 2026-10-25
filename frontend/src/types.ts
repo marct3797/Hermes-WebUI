@@ -212,3 +212,8 @@ export type TelegramPoll = { status: "waiting" | "ready"; bot_username?: string 
 export type HmProvider = { name: string; description?: string; status?: string; configured: boolean; available: boolean; required_env: string[]; missing: Array<{ name: string; install: string }> };
 export type HmOverview = { active: string; providers: HmProvider[]; files: { memory: number; user: number } };
 export type HmField = { key: string; label?: string; kind: string; description?: string; placeholder?: string; required?: boolean; is_set: boolean; options: Array<{ value: string; label?: string }>; url?: string | null; value?: string };
+
+/** Profil-Lebenszyklus und Betrieb: Namen kommen als Text vom Dashboard, Serverpfade nie. */
+export type LcEntry = { name: string; is_default?: boolean; has_env?: boolean };
+export type LcList = { profiles: LcEntry[]; active?: string };
+export type LcCreated = { ok: boolean; name: string; setup?: string };

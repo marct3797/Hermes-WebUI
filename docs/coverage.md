@@ -91,8 +91,8 @@ Pfadgenau heißt: ein Pfad zählt als genutzt, auch wenn nur eine seiner Methode
 1. ~~Messaging-Plattformen und Gateway-Betrieb~~ umgesetzt und gegen ein echtes Dashboard geprüft (`devtools/real/contract_messaging.py`). Offen daraus: WhatsApp-Kopplung (QR), Drain.
 2. ~~Werkzeuge konfigurieren und Werkzeug-Keys setzen~~ umgesetzt und gegen ein echtes Dashboard geprüft (`devtools/real/contract_tools.py`).
 3. ~~Hermes-Gedächtnis~~ umgesetzt und gegen ein echtes Dashboard geprüft (`devtools/real/contract_memory.py`). Offen daraus: Inhalt von `MEMORY.md`/`USER.md` anzeigen und bearbeiten (das Dashboard liefert ihn nicht; der Host-Dienst könnte die Dateien lesen).
-4. Profil-Lebenszyklus: anlegen, löschen, umbenennen, Import/Export.
-5. Betrieb: Status/Gesundheit, Doctor, Backup, Update-Prüfung.
+4. ~~Profil-Lebenszyklus: anlegen, löschen, umbenennen, Import/Export~~ umgesetzt und gegen ein echtes Dashboard geprüft (`devtools/real/contract_lifecycle.py`): Canvas-Regel wie Hermes (klein, kein reservierter Name), Löschen/Backup nur mit Namenseingabe, Import nur per Upload (BFF schreibt in eine temp-Datei und meldet den Pfad; freie Pfade 422), Export nur als Hinweis auf den Agenten-Rechner, Setup-Befehl nur als Text für das Dashboard-Heim.
+5. ~~Betrieb: Status/Gesundheit, Doctor, Backup, Update-Prüfung~~ umgesetzt (nur Lesen + Doctor/Backup mit Schranken; Update bleibt bewusst draußen).
 6. ~~Dashboard-Anmeldeschranke für entfernte Hosts~~ geklärt und gegen ein echtes Dashboard geprüft (Punkt 1 oben): Tunnel statt Adresse.
 7. ~~Vertragstests gegen 0.22.5~~ für die Lese-Routen aufgenommen; Run-Strom war falsch eingeschätzt (Punkt 3 oben).
 

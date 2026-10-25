@@ -187,6 +187,7 @@ export type DashState = {
   msg: { available: boolean; enabled: Record<string, boolean>; env: Record<string, string>; gateway: { running: boolean; busy: boolean; sessions: number }; polls: number; applied: string[] }; // Messaging und Gateway
   hm: { available: boolean; active: string; files: { memory: number; user: number }; keySet: boolean; project: string; mode: string }; // Hermes-Gedächtnis
   tools: { available: boolean; enabled: Record<string, boolean>; keys: Record<string, string>; provider: Record<string, string>; model: string; installed: boolean }; // Werkzeug-Gruppen
+  lcProfiles: string[]; lcActive: string; // Profil-Lebenszyklus: Namen als Text, nie Serverpfade
 };
 
 const TOOL_CATALOG = [
@@ -273,7 +274,7 @@ function providersOverview(dash: DashState, days: number) {
   return { providers, period_days: days, warnings: [] as string[] };
 }
 
-function dashboardRoute(rest: string, method: string, agent: string, dash: DashState, json: (b: unknown, s?: number) => Response, body?: Record<string, unknown>): Response | undefined {
+function dashboardRoute(rest: string, method: string, agent: string, dash: DashState, json: (b: unknown, s?: number) => Response, body?: Record<string, unknown>, init?: RequestInit): Response | undefined {
   if (rest === "/dashboard") {
     return json(dash.available
       ? { available: true, reason: null, profile: { name: agent, ...dash.model, description: dash.description, description_auto: false, skill_count: 12, gateway_running: false, has_env: true } }
@@ -413,6 +414,46 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
     }
     if (tg && method === "DELETE") return json({ ok: true });
   }
+  const lcPath = /^\/hermes-profiles(\/import|\/active|\/([^/]+))?$/.exec(path);
+  if (lcPath) {
+    if (!dash.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
+    if (method !== "GET" && dash.stepUp) return json(stepUpBody, 401);
+    if (path === "/hermes-profiles" && method === "GET") {
+      return json({ profiles: dash.lcProfiles.map((n: string) => ({ name: n, is_default: n === dash.lcProfiles[0], has_env: true })), active: dash.lcActive });
+    }
+    if (path === "/hermes-profiles" && method === "POST") {
+      if (body?.clone_from && !dash.lcProfiles.includes(String(body.clone_from))) return json({ detail: "Quelle: unbekanntes Profil" }, 422);
+      dash.lcProfiles.push(String(body?.name));
+      return json({ ok: true, name: String(body?.name), setup: "Einrichtung: hermes setup" });
+    }
+    if (path === "/hermes-profiles/import" && method === "POST") {
+      if (!(init?.body instanceof FormData)) return json({ detail: "Nur hochgeladene Archive, kein Serverpfad" }, 422);
+      if (!dash.lcProfiles.includes("rueck")) dash.lcProfiles.push("rueck");
+      return json({ ok: true, name: "rueck" });
+    }
+    if (path === "/hermes-profiles/active" && method === "POST") { dash.lcActive = String(body?.name); return json({ ok: true }); }
+    const one = /^\/hermes-profiles\/([^/]+)$/.exec(path);
+    if (one && method === "PATCH") {
+      dash.lcProfiles = dash.lcProfiles.map((n: string) => (n === one[1] ? String(body?.new_name) : n));
+      if (dash.lcActive === one[1]) dash.lcActive = String(body?.new_name);
+      return json({ ok: true, name: String(body?.new_name) });
+    }
+    if (one && method === "DELETE") {
+      if (String(body?.confirm) !== one[1]) return json({ detail: "Nur mit Namenseingabe" }, 422);
+      dash.lcProfiles = dash.lcProfiles.filter((n: string) => n !== one[1]);
+      return json({ ok: true });
+    }
+  }
+  if (path === "/hermes-ops/backup" && method === "POST") {
+    if (dash.stepUp) return json(stepUpBody, 401);
+    if (String(body?.confirm) !== "gamma") return json({ detail: "Nur mit Namenseingabe" }, 422);
+    return json({ ok: true, archive: "/hermes/backup-2026.tgz" });
+  }
+  if (path === "/hermes-ops/doctor" && method === "POST") {
+    if (dash.stepUp) return json(stepUpBody, 401);
+    return json({ ok: true, name: "doctor" });
+  }
+  if (path === "/hermes-ops/actions/doctor" && method === "GET") return json({ name: "doctor", lines: ["alles bereit"] });
   if (path.startsWith("/hermes-memory")) {
     if (!dash.hm.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
     const h = dash.hm;
@@ -501,13 +542,14 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
     msg: { available: true, enabled: {}, env: {}, gateway: { running: false, busy: false, sessions: 0 }, polls: 0, applied: [] },
     hm: { available: true, active: "", files: { memory: 120, user: 45 }, keySet: false, project: "", mode: "fast" },
     tools: { available: true, enabled: { terminal: true, web: false, image_gen: true, computer_use: false }, keys: {}, provider: {}, model: "flux-2-pro", installed: false },
+    lcProfiles: [...agents], lcActive: agents[0] ?? "gamma",
   };
   let runs = 0;
   const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
   vi.stubGlobal("EventSource", FakeEventSource);
   vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
     const method = init?.method ?? "GET";
-    calls.push({ method, url, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+    calls.push({ method, url, body: init?.body instanceof FormData ? { archive: "[datei]" } : init?.body ? JSON.parse(String(init.body)) : undefined });
     if (url === "/bff/me") return json({ user: { id: "42", name: "alex" }, auth_mode: "none", fresh: true, build: "3f5c30c" });
     if (url === "/bff/hosts") return json({ hosts: hostsFor(agents), config_error: null });
     if (url === "/bff/ui") return json(uiState);
@@ -577,7 +619,8 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
     const m = /^\/bff\/h\/server\/hermes\/([^/]+)(\/.*)$/.exec(url);
     if (m && agents.includes(m[1])) {
       const rest = m[2];
-      const d = dashboardRoute(rest, method, m[1], dash, json, init?.body ? JSON.parse(String(init.body)) : undefined);
+      const parsed = init?.body instanceof FormData ? { archive: "[datei]" } : init?.body ? JSON.parse(String(init.body)) : undefined;
+      const d = dashboardRoute(rest, method, m[1], dash, json, parsed, init);
       if (d) return d;
       if (/^\/quota(\?refresh=1)?$/.test(rest)) return json(quotaOf(m[1], qm));
       if (rest === "/status") return json({ state: "online", online: true, version: "0.21.6", features, error: null });
