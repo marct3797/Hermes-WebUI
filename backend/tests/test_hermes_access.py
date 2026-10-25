@@ -168,3 +168,26 @@ def test_dropped_toggle_and_delete_are_not_success(lossy):
     lossy.dash.state.profiles["default"]["webhooks"] = {"enabled": True, "subs": {"github-push": sub}}
     assert lossy.put(f"{W}/github-push/enabled", json={"enabled": False}).status_code == 502
     assert lossy.request("DELETE", f"{W}/github-push", params={"confirm": "github-push"}).status_code == 502
+
+
+def test_shell_hooks_list_hides_the_command_behind_a_preview(env):
+    body = env.get("/bff/h/server/hermes/default/hermes-hooks").json()
+    assert body["valid_events"] == ["before_tool", "after_tool"]
+    assert body["hooks"] == [{"event": "before_tool", "matcher": "", "executable": True, "allowed": True, "approved_at": "2026-01-01", "command_preview": "echo hallo"}]
+
+
+def test_shell_hooks_create_needs_the_typed_command_and_valid_event(env):
+    base = {"event": "after_tool", "command": "echo fertig", "approve": True}
+    assert env.post("/bff/h/server/hermes/default/hermes-hooks", json={**base, "confirm": "falsch"}).status_code == 422
+    assert env.post("/bff/h/server/hermes/default/hermes-hooks", json={**base, "event": "erfunden", "confirm": "echo fertig"}).status_code == 422
+    r = env.post("/bff/h/server/hermes/default/hermes-hooks", json={**base, "confirm": "echo fertig"})
+    assert r.status_code == 200 and r.json() == {"ok": True, "event": "after_tool", "approved": True}
+    assert "echo fertig" not in open(env.audit_file).read()
+
+
+def test_shell_hooks_delete_needs_the_typed_command(env):
+    base = {"event": "after_tool", "command": "echo weg"}
+    env.post("/bff/h/server/hermes/default/hermes-hooks", json={**base, "confirm": "echo weg"})
+    assert env.request("DELETE", "/bff/h/server/hermes/default/hermes-hooks", json={**base, "confirm": "falsch"}).status_code == 422
+    r = env.request("DELETE", "/bff/h/server/hermes/default/hermes-hooks", json={**base, "confirm": "echo weg"})
+    assert r.status_code == 200 and r.json() == {"ok": True}

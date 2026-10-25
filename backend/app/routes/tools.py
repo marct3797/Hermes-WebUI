@@ -8,7 +8,9 @@ stellen, `post-setup` lädt Programme). Darum steht hier nur, was eine Weboberfl
 - Schreiben (frische Anmeldung): ein-/ausschalten, Anbieter, Modell, Werkzeug-Keys NUR für Variablen, die die Gruppe selbst nennt.
 - Einschalten, das Software installieren kann (Anbieter mit `post_setup`, der laut Dashboard noch „needs_setup“ meldet), verlangt eine
   ausdrückliche Zustimmung. Hermes selbst prüft die Installation nur für `cua_driver`; für die anderen Schlüssel startet es beim Einschalten nichts.
-- Nicht vorhanden: Terminal-Backend umstellen, `post-setup`, Computer-Use-Rechte, freies Schreiben/Löschen/Zeigen von Variablen.
+- Terminal-Backend umstellen, Nachinstallation (`post-setup`) und Computer-Use-Anfrage laufen über belegte Dashboard-Routen;
+  Computer-Use vergibt Hermes nur unter macOS, anderswo antwortet es mit Begründung (400).
+- Nicht vorhanden: freies Schreiben/Löschen/Zeigen von Variablen (nur erklärte Gruppen-Variablen).
 
 Jede Änderung wird zurückgelesen; übernimmt das Dashboard sie nicht, antwortet die Route mit 502. Das Audit nennt Gruppen und
 Variablennamen, nie Werte.
@@ -22,6 +24,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Request
 from pydantic import BaseModel, Field
 
 from ..auth import User, current_user, fresh_user
+from ..dashboard_ops import clip
 from .agents import Tgt, upstream
 from .dashboard import Dash, audit
 
@@ -52,6 +55,15 @@ class EnvIn(BaseModel):
 class ModelIn(BaseModel):
     model: str = Field(min_length=1, max_length=200)
     provider: str | None = Field(default=None, max_length=120)
+
+
+class BackendIn(BaseModel):
+    backend: str = Field(min_length=1, max_length=64)
+
+
+class PostSetupIn(BaseModel):
+    key: str = Field(min_length=1, max_length=120)
+    accept_install: bool = False
 
 
 def pick(row: dict[str, Any], fields: tuple[str, ...]) -> dict[str, Any]:
@@ -215,3 +227,57 @@ async def set_model(request: Request, name: Toolset, target: Tgt, dash: Dash, re
         raise HTTPException(502, "Das Dashboard hat die Änderung nicht übernommen")
     audit(request, user, "tools.model", target, toolset=name, model=req.model)
     return {"ok": True, "name": name, "model": req.model}
+
+
+@router.put("/terminal-backend")
+async def select_backend(request: Request, target: Tgt, dash: Dash, req: BackendIn, user: User = Depends(fresh_user)):
+    """Terminal-Backend umstellen: Name gegen die gemeldete Liste prüfen, schreiben, zurücklesen."""
+    _limit(request, user)
+    rows = await upstream(dash.request("GET", "/api/tools/terminal/backends", params=scope(target)))
+    if not isinstance(rows, dict) or not isinstance(rows.get("backends"), list):
+        raise HTTPException(502, "Das Dashboard liefert die Terminal-Backends in einer unbekannten Form")
+    names = {b.get("name") for b in rows["backends"] if isinstance(b, dict) and isinstance(b.get("name"), str)}
+    want = req.backend.strip().lower()
+    if want not in names:
+        raise HTTPException(422, "Dieses Terminal-Backend kennt Hermes nicht")
+    await upstream(dash.request("PUT", "/api/tools/terminal/backend", body={"backend": want, "profile": target.agent.id}, params=scope(target)))
+    after = await upstream(dash.request("GET", "/api/tools/terminal/backends", params=scope(target)))
+    if not isinstance(after, dict) or after.get("active") != want:
+        raise HTTPException(502, "Das Dashboard hat die Änderung nicht übernommen")
+    audit(request, user, "tools.terminal_backend", target, backend=want)
+    return {"ok": True, "backend": want}
+
+
+@router.post("/tools/{name}/post-setup")
+async def run_post_setup(request: Request, name: Toolset, target: Tgt, dash: Dash, req: PostSetupIn, user: User = Depends(fresh_user)):
+    """Nachinstallation einer Werkzeuggruppe starten (läuft im Dashboard als Hintergrundaktion)."""
+    _limit(request, user)
+    await _known(target, dash, name)
+    body = await upstream(dash.request("POST", f"/api/tools/toolsets/{name}/post-setup", body={"key": req.key, "profile": target.agent.id}, params=scope(target)))
+    if not isinstance(body, dict):
+        raise HTTPException(502, "Das Dashboard liefert den Start in einer unbekannten Form")
+    audit(request, user, "tools.post_setup", target, toolset=name, key=req.key)
+    return {"ok": bool(body.get("ok", True)), "name": body.get("name", "tools-post-setup"), "key": body.get("key", req.key)}
+
+
+@router.get("/computer-use/status")
+async def computer_use_status(target: Tgt, dash: Dash):
+    body = await upstream(dash.request("GET", "/api/tools/computer-use/status", params=scope(target)))
+    if not isinstance(body, dict):
+        raise HTTPException(502, "Das Dashboard liefert den Computer-Use-Stand in einer unbekannten Form")
+    for key in ("ready", "installed", "can_grant", "granted"):
+        if key in body and not isinstance(body[key], bool):
+            raise HTTPException(502, "Das Dashboard liefert den Computer-Use-Stand in einer unbekannten Form")
+    return {"ready": body.get("ready"), "installed": body.get("installed"), "can_grant": body.get("can_grant"), "granted": body.get("granted"),
+            "platform": str(body.get("platform") or "")[:32], "detail": clip(body.get("detail") or body.get("message") or body.get("error"), 300) if isinstance(body.get("detail") or body.get("message") or body.get("error"), str) else None}
+
+
+@router.post("/computer-use/grant")
+async def computer_use_grant(request: Request, target: Tgt, dash: Dash, user: User = Depends(fresh_user)):
+    """Computer-Use-Rechte anfordern. Hermes lehnt außerhalb von macOS mit Begründung ab (400)."""
+    _limit(request, user)
+    body = await upstream(dash.request("POST", "/api/tools/computer-use/permissions/grant", params=scope(target)))
+    if not isinstance(body, dict):
+        raise HTTPException(502, "Das Dashboard liefert die Antwort in einer unbekannten Form")
+    audit(request, user, "tools.computer_use_grant", target)
+    return {"ok": bool(body.get("ok", True)), "name": body.get("name", "computer-use-grant")}

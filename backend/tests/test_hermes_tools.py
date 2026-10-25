@@ -1,7 +1,8 @@
-"""Werkzeuge eines Hermes-Profils: ein- und ausschalten, Anbieter und Modell wählen, Werkzeug-Keys setzen.
+"""Werkzeuge eines Hermes-Profils: ein- und ausschalten, Anbieter und Modell wählen, Werkzeug-Keys setzen,
+Terminal-Backend umstellen, Nachinstallation starten, Computer-Use-Stand lesen und anfordern.
 
-Bewusst NICHT durchgereicht (Hermes schützt sie serverseitig nicht): Terminal-Backend umstellen, `post-setup`, Computer-Use-Rechte,
-freies `PUT /api/env`, `POST /api/env/reveal`. Das Mock-Dashboard führt diese Routen aus und merkt sie sich; die Tests belegen, dass sie nie ankommen.
+Bewusst NICHT durchgereicht: freies `PUT /api/env`, `POST /api/env/reveal`. Das Mock-Dashboard führt diese Routen aus
+und merkt sie sich; die Tests belegen, dass sie nie ankommen.
 """
 import json
 
@@ -158,18 +159,41 @@ def test_model_catalog_and_choice_for_image_generation(env):
     assert env.get(f"{T}/web/models").json()["has_models"] is False
 
 
-def test_terminal_backends_are_readable_but_not_changeable(env):
+def test_terminal_backends_are_readable_and_changeable(env):
     body = env.get(f"{BASE}/terminal-backends").json()
     assert body["active"] == "local" and {b["name"] for b in body["backends"]} == {"local", "docker"}
-    r = env.put(f"{BASE}/terminal-backends", json={"backend": "docker"})
-    assert r.status_code in (404, 405)
+    r = env.put(f"{BASE}/terminal-backend", json={"backend": "docker"})
+    assert r.status_code == 200 and r.json() == {"ok": True, "backend": "docker"}
+    assert env.get(f"{BASE}/terminal-backends").json()["active"] == "docker"
+    assert ("PUT", "/api/tools/terminal/backend") in env.dash.state.tool_calls
+    r = env.put(f"{BASE}/terminal-backend", json={"backend": "erfunden"})
+    assert r.status_code == 422
+    assert ("PUT", "/api/tools/terminal/backend") not in env.dash.state.tool_calls[-1:]
+    env.put(f"{BASE}/terminal-backend", json={"backend": "local"})
+    assert env.get(f"{BASE}/terminal-backends").json()["active"] == "local"
+
+
+def test_post_setup_starts_and_names_the_background_action(env):
+    r = env.post(f"{T}/web/post-setup", json={"key": "cua_driver"})
+    assert r.status_code == 200 and r.json() == {"ok": True, "name": "tools-post-setup", "key": "cua_driver"}
+    assert ("POST", "/api/tools/toolsets/web/post-setup") in env.dash.state.tool_calls
+    assert env.post(f"{T}/gibtsnicht/post-setup", json={"key": "x"}).status_code == 404
+
+
+def test_computer_use_status_shows_state_without_paths_or_versions(env):
+    body = env.get(f"{BASE}/computer-use/status").json()
+    assert body == {"ready": True, "installed": True, "can_grant": False, "granted": None, "platform": "linux", "detail": None}
+    assert "sk-LEAK" not in env.get(f"{BASE}/computer-use/status").text and "/home/someone" not in env.get(f"{BASE}/computer-use/status").text
+
+
+def test_computer_use_grant_starts_the_request(env):
+    r = env.post(f"{BASE}/computer-use/grant")
+    assert r.status_code == 200 and r.json() == {"ok": True, "name": "computer-use-grant"}
+    assert ("POST", "/api/tools/computer-use/permissions/grant") in env.dash.state.tool_calls
 
 
 @pytest.mark.parametrize("method,path,body", [
     ("PUT", "/tools/terminal/backend", {"backend": "local"}),
-    ("PUT", "/terminal-backend", {"backend": "local"}),
-    ("POST", "/tools/web/post-setup", {"key": "x"}),
-    ("POST", "/tools/computer_use/post-setup", {"key": "cua_driver"}),
     ("POST", "/tools/computer-use/permissions/grant", {}),
     ("POST", "/env/reveal", {"key": "ANTHROPIC_API_KEY"}),
     ("PUT", "/env", {"key": "FOO", "value": "bar"}),
@@ -183,6 +207,9 @@ def test_dangerous_hermes_routes_are_not_exposed(env, method, path, body):
 
 @pytest.mark.parametrize("method,path,body", [
     ("PUT", "/tools/web", {"enabled": True}),
+    ("PUT", "/terminal-backend", {"backend": "docker"}),
+    ("POST", "/tools/web/post-setup", {"key": "x"}),
+    ("POST", "/computer-use/grant", {}),
     ("PUT", "/tools/web/provider", {"provider": "Firecrawl Cloud"}),
     ("PUT", "/tools/web/env", {"env": {"BRAVE_SEARCH_API_KEY": SECRET}}),
     ("PUT", "/tools/image_gen/model", {"model": "flux-2-klein"}),

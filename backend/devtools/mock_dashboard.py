@@ -416,6 +416,15 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
         profile_or_default(profile)["env"][body.key] = body.value
         return {"ok": True, "key": body.key}
 
+    @app.delete("/api/env")
+    async def delete_env(body: dict[str, Any], profile: str | None = None):
+        key = body.get("key")
+        prof = profile_or_default(profile)
+        if not isinstance(key, str) or key not in prof["env"]:
+            raise HTTPException(404, f"{key} not found in .env")
+        del prof["env"][key]
+        return {"ok": True, "key": key, "found": True}
+
     @app.get("/api/providers/oauth")
     async def oauth(profile: str | None = None):
         profile_or_default(profile)
@@ -820,9 +829,43 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
         app.state.gateway.update(running=True, state="running", active_sessions=0, busy=False)
         return spawn("gateway-restart", profile)
 
+    @app.get("/api/gateway/migrate/plan")
+    async def migrate_plan():
+        return {"blocked": [], "profiles": ["default", "beta"], "target": "host"}
+
+    @app.post("/api/gateway/migrate")
+    async def migrate_run():
+        app.state.gateway_calls.append(("gateway-migrate", {}))
+        return {"ok": True, "pid": 43, "name": "gateway-migrate"}
+
+    @app.post("/api/hermes/update")
+    async def hermes_update():
+        return {"ok": True, "pid": 42, "name": "hermes-update", "already_running": False}
+
+    @app.get("/api/ops/hooks")
+    async def ops_hooks_list():
+        static = [{"event": "before_tool", "matcher": "", "command": "echo hallo", "timeout": 30, "allowed": True, "approved_at": "2026-01-01", "executable": True}]
+        extra = [{"event": h.get("event"), "matcher": h.get("matcher", ""), "command": h.get("command"), "timeout": h.get("timeout"),
+                  "allowed": bool(h.get("approve")), "approved_at": "2026-10-25" if h.get("approve") else None, "executable": True} for h in app.state.shell_hooks]
+        return {"hooks": static + extra, "valid_events": ["before_tool", "after_tool"]}
+
+    @app.post("/api/ops/hooks")
+    async def ops_hooks_create(body: dict[str, Any]):
+        if body.get("event") not in ("before_tool", "after_tool"):
+            raise HTTPException(400, "Unknown event")
+        app.state.shell_hooks.append(body)
+        return {"ok": True, "event": body.get("event"), "command": body.get("command"), "approved": bool(body.get("approve"))}
+
+    @app.delete("/api/ops/hooks")
+    async def ops_hooks_delete(body: dict[str, Any]):
+        app.state.shell_hooks = [h for h in app.state.shell_hooks if not (h.get("event") == body.get("event") and h.get("command") == body.get("command"))]
+        return {"ok": True}
+
+    app.state.shell_hooks = []
+
     @app.get("/api/actions/{name}/status")
     async def action_status(name: str, lines: int = 200):
-        if name not in ("gateway-start", "gateway-stop", "gateway-restart", "tools-post-setup", "doctor", "curator-run"):
+        if name not in ("gateway-start", "gateway-stop", "gateway-restart", "gateway-migrate", "tools-post-setup", "hermes-update", "doctor", "curator-run"):
             raise HTTPException(404, "Unknown action")
         if name == "curator-run":
             return {"name": name, "running": False, "exit_code": 0, "pid": 4711, "lines": ["Curator fertig", "Authorization: Bearer sk-LEAK-curator"]}
@@ -870,6 +913,45 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
     async def tg_cancel(pairing_id: str):
         app.state.pairings.pop(pairing_id, None)
         return {"ok": True}
+
+    @app.post("/api/messaging/whatsapp/onboarding/start")
+    async def wa_start(body: dict[str, Any]):
+        pid = "wa_pair_1"
+        app.state.wa_pairings[pid] = {"polls": 0}
+        if app.state.wa_forged is not None:
+            return {"pairing_id": pid, **app.state.wa_forged}
+        return {"pairing_id": pid, "status": "waiting", "qr_payload": "WA-QR-1", "expires_at": "2026-10-24T18:00:00Z",
+                "mode": body.get("mode", "qr"), "account_id": None, "account_name": None, "account_phone": None, "error": None}
+
+    @app.get("/api/messaging/whatsapp/onboarding/{pairing_id}")
+    async def wa_poll(pairing_id: str):
+        rec = app.state.wa_pairings.get(pairing_id)
+        if rec is None:
+            raise HTTPException(404, "WhatsApp setup session was not found. Start a new setup.")
+        rec["polls"] += 1
+        if rec["polls"] < 2:
+            return {"pairing_id": pairing_id, "status": "waiting", "qr_payload": "WA-QR-1", "expires_at": "2026-10-24T18:00:00Z",
+                    "mode": "qr", "account_id": None, "account_name": None, "account_phone": None, "error": None}
+        return {"pairing_id": pairing_id, "status": "connected", "qr_payload": None, "expires_at": "2026-10-24T18:00:00Z",
+                "mode": "qr", "account_id": "491701234567", "account_name": "Testhandy", "account_phone": "491701234567", "error": None}
+
+    @app.post("/api/messaging/whatsapp/onboarding/{pairing_id}/apply")
+    async def wa_apply(pairing_id: str, body: dict[str, Any]):
+        rec = app.state.wa_pairings.get(pairing_id)
+        if rec is None:
+            raise HTTPException(404, "WhatsApp setup session was not found. Start a new setup.")
+        if rec["polls"] < 2:
+            raise HTTPException(409, "WhatsApp setup is not connected yet.")
+        del app.state.wa_pairings[pairing_id]
+        return {"ok": True, "platform": "whatsapp"}
+
+    @app.delete("/api/messaging/whatsapp/onboarding/{pairing_id}")
+    async def wa_cancel(pairing_id: str):
+        app.state.wa_pairings.pop(pairing_id, None)
+        return {"ok": True}
+
+    app.state.wa_pairings = {}
+    app.state.wa_forged = None
 
     app.state.memory_calls = []  # (Methode, Pfad); `setup` darf nie darin vorkommen
 
@@ -979,8 +1061,19 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
     @app.get("/api/mcp/servers")
     async def mcp_servers(profile: str | None = None):
         profile_or_default(profile)
+        stored = profile_or_default(profile).get("mcp_replaced")
+        if stored is not None:
+            return {"servers": [{"name": n, "transport": "stdio", "command": "x", "args": [], "env": {}, "enabled": True, "source": "config", "plugin": None} for n in stored]}
         return {"servers": [{"name": "rag", "transport": "stdio", "url": "https://x.test/?key=geheim", "command": "rag-mcp", "args": ["--key", "geheim"],
                              "env": {"RAG_API_KEY": "geheim"}, "enabled": True, "source": "config", "plugin": None}]}
+
+    @app.put("/api/mcp/servers")
+    async def mcp_replace(body: dict[str, Any], profile: str | None = None):
+        servers = body.get("servers")
+        if not isinstance(servers, dict) or not servers:
+            raise HTTPException(400, "servers fehlt")
+        profile_or_default(profile)["mcp_replaced"] = sorted(servers)
+        return {"ok": True}
 
     @app.get("/api/dashboard/plugins/hub")
     async def plugin_hub(profile: str | None = None):

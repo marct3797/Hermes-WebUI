@@ -6,6 +6,8 @@ Agent-Router sonst schluckt.
 """
 from __future__ import annotations
 
+import json
+import re
 from typing import Annotated, Any, Literal
 from urllib.parse import quote
 
@@ -174,6 +176,28 @@ async def mcp_remove(request: Request, host: HostId, profile: ProfileId, name: M
     await dash(request, host, "DELETE", f"/api/mcp/servers/{quote(name, safe='')}", params=scope(profile), missing="Server nicht gefunden")
     rec(request, user, "ext.mcp.remove", host, profile=profile, server=name)
     return {"ok": True}
+
+
+@router.put(P + "/mcp")
+async def mcp_replace(request: Request, host: HostId, profile: ProfileId, body: dict[str, Any], user: User = Depends(fresh_user)):
+    """Die ganze MCP-Serverliste ersetzen. Bestätigung: „ERSETZEN“ eintippen. Zählt nur Namen, nie Inhalte."""
+    raw = body.get("servers") if isinstance(body, dict) else None
+    if not isinstance(raw, dict) or not raw or len(raw) > 100:
+        raise HTTPException(422, "Liste: 1 bis 100 Server mit Namen")
+    if len(json.dumps(raw, default=str)) > 100_000:
+        raise HTTPException(422, "Liste: zu groß (höchstens 100 KB)")
+    for name in raw:
+        if not isinstance(name, str) or not re.match(MCP_NAME_RE, name):
+            raise HTTPException(422, f"Servername ungültig: {str(name)[:64]}")
+    if body.get("confirm") != "ERSETZEN":
+        raise HTTPException(422, "Ersetzen: „ERSETZEN“ zur Bestätigung eintippen. Das löscht alle Server auf einmal.")
+    await dash(request, host, "PUT", "/api/mcp/servers", params=scope(profile), body={"servers": raw})
+    after = await dash(request, host, "GET", "/api/mcp/servers", params=scope(profile))
+    names = {s.get("name") for s in (after.get("servers") if isinstance(after, dict) else []) if isinstance(s, dict)}
+    if set(raw) != names:
+        raise HTTPException(502, "Das Dashboard hat die Liste nicht übernommen")
+    rec(request, user, "ext.mcp.replace", host, profile=profile, servers=len(raw))
+    return {"ok": True, "servers": sorted(set(raw))}
 
 
 # --- Plugins (gelten für den Host, die Profil-Angabe wählt nur die Sicht des Hubs) ------------------

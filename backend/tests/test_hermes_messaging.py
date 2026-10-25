@@ -289,3 +289,45 @@ def test_cancelling_forgets_the_session(env):
 def test_bot_name_is_optional_and_limited(env):
     assert env.post(T, json={"bot_name": "Mein Hermes"}).status_code == 200
     assert env.post(T, json={"bot_name": "x" * 200}).status_code == 422
+
+
+W = f"{M}/whatsapp/onboarding"
+
+
+def test_whatsapp_pairing_starts_and_polls_until_connected(env):
+    r = env.post(W, json={"mode": "qr"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["pairing_id"] == "wa_pair_1" and body["status"] == "waiting" and body["qr_payload"] == "WA-QR-1"
+    pid = body["pairing_id"]
+    first = env.get(f"{W}/{pid}").json()
+    assert first["status"] == "waiting"
+    second = env.get(f"{W}/{pid}").json()
+    assert second["status"] == "connected" and second["account"]["account_id"] == "491701234567"
+    r = env.post(f"{W}/{pid}/apply", json={})
+    assert r.status_code == 200 and r.json() == {"ok": True, "platform": "whatsapp"}
+    assert env.post(f"{W}/{pid}/apply", json={}).status_code == 404
+
+
+def test_whatsapp_apply_before_connected_is_a_clear_error(env):
+    pid = env.post(W, json={"mode": "qr"}).json()["pairing_id"]
+    r = env.post(f"{W}/{pid}/apply", json={})
+    assert r.status_code == 502 and "not connected" in r.text
+
+
+def test_whatsapp_cancel_forgets_the_session(env):
+    pid = env.post(W, json={"mode": "qr"}).json()["pairing_id"]
+    assert env.delete(f"{W}/{pid}").status_code == 200
+    assert env.get(f"{W}/{pid}").status_code == 404
+
+
+def test_whatsapp_needs_fresh_login(env):
+    from app.auth import SESSION_COOKIE
+    env.app.state.sessions.get(env.cookies.get(SESSION_COOKIE)).auth_time = 0
+    assert env.post(W, json={"mode": "qr"}).status_code == 401
+
+
+def test_whatsapp_rejects_an_unknown_dashboard_state(env):
+    env.dash.state.wa_forged = {"status": "kaputt"}
+    assert env.post(W, json={"mode": "qr"}).status_code == 502
+    env.dash.state.wa_forged = None
