@@ -2291,5 +2291,17 @@
  "Zustimmen und einschalten": "Concordar e ativar",
  "Zuweisung": "Atribuição",
  "Zwei Mitglieder tragen denselben Namen; ändere einen Anzeigenamen in der hosts.json": "Dois membros têm o mesmo nome; altere um nome visível no hosts.json",
- "Zweite Meinung (SkillEvaluator): {passed}, {findings} Funde.": "Segunda opinião (SkillEvaluator): {passed}, {findings} achados."
+ "Zweite Meinung (SkillEvaluator): {passed}, {findings} Funde.": "Segunda opinião (SkillEvaluator): {passed}, {findings} achados.",
+ "{n} Sitzungen": "{n} Sitzungen",
+ "Abhilfe: Agent-Dienst neu starten und Diagnose erneut öffnen.": "Abhilfe: Agent-Dienst neu starten und Diagnose erneut öffnen.",
+ "Abhilfe: Anbieter-Schlüssel hinterlegen.": "Abhilfe: Anbieter-Schlüssel hinterlegen.",
+ "Abhilfe: Chat öffnen und erste Nachricht senden.": "Abhilfe: Chat öffnen und erste Nachricht senden.",
+ "Abhilfe: Hauptmodell auf der Modellseite wählen.": "Abhilfe: Hauptmodell auf der Modellseite wählen.",
+ "Abhilfe: Host-Dienst prüfen und Setup-Skript erneut laufen lassen.": "Abhilfe: Host-Dienst prüfen und Setup-Skript erneut laufen lassen.",
+ "Abhilfe: Setup-Skript im Terminal laufen lassen.": "Abhilfe: Setup-Skript im Terminal laufen lassen.",
+ "eingerichtet": "eingerichtet",
+ "von": "von",
+ "Erst Schritt 3 abschließen: Anbieter einrichten.": "Erst Schritt 3 abschließen: Anbieter einrichten.",
+ "nicht bereit": "nicht bereit",
+ "Zugang abgelehnt": "Zugang abgelehnt"
 }

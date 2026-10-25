@@ -21,6 +21,86 @@ beforeEach(() => { resetRedirect(); sessionStorage.clear(); });
 afterEach(() => { cleanup(); });
 
 describe("Einrichtungsassistent", () => {
+  it("Kopf zeigt Fortschritt als Balken mit n von 5", async () => {
+    await open();
+    backend.dash.mdFresh = true;
+    backend.dash.sessEmpty = true;
+    fireEvent.click((await step(1)).querySelector("button") as HTMLElement);
+    await waitFor(() => expect(screen.getByText("2 von 5 erledigt")).toBeInTheDocument());
+    const bar = await screen.findByRole("progressbar");
+    expect(bar.getAttribute("aria-valuenow")).toBe("2");
+    expect(bar.getAttribute("aria-valuemax")).toBe("5");
+  });
+
+  it("zeigt Schritt 1 mit Host-Label, Agent-Pfad und Zustand", async () => {
+    await open();
+    fireEvent.click((await step(1)).querySelector("button") as HTMLElement);
+    const s1 = await step(1);
+    await waitFor(() => expect(s1.textContent).toContain("Erledigt"));
+    expect(s1.textContent).toMatch(/Server/);
+    expect(s1.textContent).toMatch(/server\/hermes\/gamma|Server \/ Hermes \/ gamma/);
+    expect(s1.textContent).toMatch(/Version 0\.21\.6|0\.21\.6/);
+  });
+
+  it("Schritt 2 listet alle warnenden Checks, nicht nur den ersten", async () => {
+    await open();
+    backend.dash.diagWarn = ["Erreichbar und angemeldet: Version 0.21.6", "Modelle und Anbieter: 1 Anbieter, 2 Modelle"];
+    fireEvent.click((await step(1)).querySelector("button") as HTMLElement);
+    const s2 = await step(2);
+    await waitFor(() => expect(s2.textContent).toContain("Offen"));
+    expect(s2.textContent).toMatch(/Erreichbar und angemeldet/);
+    expect(s2.textContent).toMatch(/Modelle und Anbieter/);
+    backend.dash.diagWarn = undefined;
+  });
+
+  it("Schritt 3 nennt Anbieter-Namen und Zahl konfiguriert/gesamt", async () => {
+    await open();
+    backend.dash.mdFresh = false;
+    fireEvent.click((await step(1)).querySelector("button") as HTMLElement);
+    const s3 = await step(3);
+    await waitFor(() => expect(s3.textContent).toContain("Erledigt"));
+    expect(s3.textContent).toMatch(/2 von \d+ eingerichtet|konfiguriert/i);
+  });
+
+  it("Schritt 4 nennt Anbieter- und Modellnamen", async () => {
+    await open();
+    fireEvent.click((await step(1)).querySelector("button") as HTMLElement);
+    const s4 = await step(4);
+    await waitFor(() => expect(s4.textContent).toContain("Erledigt"));
+    expect(s4.textContent).toMatch(/anthropic/i);
+    expect(s4.textContent).toMatch(/claude-test/);
+  });
+
+  it("Schritt 5 nennt die Sitzungszahl", async () => {
+    await open();
+    fireEvent.click((await step(1)).querySelector("button") as HTMLElement);
+    const s5 = await step(5);
+    await waitFor(() => expect(s5.textContent).toContain("Erledigt"));
+    expect(s5.textContent).toMatch(/1 Sitzung|1 Sitzungen/i);
+  });
+
+  it("Schritte sind nummerierte Karten mit Zustandszeichen, Details aufklappbar", async () => {
+    await open();
+    backend.dash.mdFresh = true;
+    backend.dash.sessEmpty = true;
+    fireEvent.click((await step(1)).querySelector("button") as HTMLElement);
+    await waitFor(() => expect(screen.getByText("2 von 5 erledigt")).toBeInTheDocument());
+    const s1 = await step(1);
+    expect(s1.textContent).toMatch(/●|✓|○|◌|!/);
+    expect(s1.querySelector("details")).not.toBeNull();
+  });
+
+  it("Fehlerkarte nennt die konkrete Abhilfe mit Link", async () => {
+    await open();
+    backend.dash.provDown = true;
+    fireEvent.click((await step(1)).querySelector("button") as HTMLElement);
+    const s3 = await step(3);
+    await waitFor(() => expect(s3.textContent).toContain("Fehler"));
+    const link = s3.querySelector("a");
+    expect(link).not.toBeNull();
+    backend.dash.provDown = false;
+  });
+
   it("zeigt fünf datengetriebene Schritte und 2 von 5 auf frischer Installation", async () => {
     await open();
     backend.dash.mdFresh = true; // noch kein Anbieter, kein Modell

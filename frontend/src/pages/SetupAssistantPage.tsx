@@ -12,6 +12,7 @@ type StepState = "checking" | "done" | "open" | "waiting" | "error";
 type Pick = { ref: AgentRef; label: string };
 type Step = {
   n: number; title: string; why: string; state: StepState; reason: string | null;
+  facts: string[]; remedy: string | null;
   to: string | null; action: string | null; chatTo: string | null; agentPick: Pick[];
 };
 
@@ -19,51 +20,58 @@ type Step = {
 const SETUP_HINT = "deploy/setup.py";
 const ADD_HOST_HINT = "deploy/add-host.sh";
 
-async function hostLive(ref: AgentRef): Promise<{ state: StepState; reason: string | null }> {
+async function hostLive(ref: AgentRef, hostLabel: string): Promise<{ state: StepState; reason: string | null; facts: string[] }> {
   try {
     const s = await api.status(ref);
-    if (s.online && s.state === "online") return { state: "done", reason: null };
-    if (s.state === "auth_error" || (s.error ?? "").length > 0) return { state: "error", reason: s.error ?? "Zugang abgelehnt" };
-    return { state: "open", reason: s.error ?? "nicht erreichbar" };
-  } catch (e) { return { state: "error", reason: (e as Error).message }; }
+    const facts = [`${t("Host")}: ${hostLabel}`, `${t("Agent")}: ${ref.host}/${ref.runtime}/${ref.agent}`];
+    if ((s.version ?? "").length > 0) facts.push(`${t("Version")}: ${s.version}`);
+    if (s.online && s.state === "online") return { state: "done", reason: null, facts };
+    if (s.state === "auth_error" || (s.error ?? "").length > 0) return { state: "error", reason: s.error ?? t("Zugang abgelehnt"), facts };
+    return { state: "open", reason: s.error ?? t("nicht erreichbar"), facts };
+  } catch (e) { return { state: "error", reason: (e as Error).message, facts: [] }; }
 }
 
-async function connLive(ref: AgentRef): Promise<{ state: StepState; reason: string | null }> {
+async function connLive(ref: AgentRef): Promise<{ state: StepState; reason: string | null; facts: string[] }> {
   try {
     const d = await api.diagnose(ref);
-    const fails = d.checks.filter((c) => c.status === "fail");
-    if (fails.length > 0) return { state: "error", reason: fails.map((c) => `${c.label}: ${c.detail}`).join("; ") };
+    const bad = d.checks.filter((c) => c.status !== "ok");
+    const facts = bad.map((c) => `${c.label}: ${c.detail}`);
+    if (d.checks.filter((c) => c.status === "fail").length > 0) return { state: "error", reason: facts.join("; "), facts };
     if (d.status === "warn") {
-      const warns = d.checks.filter((c) => c.status !== "ok");
-      return { state: "open", reason: warns.length ? `${warns[0].label}: ${warns[0].detail}` : "nicht bereit" };
+      return { state: "open", reason: facts.length ? facts.join("; ") : t("nicht bereit"), facts };
     }
-    return { state: "done", reason: null };
-  } catch (e) { return { state: "error", reason: (e as Error).message }; }
+    return { state: "done", reason: null, facts: d.checks.map((c) => `${c.label}: ${c.detail}`) };
+  } catch (e) { return { state: "error", reason: (e as Error).message, facts: [] }; }
 }
 
-async function provLive(ref: AgentRef): Promise<{ state: StepState; reason: string | null }> {
+async function provLive(ref: AgentRef): Promise<{ state: StepState; reason: string | null; facts: string[] }> {
   try {
     const p = await api.providers(ref, 30);
-    return p.providers.filter((g) => g.configured).length > 0 ? { state: "done", reason: null } : { state: "open", reason: null };
-  } catch (e) { return { state: "error", reason: (e as Error).message }; }
+    const names = p.providers.filter((g) => g.configured).map((g) => g.label);
+    const facts = [`${names.length} ${t("von")} ${p.providers.length} ${t("eingerichtet")}`, ...names];
+    return names.length > 0 ? { state: "done", reason: null, facts } : { state: "open", reason: null, facts: [] };
+  } catch (e) { return { state: "error", reason: (e as Error).message, facts: [] }; }
 }
 
-async function modelLive(ref: AgentRef): Promise<{ state: StepState; reason: string | null }> {
+async function modelLive(ref: AgentRef): Promise<{ state: StepState; reason: string | null; facts: string[] }> {
   try {
     const m = await api.mdInfo(ref);
-    return m.configured ? { state: "done", reason: null } : { state: "open", reason: null };
-  } catch (e) { return { state: "error", reason: (e as Error).message }; }
+    const facts = m.configured && m.provider && m.model ? [`${t("Anbieter")}: ${m.provider}`, `${t("Modell")}: ${m.model}`] : [];
+    return m.configured ? { state: "done", reason: null, facts } : { state: "open", reason: null, facts };
+  } catch (e) { return { state: "error", reason: (e as Error).message, facts: [] }; }
 }
 
-async function sessLive(ref: AgentRef): Promise<{ state: StepState; reason: string | null; chatTo: string }> {
+async function sessLive(ref: AgentRef): Promise<{ state: StepState; reason: string | null; chatTo: string; facts: string[] }> {
   try {
     const s = await api.sessions(ref);
-    const has = sessionList(s).length > 0;
-    return { state: has ? "done" : "open", reason: null, chatTo: agentPath(ref) };
-  } catch (e) { return { state: "error", reason: (e as Error).message, chatTo: agentPath(ref) }; }
+    const count = sessionList(s).length;
+    const facts = count > 0 ? [t("{n} Sitzungen", { n: count })] : [];
+    return { state: count > 0 ? "done" : "open", reason: null, chatTo: agentPath(ref), facts };
+  } catch (e) { return { state: "error", reason: (e as Error).message, chatTo: agentPath(ref), facts: [] }; }
 }
 
 const labelOf = (s: StepState) => s === "done" ? t("Erledigt") : s === "open" ? t("Offen") : s === "waiting" ? t("Wartet") : s === "error" ? t("Fehler") : t("Wird geprüft");
+const glyphOf = (s: StepState) => s === "done" ? "✓" : s === "open" ? "○" : s === "waiting" ? "◌" : s === "error" ? "!" : "…";
 
 /** Echter Einrichtungsassistent: fünf Schritte, jeder Zustand kommt aus den Daten. Schreibt nichts, verlinkt nur. */
 export function SetupAssistantPage() {
@@ -91,27 +99,28 @@ export function SetupAssistantPage() {
         const cfgErr = hr.config_error;
         if (hosts.length === 0) {
           setAgents([]);
-          setSteps([{ n: 1, title: t("Host eintragen"), why: t("Die WebUI braucht mindestens einen Host mit Dashboard. Hosts legt das Terminal-Skript an, nicht der Browser."), state: "open", reason: cfgErr ?? t("Noch kein Host eingetragen. Lege ihn mit {setup} an, weitere Rechner mit {add}.", { setup: SETUP_HINT, add: ADD_HOST_HINT }), to: "/hosts", action: t("Zu den Hosts"), chatTo: null, agentPick: [] }]);
+          setSteps([{ n: 1, title: t("Host eintragen"), why: t("Die WebUI braucht mindestens einen Host mit Dashboard. Hosts legt das Terminal-Skript an, nicht der Browser."), state: "open", reason: cfgErr ?? t("Noch kein Host eingetragen. Lege ihn mit {setup} an, weitere Rechner mit {add}.", { setup: SETUP_HINT, add: ADD_HOST_HINT }), facts: [], remedy: t("Abhilfe: Setup-Skript im Terminal laufen lassen."), to: "/hosts", action: t("Zu den Hosts"), chatTo: null, agentPick: [] }]);
           setPageError(null);
           return;
         }
         const idx = Math.min(hostIdx, hosts.length - 1);
         const list = hosts[idx].agents;
         setAgents(list);
+        const label = hosts[idx].label;
         const ref = list.find((a) => a.ref.agent === pick)?.ref ?? list[0]?.ref;
         if (!ref) {
-          setSteps([{ n: 1, title: t("Host eintragen"), why: t("Dieser Host meldet keinen Agent. Wähle oben einen anderen Host."), state: "open", reason: cfgErr, to: "/hosts", action: t("Zu den Hosts"), chatTo: null, agentPick: [] }]);
+          setSteps([{ n: 1, title: t("Host eintragen"), why: t("Dieser Host meldet keinen Agent. Wähle oben einen anderen Host."), state: "open", reason: cfgErr, facts: [], remedy: null, to: "/hosts", action: t("Zu den Hosts"), chatTo: null, agentPick: [] }]);
           return;
         }
-        const [live, conn, prov, model, sess] = await Promise.all([hostLive(ref), connLive(ref), provLive(ref), modelLive(ref), sessLive(ref)]);
+        const [live, conn, prov, model, sess] = await Promise.all([hostLive(ref, label), connLive(ref), provLive(ref), modelLive(ref), sessLive(ref)]);
         if (!alive) return;
-        const modelStep = prov.state === "done" ? model : { state: "waiting" as StepState, reason: null };
+        const modelStep = prov.state === "done" ? model : { ...model, state: "waiting" as StepState, reason: t("Erst Schritt 3 abschließen: Anbieter einrichten."), facts: [] };
         setSteps([
-          { n: 1, title: t("Host eintragen"), why: t("Die WebUI braucht mindestens einen Host mit Dashboard. Hosts legt das Terminal-Skript an, nicht der Browser."), state: live.state, reason: live.state === "done" ? null : (live.reason ?? cfgErr), to: "/hosts", action: t("Zu den Hosts"), chatTo: null, agentPick: [] },
-          { n: 2, title: t("Verbindung prüfen"), why: t("Der Agent muss online sein und das Dashboard erreichen, sonst antwortet niemand."), state: conn.state, reason: conn.reason, to: "/system", action: t("Zur Diagnose"), chatTo: null, agentPick: [] },
-          { n: 3, title: t("Anbieter und Schlüssel"), why: t("Modelle antworten nur über einen eingerichteten Anbieter. Eine frische Installation ohne Anbieter ist normal, kein Fehler."), state: prov.state, reason: prov.reason, to: agentPath(ref, "providers"), action: t("Zu den Anbietern"), chatTo: null, agentPick: [] },
-          { n: 4, title: t("Hauptmodell wählen"), why: t("Das Hauptmodell beantwortet deine Nachrichten. Ohne Anbieter aus Schritt 3 wartet dieser Schritt."), state: modelStep.state, reason: modelStep.reason, to: agentPath(ref, "modelle"), action: t("Zu den Modellen"), chatTo: null, agentPick: [] },
-          { n: 5, title: t("Erster Chat"), why: t("Eine Sitzung zeigt, dass alles verbunden ist. Wähle einen Agent und schreibe los."), state: sess.state, reason: sess.reason, to: null, action: null, chatTo: sess.chatTo, agentPick: list },
+          { n: 1, title: t("Host eintragen"), why: t("Die WebUI braucht mindestens einen Host mit Dashboard. Hosts legt das Terminal-Skript an, nicht der Browser."), state: live.state, reason: live.state === "done" ? null : (live.reason ?? cfgErr), facts: live.facts, remedy: live.state === "error" ? t("Abhilfe: Host-Dienst prüfen und Setup-Skript erneut laufen lassen.") : null, to: "/hosts", action: t("Zu den Hosts"), chatTo: null, agentPick: [] },
+          { n: 2, title: t("Verbindung prüfen"), why: t("Der Agent muss online sein und das Dashboard erreichen, sonst antwortet niemand."), state: conn.state, reason: conn.reason, facts: conn.facts, remedy: conn.state === "error" ? t("Abhilfe: Agent-Dienst neu starten und Diagnose erneut öffnen.") : null, to: "/system", action: t("Zur Diagnose"), chatTo: null, agentPick: [] },
+          { n: 3, title: t("Anbieter und Schlüssel"), why: t("Modelle antworten nur über einen eingerichteten Anbieter. Eine frische Installation ohne Anbieter ist normal, kein Fehler."), state: prov.state, reason: prov.reason, facts: prov.facts, remedy: prov.state === "open" ? t("Abhilfe: Anbieter-Schlüssel hinterlegen.") : null, to: agentPath(ref, "providers"), action: t("Zu den Anbietern"), chatTo: null, agentPick: [] },
+          { n: 4, title: t("Hauptmodell wählen"), why: t("Das Hauptmodell beantwortet deine Nachrichten. Ohne Anbieter aus Schritt 3 wartet dieser Schritt."), state: modelStep.state, reason: modelStep.reason, facts: modelStep.facts, remedy: modelStep.state === "open" ? t("Abhilfe: Hauptmodell auf der Modellseite wählen.") : null, to: agentPath(ref, "modelle"), action: t("Zu den Modellen"), chatTo: null, agentPick: [] },
+          { n: 5, title: t("Erster Chat"), why: t("Eine Sitzung zeigt, dass alles verbunden ist. Wähle einen Agent und schreibe los."), state: sess.state, reason: sess.reason, facts: sess.facts, remedy: sess.state === "open" ? t("Abhilfe: Chat öffnen und erste Nachricht senden.") : null, to: null, action: null, chatTo: sess.chatTo, agentPick: list },
         ]);
         setPageError(null);
       } catch (e) { if (alive) setPageError((e as Error).message); }
@@ -125,6 +134,7 @@ export function SetupAssistantPage() {
   return (
     <main className="page">
       <PageHead title={t("Einrichtungsassistent")} sub={steps ? t("{n} von 5 erledigt", { n: doneCount }) : t("Prüft den echten Stand …")} />
+      {steps && <div role="progressbar" aria-valuenow={doneCount} aria-valuemin={0} aria-valuemax={5} aria-label={t("{n} von 5 erledigt", { n: doneCount })} />}
       {pageError && <p className="banner" role="alert">{pageError}</p>}
       {hostsMeta.length > 1 && (
         <label className="row" style={{ gap: 8 }}>{t("Host")}
@@ -137,9 +147,16 @@ export function SetupAssistantPage() {
       <div className="col" style={{ gap: 12 }}>
         {steps?.map((s) => (
           <section className="card" key={s.n} aria-label={t("Schritt {n}", { n: s.n })}>
-            <h2>{s.n}. {s.title} <span className="tag">{labelOf(s.state)}</span></h2>
+            <h2>{s.n}. {s.title} <span className="tag"><span aria-hidden="true">{glyphOf(s.state)}</span> {labelOf(s.state)}</span></h2>
             <p>{s.why}</p>
+            {s.facts.length > 0 && (
+              <details>
+                <summary>{t("Details")}</summary>
+                <ul>{s.facts.map((f, i) => <li key={i}>{f}</li>)}</ul>
+              </details>
+            )}
             {s.reason && <p className="muted">{s.reason}</p>}
+            {s.remedy && s.to && <p><strong>{s.remedy}</strong> <Link to={s.to}>{s.action ?? s.to}</Link></p>}
             {s.agentPick.length > 1 && s.chatTo && (
               <label className="row" style={{ gap: 8 }}>{t("Agent")}
                 <select aria-label={t("Agent wählen")} value={s.agentPick.find((a) => a.ref.agent === pick)?.ref.agent ?? s.agentPick[0].ref.agent} onChange={(e) => setPick(e.target.value)}>
