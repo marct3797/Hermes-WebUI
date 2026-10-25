@@ -134,7 +134,7 @@ export function SetupAssistantPage() {
   return (
     <main className="page">
       <PageHead title={t("Einrichtungsassistent")} sub={steps ? t("{n} von 5 erledigt", { n: doneCount }) : t("Prüft den echten Stand …")} />
-      {steps && <div role="progressbar" aria-valuenow={doneCount} aria-valuemin={0} aria-valuemax={5} aria-label={t("{n} von 5 erledigt", { n: doneCount })} />}
+      {steps && <div role="progressbar" aria-valuenow={doneCount} aria-valuemin={0} aria-valuemax={5} aria-label={t("{n} von 5 erledigt", { n: doneCount })} style={{ height: 8, borderRadius: 4, background: "var(--s2)", overflow: "hidden" }}><div style={{ width: `${(doneCount / 5) * 100}%`, height: "100%", background: "var(--crim)" }} /></div>}
       {pageError && <p className="banner" role="alert">{pageError}</p>}
       {hostsMeta.length > 1 && (
         <label className="row" style={{ gap: 8 }}>{t("Host")}
@@ -155,7 +155,7 @@ export function SetupAssistantPage() {
                 <ul>{s.facts.map((f, i) => <li key={i}>{f}</li>)}</ul>
               </details>
             )}
-            {s.reason && <p className="muted">{s.reason}</p>}
+            {s.reason && !s.facts.includes(s.reason) && <p className="muted">{s.reason}</p>}
             {s.remedy && s.to && <p><strong>{s.remedy}</strong> <Link to={s.to}>{s.action ?? s.to}</Link></p>}
             {s.agentPick.length > 1 && s.chatTo && (
               <label className="row" style={{ gap: 8 }}>{t("Agent")}

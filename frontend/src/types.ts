@@ -207,6 +207,10 @@ export type GatewayState = { running: boolean; state: string | null; busy: boole
 export type GatewayAction = { name: string; running: boolean; exit_code: number | null; lines: string[] };
 export type TelegramPairing = { pairing_id: string; suggested_username?: string; deep_link: string; expires_at?: string };
 export type TelegramPoll = { status: "waiting" | "ready"; bot_username?: string | null; owner_user_id?: string | null; expires_at?: string };
+export type WhatsAppPairing = { pairing_id: string; status: string; qr_payload?: string | null; expires_at?: string | null; mode?: string | null; account?: { account_id?: string | null; account_name?: string | null; account_phone?: string | null } | null; error?: string | null };
+export type ComputerUse = { ready?: boolean | null; installed?: boolean | null; can_grant?: boolean | null; granted?: boolean | null; platform?: string | null; detail?: string | null };
+export type ShellHook = { event: string; matcher?: string; executable: boolean; allowed: boolean; approved_at?: string | null; command_preview?: string };
+export type ShellHooks = { hooks: ShellHook[]; valid_events: string[] };
 
 /** Eingebautes Hermes-Gedächtnis (nur Dateigrößen) und externe Anbieter. Geheimnisfelder haben nie einen Wert, nur `is_set`. */
 export type HmProvider = { name: string; label?: string; docs_url?: string | null; description?: string; status?: string; configured: boolean; available: boolean; required_env: string[]; missing: Array<{ name: string; install: string }> };

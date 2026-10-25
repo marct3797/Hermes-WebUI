@@ -65,6 +65,7 @@ export const extApi = {
   authMcp: (h: string, p: string, n: string) => call<OAuthFlow>("POST", `${ext(h, p)}/mcp/${e(n)}/auth`, {}),
   authStatus: (h: string, p: string, flow: string) => call<OAuthFlow>("GET", `${ext(h, p)}/mcp/oauth/${e(flow)}`),
   removeMcp: (h: string, p: string, n: string) => call<{ ok: boolean }>("DELETE", `${ext(h, p)}/mcp/${e(n)}`),
+  replaceMcp: (h: string, p: string, servers: Record<string, unknown>) => call<{ ok: boolean; servers: string[] }>("PUT", `${ext(h, p)}/mcp`, { servers, confirm: "ERSETZEN" }),
   mcpCatalog: (h: string, p: string) => call<{ entries: McpCatalogEntry[] }>("GET", `${ext(h, p)}/mcp/catalog`),
   installMcp: (h: string, p: string, body: { name: string; env: Record<string, string>; enable: boolean }) => call<{ ok: boolean }>("POST", `${ext(h, p)}/mcp/catalog/install`, body),
   plugins: (h: string, p: string) => call<{ plugins: Plugin[] }>("GET", `${ext(h, p)}/plugins`),
