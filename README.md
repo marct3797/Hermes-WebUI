@@ -281,7 +281,19 @@ bash deploy/deploy.sh          # legt ~/hermes-webui/{config,data,webui.env} an 
 
 ## Kompatibilität
 
-Welche Hermes-Version, welche Bausteine, welche Funktion in welchem Stand: [docs/compatibility.md](docs/compatibility.md). Was von Hermes nativ abgebildet ist und was nicht: [docs/coverage.md](docs/coverage.md).
+Mindestversion: Hermes 0.21.6. Kennt ein Dashboard eine Route nicht (ältere Version), antwortet das BFF 501 mit Hinweis (statt 404 oder 502), siehe [docs/compatibility.md](docs/compatibility.md). Was von Hermes nativ abgebildet ist, was fehlt und welche Risiken bleiben: [docs/coverage.md](docs/coverage.md).
+
+## Einrichtung
+
+Erst das Terminal-Skript (`python3 deploy/setup.py`: fragt Gateway, Anmeldung, Optionen, prüft die Verbindungen, schreibt `hosts.json` und `webui.env`), danach die Seite `/assistant` (5 Schritte mit Live-Prüfung, schreibt nichts). Bewusst nicht in der WebUI: 10 Funktionen unter `/guide` mit Befehl zum Kopieren und Prüfung über Lese-Routen (`guide.ts`, `GuidePage.tsx`).
+
+## Sprachen
+
+Zwölf Sprachen: de, en, es, fr, pt, zh, zh-hant, ja, ko, ar, it, tr (2293 Schlüssel je Sprache, `frontend/src/locales/_keys.json`; Arabisch rechts-nach-links). Übersetzung maschinell, ohne Muttersprachler-Prüfung; kein Russisch.
+
+## CI
+
+Backend auf Ubuntu und macOS, `hostd` und Installation nur auf Ubuntu (`.github/workflows/ci.yml`).
 
 ## Lizenz
 

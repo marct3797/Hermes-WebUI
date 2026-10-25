@@ -13,7 +13,7 @@ The main documentation is in German ([README.md](README.md)). This page is the E
 | Kanban plugin (ships with Hermes) | kanban board | no |
 | `hostd` (this repo) | terminal, files, git, CLI sign-in | no |
 
-Which Hermes version was checked, and what is covered or open: [docs/compatibility.md](docs/compatibility.md); how much of Hermes' native API and feature set the UI maps (99 of 390 routes today, with the list of gaps): [docs/coverage.md](docs/coverage.md) (both German). Check it yourself against any Hermes source tree:
+Which Hermes version was checked, and what is covered or open: [docs/compatibility.md](docs/compatibility.md); how much of Hermes' native API and feature set the UI maps (206 of 390 routes today, with the list of gaps): [docs/coverage.md](docs/coverage.md) (both German). Minimum: Hermes 0.21.6; older dashboards get 501 with a hint. Check it yourself against any Hermes source tree:
 
 ```
 cd backend && python -m devtools.check_upstream /path/to/hermes-agent
@@ -37,6 +37,18 @@ Development: `cd backend && pip install -e '.[dev]' && pytest`; `cd frontend && 
 - Risky actions (terminal, SOUL, keys, settings writes) ask for a fresh sign-in ("step-up"). It is on by default; `HERMES_WEBUI_STEP_UP=off` only makes sense when the UI is reachable from a private network only. The System page shows whether your identity provider can prove how fresh a sign-in is.
 - Secrets (keys, tokens, passwords) never leave the server and cannot be written through the settings page.
 - Details, threat notes and limits: [SECURITY.md](SECURITY.md) (German).
+
+## Setup
+
+Terminal script first (`python3 deploy/setup.py`: asks for gateway, sign-in, options; tests the connections; writes `hosts.json` and `webui.env`), then page `/assistant` (5 steps with live checks, writes nothing). Deliberately outside the UI: 10 functions under `/guide` with a command to copy and a read-route check (`guide.ts`, `GuidePage.tsx`).
+
+## Languages
+
+Twelve languages: de, en, es, fr, pt, zh, zh-hant, ja, ko, ar, it, tr (2293 keys each, `frontend/src/locales/_keys.json`; Arabic right-to-left). Machine-translated, no native-speaker review; no Russian.
+
+## CI
+
+Backend on Ubuntu and macOS, `hostd` and install only on Ubuntu (`.github/workflows/ci.yml`).
 
 ## Configuration
 
