@@ -187,7 +187,9 @@ async def import_upload(request: Request, target: Tgt, dash: Dash, archive: Uplo
         try:
             result = await upstream(dash.request("POST", "/api/profiles/import", body={"archive": tmp_name, **({"name": want} if want else {})}))
         except HTTPException as e:
-            raise HTTPException(502, NOT_SHARED)
+            if e.status_code == 404 or e.status_code == 422 or (e.status_code == 502 and "file" in str(e.detail).lower()):
+                raise HTTPException(502, NOT_SHARED)
+            raise
     finally:
         try:
             os.unlink(tmp_name)
