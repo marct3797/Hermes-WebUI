@@ -18,24 +18,23 @@ python -m devtools.check_upstream /pfad/zu/hermes-agent --coverage
 Von 390 Routen (Modul, Methode, Pfad) nutzt das BFF 206 pfadgenau. Nach Modul, wenig genutzte zuerst:
 
 | Modul | Routen | genutzt | Inhalt |
-|---|---:|---:|---|
-| `web_routers/ops.py` | 28 | 18 | Gateway, Doctor, Backup, Gedächtnis zurücksetzen, Pairing, Webhooks, Schlüssel-Pools (genutzt); **offen**: Import, Checkpoints, Hooks (bewusst aus) |
+|---|---|---:|---|
 | `web_routers/git.py` | 21 | 0 | Git im Dashboard (die WebUI nutzt dafür `hostd`) |
-| `web_routers/local_models.py` | 18 | 1 | lokale Modelle: Status (genutzt); **bewusst nicht**: Katalog, Hardware, Download, Server, Installieren (CLI) |
 | `web_routers/files.py` | 18 | 0 | Dateien im Dashboard (die WebUI nutzt dafür `hostd`) |
+| `web_routers/chat_ws.py` | 5 | 0 | Terminal-Chat per WebSocket (die WebUI nutzt die Gateway-API) |
+| `dashboard_auth/routes.py` | 3 | 0 | Anmeldeschranke des Dashboards (Login-Seite, keine API für die WebUI) |
+| `web_routers/chat_workspaces.py` | 1 | 0 | Chat-Arbeitsbereiche im Dashboard (die WebUI nutzt eigene Routen) |
+| `web_routers/display.py` | 1 | 0 | Anzeigesteuerung im Dashboard (kein Thema einer WebUI) |
+| `web_routers/local_models.py` | 18 | 1 | lokale Modelle: Status (genutzt); **bewusst nicht**: Katalog, Hardware, Download, Server, Installieren (CLI) |
 | `web_routers/messaging.py` | 11 | 7 | Messaging-Plattformen: Liste, Konfiguration, Test, Telegram-Einrichtung. **Nicht**: WhatsApp-Kopplung (4 Routen, QR-Code) |
 | `web_routers/audio.py` | 10 | 3 | Sprache: Live-Status, Vorlesen, Abschrift (genutzt, Aufnahmen höchstens 1,4 MB); **bewusst nicht**: `voice-config` (liefert Anbieter-Schlüssel), Live-Sitzungen, WebSockets |
 | `web_routers/actions.py` | 8 | 3 | Gateway neu starten (genutzt), Aktions-Status, Update-Prüfung (genutzt); **nicht**: leeren (Drain), Hermes-Update, Migration |
-| `web_routers/chat_ws.py` | 5 | 0 | Terminal-Chat per WebSocket (die WebUI nutzt die Gateway-API) |
-| `web_routers/display.py` | 1 | 0 | Anzeigesteuerung im Dashboard (kein Thema einer WebUI) |
-| `web_routers/chat_workspaces.py` | 1 | 0 | Chat-Arbeitsbereiche im Dashboard (die WebUI nutzt eigene Routen) |
-| `dashboard_auth/routes.py` | 3 | 0 | Anmeldeschranke des Dashboards (Login-Seite, keine API für die WebUI) |
 | `web_routers/delegation.py` | 4 | 2 | Delegation: Routing lesen, Backend wählen (genutzt); **nicht**: Modellzuordnung und Profil-Routen schreiben |
 | `web_routers/memory_providers.py` | 3 | 2 | Felder lesen/schreiben (genutzt); **bewusst nicht**: `POST .../setup` (führt `curl \| sh` aus) |
 | `web_routers/status.py` | 20 | 11 | Status, Systemwerte, Curator (pausieren/starten), Lerngraph (lesen/bearbeiten/löschen, Skills werden archiviert), Computer-Use-Status; **nicht**: Host-Identität, Gesundheit, SSH-Besitz, Portal |
 | `web_routers/tools.py` | 12 | 9 | Toolsets, Anbieter, Keys, Modelle; **bewusst nicht**: Terminal-Backend setzen, `post-setup`, Computer-Use-Rechte, siehe unten |
 | `web_routers/models.py` | 7 | 7 | Hauptmodell, Auswahl, Hilfsmodelle, Mixture of Agents, empfohlenes Standardmodell (alle genutzt) |
-| `plugins/kanban` | 48 | 27 | Kanban inkl. Diagnose, Worker, Lauf beenden, Dispatch (erst Vorschau), Schätzen, Spezifizieren, Zerlegen, Anhänge, Board-Export/Import/Archivieren, Board wechseln; **nicht**: Orchestrierung schreiben, Profil-Metadaten schreiben, hartes Löschen |
+| `plugins/kanban` | 48 | 27 | Kanban inkl. Diagnose, Worker, Lauf beenden, Dispatch (erst Vorschau), Schätzen, Spezifizieren, Zerlegen, Anhänge, Board-Export/Import mit Gegenlesen, Board-Archivieren/Wechseln; **nicht**: Orchestrierung schreiben, Profil-Metadaten schreiben, hartes Löschen |
 | `web_routers/profiles.py` | 20 | 10 | Profile anlegen, löschen, umbenennen, exportieren, importieren |
 | `web_routers/dashboard_ui.py` | 16 | 11 | Plugin-Verwaltung, Themes, Schrift (nur aus der Liste); **nicht**: eigene Theme-Dateien |
 | `web_routers/sessions.py` | 18 | 15 | Statistik, Export, Aufräumen, Mehrfach-Löschen, leere löschen, Zeitachse, Import, Profil-Zuordnung (genutzt); **nicht**: Umbenennen/Fork (laufen über die Agent-API) |
@@ -56,12 +55,14 @@ Pfadgenau heißt: ein Pfad zählt als genutzt, auch wenn nur eine seiner Methode
 |---|---|---|
 | Chat, Läufe, Freigaben, Steuern, Stoppen | abgebildet | Gateway `/v1/runs*` |
 | Sitzungen | Liste, Fortsetzen, Umbenennen, Löschen, Fork, Suche, **Statistik, Export einer Sitzung, Aufräumen (mit Vorschau und Zahl eintippen), Mehrfach-Löschen (BFF), leere Sitzungen löschen, Zeitachse, Import (mit Anzahl-Bestätigung), Profil-Zuordnung (`owner-backfill`)** | `sessions.py`: 15 von 18, `routes/sessions_admin.py` |
-| Profile (`Profiles`) | Lebenszyklus abgebildet: anlegen, löschen, umbenennen, Import/Export, aktives Profil (`routes/lifecycle.py`, `LifecyclePage.tsx`); SOUL und Beschreibung daneben | `profiles.py`: 10 von 20 |
+| Profile (`Profiles`) | Lebenszyklus abgebildet: anlegen, löschen, umbenennen, Import als Upload mit Gegenlesen, Export als Hinweis, aktives Profil (`routes/lifecycle.py`, `LifecyclePage.tsx`); SOUL und Beschreibung daneben | `profiles.py`: 10 von 20 |
+| Einrichtungs-Seiten | `/assistant` (5 Schritte mit Live-Prüfung, schreibt nichts; Schritt 1 bleibt `deploy/setup.py`) und `/guide` (10 Anleitungen mit Befehl und Lese-Prüfung): `SetupAssistantPage.tsx`, `guide.ts`, `GuidePage.tsx` |
+| Datei-Austausch | Board-Export/Import und Profil-Import prüfen das Ergebnis (`fileexchange.py`, `docs/file-exchange.md`); Bedingung: gemeinsames Dateisystem, sonst 502 (siehe Risiken) |
 | Konfiguration (`Configuration`) | abgebildet über das Schema (alle Felder, Geheimnisse ausgenommen). Fehlt: Roh-YAML, Migration, Standardwerte | `config_env.py`, `analytics.py` |
 | Modelle und Anbieter (`Providers`) | eigene Seite mit Schlüssel-Pools, eigenen Endpunkten, Hilfsmodellen und Mixture of Agents (`routes/endpoints.py`, `routes/credentials.py`, `routes/models.py`, `ModelsPage.tsx`, `EndpointsPage.tsx`); lokale Modelle nur lesend (Status). **Offen**: lokale Modelle installieren/laden (bewusst CLI), Delegations-Routen schreiben | `models.py`: 7 von 7; `oauth.py`: 5 von 7; `analytics.py`: 1 von 4 |
 | Werkzeuge (`Tools`) | ja: Gruppen ein-/ausschalten, Anbieter wählen (bei `web` getrennt für Suche und Extraktion), Werkzeug-Keys setzen (nur Variablen, die die Gruppe selbst nennt, nie angezeigt), Bild-/Video-Modell wählen, Terminal-Backend anzeigen. **Bewusst nicht**: Terminal-Backend umstellen, `post-setup` starten, Computer-Use-Rechte vergeben (Hermes prüft das serverseitig nicht) | `tools.py`: 9 von 12; `routes/tools.py`, `ToolsetPanel.tsx` |
 | Skills (`Skills System`) | abgebildet. Fehlt: Curator | `skills.py`: 13 von 13 |
-| Gedächtnis (`Memory`, `Memory Providers`) | Hindsight über einen eigenen Client **und** Hermes-Gedächtnis: Dateigrößen von `MEMORY.md`/`USER.md` (Inhalt liefert das Dashboard nicht), Zurücksetzen mit Namenseingabe, Anbieter wählen und einrichten. **Nicht**: Inhalt der Dateien lesen/bearbeiten, Programme der Anbieter installieren | `routes/hermes_memory.py`, `HermesMemoryPage.tsx`; `ops.py` Gedächtnis-Routen: 3 von 3 |
+| Gedächtnis (`Memory`, `Memory Providers`) | Hindsight über einen eigenen Client **und** Hermes-Gedächtnis (`hostd/hostd/memory_files.py`, `hostd/hostd/operations.py`, `backend/app/routes/hermes_memory.py`, `HermesMemoryPage.tsx`): Inhalt von `MEMORY.md`/`USER.md` lesen und bearbeiten, SHA-256-Prüfung, 5 Sicherungen, Schreiben nur mit frischer Anmeldung. Anbieter wählen und einrichten. **Nicht**: Anbieter-Programme installieren | `routes/hermes_memory.py`, `HermesMemoryPage.tsx`; `ops.py` Gedächtnis-Routen: 3 von 3 |
 | MCP | Liste, Katalog, Installieren, Testen, Aktivieren, Entfernen, OAuth. **Nicht**: ganze `mcp_servers`-Map ersetzen (`PUT /api/mcp/servers`) | `mcp.py`, `routes/extensions.py` |
 | Plugins | Hub, Katalog, Installieren, Aktivieren, Deaktivieren, Aktualisieren, Entfernen. **Nicht**: Sichtbarkeit in der Seitenleiste, Speicher-/Kontext-Anbieter über `plugin-providers` (stehen im Einstellungs-Editor) | `dashboard_ui.py`, `routes/extensions.py` |
 | Zeitpläne (`Cron Jobs`) | abgebildet (12 von 13 Routen); `POST /api/cron/fire` ist der NAS-Webhook (kein manueller Auslöser, bewusst nicht verdrahtet), manuell auslösen geht über `trigger`. Skript-Jobs ohne Agent (`no_agent`) lassen sich mit eingetippter Bestätigung anlegen | `cron.py`, `app/cron.py` |
@@ -85,18 +86,19 @@ Pfadgenau heißt: ein Pfad zählt als genutzt, auch wenn nur eine seiner Methode
 
 1. **Dashboard auf einem anderen Rechner.** Geprüft an einem echten Dashboard (0.22.5, Loopback): Hermes vergleicht den Rechnernamen im `Host`-Header (Port egal): `127.0.0.1`, `localhost` gehen, jeder andere Name liefert 400 „Invalid Host header“. Bindet das Dashboard nicht auf Loopback, schaltet Hermes eine Anmeldeschranke ein (Sitzung oder Bearer-Token eines Anbieters; `--insecure` ist wirkungslos, siehe `hermes dashboard --help`). Der Sitzungs-Header der WebUI genügt dann nicht. **Der unterstützte Weg ist Loopback plus Tunnel:** Dashboard auf `127.0.0.1` des Hosts lassen, per `ssh -N -L 127.0.0.1:19119:127.0.0.1:9119 <benutzer>@<host>` auf den WebUI-Rechner führen und `http://127.0.0.1:19119` eintragen (`add-host.sh --dashboard-url`). Die WebUI meldet die drei Fälle (falscher Rechnername, eigene Anmeldung verlangt, Token abgelehnt) jetzt mit diesem Ausweg. Nicht getestet: die Antwort der Schranke selbst an einer nicht-loopback gebundenen Instanz (aus dem Quelltext gelesen: 401 oder Weiterleitung auf `/login`; beides ist abgefangen).
 2. **Antwortformen.** Die Lese-Routen sind gegen echte Antworten von 0.22.5 getestet (`tests/test_contract_hermes_0_22_5.py`, Fixture aus einem Sandbox-Dashboard). Nicht aufgenommen sind Schreib-Routen und Zustände mit Daten (laufende Sitzungen, eingerichtete Anbieter, Zeitpläne): das frische Sandbox-HOME hat keine. Pfade über mehrere Hermes-Versionen prüft `docs/compatibility.md` (44 Stände von `v2026.3.12` bis `v0.22.5`); Antwortformen anderer Versionen sind **nicht** geprüft.
-3. **Run-Strom.** Korrektur: `run.stopping` und `run.interrupted` sind Lauf-*Status* (`GET /v1/runs/{id}`), keine Stromereignisse; `runStore.ts` behandelt sie beim Nachfragen (Zeilen 154 bis 172). Nur `run.queued` kommt als Ereignis (als `unknown`), danach setzt die Wiederaufnahme per Statusabfrage fort. Aus dem Quelltext gelesen, nicht mit einem laufenden Gateway-Neustart geprüft.
-4. **Verwaltete Konfiguration.** Hermes kennt „Managed Scope“ (vom Administrator festgelegte, nicht änderbare Werte). Wie der Einstellungs-Editor ein abgelehntes Feld zeigt, ist nicht getestet.
-5. **Übersetzungen maschinell.** Die Oberfläche hat zwölf Sprachen (`frontend/src/locales/`, 2174 Schlüssel je Sprache); die Texte stammen aus einer maschinellen Übersetzung und sind nicht von Muttersprachlern geprüft. Fachbegriffe können daher abweichen.
-6. **Keine Prüfung im echten Browser** für die Seiten „Kanban“ und „Hermes-Einstellungen“ (nur jsdom).
-7. **CI** prüft Backend und Frontend auf Ubuntu und macOS (`.github/workflows/ci.yml`); nur die `hostd`-Tests mit echten CLIs werden übersprungen, sofern die CLIs fehlen. Die systemd-Installation (`deploy/install-hostd.sh`) läuft nicht in CI.
+3. **CI** läuft auf Ubuntu und macOS (`.github/workflows/ci.yml`: Backend auf beiden, `hostd` und `fresh-install` nur auf Ubuntu); nur die `hostd`-Tests mit echten CLIs werden übersprungen, sofern die CLIs fehlen. Die systemd-Installation (`deploy/install-hostd.sh`) läuft nicht in CI.
+4. **Run-Strom.** Korrektur: `run.stopping` und `run.interrupted` sind Lauf-*Status* (`GET /v1/runs/{id}`), keine Stromereignisse; `runStore.ts` behandelt sie beim Nachfragen (Zeilen 154 bis 172). Nur `run.queued` kommt als Ereignis (als `unknown`), danach setzt die Wiederaufnahme per Statusabfrage fort. Aus dem Quelltext gelesen, nicht mit einem laufenden Gateway-Neustart geprüft.
+5. **Verwaltete Konfiguration.** Hermes kennt „Managed Scope“ (vom Administrator festgelegte, nicht änderbare Werte). Wie der Einstellungs-Editor ein abgelehntes Feld zeigt, ist nicht getestet.
+6. **Übersetzungen maschinell.** Die Oberfläche hat zwölf Sprachen (de, en, es, fr, pt, zh, zh-hant, ja, ko, ar, it, tr; `frontend/src/i18n.ts`, `frontend/src/locales/`, 2293 Schlüssel je Sprache laut `frontend/src/locales/_keys.json`); die Texte stammen aus einer maschinellen Übersetzung und sind nicht von Muttersprachlern geprüft. Arabisch läuft rechts-nach-links (`rtl` in `i18n.ts`); Russisch gibt es nicht. Fachbegriffe können daher abweichen.
+7. **Datei-Austausch braucht dasselbe Dateisystem.** Board-Export/Import und Profil-Import reichen dem Dashboard nur einen Pfad (`routes/kanban_admin.py`, `routes/lifecycle.py`, Prüfung in `fileexchange.py`, `docs/file-exchange.md`). Sehen BFF und Dashboard nicht dasselbe Dateisystem, meldet das BFF 502 statt eines falschen Erfolgs; Erfolg prüft es per Gegenlesen nach.
+8. **Keine Prüfung im echten Browser** für die Seiten „Kanban“ und „Hermes-Einstellungen“ (nur jsdom).
 
 ## Reihenfolge, die ich vorschlage
 
 **P1: ohne das ist es keine vollständige Oberfläche für Hermes**
 1. ~~Messaging-Plattformen und Gateway-Betrieb~~ umgesetzt und gegen ein echtes Dashboard geprüft (`devtools/real/contract_messaging.py`). Offen daraus: WhatsApp-Kopplung (QR), Drain.
 2. ~~Werkzeuge konfigurieren und Werkzeug-Keys setzen~~ umgesetzt und gegen ein echtes Dashboard geprüft (`devtools/real/contract_tools.py`).
-3. ~~Hermes-Gedächtnis~~ umgesetzt und gegen ein echtes Dashboard geprüft (`devtools/real/contract_memory.py`). Offen daraus: Inhalt von `MEMORY.md`/`USER.md` anzeigen und bearbeiten (das Dashboard liefert ihn nicht; der Host-Dienst könnte die Dateien lesen).
+3. ~~Hermes-Gedächtnis~~ umgesetzt und gegen ein echtes Dashboard geprüft (`devtools/real/contract_memory.py`). Stand danach: Inhalt von `MEMORY.md`/`USER.md` wird über hostd gelesen und bearbeitet (`hostd/hostd/memory_files.py`, `hostd/hostd/operations.py`, `routes/hermes_memory.py`, `HermesMemoryPage.tsx`); das Dashboard liefert weiter nur die Größe.
 4. ~~Profil-Lebenszyklus: anlegen, löschen, umbenennen, Import/Export~~ umgesetzt und gegen ein echtes Dashboard geprüft (`devtools/real/contract_lifecycle.py`): Canvas-Regel wie Hermes (klein, kein reservierter Name), Löschen/Backup nur mit Namenseingabe, Import nur per Upload (BFF schreibt in eine temp-Datei und meldet den Pfad; freie Pfade 422), Export nur als Hinweis auf den Agenten-Rechner, Setup-Befehl nur als Text für das Dashboard-Heim.
 5. ~~Betrieb: Status/Gesundheit, Doctor, Backup, Update-Prüfung~~ umgesetzt (nur Lesen + Doctor/Backup mit Schranken; Update bleibt bewusst draußen).
 6. ~~Dashboard-Anmeldeschranke für entfernte Hosts~~ geklärt und gegen ein echtes Dashboard geprüft (Punkt 1 oben): Tunnel statt Adresse.
@@ -134,7 +136,7 @@ Aus dem Hermes-Quelltext (0.22.5, `hermes_cli/web_routers/tools.py`, `config_env
 
 ## Hermes-Gedächtnis: bewusste Grenzen
 
-- Das Dashboard liefert von `MEMORY.md`/`USER.md` nur die Größe in Bytes. Es gibt dort keine Route zum Lesen oder Schreiben (im Quelltext gesucht). Die WebUI zeigt deshalb nur Größe und kann zurücksetzen; die Dateien selbst bleiben im Profil.
+- Das Dashboard liefert von `MEMORY.md`/`USER.md` nur die Größe in Bytes. Es gibt dort keine Route zum Lesen oder Schreiben (im Quelltext gesucht). Die WebUI liest und schreibt den Inhalt deshalb über hostd (`hostd/hostd/memory_files.py`, `routes/hermes_memory.py`, Seite `HermesMemoryPage.tsx`): SHA-256-Prüfung, 5 Sicherungen, Schreiben nur mit frischer Anmeldung.
 - Zurücksetzen löscht ohne Papierkorb und ohne Sicherung. Die WebUI verlangt, den Zielnamen einzutippen, und liest danach die Größen zurück. Daten externer Anbieter bleiben unberührt (so Hermes).
 - Der Anbieter-Setup von Hermes führt Befehle der Anbieter-Manifeste mit Shell aus (z. B. `curl -fsSL https://byterover.dev/install.sh | sh`), mit der Umgebung des Dashboards. Das reicht die WebUI nicht durch; sie nennt nur, welches Programm fehlt und wie man es auf dem Rechner selbst installiert.
 - Hermes setzt beim Speichern der Anbieter-Felder den Anbieter aktiv, sobald er bereit ist. Ist er nicht bereit, sind die Werte trotzdem gespeichert, und die WebUI zeigt die Fehlermeldung von Hermes.
