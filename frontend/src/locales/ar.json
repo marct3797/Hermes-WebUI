@@ -2291,5 +2291,17 @@
  "Zustimmen und einschalten": "وافق وشغّل",
  "Zuweisung": "التعيين",
  "Zwei Mitglieder tragen denselben Namen; ändere einen Anzeigenamen in der hosts.json": "يحمل عضوان الاسم نفسه؛ غيّر اسما معروضا في hosts.json",
- "Zweite Meinung (SkillEvaluator): {passed}, {findings} Funde.": "رأي ثانٍ (SkillEvaluator): {passed}، {findings} نتائج."
+ "Zweite Meinung (SkillEvaluator): {passed}, {findings} Funde.": "رأي ثانٍ (SkillEvaluator): {passed}، {findings} نتائج.",
+ "{n} Sitzungen": "{n} Sitzungen",
+ "Abhilfe: Agent-Dienst neu starten und Diagnose erneut öffnen.": "Abhilfe: Agent-Dienst neu starten und Diagnose erneut öffnen.",
+ "Abhilfe: Anbieter-Schlüssel hinterlegen.": "Abhilfe: Anbieter-Schlüssel hinterlegen.",
+ "Abhilfe: Chat öffnen und erste Nachricht senden.": "Abhilfe: Chat öffnen und erste Nachricht senden.",
+ "Abhilfe: Hauptmodell auf der Modellseite wählen.": "Abhilfe: Hauptmodell auf der Modellseite wählen.",
+ "Abhilfe: Host-Dienst prüfen und Setup-Skript erneut laufen lassen.": "Abhilfe: Host-Dienst prüfen und Setup-Skript erneut laufen lassen.",
+ "Abhilfe: Setup-Skript im Terminal laufen lassen.": "Abhilfe: Setup-Skript im Terminal laufen lassen.",
+ "eingerichtet": "eingerichtet",
+ "von": "von",
+ "Erst Schritt 3 abschließen: Anbieter einrichten.": "Erst Schritt 3 abschließen: Anbieter einrichten.",
+ "nicht bereit": "nicht bereit",
+ "Zugang abgelehnt": "Zugang abgelehnt"
 }

@@ -62,11 +62,13 @@ export function sessionMessages(_path: string) {
   ];
 }
 
-const diag = (agent: string, withRun = false) => ({
-  agent: `server/hermes/${agent}`, status: withRun ? "warn" : "ok", at: 1_792_000_000,
+const diag = (agent: string, withRun = false, warns?: string[]) => ({
+  agent: `server/hermes/${agent}`, status: withRun || (warns && warns.length > 0) ? "warn" : "ok", at: 1_792_000_000,
   checks: withRun
     ? [{ id: "run.start", label: "Run starten", status: "ok", detail: "Run run_1", ms: 12 }, { id: "run.stream", label: "Ereignisstrom bis zum Abschluss", status: "warn", detail: "Antwort kam ohne Zeichenstrom", ms: 80 }]
-    : [{ id: "health", label: "Erreichbar und angemeldet", status: "ok", detail: "Version 0.21.6", ms: 5 }, { id: "models", label: "Modelle und Anbieter", status: "ok", detail: "1 Anbieter, 2 Modelle", ms: 9 }],
+    : warns && warns.length > 0
+      ? warns.map((w, i) => { const [label, detail] = w.split(/: (.+)/); return { id: `warn.${i}`, label: label ?? w, status: "warn", detail: detail ?? "", ms: 5 }; })
+      : [{ id: "health", label: "Erreichbar und angemeldet", status: "ok", detail: "Version 0.21.6", ms: 5 }, { id: "models", label: "Modelle und Anbieter", status: "ok", detail: "1 Anbieter, 2 Modelle", ms: 9 }],
 });
 
 const memItem = (id: string, text: string, kind: string, entities: string[] = []) => ({ id, text, kind, context: null, entities, at: 1_792_000_000_000, tags: [], document: null });
@@ -190,7 +192,7 @@ export type DashState = {
   ac: { pending: Array<{ platform: string; request_id: string; user_id: string; user_name: string }>; approved: Array<{ platform: string; user_id: string; user_name: string }>; hooksOn: boolean; hooks: Array<{ name: string; enabled: boolean }> };
   mdDown?: boolean; mdFresh: boolean; // frische Installation: noch kein Anbieter, kein Modell (gültige, leere Antworten)
   hostsEmpty?: boolean; // keine Hosts eingetragen (leere, gültige Antwort)
-  statusDown?: boolean; altDown?: boolean; sessDown?: boolean; sessEmpty?: boolean; provFresh?: boolean; diagDown?: boolean; provDown?: boolean; // Fehler-/Leer-Proben je Schritt
+  statusDown?: boolean; altDown?: boolean; sessDown?: boolean; sessEmpty?: boolean; provFresh?: boolean; diagDown?: boolean; provDown?: boolean; diagWarn?: string[]; // Fehler-/Leer-Proben je Schritt
   sa: { down?: boolean; sessions: Array<{ id: string; ageDays: number; messages: number; active?: boolean }> };
   ep: { backend: string; endpoints: Array<{ id: string; name: string; base_url: string; model: string; hasKey: boolean }>; current: string };
   lcProfiles: string[]; lcActive: string; kbImportFail?: string | null; // Profil-Lebenszyklus: Namen als Text, nie Serverpfade
@@ -872,7 +874,7 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
       if (rest === "/toolsets") return json({ object: "list", data: [{ name: "terminal", label: "Terminal", enabled: true, configured: true, tools: ["terminal"] }, { name: "web", label: "Web", enabled: true, configured: false }, { name: "browser", enabled: false }] });
       if (rest === "/diagnose") {
         if (dash.diagDown) return json({ detail: "Diagnose nicht lesbar" }, 502);
-        return json(diag(m[1]));
+        return json(diag(m[1], false, (dash as DashState & { diagWarn?: string[] }).diagWarn));
       }
       if (method === "POST" && rest === "/diagnose/run") return json(diag(m[1], true));
       if (method === "POST" && /^\/sessions\/[^/]+\/fork$/.test(rest)) return json({ session_id: `fork-${m[1]}` });
