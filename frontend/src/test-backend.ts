@@ -185,7 +185,7 @@ export type DashState = {
   loginError: string | null; // lässt die Anmeldung scheitern
   config: Record<string, unknown>; // Werte der Hermes-Einstellungen (Punkt-Pfad → Wert)
   msg: { available: boolean; enabled: Record<string, boolean>; env: Record<string, string>; gateway: { running: boolean; busy: boolean; sessions: number }; polls: number; applied: string[] }; // Messaging und Gateway
-  hm: { available: boolean; active: string; files: { memory: number; user: number }; keySet: boolean; project: string; mode: string }; // Hermes-Gedächtnis
+  hm: { available: boolean; active: string; files: { memory: number; user: number }; keySet: boolean; project: string; mode: string; memfiles: { content: Record<string, string>; sha: Record<string, string>; conflict: boolean; oldHostd: boolean } }; // Hermes-Gedächtnis
   tools: { available: boolean; enabled: Record<string, boolean>; keys: Record<string, string>; provider: Record<string, string>; model: string; installed: boolean }; // Werkzeug-Gruppen
   ac: { pending: Array<{ platform: string; request_id: string; user_id: string; user_name: string }>; approved: Array<{ platform: string; user_id: string; user_name: string }>; hooksOn: boolean; hooks: Array<{ name: string; enabled: boolean }> };
   mdDown?: boolean; mdFresh: boolean; // frische Installation: noch kein Anbieter, kein Modell (gültige, leere Antworten)
@@ -646,6 +646,32 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
       h.active = "retaindb";
       return json({ ok: true, active: "retaindb" });
     }
+    const memSha = (text: string) => `sha-${text.length}-${text.slice(0, 8)}`;
+    const memFile = /^\/hermes-memory\/files\/(MEMORY\.md|USER\.md)$/.exec(path);
+    if (path === "/hermes-memory/files" && method === "GET") {
+      if (h.memfiles.oldHostd) return json({ detail: "Der Host-Dienst ist zu alt für Gedächtnisdateien. Aktualisiere hostd auf dem Rechner." }, 501);
+      const enc = (s: string) => new TextEncoder().encode(s).length;
+      return json({ files: (["MEMORY.md", "USER.md"] as const).map((name) => ({ name, size: enc(h.memfiles.content[name] ?? ""), mtime: "2026-01-01T00:00:00+00:00", exists: Boolean(h.memfiles.content[name]) })) });
+    }
+    if (memFile && method === "GET") {
+      if (h.memfiles.oldHostd) return json({ detail: "Der Host-Dienst ist zu alt für Gedächtnisdateien. Aktualisiere hostd auf dem Rechner." }, 501);
+      const content = h.memfiles.content[memFile[1]] ?? "";
+      const sha = memSha(content);
+      h.memfiles.sha[memFile[1]] = sha;
+      return json({ name: memFile[1], content, sha256: sha, size: new TextEncoder().encode(content).length, mtime: "2026-01-01T00:00:00+00:00" });
+    }
+    if (memFile && method === "PUT") {
+      if (h.memfiles.oldHostd) return json({ detail: "Der Host-Dienst ist zu alt für Gedächtnisdateien. Aktualisiere hostd auf dem Rechner." }, 501);
+      if (h.memfiles.conflict) return json({ detail: "Die Datei wurde inzwischen geändert. Lade neu und speichere erneut." }, 409);
+      const content = String(body?.content ?? "");
+      if (content.includes("\0")) return json({ detail: "Der Inhalt ist ungültig (nur UTF-8-Text ohne NUL-Zeichen)" }, 422);
+      if (content.length > 262144) return json({ detail: "Die Datei ist zu groß für den Host-Dienst" }, 413);
+      if (body?.expected_sha256 !== h.memfiles.sha[memFile[1]]) return json({ detail: "Die Datei wurde inzwischen geändert. Lade neu und speichere erneut." }, 409);
+      h.memfiles.content[memFile[1]] = content;
+      const sha = memSha(content);
+      h.memfiles.sha[memFile[1]] = sha;
+      return json({ name: memFile[1], sha256: sha, size: new TextEncoder().encode(content).length, mtime: "2026-01-01T00:00:00+00:00", backup: `${memFile[1]}.bak-1` });
+    }
   }
   const toolRows = () => TOOL_CATALOG.map((t) => ({ name: t.name, label: t.label, description: t.description, enabled: dash.tools.enabled[t.name], configured: !t.providers.length || t.providers.some((p) => (p.env as Array<{ key: string }>).every((v) => v.key in dash.tools.keys)), tools: t.tools }));
   const toolPath = /^\/tools(?:\/([a-z_]+)(?:\/(provider|env|model|models))?)?$/.exec(path);
@@ -702,7 +728,7 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
     loggedIn: new Set(["openai-codex"]), polls: 0, loginError: null,
     config: { model: "claude-test", "agent.service_tier": "normal", "agent.max_turns": 90, "display.streaming": true, fallback_providers: [], "web.api_key": null },
     msg: { available: true, enabled: {}, env: {}, gateway: { running: false, busy: false, sessions: 0 }, polls: 0, applied: [] },
-    hm: { available: true, active: "", files: { memory: 120, user: 45 }, keySet: false, project: "", mode: "fast" },
+    hm: { available: true, active: "", files: { memory: 120, user: 45 }, keySet: false, project: "", mode: "fast", memfiles: { content: { "MEMORY.md": "Eintrag eins\n§\nEintrag zwei\n", "USER.md": "" }, sha: {}, conflict: false, oldHostd: false } },
     tools: { available: true, enabled: { terminal: true, web: false, image_gen: true, computer_use: false }, keys: {}, provider: {}, model: "flux-2-pro", installed: false },
     ac: { pending: [{ platform: "telegram", request_id: "req-1", user_id: "42", user_name: "Anna" }], approved: [{ platform: "telegram", user_id: "7", user_name: "Bob" }], hooksOn: false, hooks: [] },
     mdFresh: false,
