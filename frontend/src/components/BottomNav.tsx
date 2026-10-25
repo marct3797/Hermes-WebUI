@@ -42,6 +42,7 @@ export function BottomNav({ me, path, onChats, onLogout }: Props) {
           {wissen && <Link to="/knowledge"><Icon name="file" size={18} />{t("Wissen")}</Link>}
           <Link to="/providers"><Icon name="coin" size={18} />{t("Anbieter")}</Link>
           <Link to="/system"><Icon name="shield" size={18} />{t("System")}</Link>
+          <Link to="/guide"><Icon name="file" size={18} />{t("Anleitungen")}</Link>
           <Link to="/settings"><Icon name="sliders" size={18} />{t("Darstellung")}</Link>
           <span className="soon" aria-disabled="true"><Icon name="kanban" size={18} />{t("Kanban")}<span className="tag">{t("PHASE 3")}</span></span>
           {me.auth_mode === "oidc" && <button type="button" onClick={onLogout}><Icon name="power" size={18} />{t("Abmelden")}</button>}

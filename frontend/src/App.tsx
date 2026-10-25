@@ -31,6 +31,7 @@ const LogsPage = lazy(() => import("./pages/LogsPage").then(m => ({ default: m.L
 const ExtensionsPage = lazy(() => import("./pages/ExtensionsPage").then(m => ({ default: m.ExtensionsPage })));
 const MarketplacePage = lazy(() => import("./pages/MarketplacePage").then(m => ({ default: m.MarketplacePage })));
 const OperationsPage = lazy(() => import("./pages/OperationsPage").then(m => ({ default: m.OperationsPage })));
+const GuidePage = lazy(() => import("./pages/GuidePage").then(m => ({ default: m.GuidePage })));
 const TerminalPage = lazy(() => import("./pages/TerminalPage").then(m => ({ default: m.TerminalPage })));
 const WorkspacePage = lazy(() => import("./pages/WorkspacePage").then(m => ({ default: m.WorkspacePage })));
 
@@ -81,6 +82,7 @@ function AppContent() {
                 case "providers": return <ProvidersHubPage />;
                 case "rooms": return <RoomsPage />;
                 case "room": return <RoomPage key={page.id} roomId={page.id} />;
+                case "guide": return <GuidePage />;
                 case "agent": return <AgentPage page={page} />;
                 case "operations": return <OperationsPage section={page.section} host={page.host} />;
                 case "kanban": return <KanbanPage host={page.host} />;

@@ -52,6 +52,7 @@ const GROUPS: { id: string; label: string; items: NavItem[] }[] = [
     { to: "/providers", get label() { return t("Anbieter"); }, icon: "coin" },
     { to: "/logs", get label() { return t("Logs"); }, icon: "layers" },
     { to: "/system", get label() { return t("System"); }, icon: "shield" },
+    { to: "/guide", get label() { return t("Anleitungen"); }, icon: "file" },
   ] },
 ];
 const STORE = "hermes-nav-groups";
