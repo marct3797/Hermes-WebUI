@@ -14,11 +14,53 @@ from pydantic import BaseModel, Field
 
 from ..auth import User, current_user, fresh_user
 from ..dashboard_ops import clip
-from .agents import Tgt, upstream
+from ..operations import HostdClient
+from .agents import HostId, Tgt, upstream
 from .dashboard import Dash, audit
 from .tools import _check_value, pick, scope
 
 router = APIRouter(prefix="/bff/h/{host}/{runtime}/{agent}", dependencies=[Depends(current_user)])
+
+MemFile = Literal["MEMORY.md", "USER.md"]
+MAX_MEM_CHARS = 262144  # hostd nimmt höchstens 256 KiB
+OLD_HOSTD = "Der Host-Dienst ist zu alt für Gedächtnisdateien. Aktualisiere hostd auf dem Rechner."
+
+
+class MemFileIn(BaseModel):
+    content: str = Field(max_length=MAX_MEM_CHARS)
+    expected_sha256: str = Field(min_length=1, max_length=128)
+
+
+def _daemon(request: Request, host: HostId) -> HostdClient:
+    from .operations import daemon
+    return daemon(request, host)
+
+
+def _profile(target: Tgt) -> str:
+    return target.agent.id  # hostd-Profil = Agent-ID, wie scope() in tools.py
+
+
+def _mem_err(exc: HTTPException) -> HTTPException:
+    """hostd-Fehler ohne Pfade auf Deutsch abbilden."""
+    if exc.status_code == 404:
+        return HTTPException(501, OLD_HOSTD)
+    if exc.status_code == 409:
+        return HTTPException(409, "Die Datei wurde inzwischen geändert. Lade neu und speichere erneut.")
+    if exc.status_code == 413:
+        return HTTPException(413, "Die Datei ist zu groß für den Host-Dienst")
+    if exc.status_code == 422:
+        return HTTPException(422, "Der Inhalt ist ungültig (nur UTF-8-Text ohne NUL-Zeichen)")
+    if exc.status_code in (401, 403):
+        return HTTPException(502, "Der Host-Dienst lehnt die Anfrage ab")
+    return HTTPException(exc.status_code if 400 <= exc.status_code < 600 else 502,
+                         exc.detail if isinstance(exc.detail, str) else "Der Host-Dienst meldet einen Fehler")
+
+
+async def _mem_get(request: Request, target: Tgt, suffix: str):
+    try:
+        return await _daemon(request, target.host.id).request("GET", f"/v1/profiles/{_profile(target)}/memory-files" + suffix)
+    except HTTPException as exc:
+        raise _mem_err(exc) from exc
 
 Provider = Annotated[str, Path(pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")]
 FIELD_FIELDS = ("key", "label", "kind", "description", "placeholder", "required", "is_set", "options", "url")
@@ -61,6 +103,44 @@ async def _overview(target: Tgt, dash: Dash) -> dict[str, Any]:
 @router.get("/hermes-memory")
 async def overview(target: Tgt, dash: Dash):
     return await _overview(target, dash)
+
+
+@router.get("/hermes-memory/files")
+async def mem_list(request: Request, target: Tgt):
+    body = await _mem_get(request, target, "")
+    files = body.get("files") if isinstance(body, dict) else None
+    if not isinstance(files, list):
+        raise HTTPException(502, "Der Host-Dienst liefert die Dateiliste in einer unbekannten Form")
+    out = [f for f in files if isinstance(f, dict) and f.get("name") in ("MEMORY.md", "USER.md")]
+    if len(out) != 2:
+        raise HTTPException(502, "Der Host-Dienst liefert die Dateiliste in einer unbekannten Form")
+    return {"files": out}
+
+
+@router.get("/hermes-memory/files/{name}")
+async def mem_read(request: Request, target: Tgt, name: MemFile):
+    body = await _mem_get(request, target, f"/{name}")
+    if not isinstance(body, dict) or body.get("name") != name or not isinstance(body.get("content"), str):
+        raise HTTPException(502, "Der Host-Dienst liefert die Datei in einer unbekannten Form")
+    return body
+
+
+@router.put("/hermes-memory/files/{name}")
+async def mem_write(request: Request, target: Tgt, name: MemFile, req: MemFileIn,
+                    user: User = Depends(fresh_user)):
+    _limit(request, user)
+    if "\x00" in req.content:
+        raise HTTPException(422, "Der Inhalt ist ungültig (nur UTF-8-Text ohne NUL-Zeichen)")
+    try:
+        result = await _daemon(request, target.host.id).request(
+            "PUT", f"/v1/profiles/{_profile(target)}/memory-files/{name}",
+            body={"content": req.content, "expected_sha256": req.expected_sha256})
+    except HTTPException as exc:
+        raise _mem_err(exc) from exc
+    if not isinstance(result, dict):
+        raise HTTPException(502, "Der Host-Dienst liefert die Datei in einer unbekannten Form")
+    audit(request, user, "hermes_memory.file", target, file=name, chars=len(req.content))
+    return result
 
 
 @router.put("/hermes-memory/provider")
