@@ -3,11 +3,13 @@ import { ApiError, api } from "../api";
 import { Icon } from "../components/Icon";
 import { PageHead } from "../components/PageHead";
 import { StepUpNote, webUrl } from "../components/providers/StepUpNote";
-import type { AgentRef, HmField, HmOverview, HmProvider } from "../types";
+import type { AgentRef, HmField, HmFileName, HmOverview, HmProvider } from "../types";
 import { t } from "../i18n";
 
 const STATUS: Record<string, string> = { ready: "bereit", needs_config: "Key fehlt", unavailable: "Programm fehlt", get missing() { return t("nicht gefunden"); } };
 const FILES = [["memory", "MEMORY.md"], ["user", "USER.md"]] as const;
+const MEM_NAMES: HmFileName[] = ["MEMORY.md", "USER.md"];
+const MEM_LIMIT = 262144;
 
 /** Faehigkeit des Hostes: Fehler eines Aufrufs als Text oder als Hinweis auf die frische Anmeldung. */
 function useAction() {
@@ -39,6 +41,7 @@ export function HermesMemoryPage({ agent, label }: { agent: AgentRef; label: str
       {error && <p className="banner" role="alert"><Icon name="alert" />{error}</p>}
       {!data && !error && <p className="muted">{t("Lade…")}</p>}
       {data && <Builtin agent={agent} files={data.files} onChanged={() => void load()} />}
+      {data && <MemFiles agent={agent} />}
       {data && (
         <section aria-label={t("Externe Anbieter")} className="mem-prov">
           <h2>{t("Externe Anbieter")}</h2>
@@ -47,6 +50,104 @@ export function HermesMemoryPage({ agent, label }: { agent: AgentRef; label: str
         </section>
       )}
     </main>
+  );
+}
+
+/** Hermes-Dateien (MEMORY.md, USER.md) lesen und bearbeiten. Inhalt kommt vom Host-Dienst, nicht vom Dashboard. */
+function MemFiles({ agent }: { agent: AgentRef }) {
+  const [missing, setMissing] = useState(false);
+  const [failed, setFailed] = useState<string>();
+  useEffect(() => {
+    let stop = false;
+    api.hmFiles(agent).then(() => { if (!stop) { setMissing(false); setFailed(undefined); } },
+      (e: Error) => {
+        if (stop) return;
+        if (e instanceof ApiError && (e.status === 501 || e.status === 503)) setMissing(true);
+        else setFailed(e.message);
+      });
+    return () => { stop = true; };
+  }, [agent.host, agent.runtime, agent.agent]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (missing) return (
+    <section className="card tool-panel" role="region" aria-label="Hermes-Dateien">
+      <b>Hermes-Dateien</b>
+      <p className="muted small" style={{ margin: 0 }}>Der Host-Dienst kennt diese Funktion nicht und ist vermutlich veraltet. Mit deploy/install-hostd.sh aktualisieren.</p>
+    </section>
+  );
+  if (failed) return (
+    <section className="card tool-panel" role="region" aria-label="Hermes-Dateien">
+      <b>Hermes-Dateien</b>
+      <p className="banner" role="alert"><Icon name="alert" /><span>{failed}</span></p>
+    </section>
+  );
+  return (
+    <section className="card tool-panel" role="region" aria-label="Hermes-Dateien">
+      <b>Hermes-Dateien</b>
+      <p className="muted small" style={{ margin: 0 }}>Einträge sind durch eine Zeile mit § getrennt. Änderungen gelten ab der nächsten Sitzung.</p>
+      {MEM_NAMES.map((name) => <MemCard key={name} agent={agent} name={name} />)}
+    </section>
+  );
+}
+
+function MemCard({ agent, name }: { agent: AgentRef; name: HmFileName }) {
+  const [saved, setSaved] = useState<{ content: string; sha: string; size: number }>();
+  const [draft, setDraft] = useState("");
+  const [error, setError] = useState<string>();
+  const [stepUp, setStepUp] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [conflict, setConflict] = useState(false);
+  const [done, setDone] = useState<string>();
+  const dirty = saved !== undefined && draft !== saved.content;
+  const tooLong = draft.length > MEM_LIMIT;
+  const load = useCallback(async () => {
+    setError(undefined); setConflict(false);
+    try {
+      const f = await api.hmFile(agent, name);
+      setSaved({ content: f.content, sha: f.sha256, size: f.size }); setDraft(f.content); setDone(undefined);
+    } catch (e) { setError((e as Error).message); }
+  }, [agent.host, agent.runtime, agent.agent, name]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    if (!dirty) return;
+    const fn = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener("beforeunload", fn);
+    return () => window.removeEventListener("beforeunload", fn);
+  }, [dirty]);
+  const save = async () => {
+    if (!saved || !dirty || tooLong) return;
+    if (!window.confirm(t("{key} speichern", { key: name }))) return;
+    setBusy(true); setError(undefined); setStepUp(false); setConflict(false); setDone(undefined);
+    try {
+      const r = await api.hmSaveFile(agent, name, draft, saved.sha);
+      const f = await api.hmFile(agent, name);
+      setSaved({ content: f.content, sha: f.sha256, size: f.size }); setDraft(f.content);
+      setDone(t("Gespeichert. Der bisherige Text liegt im Verlauf."));
+    } catch (e) {
+      if (e instanceof ApiError && e.code === "step_up_required") setStepUp(true);
+      else if (e instanceof ApiError && e.status === 409) setConflict(true);
+      else setError((e as Error).message);
+    } finally { setBusy(false); }
+  };
+  return (
+    <div className="pf-fld" role="region" aria-label={name}>
+      <div className="row" style={{ gap: 8 }}>
+        <b>{name}</b>
+        {saved && <span className="muted small">{t("{reason} · {chars} Zeichen", { reason: name, chars: saved.size.toLocaleString("de-DE") })}</span>}
+        <span className="grow" />
+        {conflict && <button type="button" className="btn btn-s btn-g" onClick={() => void load()}>{t("Neu laden")}</button>}
+      </div>
+      <label className="hint" htmlFor={`hm-file-${name}`}>Inhalt von {name}</label>
+      <textarea id={`hm-file-${name}`} className="pf-in mono" rows={8} value={draft} spellCheck={false} aria-label={`Inhalt von ${name}`} onChange={(e) => setDraft(e.target.value)} />
+      <div className="row" style={{ gap: 8 }}>
+        <span className="hint">{t("{toLocaleString} / {toLocaleString2} Zeichen", { toLocaleString: draft.length.toLocaleString("de-DE"), toLocaleString2: MEM_LIMIT.toLocaleString("de-DE") })}</span>
+        <span className="grow" />
+        <button type="button" className="btn btn-s btn-p" disabled={busy || !dirty || tooLong} onClick={() => void save()}>{t("Speichern")}</button>
+      </div>
+      {tooLong && <span className="hint" role="alert">{t("Der Inhalt ist größer als 200 KB")}</span>}
+      {conflict && <p className="banner" role="alert"><Icon name="alert" /><span>{t("SOUL.md wurde inzwischen geändert")}</span></p>}
+      {stepUp && <StepUpNote what={t("Diese Änderung")} />}
+      {error && <p className="banner" role="alert"><Icon name="alert" /><span>{error}</span></p>}
+      {done && <p className="muted small" role="status" style={{ margin: 0 }}>{done}</p>}
+    </div>
   );
 }
 
