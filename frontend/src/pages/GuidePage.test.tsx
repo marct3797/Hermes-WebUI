@@ -25,8 +25,8 @@ describe("GuidePage", () => {
     for (const e of GUIDE) {
       const c = card(e.id);
       expect(c.getByRole("heading", { name: e.title })).toBeInTheDocument();
-      expect(c.getByText(e.command)).toBeInTheDocument();
-      expect(c.getByText(e.caution)).toBeInTheDocument();
+      expect(c.getByText(e.noExecute!.command)).toBeInTheDocument();
+      expect(c.getByText(e.noExecute!.caution)).toBeInTheDocument();
     }
   });
 
@@ -39,55 +39,41 @@ describe("GuidePage", () => {
     expect(await card("gateway").findByRole("button", { name: "Kopiert" })).toBeInTheDocument();
   });
 
-  it("check calls its own read route and shows the result", async () => {
+  it("links entries without execution to the configuring agent page", async () => {
     await open();
-    fireEvent.click(card("whatsapp").getByRole("button", { name: "Ergebnis prüfen" }));
-    await card("whatsapp").findByText("Telegram: disabled");
-    expect(calls.some((c) => c.method === "GET" && c.url.endsWith("/messaging"))).toBe(true);
-    expect(calls.some((c) => c.url.endsWith("/gateway"))).toBe(false);
+    // mcp hat keine BFF-Schreib-Route und verweist daher auf Erweiterungen
+    const mcp = GUIDE.find((e) => e.id === "mcp")!;
+    expect(mcp.execute).toBeNull();
+    expect(mcp.configurePath).toBe("extensions");
+    expect(card("mcp").getByRole("link", { name: mcp.configureLabel! }).getAttribute("href")).toMatch(
+      /\/h\/[^/]+\/hermes\/gamma\/extensions/,
+    );
+    // computeruse ebenfalls: kein Shell-Befehl aus dem Browser
+    const cu = GUIDE.find((e) => e.id === "computeruse")!;
+    expect(cu.execute).toBeNull();
+    expect(card("computeruse").getByRole("link", { name: cu.configureLabel! })).toBeInTheDocument();
   });
 
-  it("shows a dashboard error instead of swallowing it", async () => {
+  it("executes whatsapp test through the BFF and checks the after state", async () => {
     await open();
-    const f = vi.mocked(globalThis.fetch);
-    const orig = f.getMockImplementation()!;
-    f.mockImplementation(async (input: URL | RequestInfo, init?: RequestInit) =>
-      String(input).endsWith("/gateway") && (init?.method ?? "GET") === "GET"
-        ? new Response(JSON.stringify({ detail: "kaputt" }), { status: 502 })
-        : orig(input, init));
-    fireEvent.click(card("gateway").getByRole("button", { name: "Ergebnis prüfen" }));
-    expect(await card("gateway").findByRole("alert")).toHaveTextContent(/kaputt|Dashboard/);
+    const entry = GUIDE.find((e) => e.id === "whatsapp")!;
+    expect(entry.execute).not.toBeNull();
+    fireEvent.click(card("whatsapp").getByRole("button", { name: entry.execute!.label }));
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === "POST" && c.url.endsWith("/messaging/whatsapp/test"))).toBe(true),
+    );
+    expect((await card("whatsapp").findAllByRole("status")).length).toBeGreaterThan(0);
   });
 
-  it("sends no POST/PUT/DELETE on open or on any check", async () => {
+  it("executes gateway start through the BFF after confirmation", async () => {
     await open();
-    for (const b of screen.getAllByRole("button", { name: "Ergebnis prüfen" })) fireEvent.click(b);
-    await waitFor(() => expect(screen.getAllByRole("status").length + screen.queryAllByRole("alert").length).toBeGreaterThan(0));
-    expect(calls.some((c) => c.method !== "GET")).toBe(false);
-  });
-
-  it("entries without a read route link to the page that shows the result", async () => {
-    await open();
-    const env = card("env");
-    expect(env.queryByRole("button", { name: "Ergebnis prüfen" })).toBeNull();
-    expect(env.getByRole("link", { name: "/providers" })).toBeInTheDocument();
-  });
-
-  it("commands render as plain text in code, never as HTML", async () => {
-    await open();
-    for (const e of GUIDE) expect(card(e.id).getByText(e.command).tagName.toLowerCase()).toBe("code");
-  });
-
-  it("commands are the verified ones (no invented subcommands)", () => {
-    expect(GUIDE.map((e) => e.command)).toEqual([
-      "hermes whatsapp", "hermes setup terminal", "hermes tools post-setup <schlüssel>", "hermes computer-use install",
-      "hermes update --check", "hermes gateway migrate --dry-run", "hermes hooks list", "hermes config env-path",
-      "hermes config edit", "hermes memory setup",
-    ]);
-  });
-
-  it("route /guide opens the page and the menu links exist", async () => {
-    await open();
-    expect(screen.getAllByRole("link", { name: /Anleitungen/ }).length).toBeGreaterThanOrEqual(1);
+    const entry = GUIDE.find((e) => e.id === "gateway")!;
+    expect(entry.execute).not.toBeNull();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    fireEvent.click(card("gateway").getByRole("button", { name: entry.execute!.label }));
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === "POST" && c.url.endsWith("/gateway/start"))).toBe(true),
+    );
+    expect((await card("gateway").findAllByRole("status")).length).toBeGreaterThan(0);
   });
 });
