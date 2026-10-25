@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { App } from "../App";
 import { resetRedirect } from "../api";
@@ -20,8 +20,8 @@ describe("Modelle", () => {
   it("shows active model, options and helpers without inventing", async () => {
     await open();
     expect(await screen.findByRole("region", { name: "Hauptmodell" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Auswahl" }).textContent).toContain("claude-small");
-    expect(screen.getByRole("region", { name: "Hilfsmodelle" }).textContent).toContain("coding");
+    await waitFor(() => expect(screen.getByRole("region", { name: "Auswahl" }).textContent).toContain("claude-small"));
+    await waitFor(() => expect(screen.getByRole("region", { name: "Hilfsmodelle" }).textContent).toContain("coding"));
     expect(document.body.textContent).not.toMatch(/sk-ant|SECRET/i);
   });
 

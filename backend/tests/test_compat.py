@@ -15,7 +15,7 @@ def prefix(path: str) -> str:
 
 def test_every_path_the_bff_calls_is_listed():
     listed = {prefix(p) for paths in USED.values() for p in paths} | {prefix(p) for v in OWN.values() for p in v.split()}
-    listed.add("/api/plugins/kanban")  # die Konstante P in routes/kanban.py; die Pfade dahinter stehen unter „kanban-plugin“
+    listed |= {"/api/plugins/kanban", "/api/plugins/hermes-achievements"}  # die Konstante P in routes/kanban.py und routes/achievements.py; die Pfade dahinter stehen unter „kanban-plugin“
     called = {prefix(m.group(1)) for f in APP.rglob("*.py") if f.name not in SKIP
               for line in f.read_text().splitlines() if not line.lstrip().startswith(("#", '"""', "@router", "@app", "@quota_router", "@host_router"))
               for m in LITERAL.finditer(line)}

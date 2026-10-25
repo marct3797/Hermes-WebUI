@@ -15,30 +15,30 @@ cd backend
 python -m devtools.check_upstream /pfad/zu/hermes-agent --coverage
 ```
 
-Von 390 Routen (Modul, Methode, Pfad) nutzt das BFF 159 pfadgenau. Nach Modul, wenig genutzte zuerst:
+Von 390 Routen (Modul, Methode, Pfad) nutzt das BFF 202 pfadgenau. Nach Modul, wenig genutzte zuerst:
 
 | Modul | Routen | genutzt | Inhalt |
 |---|---:|---:|---|
-| `web_routers/ops.py` | 28 | 15 | Gateway, Doctor, Backup, Gedächtnis zurücksetzen, Pairing, Webhooks (genutzt); **offen**: Import, Checkpoints, Hooks (bewusst aus), Credential-Pool |
+| `web_routers/ops.py` | 28 | 18 | Gateway, Doctor, Backup, Gedächtnis zurücksetzen, Pairing, Webhooks, Schlüssel-Pools (genutzt); **offen**: Import, Checkpoints, Hooks (bewusst aus) |
 | `web_routers/git.py` | 21 | 0 | Git im Dashboard (die WebUI nutzt dafür `hostd`) |
 | `web_routers/local_models.py` | 18 | 1 | lokale Modelle: Status (genutzt); **bewusst nicht**: Katalog, Hardware, Download, Server, Installieren (CLI) |
 | `web_routers/files.py` | 18 | 0 | Dateien im Dashboard (die WebUI nutzt dafür `hostd`) |
 | `web_routers/messaging.py` | 11 | 7 | Messaging-Plattformen: Liste, Konfiguration, Test, Telegram-Einrichtung. **Nicht**: WhatsApp-Kopplung (4 Routen, QR-Code) |
-| `web_routers/audio.py` | 10 | 0 | Sprache: TTS, STT, Live-Sprachmodus |
+| `web_routers/audio.py` | 10 | 3 | Sprache: Live-Status, Vorlesen, Abschrift (genutzt, Aufnahmen höchstens 1,4 MB); **bewusst nicht**: `voice-config` (liefert Anbieter-Schlüssel), Live-Sitzungen, WebSockets |
 | `web_routers/actions.py` | 8 | 3 | Gateway neu starten (genutzt), Aktions-Status (genutzt); **nicht**: leeren (Drain), migrieren, Hermes-Update |
 | `web_routers/chat_ws.py` | 5 | 0 | Terminal-Chat per WebSocket (die WebUI nutzt die Gateway-API) |
 | `web_routers/delegation.py` | 4 | 2 | Delegation: Routing lesen, Backend wählen (genutzt); **nicht**: Modellzuordnung und Profil-Routen schreiben |
 | `web_routers/memory_providers.py` | 3 | 2 | Felder lesen/schreiben (genutzt); **bewusst nicht**: `POST .../setup` (führt `curl \| sh` aus) |
-| `web_routers/status.py` | 20 | 3 | Status (Gateway-Zustand genutzt), Gesundheit, Systemwerte, Curator, Lerngraph |
+| `web_routers/status.py` | 20 | 11 | Status, Systemwerte, Curator (pausieren/starten), Lerngraph (lesen/bearbeiten/löschen); **nicht**: Host-Identität, Gesundheit, SSH-Besitz, Portal |
 | `web_routers/tools.py` | 12 | 8 | Toolsets, Anbieter, Keys, Modelle; **bewusst nicht**: Terminal-Backend setzen, `post-setup`, Computer-Use-Rechte, siehe unten |
 | `web_routers/models.py` | 7 | 7 | Hauptmodell, Auswahl, Hilfsmodelle, Mixture of Agents, empfohlenes Standardmodell (alle genutzt) |
-| `plugins/kanban` | 48 | 18 | Kanban |
+| `plugins/kanban` | 48 | 27 | Kanban inkl. Diagnose, Worker, Lauf beenden, Dispatch (erst Vorschau), Schätzen, Spezifizieren, Board wechseln; **nicht**: Anhänge, Export/Import, Zerlegen |
 | `web_routers/profiles.py` | 20 | 10 | Profile anlegen, löschen, umbenennen, exportieren, importieren |
-| `web_routers/dashboard_ui.py` | 16 | 3 | Plugin-Verwaltung, Themes, Schrift |
+| `web_routers/dashboard_ui.py` | 16 | 11 | Plugin-Verwaltung, Themes, Schrift (nur aus der Liste); **nicht**: eigene Theme-Dateien |
 | `web_routers/sessions.py` | 18 | 12 | Statistik, Export, Aufräumen, Mehrfach-Löschen, leere löschen (genutzt); **nicht**: Import, Zeitachse |
 | `gateway/api_server` | 46 | 20 | Läufe, Sitzungen, Jobs; ungenutzt u. a. OpenAI-Schnittstellen, Artefakte, Raum-Mitglieder |
-| `web_routers/mcp.py` | 12 | 5 | MCP testen, aktivieren, entfernen, OAuth |
-| `web_routers/config_env.py` | 15 | 12 | eigene Endpunkte (genutzt); **offen**: Defaults, Egress, Roh-YAML |
+| `web_routers/mcp.py` | 12 | 11 | MCP testen, aktivieren, entfernen, OAuth |
+| `web_routers/config_env.py` | 15 | 13 | eigene Endpunkte, Egress-Status (genutzt); **offen**: Defaults, Roh-YAML |
 | `web_routers/cron.py` | 13 | 12 | Zeitpläne |
 | `web_routers/skills.py` | 13 | 13 | Skills |
 
@@ -144,3 +144,23 @@ Das echte BFF gegen das echte Hermes-Dashboard 0.22.5. Befunde, die der Mock nic
 
 **Nicht live belegt** (nur Mock + Quelltext): Erfolgspfade von Aufräumen, Mehrfach-Löschen, Leere löschen und Export (der Sitzungsspeicher der Sandbox ließ sich ohne laufendes Gateway nicht befüllen; `sessions/import` verlangt Client-Versionsabgleich), Webhook anlegen/umschalten/löschen und Pairing freigeben/sperren (brauchen eingeschaltete Webhook-Plattform bzw. eine echte Anfrage; Einschalten startet das Gateway neu).
 
+## P2-Reste und P3 gegen ein echtes Dashboard geprüft (`devtools/real/contract_p3_bff.py`, Sandbox-HOME, 33 von 33)
+
+Schlüssel-Pools, Sprache, System, Curator, Lerngraph, Darstellung, Datenschutz, Achievements und Kanban-Diagnose, jeweils über das echte BFF gegen das echte Dashboard 0.22.5. Befunde, die der Mock nicht gezeigt hat:
+
+- **Sprache**: `voice-live/status` meldet `available: false` (kein OpenAI-Schlüssel), obwohl Vorlesen trotzdem Audio liefert. Die Seite nennt den Status deshalb „Live-Sprache“ und sperrt Vorlesen und Abschrift nicht. Das Vorlesen ging in der Sandbox an einen externen Sprachdienst; Anbieter und Kosten stehen in der Hermes-Konfiguration.
+- **Datenschutz**: der Egress-Status ist mehrzeiliger Text („Egress proxy status … Enabled: no …“), die Seite zeigt ihn mit Zeilenumbrüchen.
+- **Schlüssel-Pools**: der Schlüssel kommt nie zurück, nur die letzten vier Zeichen; Entfernen nur für `manual`-Einträge und nur mit eingetipptem Anbieternamen.
+- **Achievements**: 60 Erfolge in der Sandbox, geheime erscheinen als „???“.
+
+**Nicht live belegt** (nur Mock + Quelltext): Lerngraph lesen/bearbeiten/löschen (der Graph der frischen Sandbox ist leer), Curator-Lauf (verbraucht Tokens), Achievements zurücksetzen und neu scannen, Metrik-Senden (schickt Daten weg), Dispatch mit Start, Lauf beenden, Schätzen und Spezifizieren (brauchen ein Hilfsmodell).
+
+## P3: bewusst nicht gebaut
+
+- **Artefakte** (`POST /v1/artifacts/upload`, `GET /v1/artifacts/download/{id}` der Gateway-API): Hermes bietet sie, die WebUI bildet sie **noch nicht** ab. Offen, nicht abgelehnt.
+- **Computer Use**: Status (`GET /api/tools/computer-use/status`) und Berechtigungen gibt es; die Rechte vergibt die WebUI bewusst nicht (Betriebssystem-Berechtigung), der Status ist **noch nicht** angezeigt.
+- **Pets**: im Quelltext nur als CLI-Unterbefehl (`hermes pets`) gefunden, keine Dashboard- oder Gateway-Route; die WebUI bildet es nicht ab.
+- **Eigene Theme-Dateien**: nicht geprüft, ob Hermes dafür eine Route anbietet.
+- **`host/identity`, `health/*`, `ssh/ownership`, `portal`, `ops/dump`, `ops/debug-share`, `ops/config-migrate`**: Anbindung des Desktop-Clients bzw. Upload von Diagnosedaten an einen Fremddienst.
+- **Sprache**: `voice-config`, Live-Sitzungen und WebSockets (Dauerverbindungen, Schlüsselauslieferung).
+- **Lerngraph**: als Liste mit Verbindungsanzahl, nicht als gezeichneter Graph.

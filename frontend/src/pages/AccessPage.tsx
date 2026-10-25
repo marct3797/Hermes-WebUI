@@ -1,28 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, api } from "../api";
+import { api } from "../api";
 import { PageHead } from "../components/PageHead";
-import { StepUpNote } from "../components/providers/StepUpNote";
+import { useAction } from "../components/useAction";
 import type { AcHooks, AcPairing, AgentRef } from "../types";
-
-function useAction() {
-  const [error, setError] = useState<string>();
-  const [stepUp, setStepUp] = useState(false);
-  const [missing, setMissing] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const run = async (fn: () => Promise<unknown>): Promise<boolean> => {
-    setBusy(true); setError(undefined); setStepUp(false); setMissing(false);
-    try { await fn(); return true; }
-    catch (e) {
-      if (e instanceof ApiError && e.code === "step_up_required") setStepUp(true);
-      else if (e instanceof ApiError && e.status === 501) setMissing(true);
-      else setError((e as Error).message);
-      return false;
-    }
-    finally { setBusy(false); }
-  };
-  const notes = <>{stepUp && <StepUpNote what="Diese Änderung" />}{missing && <p className="banner">Für diese Runtime ist kein Dashboard eingerichtet.</p>}{error && <p className="banner" role="alert">{error}</p>}</>;
-  return { run, notes, busy };
-}
 
 export default function AccessPage({ agent }: { agent: AgentRef }) {
   const [pairing, setPairing] = useState<AcPairing | null>(null);

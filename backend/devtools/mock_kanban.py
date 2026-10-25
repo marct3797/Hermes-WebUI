@@ -92,6 +92,10 @@ class BoardIn(BaseModel):
     color: Optional[str] = None
 
 
+class Terminate(BaseModel):
+    reason: Optional[str] = None
+
+
 def create_mock() -> FastAPI:
     app = FastAPI()
     app.state.db = seed()
@@ -306,6 +310,74 @@ def create_mock() -> FastAPI:
         if ok:
             child["parents"].remove(parent_id)
         return {"ok": ok}
+
+    # Tiefe: Läufe, Worker, Diagnose, Spezifizieren/Schätzen, Dispatch, Board wechseln (Formen nach plugin_api.py 0.22.5)
+    app.state.live = {21: {"id": 21, "task_id": "t_aaaa0003", "profile": "beta", "worker_pid": 4242, "started_at": NOW - 300, "claim_lock": "host:4242",
+                           "claim_expires": NOW + 600, "last_heartbeat_at": NOW - 10, "max_runtime_seconds": 3600, "ended_at": None}}
+    app.state.drop_terminate = False
+
+    @app.get("/api/plugins/kanban/diagnostics")
+    def diagnostics(board: Optional[str] = None, severity: Optional[str] = None):
+        b = bd(board)
+        rows = [{"task_id": t["id"], "task_title": t["title"], "task_status": t["status"], "task_assignee": t["assignee"],
+                 "diagnostics": [{"kind": "stuck_in_blocked", "severity": "warning", "title": "Aufgabe blockiert", "detail": "Wartet seit Stunden", "actions": [{"kind": "x"}]}]}
+                for t in b["tasks"].values() if t["status"] == "blocked"]
+        return {"diagnostics": rows, "count": len(rows)}
+
+    @app.get("/api/plugins/kanban/workers/active")
+    def workers(board: Optional[str] = None):
+        bd(board)
+        rows = [{"run_id": r["id"], "task_id": r["task_id"], "task_title": "Bericht schreiben", "task_status": "running", "task_assignee": r["profile"], "profile": r["profile"],
+                 "worker_pid": r["worker_pid"], "started_at": r["started_at"], "claim_lock": r["claim_lock"], "claim_expires": r["claim_expires"],
+                 "last_heartbeat_at": r["last_heartbeat_at"], "max_runtime_seconds": r["max_runtime_seconds"]} for r in app.state.live.values() if r["ended_at"] is None]
+        return {"workers": rows, "count": len(rows), "checked_at": NOW}
+
+    @app.get("/api/plugins/kanban/runs/{rid}")
+    def get_run(rid: int, board: Optional[str] = None):
+        if rid not in app.state.live:
+            raise HTTPException(404, f"run {rid} not found")
+        return {"run": app.state.live[rid]}
+
+    @app.get("/api/plugins/kanban/runs/{rid}/inspect")
+    def inspect_run(rid: int, board: Optional[str] = None):
+        if rid not in app.state.live:
+            raise HTTPException(404, f"run {rid} not found")
+        return {"run_id": rid, "alive": True, "pid": 4242, "cpu_percent": 1.5, "memory_rss_bytes": 52428800, "memory_vms_bytes": 1, "num_threads": 4, "num_fds": 9,
+                "status": "running", "create_time": 1.0, "cmdline": ["hermes", "--api-key", "sk-LEAK-cmdline"]}
+
+    @app.post("/api/plugins/kanban/runs/{rid}/terminate")
+    def terminate(rid: int, p: Terminate, board: Optional[str] = None):
+        r = app.state.live.get(rid)
+        if r is None:
+            raise HTTPException(404, f"run {rid} not found")
+        if r["ended_at"] is not None:
+            raise HTTPException(409, f"run {rid} already ended")
+        if not app.state.drop_terminate:
+            r["ended_at"] = NOW
+        return {"ok": True, "run_id": rid, "task_id": r["task_id"]}
+
+    @app.post("/api/plugins/kanban/tasks/{tid}/specify")
+    def specify(tid: str, board: Optional[str] = None):
+        t = tk(bd(board), tid)
+        t["title"] = t["title"] + " (präzisiert)"
+        return {"ok": True, "task_id": tid, "reason": None, "new_title": t["title"]}
+
+    @app.post("/api/plugins/kanban/tasks/{tid}/estimate")
+    def estimate(tid: str, board: Optional[str] = None):
+        tk(bd(board), tid)
+        return {"ok": True, "est_tokens": 120000, "complexity": "M", "rationale": "Mehrere Dateien.", "model": "aux-model"}
+
+    @app.post("/api/plugins/kanban/dispatch")
+    def dispatch(dry_run: bool = False, max: int = 8, board: Optional[str] = None):
+        return {"spawned": [] if dry_run else ["t_aaaa0003"], "promoted": ["t_aaaa0004"], "dry_run": dry_run, "skipped_unassigned": []}
+
+    @app.post("/api/plugins/kanban/boards/{slug}/switch")
+    def switch(slug: str):
+        if slug not in app.state.db["boards"]:
+            raise HTTPException(404, f"board {slug!r} does not exist")
+        if not getattr(app.state, "drop_switch", False):
+            app.state.db["current"] = slug
+        return {"current": slug}
 
     return app
 

@@ -1,3 +1,4 @@
+import { AchievementsPage } from "./pages/AchievementsPage";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { ApiError, api, page as browser } from "./api";
 import { Shell } from "./components/Shell";
@@ -74,6 +75,7 @@ export function App() {
                 case "agent": return <AgentPage page={page} />;
                 case "operations": return <OperationsPage section={page.section} host={page.host} />;
                 case "kanban": return <KanbanPage host={page.host} />;
+                case "achievements": return <AchievementsPage host={page.host} />;
                 case "jobs": return <JobsPage host={page.host} />;
                 case "logs": return <LogsPage host={page.host} />;
                 case "extensions": return <ExtensionsPage host={page.host} />;

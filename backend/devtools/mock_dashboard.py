@@ -806,8 +806,10 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
 
     @app.get("/api/actions/{name}/status")
     async def action_status(name: str, lines: int = 200):
-        if name not in ("gateway-start", "gateway-stop", "gateway-restart", "tools-post-setup", "doctor"):
+        if name not in ("gateway-start", "gateway-stop", "gateway-restart", "tools-post-setup", "doctor", "curator-run"):
             raise HTTPException(404, "Unknown action")
+        if name == "curator-run":
+            return {"name": name, "running": False, "exit_code": 0, "pid": 4711, "lines": ["Curator fertig", "Authorization: Bearer sk-LEAK-curator"]}
         if name == "doctor":
             return {"name": name, "running": False, "exit_code": 0, "log": app.state.action_logs.get(name, "")}
         return {"name": name, "running": False, "exit_code": 0, "pid": 4242, "lines": app.state.action_lines[-lines:]}
@@ -962,6 +964,182 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
     async def plugin_hub(profile: str | None = None):
         profile_or_default(profile)
         return {"plugins": [{"name": "disk-cleanup", "version": "1.0", "description": "Räumt auf.", "runtime_status": "enabled", "path": "/geheim/pfad"}]}
+
+    # P3: System, Curator, Lerngraph, Darstellung, Datenschutz, Achievements (Form wie Hermes 0.22.5)
+    @app.get("/api/system/stats")
+    async def system_stats():
+        return {"system": "Linux", "release": "7.0", "arch": "x86_64", "hostname": "box", "python_version": "3.14", "python_impl": "CPython", "hermes_version": "0.22.5",
+                "cpu_count": 8, "cpu_percent": 5.0, "memory": {"total": 100, "used": 40}, "disk": {"total": 1000, "used": 500}, "uptime_seconds": 1234,
+                "env": {"OPENROUTER_API_KEY": "sk-LEAK-env"}, "home": "/home/someone/.hermes"}
+
+    @app.get("/api/curator")
+    async def curator_get(profile: str | None = None):
+        c = profile_or_default(profile).setdefault("curator", {"paused": False})
+        return {"enabled": True, "paused": c["paused"], "interval_hours": 168, "last_run_at": None, "min_idle_hours": 2, "stale_after_days": 30, "archive_after_days": 90}
+
+    @app.put("/api/curator/paused")
+    async def curator_paused(body: dict[str, Any], profile: str | None = None):
+        c = profile_or_default(profile).setdefault("curator", {"paused": False})
+        if not drop_writes:
+            c["paused"] = bool(body.get("paused"))
+        return {"ok": True, "paused": bool(body.get("paused"))}
+
+    @app.post("/api/curator/run")
+    async def curator_run(profile: str | None = None):
+        profile_or_default(profile)["curator_ran"] = True
+        return {"ok": True, "pid": 4711, "name": "curator-run"}
+
+    def graph_of(prof: dict[str, Any]) -> dict[str, Any]:
+        n = prof.get("graph_n")
+        if n:
+            return {"nodes": [{"id": f"s{i}", "label": f"s{i}", "kind": "skill"} for i in range(n)], "edges": [], "clusters": {}}
+        nodes = prof.setdefault("nodes", {"skill-a": "# Skill A\nText", "mem:1": "Merke dir das"})
+        return {"nodes": [{"id": k, "label": k, "kind": "memory" if k.startswith("mem:") else "skill", "path": "/home/x/skills/" + k} for k in nodes],
+                "edges": [{"source": "skill-a", "target": "mem:1"}] if len(nodes) > 1 else [], "clusters": {"general": 1}}
+
+    @app.get("/api/learning/graph")
+    async def learning_graph(profile: str | None = None):
+        return graph_of(profile_or_default(profile))
+
+    @app.get("/api/learning/node")
+    async def learning_node(id: str, profile: str | None = None):
+        nodes = profile_or_default(profile).setdefault("nodes", {"skill-a": "# Skill A\nText", "mem:1": "Merke dir das"})
+        if id not in nodes:
+            raise HTTPException(404, f"skill '{id}' not found")
+        return {"ok": True, "kind": "memory" if id.startswith("mem:") else "skill", "id": id, "label": id, "content": nodes[id]}
+
+    @app.put("/api/learning/node")
+    async def learning_edit(body: dict[str, Any], profile: str | None = None):
+        nodes = profile_or_default(profile).setdefault("nodes", {"skill-a": "# Skill A\nText", "mem:1": "Merke dir das"})
+        if body.get("id") not in nodes:
+            raise HTTPException(404, "not found")
+        if not drop_writes:
+            nodes[body["id"]] = body.get("content", "")
+        return {"ok": True}
+
+    @app.delete("/api/learning/node")
+    async def learning_delete(body: dict[str, Any], profile: str | None = None):
+        nodes = profile_or_default(profile).setdefault("nodes", {"skill-a": "# Skill A\nText", "mem:1": "Merke dir das"})
+        if body.get("id") not in nodes:
+            raise HTTPException(404, "not found")
+        if not drop_writes:
+            nodes.pop(body["id"])
+        return {"ok": True}
+
+    @app.get("/api/dashboard/themes")
+    async def themes(profile: str | None = None):
+        return {"themes": [{"name": "default", "label": "Default", "description": "x"}, {"name": "midnight", "label": "Midnight", "description": "y"}],
+                "active": profile_or_default(profile).get("theme", "default")}
+
+    @app.put("/api/dashboard/theme")
+    async def theme_set(body: dict[str, Any], profile: str | None = None):
+        if not drop_writes:
+            profile_or_default(profile)["theme"] = body.get("name")
+        return {"ok": True, "theme": body.get("name")}
+
+    @app.get("/api/dashboard/font")
+    async def font_get(profile: str | None = None):
+        return {"font": profile_or_default(profile).get("font", "theme")}
+
+    @app.put("/api/dashboard/font")
+    async def font_set(body: dict[str, Any], profile: str | None = None):
+        if not drop_writes:
+            profile_or_default(profile)["font"] = body.get("font")
+        return {"ok": True, "font": body.get("font")}
+
+    @app.get("/api/egress/status")
+    async def egress(profile: str | None = None):
+        profile_or_default(profile)
+        return {"text": "Egress-Proxy: aus (kein proxy-Block in config.yaml)"}
+
+    @app.get("/api/shared-metrics/consent")
+    async def metrics_get(profile: str | None = None):
+        p = profile_or_default(profile)
+        c = p.setdefault("metrics", {"enabled": False, "send": False, "decided": False})
+        return {**c, "managed": bool(p.get("managed"))}
+
+    @app.put("/api/shared-metrics/consent")
+    async def metrics_put(body: dict[str, Any], profile: str | None = None):
+        p = profile_or_default(profile)
+        if not drop_writes:
+            p["metrics"] = {"enabled": bool(body.get("enabled")), "send": bool(body.get("send")), "decided": True}
+        return {**p.setdefault("metrics", {"enabled": False, "send": False, "decided": False}), "managed": bool(p.get("managed"))}
+
+    ach = {"unlocked": ["let_him_cook"]}
+    app.state.ach = ach
+
+    def ach_snapshot() -> dict[str, Any]:
+        items = [{"id": "let_him_cook", "name": "Let Him Cook", "description": "Viele Werkzeugaufrufe", "category": "Agent Autonomy", "icon": "flame", "state": "unlocked", "unlocked": True,
+                  "tier": "Bronze", "progress": 250, "next_threshold": 500, "progress_pct": 50, "unlocked_at": 1_790_000_000, "evidence": {"session_id": "s1", "title": "sk-LEAK-title"}},
+                 {"id": "tinkerer", "name": "Tinkerer", "description": "Mehrere Werkzeuge", "category": "Tools", "icon": "wrench", "state": "discovered", "unlocked": False, "tier": None, "progress": 3, "next_threshold": 10, "progress_pct": 30},
+                 {"id": "sec", "name": "Echter Geheimname" if getattr(app.state, "ach_leaky", False) else "???", "description": "Kriterium: 100 Fehler" if getattr(app.state, "ach_leaky", False) else "Secret achievement", "criteria": "geheim", "category": "Secret", "icon": "secret", "state": "secret", "unlocked": False, "progress": 0}]
+        for it in items:
+            if it["id"] not in ach["unlocked"] and it["state"] == "unlocked":
+                it.update(state="discovered", unlocked=False, tier=None)
+        return {"achievements": items, "unlocked_count": sum(1 for i in items if i["unlocked"]), "discovered_count": 1, "secret_count": 1, "total_count": 3, "error": None, "generated_at": 1_790_000_100,
+                "is_stale": False, "scan_meta": {"status": {"state": "idle"}}, "sessions": [{"session_id": "s1", "title": "sk-LEAK-title"}]}
+
+    @app.get("/api/plugins/hermes-achievements/achievements")
+    async def ach_list():
+        return ach_snapshot()
+
+    @app.post("/api/plugins/hermes-achievements/rescan")
+    async def ach_rescan():
+        return {"ok": True, **ach_snapshot()}
+
+    @app.post("/api/plugins/hermes-achievements/reset-state")
+    async def ach_reset():
+        if not drop_writes:
+            ach["unlocked"] = []
+        return {"ok": True}
+
+    # Punkt 8: Schlüssel-Pools; Punkt 10: Sprache (Form wie Hermes 0.22.5 ops.py / audio.py)
+    def pool_of(prof: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+        return prof.setdefault("pool", {})
+
+    @app.get("/api/credentials/pool")
+    async def pool_list(profile: str | None = None):
+        return {"providers": [{"provider": p, "entries": e} for p, e in pool_of(profile_or_default(profile)).items() if e]}
+
+    @app.post("/api/credentials/pool")
+    async def pool_add(body: dict[str, Any], profile: str | None = None):
+        pool = pool_of(profile_or_default(profile)).setdefault(str(body.get("provider")), [])
+        if not drop_writes:
+            n = len(pool) + 1
+            pool.append({"index": n, "id": f"id{n}", "label": body.get("label") or f"key #{n}", "auth_type": "api_key", "source": "manual", "priority": 0,
+                         "last_status": None, "request_count": 0, "token_preview": "sk-p…" + str(body.get("api_key"))[-4:], "has_refresh": False})
+        return {"ok": True, "provider": body.get("provider"), "count": len(pool)}
+
+    @app.delete("/api/credentials/pool/{provider}/{index}")
+    async def pool_remove(provider: str, index: int, profile: str | None = None):
+        pool = pool_of(profile_or_default(profile)).get(provider, [])
+        if not 1 <= index <= len(pool):
+            raise HTTPException(404, "No pool entry at that index")
+        if not drop_writes:
+            pool.pop(index - 1)
+            for i, e in enumerate(pool, start=1):
+                e["index"] = i
+        return {"ok": True, "provider": provider, "count": len(pool), "cleaned": [], "hints": []}
+
+    @app.get("/api/audio/voice-live/status")
+    async def voice_status(profile: str | None = None):
+        profile_or_default(profile)
+        return {"ok": True, "mode": "chained", "available": True, "reason": "", "secret_field": "sk-LEAK-voice"}
+
+    @app.post("/api/audio/speak")
+    async def voice_speak(body: dict[str, Any], profile: str | None = None):
+        bad = profile_or_default(profile).get("voice_bad")
+        if bad == "html":
+            return {"ok": True, "data_url": "data:text/html;base64,PHNjcmlwdD4=", "mime_type": "text/html", "provider": "edge"}
+        if bad == "huge":
+            return {"ok": True, "data_url": "data:audio/mpeg;base64," + "A" * (14 * 1024 * 1024), "mime_type": "audio/mpeg", "provider": "edge"}
+        return {"ok": True, "data_url": "data:audio/mpeg;base64,AAAA", "mime_type": "audio/mpeg", "provider": "edge"}
+
+    @app.post("/api/audio/transcribe")
+    async def voice_transcribe(body: dict[str, Any], profile: str | None = None):
+        if profile_or_default(profile).get("voice_bad") == "shape":
+            return {"ok": True}
+        return {"ok": True, "transcript": "Hallo Welt", "provider": "whisper"}
 
     # Punkt 10: Pairing und Webhooks (Form wie Hermes 0.22.5 ops.py; Codes und Secrets nie in Listen)
     def pairing_of(prof: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:

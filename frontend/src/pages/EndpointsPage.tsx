@@ -1,29 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, api } from "../api";
+import { api } from "../api";
 import { PageHead } from "../components/PageHead";
-import { StepUpNote } from "../components/providers/StepUpNote";
+import { CredentialPool } from "../components/CredentialPool";
+import { useAction } from "../components/useAction";
 import type { AgentRef, EpDelegation, EpList, EpLocal, EpValidate } from "../types";
-
-/** Fehler eines Aufrufs als Text oder Hinweis auf frische Anmeldung / fehlendes Dashboard. */
-function useAction() {
-  const [error, setError] = useState<string>();
-  const [stepUp, setStepUp] = useState(false);
-  const [missing, setMissing] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const run = async (fn: () => Promise<unknown>): Promise<boolean> => {
-    setBusy(true); setError(undefined); setStepUp(false); setMissing(false);
-    try { await fn(); return true; }
-    catch (e) {
-      if (e instanceof ApiError && e.code === "step_up_required") setStepUp(true);
-      else if (e instanceof ApiError && e.status === 501) setMissing(true);
-      else setError((e as Error).message);
-      return false;
-    }
-    finally { setBusy(false); }
-  };
-  const notes = <>{stepUp && <StepUpNote what="Diese Änderung" />}{missing && <p className="banner">Für diese Runtime ist kein Dashboard eingerichtet.</p>}{error && <p className="banner" role="alert">{error}</p>}</>;
-  return { run, notes, busy };
-}
 
 const BAD_URL = /^https?:\/\/[^@/]+(\/.*)?$/; // spiegelt die BFF-Prüfung vorab: nur http(s), keine Zugangsdaten
 
@@ -84,6 +64,7 @@ export default function EndpointsPage({ agent }: { agent: AgentRef }) {
         {check && <p role="status">{check.ok ? `Erreichbar, Modelle: ${check.models.join(", ") || "keine gemeldet"}` : check.message}</p>}
         <button type="button" disabled={busy || !complete} onClick={() => void run(async () => { await api.epSave(agent, body()); setForm({ name: "", base_url: "", model: "", api_key: "" }); setCheck(null); await load(); })}>Endpunkt speichern</button>
       </section>
+      <CredentialPool agent={agent} />
       <section aria-label="Lokale Modelle">
         <h2>Lokale Modelle</h2>
         {local && <p>Server: {local.server_running ? "läuft" : "aus"}; installieren und laden über die Hermes-CLI.</p>}

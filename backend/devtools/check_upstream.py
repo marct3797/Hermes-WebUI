@@ -37,11 +37,18 @@ USED: dict[str, list[str]] = {
         "/api/delegation/routing", "/api/delegation/backend", "/api/providers/custom-endpoints", "/api/providers/custom-endpoints/{}/activate", "/api/providers/custom-endpoints/{}", "/api/providers/custom-endpoints/validate", "/api/local-models/status",
         "/api/sessions/stats", "/api/sessions/empty/count", "/api/sessions/empty", "/api/sessions/prune", "/api/sessions/bulk-delete", "/api/sessions/{}/export",
         "/api/pairing", "/api/pairing/approve", "/api/pairing/revoke", "/api/webhooks", "/api/webhooks/enable", "/api/webhooks/{}", "/api/webhooks/{}/enabled",
+        "/api/credentials/pool", "/api/credentials/pool/{}/{}", "/api/audio/voice-live/status", "/api/audio/speak", "/api/audio/transcribe",
+        "/api/system/stats", "/api/curator", "/api/curator/paused", "/api/curator/run", "/api/learning/graph", "/api/learning/node",
+        "/api/dashboard/themes", "/api/dashboard/theme", "/api/dashboard/font", "/api/egress/status", "/api/shared-metrics/consent",
+        "/api/mcp/servers/{}", "/api/mcp/servers/{}/test", "/api/mcp/servers/{}/auth", "/api/mcp/servers/{}/enabled", "/api/mcp/oauth/flows/{}",
+        "/api/dashboard/agent-plugins/{}", "/api/dashboard/agent-plugins/{}/enable", "/api/dashboard/agent-plugins/{}/disable", "/api/dashboard/agent-plugins/{}/update",
     ],
+    "achievements-plugin": ["/api/plugins/hermes-achievements/achievements", "/api/plugins/hermes-achievements/rescan", "/api/plugins/hermes-achievements/reset-state"],  # plugins/hermes-achievements/dashboard/plugin_api.py
     "kanban-plugin": [  # liegt Hermes bei: plugins/kanban/dashboard/plugin_api.py, eingehängt unter /api/plugins/kanban
         "/api/plugins/kanban/board", "/api/plugins/kanban/boards", "/api/plugins/kanban/boards/{}", "/api/plugins/kanban/stats", "/api/plugins/kanban/assignees",
         "/api/plugins/kanban/tasks", "/api/plugins/kanban/tasks/bulk", "/api/plugins/kanban/tasks/{}", "/api/plugins/kanban/tasks/{}/log",
         "/api/plugins/kanban/tasks/{}/comments", "/api/plugins/kanban/tasks/{}/reassign", "/api/plugins/kanban/tasks/{}/reclaim", "/api/plugins/kanban/links",
+        "/api/plugins/kanban/diagnostics", "/api/plugins/kanban/workers/active", "/api/plugins/kanban/runs/{}", "/api/plugins/kanban/runs/{}/inspect", "/api/plugins/kanban/runs/{}/terminate", "/api/plugins/kanban/tasks/{}/specify", "/api/plugins/kanban/tasks/{}/estimate", "/api/plugins/kanban/dispatch", "/api/plugins/kanban/boards/{}/switch",
     ],
 }
 # Nicht Teil von Hermes: kommen aus diesem Repo (hostd, Kontingent-Plugin) und werden hier nicht gegen Hermes geprüft.

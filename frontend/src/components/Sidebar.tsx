@@ -33,6 +33,7 @@ const TOP: NavItem[] = [
 const GROUPS: { id: string; label: string; items: NavItem[] }[] = [
   { id: "work", label: "Arbeit", items: [
     { to: "/kanban", label: "Kanban", icon: "kanban" },
+    { to: "/achievements", label: "Erfolge", icon: "spark" },
     { to: "/jobs", label: "Zeitpläne", icon: "clock" },
   ] },
   { id: "know", label: "Wissen", items: [
@@ -64,6 +65,9 @@ const MODULES = [
   { module: "endpunkte", label: "Eigene Endpunkte", icon: "spark" },
   { module: "sitzungen-verwalten", label: "Sitzungen verwalten", icon: "spark" },
   { module: "zugang", label: "Zugang und Webhooks", icon: "spark" },
+  { module: "sprache", label: "Sprache", icon: "spark" },
+  { module: "lerngraph", label: "Lerngraph", icon: "spark" },
+  { module: "einblicke", label: "System und Datenschutz", icon: "spark" },
   { module: "providers", label: "Keys & Nutzung", icon: "coin" },
   { module: "skills", label: "Skills", icon: "layers" },
   { module: "tools", label: "Werkzeuge", icon: "wrench" },

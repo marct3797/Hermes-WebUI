@@ -9,6 +9,7 @@ export type Page =
   | { name: "workspace"; host: string }
   | { name: "operations"; section: "search"; host?: string }
   | { name: "kanban"; host?: string }
+  | { name: "achievements"; host?: string }
   | { name: "jobs"; host?: string }
   | { name: "logs"; host?: string }
   | { name: "extensions"; host?: string }
@@ -38,7 +39,7 @@ export function parsePath(pathname: string): Page {
       return { name: rest[1], host: dec(rest[0]) };
     }
     if (head === "search" && rest.length <= 1) return { name: "operations", section: "search", ...(rest.length ? { host: dec(rest[0]) } : {}) };
-    const section = { kanban: "kanban", jobs: "jobs", logs: "logs", extensions: "extensions", manage: "extensions", marketplace: "marketplace", marketplaces: "marketplace" }[head];
+    const section = { kanban: "kanban", achievements: "achievements", jobs: "jobs", logs: "logs", extensions: "extensions", manage: "extensions", marketplace: "marketplace", marketplaces: "marketplace" }[head];
     if (section && rest.length <= 1) return { name: section, ...(rest.length ? { host: dec(rest[0]) } : {}) } as Page;
     if (head === "settings" && rest.length === 0) return { name: "settings" };
     if (head === "system" && rest.length === 0) return { name: "system" };

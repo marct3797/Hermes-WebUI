@@ -20,7 +20,7 @@ afterEach(() => { cleanup(); });
 describe("Eigene Endpunkte", () => {
   it("shows delegation backend, endpoints and local models without any key", async () => {
     await open();
-    expect(await screen.findByRole("combobox", { name: "Backend" })).toHaveValue("default");
+    await waitFor(async () => expect(await screen.findByRole("combobox", { name: "Backend" })).toHaveValue("default"));
     expect(screen.getByRole("region", { name: "Lokale Modelle" }).textContent).toContain("llama3.gguf");
     expect(document.body.textContent).not.toMatch(/sk-[a-z]/i);
   });
