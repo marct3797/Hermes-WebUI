@@ -30,6 +30,7 @@ const TOP: NavItem[] = [
   { to: "/", get label() { return t("Cockpit"); }, icon: "grid" },
   { to: "/inbox", get label() { return t("Inbox"); }, icon: "inbox" },
   { to: "/rooms", get label() { return t("Räume"); }, icon: "orbit" },
+  { to: "/assistant", get label() { return t("Assistent"); }, icon: "spark" },
 ];
 const GROUPS: { id: string; label: string; items: NavItem[] }[] = [
   { id: "work", get label() { return t("Arbeit"); }, items: [

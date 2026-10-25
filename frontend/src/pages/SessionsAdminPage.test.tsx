@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { resetRedirect } from "../api";
 import { installBackend } from "../test-backend";
@@ -14,8 +14,8 @@ async function open() {
 const sent = (method: string, part: string) => backend.calls.filter((c) => c.method === method && c.url.includes(part));
 const type = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
 
-beforeEach(() => { resetRedirect(); sessionStorage.clear(); });
-afterEach(() => { cleanup(); });
+beforeEach(() => { resetRedirect(); sessionStorage.clear(); vi.spyOn(window, "confirm").mockReturnValue(true); });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("Sitzungen verwalten", () => {
   it("shows the store statistics", async () => {
@@ -86,5 +86,39 @@ describe("Sitzungen verwalten", () => {
     render(<App />);
     await screen.findByRole("heading", { name: "Sitzungen verwalten", level: 1 });
     expect((await screen.findByRole("alert")).textContent).toContain("Session store is not initialized");
+  });
+
+  it("loads the timeline of a session", async () => {
+    await open();
+    fireEvent.change(screen.getByLabelText("Sitzungs-ID"), { target: { value: "a1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Zeitachse laden" }));
+    await screen.findByText("Hallo");
+    expect(sent("GET", "/hermes-sessions/a1/timeline")).toHaveLength(1);
+  });
+
+  it("imports sessions only after typing the shown count", async () => {
+    await open();
+    const payload = JSON.stringify({ sessions: [{ id: "n1", title: "Neu", messages: [] }] });
+    const origText = File.prototype.text;
+    File.prototype.text = () => Promise.resolve(payload); // jsdom-File kennt .text() nicht, Browser schon
+    const file = new File([payload], "export.json", { type: "application/json" });
+    fireEvent.change(screen.getByLabelText("Exportdatei"), { target: { files: [file] } });
+    await screen.findByText("1 Sitzungen in der Datei.");
+    const btn = screen.getByRole("button", { name: "Jetzt importieren" });
+    expect(btn).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Anzahl bestätigen"), { target: { value: "2" } });
+    expect(btn).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Anzahl bestätigen"), { target: { value: "1" } });
+    fireEvent.click(btn);
+    await screen.findByText("1 Sitzungen importiert.");
+    expect(sent("POST", "/hermes-sessions/import")[0].body).toEqual({ sessions: [{ id: "n1", title: "Neu", messages: [] }], confirm_count: 1 });
+    File.prototype.text = origText;
+  });
+
+  it("assigns old sessions to this profile", async () => {
+    await open();
+    fireEvent.click(screen.getByRole("button", { name: "Jetzt zuordnen" }));
+    await screen.findByText("2 Sitzungen zugeordnet.");
+    expect(sent("POST", "/hermes-sessions/owner-backfill")[0].body).toEqual({ confirm: true });
   });
 });

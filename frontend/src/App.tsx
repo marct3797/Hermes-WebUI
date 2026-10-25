@@ -23,6 +23,7 @@ const ProvidersHubPage = lazy(() => import("./pages/ProvidersHubPage").then(m =>
 const RoomPage = lazy(() => import("./pages/RoomPage").then(m => ({ default: m.RoomPage })));
 const RoomsPage = lazy(() => import("./pages/RoomsPage").then(m => ({ default: m.RoomsPage })));
 const SettingsPage = lazy(() => import("./pages/SettingsPage").then(m => ({ default: m.SettingsPage })));
+const SetupAssistantPage = lazy(() => import("./pages/SetupAssistantPage").then(m => ({ default: m.SetupAssistantPage })));
 const SystemPage = lazy(() => import("./pages/SystemPage").then(m => ({ default: m.SystemPage })));
 const KanbanPage = lazy(() => import("./pages/KanbanPage").then(m => ({ default: m.KanbanPage })));
 const JobsPage = lazy(() => import("./pages/JobsPage").then(m => ({ default: m.JobsPage })));
@@ -72,6 +73,7 @@ function AppContent() {
                 case "cockpit": return <CockpitPage />;
                 case "inbox": return <InboxPage />;
                 case "hosts": return <HostsPage />;
+                case "assistant": return <SetupAssistantPage />;
                 case "settings": return <SettingsPage />;
                 case "system": return <SystemPage />;
                 case "memory": return <MemoryPage />;

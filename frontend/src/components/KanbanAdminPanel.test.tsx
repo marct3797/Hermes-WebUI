@@ -6,7 +6,7 @@ import { KanbanAdminPanel } from "./KanbanAdminPanel";
 
 let backend: ReturnType<typeof installBackend>;
 const sent = (method: string, part: string) => backend.calls.filter((c) => c.method === method && c.url.includes(part));
-const open = () => { backend = installBackend(["gamma"]); render(<KanbanAdminPanel host="server" board="default" />); };
+const open = (onChanged: () => void = () => undefined, onImported: (s: string) => void = () => undefined) => { backend = installBackend(["gamma"]); render(<KanbanAdminPanel host="server" board="default" onChanged={onChanged} onImported={onImported} />); };
 
 beforeEach(() => { resetRedirect(); sessionStorage.clear(); vi.spyOn(window, "confirm").mockReturnValue(true); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
@@ -71,5 +71,35 @@ describe("Kanban Diagnose und Betrieb", () => {
     backend.dash.stepUp = true;
     fireEvent.click(screen.getByRole("button", { name: "Aufwand schätzen" }));
     await waitFor(() => expect(screen.getByText(/erneut anmelden/i)).toBeTruthy());
+  });
+
+  it("asks before decomposing and shows the children", async () => {
+    open();
+    fireEvent.change(screen.getByLabelText("Aufgaben-ID"), { target: { value: "t_1" } });
+    vi.mocked(window.confirm).mockReturnValueOnce(false);
+    fireEvent.click(screen.getByRole("button", { name: "Aufgabe zerlegen" }));
+    expect(sent("POST", "/decompose")).toHaveLength(0);
+    fireEvent.click(screen.getByRole("button", { name: "Aufgabe zerlegen" }));
+    await screen.findByText(/Zerlegt in: t_9, t_10/);
+    expect(sent("POST", "/decompose")[0].body).toEqual({ confirm: true });
+  });
+
+  it("exports, imports and archives a board", async () => {
+    Object.assign(URL, { createObjectURL: () => "blob:x", revokeObjectURL: () => undefined });
+    const changed: string[] = []; const imported: string[] = [];
+    open(() => changed.push("x"), (s) => imported.push(s));
+    fireEvent.click(screen.getByRole("button", { name: "Board exportieren" }));
+    await screen.findByText("Export gespeichert: default.tar.gz");
+    expect(sent("POST", "/boards/default/export")).toHaveLength(1);
+    const file = new File([JSON.stringify({ sessions: [] })], "b.tar.gz", { type: "application/gzip" });
+    fireEvent.change(screen.getByLabelText("Archivdatei"), { target: { files: [file] } });
+    await screen.findByText("Importiert: importiert");
+    expect(imported).toEqual(["importiert"]);
+    fireEvent.change(screen.getByLabelText("Board-Namen zur Bestätigung eingeben"), { target: { value: "defaul" } });
+    expect(screen.getByRole("button", { name: "Board archivieren" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Board-Namen zur Bestätigung eingeben"), { target: { value: "default" } });
+    fireEvent.click(screen.getByRole("button", { name: "Board archivieren" }));
+    await screen.findByText("Archiviert: default");
+    expect(changed).toEqual(["x"]);
   });
 });

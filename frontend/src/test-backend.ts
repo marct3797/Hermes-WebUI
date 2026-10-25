@@ -564,6 +564,14 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
       if (new URL(rest, "http://bff").searchParams.get("confirm") !== String(e.length)) return json({ detail: "Löschen: die eingegebene Zahl stimmt nicht" }, 422);
       sa.sessions = sa.sessions.filter((s) => !e.includes(s)); return json({ ok: true, deleted: e.length });
     }
+    const tlm = /^\/hermes-sessions\/([^/]+)\/timeline$/.exec(path);
+    if (tlm && method === "GET") return json({ session_id: tlm[1], profile: "gamma", events: [{ row_id: 1, type: "user_message", summary: "Hallo" }], after_row_id: 0 });
+    if (path === "/hermes-sessions/import" && method === "POST") {
+      const ss = Array.isArray(body?.sessions) ? body.sessions : [];
+      if (Number(body?.confirm_count) !== ss.length || ss.length === 0) return json({ detail: "Zahl stimmt nicht" }, 422);
+      return json({ ok: true, imported: ss.length }, 201);
+    }
+    if (path === "/hermes-sessions/owner-backfill" && method === "POST") return body?.confirm ? json({ ok: true, stamped: 2, profile: "gamma" }) : json({ detail: "confirm" }, 422);
     return json({ detail: "Unbekannte Sitzungs-Route" }, 404);
   }
   if (path.startsWith("/hermes-delegation") || path.startsWith("/hermes-endpoints") || path.startsWith("/hermes-local-models")) {
@@ -772,7 +780,7 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
     const hs = /^\/bff\/h\/server\/(_achievements|_kanban)(\/[^?]*)?(\?.*)?$/.exec(url);
     if (hs) {
       const x = dash.p3; const sub = hs[2] ?? "";
-      const bd = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : undefined;
+      const bd = init?.body instanceof FormData ? {} : init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : undefined;
       if (method !== "GET" && dash.stepUp && !(sub === "/dispatch" && bd?.dry_run)) return json(stepUpBody, 401);
       const ach = () => ({ total: 3, unlocked: x.unlocked ? 1 : 0, discovered: 1, secret: 1, generated_at: 1_790_000_000, is_stale: Boolean(x.stale), items: [
         { id: "a", name: "Let Him Cook", description: "Viele Werkzeugaufrufe", category: "x", icon: "", state: x.unlocked ? "unlocked" : "discovered", unlocked: x.unlocked, tier: x.unlocked ? "Bronze" : null, progress: 5, next_threshold: 10, progress_pct: 50, unlocked_at: null },
@@ -788,6 +796,24 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
         if (t) { if (bd?.confirm !== t[1]) return json({ detail: "Nummer eintippen" }, 422); x.workers = x.workers.filter((w) => w.run_id !== Number(t[1])); return json({ ok: true, run_id: Number(t[1]) }); }
         if (/\/estimate$/.test(sub)) return json({ ok: true, est_tokens: 1200, complexity: "M", rationale: "Mittel", reason: "", model: "m" });
         if (/\/specify$/.test(sub)) return bd?.confirm ? json({ ok: true, reason: "", new_title: "Klarer Titel" }) : json({ detail: "confirm" }, 422);
+        if (/\/decompose$/.test(sub)) return bd?.confirm ? json({ ok: true, reason: "", fanout: true, child_ids: ["t_9", "t_10"], new_title: null }) : json({ detail: "confirm" }, 422);
+        if (/\/tasks\/[^/]+\/attachments$/.test(sub)) {
+          const store = x as unknown as { atts?: Array<{ id: number; task_id: string; filename: string; size: number; uploaded_by: string; created_at: number }> };
+          store.atts ??= [];
+          if (method === "GET") return json({ task_id: "t_1", count: store.atts.length, attachments: store.atts });
+          const a = { id: 100 + store.atts.length, task_id: "t_1", filename: "hoch.txt", size: 5, uploaded_by: "user", created_at: 1 };
+          store.atts.push(a); return json(a, 201);
+        }
+        const adl = /^\/tasks\/[^/]+\/attachments\/(\d+)$/.exec(sub);
+        if (adl && method === "GET") return json({ id: Number(adl[1]) });
+        const adm = /^\/attachments\/(\d+)$/.exec(sub);
+        if (adm && method === "DELETE") {
+          const store = x as unknown as { atts?: Array<{ id: number }> };
+          store.atts = (store.atts ?? []).filter((a) => a.id !== Number(adm[1])); return json({ ok: true, deleted: Number(adm[1]) });
+        }
+        if (/\/boards\/[^/]+\/export$/.test(sub) && method === "POST") return json({ archive: "x.tar.gz" });
+        if (sub === "/boards/import" && method === "POST") return init?.body instanceof FormData ? json({ ok: true, board: "importiert" }, 201) : json({ detail: "archiv" }, 422);
+        if (/\/boards\/[^/]+$/.test(sub) && method === "DELETE") return json({ ok: true, board: "alpha" });
         if (sub === "/dispatch") return json({ dry_run: Boolean(bd?.dry_run), spawned: x.spawnNone ? [] : ["t_1"], promoted: [] });
       }
     }

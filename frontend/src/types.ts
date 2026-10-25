@@ -239,6 +239,8 @@ export type EpLocal = { enabled: boolean; runtime_installed: boolean; server_run
 // Punkt 9: Sitzungen verwalten (Inhalte der Sitzungen nie im Typ)
 export type SaStats = { total: number; active_store: number; archived: number; messages: number; by_source: Record<string, number> };
 export type SaPreview = { matched: number; skipped_open: number; sample: Array<{ id: string; title: string }> };
+export type SaTimelineEvent = { row_id: number | null; type: string; summary: string };
+export type SaTimeline = { session_id: string; profile: string; events: SaTimelineEvent[]; after_row_id: number };
 
 // Punkt 10: Pairing und Webhooks (Codes und Secrets nie im Typ; das Secret gibt es nur in AcCreated, einmalig)
 export type AcPending = { platform: string; request_id: string; user_id: string; user_name: string; age_minutes: number };

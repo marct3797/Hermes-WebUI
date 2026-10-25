@@ -3,6 +3,7 @@ import { Icon } from "../Icon";
 import { Markdown } from "../Markdown";
 import { fmtDate, fmtTime } from "../../format";
 import { assertBulk, kanbanApi, type Card, type TaskDetail } from "../../kanbanApi";
+import { hostApi, type KbAttachment } from "../../p3Api";
 import { ArchiveDialog, Banner } from "./Dialogs";
 import { columnLabel } from "./Board";
 import { t as tr } from "../../i18n";
@@ -26,18 +27,20 @@ export function TaskPanel({ host, board, id, columns, assignees, allTasks, onClo
   const [linkWith, setLinkWith] = useState({ other: "", role: "parent" });
   const [archive, setArchive] = useState(false);
   const [log, setLog] = useState<{ data?: { content: string; truncated: boolean; exists: boolean }; tail: number; error?: string; loading: boolean }>();
+  const [atts, setAtts] = useState<KbAttachment[]>();
 
   const reload = useCallback(async (resetForm: boolean) => {
     try {
       const r = await kanbanApi.task(host, board, id);
       setD(r); setLoadError(undefined);
+      hostApi.kbAttachments(host, id, board).then((a) => setAtts(a.attachments)).catch(() => setAtts([]));
       if (resetForm) {
         setForm({ title: r.task.title, body: r.task.body, priority: r.task.priority, status: r.task.status, block_reason: "", result: r.task.result ?? "", summary: r.task.summary ?? "" });
         setWho(r.task.assignee ?? "");
       }
     } catch (e) { setLoadError(e instanceof Error ? e.message : String(e)); }
   }, [host, board, id]);
-  useEffect(() => { setD(undefined); setLog(undefined); setNote(undefined); setError(undefined); void reload(true); }, [reload]);
+  useEffect(() => { setD(undefined); setLog(undefined); setNote(undefined); setError(undefined); setAtts(undefined); void reload(true); }, [reload]);
 
   // Jede Schreibaktion: Fehler bleiben sichtbar, Erfolg lädt Detail und Board neu.
   const act = async (fn: () => Promise<unknown>, done: string, resetForm = false) => {
@@ -141,6 +144,17 @@ export function TaskPanel({ host, board, id, columns, assignees, allTasks, onClo
           <textarea className="field" rows={3} aria-label={tr("Neuer Kommentar")} placeholder={tr("Kommentar schreiben (Markdown)")} value={comment} onChange={(e) => setComment(e.target.value)} />
           <div><button type="submit" className="btn btn-s" disabled={busy || !comment.trim()}>{tr("Kommentar senden")}</button></div>
         </form>
+      </div>
+
+      <div className="kb-sec">
+        <h3>{tr("Anhänge ({v})", { v: atts ? atts.length : "…" })}</h3>
+        {atts && (atts.length === 0 ? <p className="t3 small">{tr("Keine Anhänge")}</p> : <ul className="kb-list">{atts.map((a) => (
+          <li key={a.id} className="row" style={{ gap: 8 }}>
+            <span className="grow">{a.filename} <span className="mono small t3">{a.size ?? "?"} Bytes · {a.uploaded_by}</span></span>
+            <button type="button" className="btn btn-s" disabled={busy} onClick={() => void act(() => hostApi.kbAttachmentDownload(host, id, a, board), tr("Heruntergeladen"))}>{tr("Herunterladen")}</button>
+            <button type="button" className="btn btn-s btn-g" disabled={busy} onClick={() => { if (window.confirm(tr("Anhang {name} löschen?", { name: a.filename }))) void act(() => hostApi.kbAttachmentDelete(host, a.id, board).then(() => undefined), tr("Anhang gelöscht")); }}>{tr("Löschen")}</button>
+          </li>))}</ul>)}
+        <label className="row" style={{ gap: 8 }}>{tr("Hochladen")} <input type="file" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; if (f) void act(() => hostApi.kbAttachmentUpload(host, id, f, board).then(() => undefined), tr("Anhang hochgeladen")); e.target.value = ""; }} /></label>
       </div>
 
       <div className="kb-sec">

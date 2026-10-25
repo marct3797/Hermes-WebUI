@@ -36,6 +36,7 @@ export function BottomNav({ me, path, onChats, onLogout }: Props) {
       {more && (
         <div className="sheet" role="dialog" aria-label={t("Mehr")}>
           <Link to="/hosts"><Icon name="server" size={18} />{t("Hosts")}</Link>
+          <Link to="/assistant"><Icon name="spark" size={18} />{t("Assistent")}</Link>
           <Link to="/rooms"><Icon name="orbit" size={18} />{t("Räume")}{roomNeeds.length > 0 && <span className="ct" aria-label={`${roomNeeds.length} offen`}>{roomNeeds.length}</span>}</Link>
           <Link to="/memory"><Icon name="memory" size={18} />{t("Gedächtnis")}</Link>
           {wissen && <Link to="/knowledge"><Icon name="file" size={18} />{t("Wissen")}</Link>}

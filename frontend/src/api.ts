@@ -1,6 +1,6 @@
 import { invalidate } from "./dataCache";
 import { getPreferences } from "./preferences";
-import type { AcCreated, AcHooks, AcPairing, SaPreview, SaStats, EpDelegation, EpList, EpLocal, EpValidate, LcCreated, LcList, MdAuxiliary, MdInfo, MdMoa, MdOptions, MdRecommended, MdSetResult, HmField, HmOverview, GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import type { AcCreated, AcHooks, AcPairing, SaPreview, SaStats, SaTimeline, EpDelegation, EpList, EpLocal, EpValidate, LcCreated, LcList, MdAuxiliary, MdInfo, MdMoa, MdOptions, MdRecommended, MdSetResult, HmField, HmOverview, GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 import { t, tm } from "./i18n";
 
 export class ApiError extends Error {
@@ -51,6 +51,49 @@ export async function call<T>(method: string, path: string, body?: unknown, sign
     throw new ApiError(res.status, tm(detail), code, data);
   }
   return (res.status === 204 ? undefined : await res.json()) as T;
+}
+
+async function fail(res: Response): Promise<never> {
+  let detail = res.statusText;
+  let code: string | undefined;
+  let data: Record<string, unknown> | undefined;
+  try {
+    const j = await res.json();
+    if (j.detail && typeof j.detail === "object") {
+      code = j.detail.code;
+      data = j.detail;
+      detail = j.detail.message ?? JSON.stringify(j.detail);
+    } else {
+      detail = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail ?? j);
+    }
+  } catch { /* kein JSON */ }
+  if (res.status === 401 && !code) toLogin();
+  throw new ApiError(res.status, tm(detail), code, data);
+}
+
+/** Formular mit Datei ans BFF schicken (Anhänge, Board-Archive). */
+export async function postForm<T>(path: string, form: FormData): Promise<T> {
+  const res = await fetch(path, { method: "POST", headers: { "X-Requested-With": "hermes-webui" }, body: form, credentials: "same-origin" });
+  if (!res.ok) await fail(res);
+  return (res.status === 204 ? undefined : await res.json()) as T;
+}
+
+/** Binärdatei vom BFF laden und im Browser speichern (Anhänge, Board-Exporte). */
+export async function downloadFile(method: string, path: string, filename: string, body?: unknown): Promise<void> {
+  const res = await fetch(path, {
+    method, headers: { "X-Requested-With": "hermes-webui", ...(body ? { "Content-Type": "application/json" } : {}) },
+    body: body ? JSON.stringify(body) : undefined, credentials: "same-origin",
+  });
+  if (!res.ok) await fail(res);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 const kn = (p: string) => `/bff/knowledge/${encodeURIComponent(p)}`;
@@ -190,6 +233,9 @@ export const api = {
   saPrune: (a: AgentRef, older_than_days: number, confirm_count: number) => call<{ ok: boolean; removed: number }>("POST", `${base(a)}/hermes-sessions/prune`, { older_than_days, confirm_count }),
   saEmpty: (a: AgentRef) => call<{ count: number }>("GET", `${base(a)}/hermes-sessions/empty`),
   saEmptyDelete: (a: AgentRef, confirm: string) => call<{ ok: boolean; deleted: number }>("DELETE", `${base(a)}/hermes-sessions/empty?confirm=${encodeURIComponent(confirm)}`),
+  saTimeline: (a: AgentRef, sid: string, limit = 100) => call<SaTimeline>("GET", `${base(a)}/hermes-sessions/${id(sid)}/timeline?limit=${limit}`),
+  saImport: (a: AgentRef, sessions: unknown[], confirm_count: number) => call<{ ok: boolean; imported: number }>("POST", `${base(a)}/hermes-sessions/import`, { sessions, confirm_count }),
+  saBackfill: (a: AgentRef) => call<{ ok: boolean; stamped: number | null; profile: string }>("POST", `${base(a)}/hermes-sessions/owner-backfill`, { confirm: true }),
   acPairing: (a: AgentRef) => call<AcPairing>("GET", `${base(a)}/hermes-pairing`),
   acApprove: (a: AgentRef, platform: string, request_id: string) => call<AcPairing>("POST", `${base(a)}/hermes-pairing/approve`, { platform, request_id }),
   acRevoke: (a: AgentRef, platform: string, user_id: string, confirm: string) => call<AcPairing>("POST", `${base(a)}/hermes-pairing/revoke`, { platform, user_id, confirm }),

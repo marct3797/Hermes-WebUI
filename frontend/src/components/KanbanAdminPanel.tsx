@@ -3,14 +3,17 @@ import { hostApi, type KbDiag, type KbDispatch, type KbWorker } from "../p3Api";
 import { useAction } from "./useAction";
 import { t } from "../i18n";
 
-/** Diagnose, laufende Worker, Dispatch (erst Vorschau), Schätzen und Spezifizieren. Läuft unter dem Board, beeinflusst es aber nur über das Dashboard. */
-export function KanbanAdminPanel({ host, board }: { host: string; board?: string }) {
+/** Diagnose, laufende Worker, Dispatch (erst Vorschau), Schätzen, Spezifizieren, Zerlegen, Board-Export/Import/Archivieren. Läuft unter dem Board, beeinflusst es aber nur über das Dashboard. */
+export function KanbanAdminPanel({ host, board, onChanged, onImported }: { host: string; board?: string; onChanged: () => void; onImported: (slug: string) => void }) {
   const [diag, setDiag] = useState<KbDiag | null>(null);
   const [workers, setWorkers] = useState<KbWorker[] | null>(null);
   const [preview, setPreview] = useState<KbDispatch | null>(null);
   const [task, setTask] = useState("");
   const [result, setResult] = useState("");
   const [typed, setTyped] = useState<Record<number, string>>({});
+  const [withAtt, setWithAtt] = useState(true);
+  const [withLogs, setWithLogs] = useState(false);
+  const [typedBoard, setTypedBoard] = useState("");
   const { run, notes, busy } = useAction();
   const tid = task.trim();
   return (
@@ -37,6 +40,21 @@ export function KanbanAdminPanel({ host, board }: { host: string; board?: string
         <label>{t("Aufgaben-ID")} <input aria-label={t("Aufgaben-ID")} value={task} onChange={(e) => setTask(e.target.value)} /></label>
         <button type="button" disabled={busy || !tid} onClick={() => void run(async () => { const r = await hostApi.kbEstimate(host, tid, board); setResult(r.ok ? t("Schätzung: {est_tokens} Tokens, Komplexität {complexity}. {rationale}", { est_tokens: r.est_tokens ?? "?", complexity: r.complexity, rationale: r.rationale }) : t("Keine Schätzung: {reason}", { reason: r.reason })); })}>{t("Aufwand schätzen")}</button>
         <button type="button" disabled={busy || !tid} onClick={() => { if (window.confirm(t("Spezifizieren schreibt Titel und Beschreibung der Aufgabe um. Fortfahren?"))) void run(async () => { const r = await hostApi.kbSpecify(host, tid, board); setResult(r.ok ? t("Neu formuliert: {new_title}", { new_title: r.new_title }) : t("Nicht spezifiziert: {reason}", { reason: r.reason })); }); }}>{t("Aufgabe spezifizieren")}</button>
+        <button type="button" disabled={busy || !tid} onClick={() => { if (window.confirm(t("Zerlegen legt Kindaufgaben an und verbraucht Tokens des Hilfsmodells. Fortfahren?"))) void run(async () => { const r = await hostApi.kbDecompose(host, tid, board); setResult(r.ok ? t("Zerlegt in: {kids}", { kids: r.child_ids.join(", ") || t("keine") }) : t("Nicht zerlegt: {reason}", { reason: r.reason })); }); }}>{t("Aufgabe zerlegen")}</button>
+      </section>
+      <section aria-label={t("Board-Archiv")}>
+        <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+          <button type="button" disabled={busy || !board} onClick={() => void run(async () => { await hostApi.kbBoardExport(host, board!, withAtt, withLogs); setResult(t("Export gespeichert: {slug}.tar.gz", { slug: board })); })}>{t("Board exportieren")}</button>
+          <label className="row small" style={{ gap: 4 }}><input type="checkbox" checked={withAtt} onChange={(e) => setWithAtt(e.target.checked)} />{t("Mit Anhängen")}</label>
+          <label className="row small" style={{ gap: 4 }}><input type="checkbox" checked={withLogs} onChange={(e) => setWithLogs(e.target.checked)} />{t("Mit Logs")}</label>
+        </div>
+        <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+          <label>{t("Archivdatei")} <input type="file" accept=".tar.gz,.tgz,.zip" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; if (f) void run(async () => { const r = await hostApi.kbBoardImport(host, f); setResult(t("Importiert: {board}", { board: r.board })); onImported(r.board); }); e.target.value = ""; }} /></label>
+        </div>
+        <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+          <label>{t("Board-Namen zur Bestätigung eingeben")} <input aria-label={t("Board-Namen zur Bestätigung eingeben")} value={typedBoard} disabled={busy || !board} onChange={(e) => setTypedBoard(e.target.value)} /></label>
+          <button type="button" disabled={busy || !board || typedBoard !== board} onClick={() => void run(async () => { await hostApi.kbBoardDelete(host, board!); setTypedBoard(""); setResult(t("Archiviert: {board}", { board })); onChanged(); })}>{t("Board archivieren")}</button>
+        </div>
       </section>
       {result && <p role="status">{result}</p>}
     </details>

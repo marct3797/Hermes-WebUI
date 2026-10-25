@@ -141,7 +141,7 @@ function HostKanban({ host }: { host: string }) {
         const r = await kanbanApi.createTask(host, board, t);
         setDialog(undefined); await load().catch(() => undefined); if (r.id) setOpen(r.id);
       }} />}
-      <KanbanAdminPanel host={host} board={board} />
+      <KanbanAdminPanel host={host} board={board} onChanged={() => void load().catch(() => undefined)} onImported={(slug) => switchBoard(slug)} />
       {dialog === "board-new" && <BoardDialog onClose={() => setDialog(undefined)} onSave={async (b) => {
         await kanbanApi.createBoard(host, { slug: b.slug, name: b.name, ...(b.description ? { description: b.description } : {}), ...(b.color ? { color: b.color } : {}) });
         setDialog(undefined); switchBoard(b.slug);

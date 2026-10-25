@@ -5,6 +5,7 @@ export type Page =
   | { name: "cockpit" }
   | { name: "inbox" }
   | { name: "hosts" }
+  | { name: "assistant" }
   | { name: "terminal"; host: string }
   | { name: "workspace"; host: string }
   | { name: "operations"; section: "search"; host?: string }
@@ -35,6 +36,7 @@ export function parsePath(pathname: string): Page {
     const [head, ...rest] = parts;
     if (head === "inbox" && rest.length === 0) return { name: "inbox" };
     if (head === "hosts" && rest.length === 0) return { name: "hosts" };
+    if (head === "assistant" && rest.length === 0) return { name: "assistant" };
     if (head === "hosts" && rest.length === 2 && (rest[1] === "terminal" || rest[1] === "workspace")) {
       return { name: rest[1], host: dec(rest[0]) };
     }

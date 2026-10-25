@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "../api";
 import { PageHead } from "../components/PageHead";
 import { useAction } from "../components/useAction";
-import type { AgentRef, SaPreview, SaStats } from "../types";
+import type { AgentRef, SaPreview, SaStats, SaTimeline } from "../types";
 import { t } from "../i18n";
 
 export default function SessionsAdminPage({ agent }: { agent: AgentRef }) {
@@ -14,6 +14,10 @@ export default function SessionsAdminPage({ agent }: { agent: AgentRef }) {
   const [typedEmpty, setTypedEmpty] = useState("");
   const [done, setDone] = useState("");
   const [loadErr, setLoadErr] = useState("");
+  const [sid, setSid] = useState("");
+  const [tl, setTl] = useState<SaTimeline | null>(null);
+  const [impSessions, setImpSessions] = useState<Array<Record<string, unknown>> | null>(null);
+  const [typedImp, setTypedImp] = useState("");
   const { run, notes, busy } = useAction();
 
   const load = useCallback(async () => {
@@ -49,6 +53,31 @@ export default function SessionsAdminPage({ agent }: { agent: AgentRef }) {
         <p>{t("{empty} leere, beendete Sitzungen.", { empty: empty ?? "…" })}</p>
         <label>{t("Zur Bestätigung die Anzahl eingeben")} <input aria-label={t("Leere bestätigen")} value={typedEmpty} onChange={(e) => setTypedEmpty(e.target.value)} /></label>
         <button type="button" disabled={busy || !empty || typedEmpty !== String(empty)} onClick={() => void run(async () => { const r = await api.saEmptyDelete(agent, typedEmpty); setDone(t("{deleted} leere Sitzungen gelöscht.", { deleted: r.deleted })); setTypedEmpty(""); await load(); })}>{t("Leere löschen")}</button>
+      </section>
+      <section aria-label={t("Zeitachse")}>
+        <h2>{t("Zeitachse einer Sitzung")}</h2>
+        <label>{t("Sitzungs-ID")} <input aria-label={t("Sitzungs-ID")} value={sid} onChange={(e) => { setSid(e.target.value); setTl(null); }} /></label>
+        <button type="button" disabled={busy || !sid.trim()} onClick={() => void run(async () => setTl(await api.saTimeline(agent, sid.trim())))}>{t("Zeitachse laden")}</button>
+        {tl && (tl.events.length === 0 ? <p>{t("Keine Ereignisse.")}</p> : <ul>{tl.events.map((e) => <li key={e.row_id ?? e.summary}><span className="mono small">{e.type}</span> {e.summary}</li>)}</ul>)}
+      </section>
+      <section aria-label={t("Sitzungen importieren")}>
+        <h2>{t("Sitzungen importieren")}</h2>
+        <label>{t("Exportdatei")} <input type="file" accept=".json,application/json" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; setImpSessions(null); setTypedImp(""); if (!f) return; void run(async () => {
+          let parsed: unknown; try { parsed = JSON.parse(await f.text()); } catch { throw new Error(t("Ungültige Importdatei")); }
+          const list = Array.isArray(parsed) ? parsed : (parsed as { sessions?: unknown }).sessions;
+          if (!Array.isArray(list)) throw new Error(t("Ungültige Importdatei"));
+          setImpSessions(list as Array<Record<string, unknown>>);
+        }); e.target.value = ""; }} /></label>
+        {impSessions && <>
+          <p>{t("{n} Sitzungen in der Datei.", { n: impSessions.length })}</p>
+          <label>{t("Zur Bestätigung die Anzahl eingeben")} <input aria-label={t("Anzahl bestätigen")} value={typedImp} onChange={(e) => setTypedImp(e.target.value)} /></label>
+          <button type="button" disabled={busy || impSessions.length === 0 || typedImp !== String(impSessions.length)} onClick={() => void run(async () => { const r = await api.saImport(agent, impSessions, impSessions.length); setDone(t("{imported} Sitzungen importiert.", { imported: r.imported })); setImpSessions(null); setTypedImp(""); await load(); })}>{t("Jetzt importieren")}</button>
+        </>}
+      </section>
+      <section aria-label={t("Alte Sitzungen zuordnen")}>
+        <h2>{t("Alte Sitzungen zuordnen")}</h2>
+        <p>{t("Ordnet alte Sitzungen ohne Profil diesem Profil zu.")}</p>
+        <button type="button" disabled={busy} onClick={() => { if (window.confirm(t("Alte Sitzungen ohne Profil diesem Profil zuordnen? Fortfahren?"))) void run(async () => { const r = await api.saBackfill(agent); setDone(t("{stamped} Sitzungen zugeordnet.", { stamped: r.stamped ?? 0 })); }); }}>{t("Jetzt zuordnen")}</button>
       </section>
     </article>
   );

@@ -31,6 +31,9 @@ export function JobForm({ job, targets, skills, locked, busy, label, onSubmit }:
   const [picked, setPicked] = useState<string[]>(job?.skills ?? []);
   const [unlimited, setUnlimited] = useState(job ? job.repeat.times == null : true);
   const [times, setTimes] = useState(String(job?.repeat.times ?? 1));
+  const [script, setScript] = useState("");
+  const [noAgent, setNoAgent] = useState(false);
+  const [confirmScript, setConfirmScript] = useState(false);
   const n = Number(times);
   const timesBad = !unlimited && (!Number.isInteger(n) || n < 1 || n > 1_000_000);
   const options = [...new Set([...skills, ...(job?.skills ?? [])])].sort();
@@ -46,10 +49,11 @@ export function JobForm({ job, targets, skills, locked, busy, label, onSubmit }:
     if (!job || deliver !== job.deliver) b.deliver = deliver;
     if (skillsChanged) b.skills = picked;
     if (repeatChanged) { if (unlimited) { if (job) b.repeat_unlimited = true; } else b.repeat = n; }
+    if (!job && script.trim()) { b.script = script.trim(); if (noAgent) b.no_agent = true; b.confirm_system = confirmScript; }
     return b;
   };
   const changed = Object.keys(body()).length > 0;
-  const valid = schedule.trim() !== "" && (!!job || prompt.trim() !== "") && !timesBad;
+  const valid = schedule.trim() !== "" && (!!job || prompt.trim() !== "") && !timesBad && (!script.trim() || confirmScript);
   const submit = (e: FormEvent) => { e.preventDefault(); onSubmit(body()); };
   return (
     <form className="col" style={{ gap: 10 }} onSubmit={submit}>
@@ -63,6 +67,12 @@ export function JobForm({ job, targets, skills, locked, busy, label, onSubmit }:
         <label className="col"><span className="lbl">{tr("Prompt")}</span>
           <textarea className="field" rows={7} value={prompt} maxLength={20000} onChange={(e) => setPrompt(e.target.value)} />
           {job?.no_agent && <span className="hint">{tr("Dieser Job läuft ohne Agent als Skript; der Prompt wird nicht verwendet.")}</span>}</label>
+        {!job && <label className="col"><span className="lbl">{tr("Skript (statt Agent)")}</span>
+          <textarea className="field mono" rows={5} value={script} maxLength={20000} onChange={(e) => setScript(e.target.value)} placeholder={tr("z. B. echo hallo")} /></label>}
+        {!job && script.trim() && <>
+          <label className="row" style={{ gap: 6 }}><input type="checkbox" checked={noAgent} onChange={(e) => setNoAgent(e.target.checked)} /><span>{tr("Ohne Agent ausführen (nur das Skript läuft)")}</span></label>
+          <label className="row" style={{ gap: 6 }}><input type="checkbox" checked={confirmScript} onChange={(e) => setConfirmScript(e.target.checked)} /><span>{tr("Ich weiß, dass das Skript direkt auf dem Server läuft")}</span></label>
+        </>}
         <fieldset className="jobs-skills"><legend className="lbl">{tr("Skills")}</legend>
           {options.length === 0 ? <span className="hint">{tr("Dieses Profil hat keine auswählbaren Skills.")}</span> : options.map((s) => (
             <label key={s} className="row" style={{ gap: 6 }}>

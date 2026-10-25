@@ -1,4 +1,4 @@
-import { call } from "./api";
+import { call, downloadFile, postForm } from "./api";
 import type { AgentRef } from "./types";
 
 const base = (a: AgentRef) => `/bff/h/${encodeURIComponent(a.host)}/${encodeURIComponent(a.runtime)}/${encodeURIComponent(a.agent)}`;
@@ -52,6 +52,8 @@ const bq = (board?: string) => (board ? `?board=${q(board)}` : "");
 export type KbDiag = { count: number; items: Array<{ task_id: string; title: string; status: string; assignee: string; diagnostics: Array<{ kind: string; severity: string; title: string; detail: string }> }> };
 export type KbWorker = { run_id: number | null; task_id: string; title: string; profile: string; started_at: number | null; last_heartbeat_at: number | null; max_runtime_seconds: number | null };
 export type KbDispatch = { dry_run: boolean; spawned: string[]; promoted: string[] };
+export type KbAttachment = { id: number; task_id: string; filename: string; size: number | null; uploaded_by: string; created_at: number | null };
+export type KbDecompose = { ok: boolean; reason: string; fanout: boolean; child_ids: string[]; new_title: string };
 export type Achievements = { total: number; unlocked: number; discovered: number; secret: number; generated_at: number | null; is_stale: boolean;
   items: Array<{ id: string; name: string; description: string; category: string; icon: string; state: string; unlocked: boolean; tier: string | null; progress: number; next_threshold: number | null; progress_pct: number; unlocked_at: number | null }> };
 export const hostApi = {
@@ -61,6 +63,24 @@ export const hostApi = {
   kbEstimate: (host: string, task: string, board?: string) => call<{ ok: boolean; est_tokens: number | null; complexity: string; rationale: string; reason: string }>("POST", `${hb(host)}/_kanban/tasks/${q(task)}/estimate${bq(board)}`),
   kbSpecify: (host: string, task: string, board?: string) => call<{ ok: boolean; reason: string; new_title: string }>("POST", `${hb(host)}/_kanban/tasks/${q(task)}/specify${bq(board)}`, { confirm: true }),
   kbDispatch: (host: string, dry_run: boolean, board?: string) => call<KbDispatch>("POST", `${hb(host)}/_kanban/dispatch${bq(board)}`, dry_run ? { dry_run: true } : { dry_run: false, confirm_spawn: true }),
+  kbDecompose: (host: string, task: string, board?: string) => call<KbDecompose>("POST", `${hb(host)}/_kanban/tasks/${q(task)}/decompose${bq(board)}`, { confirm: true }),
+  kbAttachments: (host: string, task: string, board?: string) => call<{ task_id: string; count: number; attachments: KbAttachment[] }>("GET", `${hb(host)}/_kanban/tasks/${q(task)}/attachments${bq(board)}`),
+  kbAttachmentUpload: (host: string, task: string, file: File, board?: string) => {
+    const form = new FormData();
+    form.append("file", file, file.name);
+    return postForm<KbAttachment>(`${hb(host)}/_kanban/tasks/${q(task)}/attachments${bq(board)}`, form);
+  },
+  kbAttachmentDownload: (host: string, task: string, attachment: KbAttachment, board?: string) =>
+    downloadFile("GET", `${hb(host)}/_kanban/tasks/${q(task)}/attachments/${attachment.id}${bq(board)}`, attachment.filename),
+  kbAttachmentDelete: (host: string, attachment: number, board?: string) => call<{ ok: boolean; deleted: number }>("DELETE", `${hb(host)}/_kanban/attachments/${attachment}${bq(board)}`),
+  kbBoardExport: (host: string, slug: string, attachments: boolean, logs: boolean) =>
+    downloadFile("POST", `${hb(host)}/_kanban/boards/${q(slug)}/export`, `${slug}.tar.gz`, { attachments, logs }),
+  kbBoardImport: (host: string, file: File) => {
+    const form = new FormData();
+    form.append("archive", file, file.name);
+    return postForm<{ ok: boolean; board: string }>(`${hb(host)}/_kanban/boards/import`, form);
+  },
+  kbBoardDelete: (host: string, slug: string) => call<{ ok: boolean; board: string }>("DELETE", `${hb(host)}/_kanban/boards/${q(slug)}`, { confirm: slug }),
   achievements: (host: string) => call<Achievements>("GET", `${hb(host)}/_achievements`),
   achRescan: (host: string) => call<Achievements>("POST", `${hb(host)}/_achievements/rescan`),
   achReset: (host: string) => call<{ ok: boolean }>("POST", `${hb(host)}/_achievements/reset`, { confirm: "reset" }),
