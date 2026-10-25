@@ -227,3 +227,11 @@ export type MdAuxTask = { task: string; provider: string; model: string; base_ur
 export type MdAuxiliary = { main: { provider: string; model: string }; tasks: MdAuxTask[] };
 export type MdMoa = { presets: Record<string, { reference_models: Array<{ provider: string; model: string }>; aggregator: { provider: string; model: string } }>; active_preset: string; default_preset?: string };
 export type MdSetResult = { ok: boolean; provider?: string; model?: string; confirm_required?: boolean; confirm_message?: string };
+
+// Punkt 8b: Delegation, eigene Endpunkte, lokale Modelle (Schlüssel nie im Typ, nur has_api_key)
+export type EpBackend = { name: string; description: string; builtin: boolean };
+export type EpDelegation = { configured: string; blocked_reason: string | null; backends: EpBackend[]; profiles: string[] };
+export type EpEndpoint = { id: string; name: string; base_url: string; model: string; has_api_key: boolean; api_key_preview: string; is_current: boolean };
+export type EpList = { endpoints: EpEndpoint[]; current: { provider?: string; model?: string; base_url?: string } };
+export type EpValidate = { ok: boolean; reachable: boolean; message: string; models: string[] };
+export type EpLocal = { enabled: boolean; runtime_installed: boolean; server_running: boolean; models: Array<{ id: string; name: string; size_bytes: number }> };

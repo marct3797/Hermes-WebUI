@@ -1,6 +1,6 @@
 import { invalidate } from "./dataCache";
 import { getPreferences } from "./preferences";
-import type { LcCreated, LcList, MdAuxiliary, MdInfo, MdMoa, MdOptions, MdRecommended, MdSetResult, HmField, HmOverview, GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import type { EpDelegation, EpList, EpLocal, EpValidate, LcCreated, LcList, MdAuxiliary, MdInfo, MdMoa, MdOptions, MdRecommended, MdSetResult, HmField, HmOverview, GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string, public data?: Record<string, unknown>) {
@@ -176,6 +176,14 @@ export const api = {
   mdAuxiliary: (a: AgentRef) => call<MdAuxiliary>("GET", `${base(a)}/hermes-models/auxiliary`),
   mdMoa: (a: AgentRef) => call<MdMoa>("GET", `${base(a)}/hermes-models/moa`),
   mdSet: (a: AgentRef, body: { scope: "main" | "auxiliary"; provider: string; model: string; task?: string; confirm_expensive_model?: boolean }) => call<MdSetResult>("POST", `${base(a)}/hermes-models/set`, body),
+  epDelegation: (a: AgentRef) => call<EpDelegation>("GET", `${base(a)}/hermes-delegation`),
+  epBackend: (a: AgentRef, backend: string) => call<{ ok: boolean; backend: string }>("PUT", `${base(a)}/hermes-delegation/backend`, { backend }),
+  epList: (a: AgentRef) => call<EpList>("GET", `${base(a)}/hermes-endpoints`),
+  epSave: (a: AgentRef, body: { name: string; base_url: string; model: string; api_key?: string }) => call<{ ok: boolean; id: string }>("POST", `${base(a)}/hermes-endpoints`, body),
+  epValidate: (a: AgentRef, body: { name: string; base_url: string; model: string; api_key?: string }) => call<EpValidate>("POST", `${base(a)}/hermes-endpoints/validate`, body),
+  epActivate: (a: AgentRef, eid: string) => call<{ ok: boolean }>("POST", `${base(a)}/hermes-endpoints/${encodeURIComponent(eid)}/activate`),
+  epDelete: (a: AgentRef, eid: string, confirm: string) => call<{ ok: boolean }>("DELETE", `${base(a)}/hermes-endpoints/${encodeURIComponent(eid)}?confirm=${encodeURIComponent(confirm)}`),
+  epLocal: (a: AgentRef) => call<EpLocal>("GET", `${base(a)}/hermes-local-models/status`),
   lcCreate: (a: AgentRef, body: { name: string; clone_from?: string; description?: string; clone_channels?: boolean }) => call<LcCreated>("POST", `${base(a)}/hermes-profiles`, body),
   lcRename: (a: AgentRef, name: string, new_name: string) => call<{ ok: boolean; name: string }>("PATCH", `${base(a)}/hermes-profiles/${id(name)}`, { new_name }),
   lcDelete: (a: AgentRef, name: string, confirm: string) => call<{ ok: boolean }>("DELETE", `${base(a)}/hermes-profiles/${id(name)}`, { confirm }),

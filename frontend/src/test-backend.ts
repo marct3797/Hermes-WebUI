@@ -187,6 +187,7 @@ export type DashState = {
   msg: { available: boolean; enabled: Record<string, boolean>; env: Record<string, string>; gateway: { running: boolean; busy: boolean; sessions: number }; polls: number; applied: string[] }; // Messaging und Gateway
   hm: { available: boolean; active: string; files: { memory: number; user: number }; keySet: boolean; project: string; mode: string }; // Hermes-Gedächtnis
   tools: { available: boolean; enabled: Record<string, boolean>; keys: Record<string, string>; provider: Record<string, string>; model: string; installed: boolean }; // Werkzeug-Gruppen
+  ep: { backend: string; endpoints: Array<{ id: string; name: string; base_url: string; model: string; hasKey: boolean }>; current: string };
   lcProfiles: string[]; lcActive: string; // Profil-Lebenszyklus: Namen als Text, nie Serverpfade
 };
 
@@ -460,6 +461,31 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
     }
     return json({ detail: "Unbekannte Modell-Route" }, 404);
   }
+  if (path.startsWith("/hermes-delegation") || path.startsWith("/hermes-endpoints") || path.startsWith("/hermes-local-models")) {
+    if (!dash.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
+    const ep = dash.ep;
+    if (method !== "GET" && dash.stepUp) return json(stepUpBody, 401);
+    const rows = () => ep.endpoints.map((e) => ({ ...e, models: [e.model], has_api_key: e.hasKey, api_key_preview: e.hasKey ? "sk-…9876" : "", is_current: ep.current === e.id }));
+    if (path === "/hermes-delegation" && method === "GET") return json({ configured: ep.backend, blocked_reason: null, backends: [{ name: "default", description: "Eingebaut", builtin: true }, { name: "docker", description: "Container", builtin: false }], profiles: ["gamma"] });
+    if (path === "/hermes-delegation/backend" && method === "PUT") { ep.backend = String(body?.backend); return json({ ok: true, backend: ep.backend }); }
+    if (path === "/hermes-endpoints" && method === "GET") return json({ endpoints: rows(), current: {} });
+    if (path === "/hermes-endpoints" && method === "POST") {
+      if (!/^https?:\/\/[^@]+$/.test(String(body?.base_url))) return json({ detail: [{ loc: ["body", "base_url"], msg: "URL: nur http(s) ohne Zugangsdaten" }] }, 422);
+      const id = String(body?.name).toLowerCase().replace(/ /g, "-");
+      ep.endpoints.push({ id, name: String(body?.name), base_url: String(body?.base_url), model: String(body?.model), hasKey: Boolean(body?.api_key) });
+      return json({ ok: true, id, endpoints: rows(), current: {} });
+    }
+    if (path === "/hermes-endpoints/validate" && method === "POST") return json({ ok: true, reachable: true, message: "ok", models: ["llama3"] });
+    const act = path.match(/^\/hermes-endpoints\/([^/]+)\/activate$/);
+    if (act && method === "POST") { ep.current = act[1]; return json({ ok: true, id: act[1] }); }
+    const one = path.match(/^\/hermes-endpoints\/([^/?]+)$/);
+    if (one && method === "DELETE") {
+      if (new URL(rest, "http://bff").searchParams.get("confirm") !== one[1]) return json({ detail: "Löschen: die Endpunkt-ID zur Bestätigung eingeben" }, 422);
+      ep.endpoints = ep.endpoints.filter((e) => e.id !== one[1]); return json({ ok: true });
+    }
+    if (path === "/hermes-local-models/status" && method === "GET") return json({ enabled: false, runtime_installed: false, server_running: false, models: [{ id: "g1", name: "llama3.gguf", size_bytes: 1048576 }] });
+    return json({ detail: "Unbekannte Endpunkt-Route" }, 404);
+  }
   if (path === "/hermes-ops/backup" && method === "POST") {
     if (dash.stepUp) return json(stepUpBody, 401);
     if (String(body?.confirm) !== "gamma") return json({ detail: "Nur mit Namenseingabe" }, 422);
@@ -558,6 +584,7 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
     msg: { available: true, enabled: {}, env: {}, gateway: { running: false, busy: false, sessions: 0 }, polls: 0, applied: [] },
     hm: { available: true, active: "", files: { memory: 120, user: 45 }, keySet: false, project: "", mode: "fast" },
     tools: { available: true, enabled: { terminal: true, web: false, image_gen: true, computer_use: false }, keys: {}, provider: {}, model: "flux-2-pro", installed: false },
+    ep: { backend: "default", endpoints: [], current: "" },
     lcProfiles: [...agents], lcActive: agents[0] ?? "gamma",
   };
   let runs = 0;

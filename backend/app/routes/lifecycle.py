@@ -22,6 +22,8 @@ from .dashboard import Dash, audit
 
 router = APIRouter(prefix="/bff/h/{host}/{runtime}/{agent}", dependencies=[Depends(current_user)])
 
+DEFAULT, DOCTOR = "default", "doctor"  # feste Namen; als f-String, damit check_upstream die Route als {name}-Muster kennt
+
 Name = Annotated[str, Path(pattern=r"^[a-z0-9][a-z0-9_-]{0,63}$")]
 RESERVED = {"hermes", "default", "test", "tmp", "root", "sudo"}
 OK = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
@@ -207,7 +209,7 @@ async def export(request: Request, name: Name, target: Tgt, dash: Dash, user: Us
 
 @router.get("/hermes-profiles/setup-command")
 async def setup_command(target: Tgt, dash: Dash):
-    result = await upstream(dash.request("GET", "/api/profiles/default/setup-command"))
+    result = await upstream(dash.request("GET", f"/api/profiles/{DEFAULT}/setup-command"))
     cmd = result.get("command") if isinstance(result, dict) else None
     if not isinstance(cmd, str) or not cmd:
         raise HTTPException(502, "Das Dashboard liefert keinen Setup-Befehl")
@@ -251,7 +253,7 @@ async def ops_start(request: Request, target: Tgt, dash: Dash, user: User = Depe
 
 @router.get("/hermes-ops/actions/doctor")
 async def ops_action(target: Tgt, dash: Dash):
-    body = await upstream(dash.request("GET", "/api/actions/doctor/status"))
+    body = await upstream(dash.request("GET", f"/api/actions/{DOCTOR}/status"))
     if not isinstance(body, dict):
         raise HTTPException(502, "Das Dashboard liefert den Aktionszustand in einer unbekannten Form")
     return {"action": "doctor", "running": bool(body.get("running")), "exit_code": body.get("exit_code") if isinstance(body.get("exit_code"), int) else None, "log": redact(str(body.get("log") or ""))[-4000:]}

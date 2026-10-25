@@ -29,11 +29,12 @@ USED: dict[str, list[str]] = {
         "/api/tools/toolsets/{}/env", "/api/tools/toolsets/{}/models", "/api/tools/toolsets/{}/model", "/api/tools/terminal/backends",
         "/api/status", "/api/messaging/platforms", "/api/messaging/platforms/{}", "/api/messaging/platforms/{}/test", "/api/messaging/telegram/onboarding/start",
         "/api/messaging/telegram/onboarding/{}", "/api/messaging/telegram/onboarding/{}/apply", "/api/gateway/start", "/api/gateway/stop", "/api/gateway/restart",
-        "/api/actions/{}/status", "/api/actions/doctor/status", "/api/health", "/api/hermes/update/check", "/api/ops/doctor", "/api/ops/backup", "/api/profiles/active", "/api/profiles/import", "/api/profiles/default/setup-command", "/api/memory", "/api/memory/provider", "/api/memory/reset", "/api/memory/providers/{}/config", "/api/mcp/servers", "/api/mcp/catalog", "/api/mcp/catalog/install", "/api/dashboard/plugins/hub",
+        "/api/actions/{}/status", "/api/health", "/api/hermes/update/check", "/api/ops/doctor", "/api/ops/backup", "/api/profiles/active", "/api/profiles/import", "/api/profiles/{}/setup-command", "/api/memory", "/api/memory/provider", "/api/memory/reset", "/api/memory/providers/{}/config", "/api/mcp/servers", "/api/mcp/catalog", "/api/mcp/catalog/install", "/api/dashboard/plugins/hub",
         "/api/dashboard/plugins/catalog", "/api/dashboard/agent-plugins/install",
         "/api/cron/jobs", "/api/cron/jobs/{}", "/api/cron/jobs/{}/runs", "/api/cron/jobs/{}/pause", "/api/cron/jobs/{}/resume",
         "/api/cron/jobs/{}/trigger", "/api/cron/delivery-targets", "/api/cron/blueprints", "/api/cron/blueprints/instantiate",
         "/api/model/info", "/api/model/recommended-default", "/api/model/auxiliary", "/api/model/moa", "/api/model/set",
+        "/api/delegation/routing", "/api/delegation/backend", "/api/providers/custom-endpoints", "/api/providers/custom-endpoints/{}/activate", "/api/providers/custom-endpoints/{}", "/api/providers/custom-endpoints/validate", "/api/local-models/status",
     ],
     "kanban-plugin": [  # liegt Hermes bei: plugins/kanban/dashboard/plugin_api.py, eingehängt unter /api/plugins/kanban
         "/api/plugins/kanban/board", "/api/plugins/kanban/boards", "/api/plugins/kanban/boards/{}", "/api/plugins/kanban/stats", "/api/plugins/kanban/assignees",

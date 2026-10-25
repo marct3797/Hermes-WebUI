@@ -7,6 +7,7 @@ import { MessagingPage } from "./MessagingPage";
 import { HermesMemoryPage } from "./HermesMemoryPage";
 import { LifecyclePage } from "./LifecyclePage";
 import ModelsPage from "./ModelsPage";
+import EndpointsPage from "./EndpointsPage";
 import { ProfilePage } from "./ProfilePage";
 import { ProvidersPage } from "./ProvidersPage";
 import { SoulPage } from "./SoulPage";
@@ -23,6 +24,7 @@ export function AgentPage({ page }: { page: Extract<Page, { name: "agent" }> }) 
   }
   if (page.module === "profil") return <ProfilePage key={agentKey(page.ref)} agent={agent} label={resolved.label} hostLabel={resolved.host.label} runtimeLabel={resolved.runtimeLabel} />;
   if (page.module === "modelle") return <ModelsPage key={agentKey(page.ref)} agent={agent} />;
+  if (page.module === "endpunkte") return <EndpointsPage key={agentKey(page.ref)} agent={agent} />;
   if (page.module === "lebenszyklus") return <LifecyclePage key={agentKey(page.ref)} agent={agent} label={resolved.label} />;
   if (page.module === "providers") return <ProvidersPage key={agentKey(page.ref)} agent={agent} label={resolved.label} />;
   if (page.module === "config") return <ConfigPage key={agentKey(page.ref)} agent={agent} label={resolved.label} />;

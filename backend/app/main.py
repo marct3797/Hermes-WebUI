@@ -22,7 +22,7 @@ from .oidc import OidcClient
 from .registry import AGENT_RE, Registry
 from .knowledge import KnowledgeRegistry
 from .memory import MemoryRegistry
-from .routes import composer as composer_routes, cron as cron_routes, extensions as extensions_routes, hermes_config as config_routes, tools as tools_routes, messaging as messaging_routes, hermes_memory as hermes_memory_routes, lifecycle as lifecycle_routes, kanban as kanban_routes, marketplace as marketplace_routes, models as models_routes
+from .routes import composer as composer_routes, cron as cron_routes, extensions as extensions_routes, hermes_config as config_routes, tools as tools_routes, messaging as messaging_routes, hermes_memory as hermes_memory_routes, lifecycle as lifecycle_routes, kanban as kanban_routes, marketplace as marketplace_routes, models as models_routes, endpoints as endpoints_routes
 from .rooms import RoomService
 from .routes import agents, auth, cli_auth, dashboard as dashboard_routes, hosts, knowledge as knowledge_routes, memory as memory_routes, operations as operations_routes, rooms as rooms_routes, ui as ui_routes
 from .redaction import RedactionMiddleware
@@ -121,6 +121,7 @@ def create_app(
     app.include_router(messaging_routes.router)
     app.include_router(lifecycle_routes.router)
     app.include_router(models_routes.router)
+    app.include_router(endpoints_routes.router)
     app.include_router(hermes_memory_routes.router)
     app.include_router(dashboard_routes.host_router)
     app.include_router(dashboard_routes.quota_router)

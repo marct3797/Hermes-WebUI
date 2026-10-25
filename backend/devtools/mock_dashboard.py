@@ -456,6 +456,77 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
             prof["provider"], prof["model"] = provider, model
         return {"ok": True, "provider": provider, "model": model}
 
+    # Punkt 8b: Delegation, eigene Endpunkte, lokale Modelle (Form wie Hermes 0.22.5, Schlüssel nie im Klartext)
+    @app.get("/api/delegation/routing")
+    async def delegation_routing(profile: str | None = None):
+        prof = profile_or_default(profile)
+        return {"configured": prof.setdefault("delegation", "default"), "blocked_reason": None,
+                "backends": [{"name": "default", "builtin": True, "description": "Eingebaut"}, {"name": "docker", "builtin": False, "description": "Container"}],
+                "model_map": {"options": [{"name": "schnell", "model": "m1", "api_key": "sk-…cdef"}], "default": None},
+                "profile_routes": {"profiles": [], "default": None}, "profiles": list(state)}
+
+    @app.put("/api/delegation/backend")
+    async def delegation_backend(body: dict[str, Any], profile: str | None = None):
+        prof = profile_or_default(profile)
+        name = str(body.get("backend", "")).strip().lower() or "default"
+        if name not in ("default", "docker"):
+            raise HTTPException(400, f"unknown backend {name}")
+        if not drop_writes:
+            prof["delegation"] = name
+        return {"ok": True, "backend": name}
+
+    def endpoints_of(prof: dict[str, Any]) -> dict[str, dict[str, Any]]:
+        return prof.setdefault("endpoints", {})
+
+    def endpoint_listing(prof: dict[str, Any]) -> dict[str, Any]:
+        rows = [{"id": i, "name": e["name"], "base_url": e["base_url"], "model": e["model"], "models": [e["model"]], "api_mode": "",
+                 "context_length": None, "discover_models": True, "has_api_key": bool(e.get("api_key")),
+                 "api_key_preview": "sk-…" + e["api_key"][-4:] if e.get("api_key") else "", "is_current": prof.get("endpoint") == i, "source": "providers"}
+                for i, e in endpoints_of(prof).items()]
+        return {"endpoints": rows}
+
+    @app.get("/api/providers/custom-endpoints")
+    async def custom_endpoints(profile: str | None = None):
+        return endpoint_listing(profile_or_default(profile))
+
+    @app.post("/api/providers/custom-endpoints/validate")
+    async def custom_endpoint_validate(body: dict[str, Any]):
+        return {"ok": True, "reachable": True, "message": "ok", "models": ["llama3"]}
+
+    @app.post("/api/providers/custom-endpoints")
+    async def custom_endpoint_upsert(body: dict[str, Any], profile: str | None = None):
+        prof = profile_or_default(profile)
+        eid = str(body.get("id") or body.get("name") or "").strip().lower().replace(" ", "-")
+        if not eid or not body.get("base_url") or not body.get("model"):
+            raise HTTPException(422, "name/base_url/model fehlt")
+        if not drop_writes:
+            endpoints_of(prof)[eid] = {k: body.get(k) for k in ("name", "base_url", "model", "api_key")}
+        return {**endpoint_listing(prof), "ok": True, "id": eid}
+
+    @app.post("/api/providers/custom-endpoints/{endpoint_id}/activate")
+    async def custom_endpoint_activate(endpoint_id: str, profile: str | None = None):
+        prof = profile_or_default(profile)
+        if endpoint_id not in endpoints_of(prof):
+            raise HTTPException(404, "custom endpoint not found")
+        if not drop_writes:
+            prof["endpoint"] = endpoint_id
+            prof["provider"], prof["model"] = endpoint_id, endpoints_of(prof)[endpoint_id]["model"]
+        return {"ok": True, "provider": endpoint_id, "model": prof["model"]}
+
+    @app.delete("/api/providers/custom-endpoints/{endpoint_id}")
+    async def custom_endpoint_delete(endpoint_id: str, profile: str | None = None):
+        prof = profile_or_default(profile)
+        if endpoint_id not in endpoints_of(prof):
+            raise HTTPException(404, "custom endpoint not found")
+        if not drop_writes:
+            endpoints_of(prof).pop(endpoint_id)
+        return {**endpoint_listing(prof), "ok": True}
+
+    @app.get("/api/local-models/status")
+    async def local_models_status():
+        return {"enabled": False, "tag": None, "runtime_installed": False, "server_running": False, "active_model_id": None,
+                "loaded_models": {}, "models": [{"id": "gguf-1", "name": "llama3.gguf", "size_bytes": 1024}], "models_dir": "/opt/data/models"}
+
     sessions: dict[str, dict[str, Any]] = {}
     app.state.oauth_sessions = sessions
 
