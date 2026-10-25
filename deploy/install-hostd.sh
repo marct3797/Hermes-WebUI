@@ -39,9 +39,9 @@ ws_id=(); ws_path=(); ws_label=()
 for spec in ${workspaces[@]+"${workspaces[@]}"}; do
   [[ "$spec" =~ ^([A-Za-z0-9_-]{1,64})=(/[^:]*)(:(.*))?$ && "$spec" != *$'\n'* ]] || {
     printf '%s\n' "Invalid --workspace (expected ID=ABSOLUTE_PATH[:Label]): $spec" >&2; exit 2; }
-  real=$(realpath -e -- "${BASH_REMATCH[2]}" 2>/dev/null) && [[ -d "$real" ]] || {
+  real=$(cd -- "${BASH_REMATCH[2]}" 2>/dev/null && pwd -P) && [[ -d "$real" ]] || {   # pwd -P statt realpath -e: läuft auch mit dem BSD-realpath von macOS
     printf '%s\n' "Workspace is not an existing directory: ${BASH_REMATCH[2]}" >&2; exit 2; }
-  [[ "$real" != / && "$real" != "$(realpath -e -- "$HOME")" ]] || {
+  [[ "$real" != / && "$real" != "$(cd -- "$HOME" && pwd -P)" ]] || {
     printf '%s\n' "Refusing / or the home directory itself as workspace: $real" >&2; exit 2; }
   ws_id+=("${BASH_REMATCH[1]}"); ws_path+=("$real"); ws_label+=("${BASH_REMATCH[4]:-${BASH_REMATCH[1]}}")
 done

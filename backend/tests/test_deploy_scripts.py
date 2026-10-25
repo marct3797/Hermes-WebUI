@@ -18,7 +18,7 @@ def box(tmp_path):
     bin_.mkdir()
     real = shutil.which("chmod")
     stubs = {
-        "chmod": f'#!/bin/bash\nfor a in "$@"; do [ -e "$a" ] && stat -c "%a %n" "$a" >> {log}; done\nexec {real} "$@"\n',
+        "chmod": f'#!/bin/bash\nfor a in "$@"; do [ -e "$a" ] && (stat -c "%a %n" "$a" 2>/dev/null || stat -f "%Lp %N" "$a") >> {log}; done\nexec {real} "$@"\n',
         "sudo": '#!/bin/bash\nwhile [[ "$1" == --* ]]; do shift; done\nexec "$@"\n',
         "docker": '#!/bin/bash\ncase "$1" in exec) printf %s synthetic-key-0123456789;; esac\nexit 0\n',
         "curl": "#!/bin/bash\nexit 0\n",
@@ -144,3 +144,35 @@ def test_add_host_dashboard_port_on_a_remote_address_warns_that_hermes_refuses_i
     prepare(box, OIDC)
     r = run(box, "add-host.sh", "box", "Box", "10.0.0.9", "--home", str(box.home), "--dashboard-port", "9119", stdin="synthetic-key-0123456789\ndash-token-0123456789\n")
     assert "Tunnel" in r.stdout and "--dashboard-url" in r.stdout
+
+
+# install-hostd.sh prüft Arbeitsordner vor jeder Installation. Die Prüfung nutzt `cd && pwd -P` statt `realpath -e` (macOS), darum festgehalten:
+@pytest.mark.parametrize("spec,expect", [
+    ("ws=/gibt/es/nicht", "not an existing directory"),
+    ("ws=/", "Refusing"),
+    ("kaputt", "Invalid --workspace"),
+    ("ws=relativ/pfad", "Invalid --workspace"),
+])
+def test_install_hostd_rejects_bad_workspaces_before_installing(box, spec, expect):
+    r = run(box, "install-hostd.sh", "--no-start", "--workspace", spec)
+    assert r.returncode == 2 and expect in r.stderr, (r.stdout, r.stderr)
+    assert not (box.tmp / ".local").exists()  # nichts installiert
+
+
+def test_install_hostd_refuses_the_home_directory_also_through_a_symlink(box):
+    link = box.tmp.parent / (box.tmp.name + "-link")
+    link.symlink_to(box.tmp)
+    for target in (box.tmp, link):
+        r = run(box, "install-hostd.sh", "--no-start", "--workspace", f"ws={target}")
+        assert r.returncode == 2 and "Refusing" in r.stderr, (target, r.stderr)
+
+
+def test_install_hostd_accepts_a_real_directory_through_a_symlink(box):
+    real = box.tmp / "projekt"; real.mkdir()
+    link = box.tmp / "kurz"; link.symlink_to(real)
+    marker = box.tmp / "install-begann"
+    fake = box.tmp / "fakepython"  # Attrappe: beweist, dass die Prüfung bestanden wurde und die Installation beginnen würde, ohne etwas zu installieren
+    fake.write_text(f"#!/bin/bash\ntouch {marker}\nexit 3\n"); fake.chmod(0o755)
+    r = run(box, "install-hostd.sh", "--no-start", "--python", str(fake), "--workspace", f"ws={link}")
+    assert marker.exists(), r.stderr
+    assert "Refusing" not in r.stderr and "not an existing" not in r.stderr and "Invalid --workspace" not in r.stderr
