@@ -77,4 +77,17 @@ describe("GuidePage", () => {
     expect(screen.getByRole("heading", { name: "Anleitungen", level: 1 })).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: /Anleitungen/ }).length).toBeGreaterThanOrEqual(1);
   });
+
+  it("mutation probe: wrong check route breaks the test", async () => {
+    await open();
+    // Kernlogik kaputt machen: Gateway-Pruefung ruft die falsche Route.
+    const gw = GUIDE.find((e) => e.id === "gateway")!;
+    const orig = gw.run!;
+    gw.run = async () => ({ ok: true, text: "FALSCH" });
+    const idx = GUIDE.findIndex((e) => e.id === "gateway");
+    fireEvent.click(screen.getAllByRole("button", { name: "Ergebnis pruefen" })[idx]);
+    await screen.findByText("FALSCH");
+    expect(calls.some((c) => c.method === "GET" && c.url.endsWith("/gateway"))).toBe(false);
+    gw.run = orig;
+  });
 });
