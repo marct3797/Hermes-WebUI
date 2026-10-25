@@ -1301,6 +1301,31 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
             raise HTTPException(404, "Session not found")
         return {"id": found["id"], "title": found["title"], "messages": [{"id": n, "role": "user", "content": f"m{n}"} for n in range(found["messages"])]}
 
+    @app.get("/api/sessions/{session_id}/timeline")
+    async def sessions_timeline(session_id: str, profile: str | None = None, limit: int = 500, after_row_id: int = 0):
+        found = next((x for x in sess_of(profile_or_default(profile)) if x["id"] == session_id), None)
+        if found is None:
+            raise HTTPException(404, "Session not found")
+        return {"session_id": session_id, "profile": profile_or_default(profile).get("name", profile),
+                "events": [{"row_id": n + 1, "type": "user_message", "summary": found["title"]} for n in range(min(found["messages"], limit))],
+                "after_row_id": after_row_id}
+
+    @app.post("/api/sessions/import")
+    async def sessions_import(body: dict[str, Any]):
+        sessions = body.get("sessions")
+        if not isinstance(sessions, list) or not sessions:
+            raise HTTPException(400, "Invalid session import payload")
+        prof = profile_or_default(body.get("profile"))
+        for s in sessions:
+            if isinstance(s, dict) and isinstance(s.get("id"), str):
+                prof["sessions"].append({"id": s["id"], "title": str(s.get("title") or ""), "last_active": time.time(),
+                                         "messages": len(s.get("messages", [])), "source": "import", "active": False})
+        return {"ok": True, "imported": len(sessions), "profile": body.get("profile")}
+
+    @app.post("/api/sessions/owner-backfill")
+    async def sessions_backfill(body: dict[str, Any]):
+        return {"ok": True, "stamped": 3, "profile": body.get("profile")}
+
     @app.get("/api/sessions/search")
     async def sessions_search(q: str):
         return {"results": [{"id": "s1", "session_id": "s1", "profile": "beta", "title": None, "snippet": f"Treffer für {q}"}]}

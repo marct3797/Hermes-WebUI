@@ -84,7 +84,7 @@ def create_mock() -> FastAPI:
         jid = f"{app.state.next_id:012x}"
         paused = body.get("paused") is True
         job = {"id": jid, "name": body.get("name") or "ohne Namen", "prompt": body.get("prompt", ""), "skills": body.get("skills") or [], "model": body.get("model"),
-               "provider": body.get("provider"), "script": None, "no_agent": False, "schedule": parse(str(body["schedule"])),
+               "provider": body.get("provider"), "script": body.get("script"), "no_agent": bool(body.get("no_agent")), "schedule": parse(str(body["schedule"])),
                "repeat": {"times": body.get("repeat"), "completed": 0}, "enabled": not paused, "state": "paused" if paused else "scheduled",
                "paused_reason": body.get("paused_reason") if paused else None, "next_run_at": None if paused else "2026-10-25T08:00:00+00:00",
                "last_run_at": None, "last_status": None, "last_error": None, "failure_streak": 0, "deliver": body.get("deliver") or "local", "latest_execution": None,

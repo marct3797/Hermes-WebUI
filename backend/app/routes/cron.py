@@ -62,8 +62,10 @@ async def job_runs(request: Request, host: Host, profile: Profile, job_id: JobId
 
 @router.post(BASE + "/schedules")
 async def create_job(request: Request, host: Host, profile: Profile, req: C.JobCreate, user: User = Depends(fresh_user)):
+    if req.creates_system() and not req.confirm_system:
+        raise HTTPException(409, "Das ist ein Skript-Job ohne Agent und läuft direkt auf dem Server: Vorgang wiederholen und dabei ausdrücklich bestätigen")
     await _check_deliver(request, host, profile, req.deliver)
-    body = {**req.model_dump(exclude_none=True), "paused": True, "paused_reason": "Neu angelegt, bitte bewusst aktivieren"}  # neu = pausiert
+    body = {**req.model_dump(exclude_none=True, exclude={"confirm_system"}), "paused": True, "paused_reason": "Neu angelegt, bitte bewusst aktivieren"}  # neu = pausiert
     job = C.job_view(await dash(request, host, "POST", "/api/cron/jobs", body=body, params={"profile": profile}))
     _audit(request, user, "cron.create", host, profile, job["id"])
     return job

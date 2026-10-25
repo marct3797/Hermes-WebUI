@@ -67,6 +67,38 @@ def _route_unknown(res: httpx.Response) -> bool:
     return isinstance(d, str) and d.startswith("No such API endpoint")
 
 
+def _fail(res: httpx.Response, path: str, *, missing: str | None, explain: bool, json_body: Any) -> None:
+    """Dashboard-Fehler auf UpstreamError abbilden (für JSON- und Binär-Aufrufe identisch)."""
+    if 300 <= res.status_code < 400:
+        raise UpstreamError(502, f"Das Dashboard verlangt eine eigene Anmeldung (es lauscht nicht auf Loopback). {LOOPBACK_HINT}")
+    if res.status_code in (401, 403):
+        raise UpstreamError(502, f"Das Dashboard lehnt den Zugang ab: Token prüfen. Lauscht es nicht auf Loopback, verlangt Hermes ab 0.22 eine eigene Anmeldung. {LOOPBACK_HINT}")
+    if res.status_code == 400 and "Invalid Host header" in res.text[:300]:
+        raise UpstreamError(502, f"Das Dashboard lehnt den Rechnernamen im Host-Header ab (Hermes ab 0.22 erlaubt nur 127.0.0.1 und localhost). {LOOPBACK_HINT}")
+    if res.status_code == 404:
+        if _route_unknown(res) and not path.startswith("/api/plugins/"):  # Plugin-Routen behalten ihre eigene Meldung („Plugin nicht installiert“)
+            raise UpstreamError(501, f"Diese Hermes-Version kennt {path} nicht. Hermes aktualisieren (Mindestversion: docs/compatibility.md).")
+        raise UpstreamError(404, missing or "Das Dashboard kennt dieses Profil nicht")
+    if res.status_code >= 400:
+        why = ""
+        if explain:  # Anmeldungen scheitern aus Gründen, die der Person helfen (Netz, abgelaufen, abgelehnt)
+            try:
+                d = res.json().get("detail")
+                if isinstance(d, str):
+                    for secret in sorted(_submitted_strings(json_body), key=len, reverse=True):
+                        d = d.replace(secret, "[REDACTED]")
+                why = f": {d[:200]}" if isinstance(d, str) else ""
+            except (ValueError, AttributeError):
+                pass
+        raise UpstreamError(502, f"Das Dashboard meldet Fehler {res.status_code}{why}")
+
+
+def _capped(data: bytes, limit: int) -> bytes:
+    if len(data) > limit:
+        raise UpstreamError(502, "Die Datei ist zu groß für den Zwischenspeicher des BFF")
+    return data
+
+
 class DashboardClient:
     def __init__(self, cfg: DashboardCfg, http: httpx.AsyncClient, caching: CacheCfg | None = None):
         self._cfg, self._http, self._caching = cfg, http, caching
@@ -95,28 +127,7 @@ class DashboardClient:
             raise UpstreamError(504, "Das Dashboard antwortet nicht") from e
         except httpx.HTTPError as e:
             raise UpstreamError(503, "Das Dashboard ist nicht erreichbar") from e
-        if 300 <= res.status_code < 400:
-            raise UpstreamError(502, f"Das Dashboard verlangt eine eigene Anmeldung (es lauscht nicht auf Loopback). {LOOPBACK_HINT}")
-        if res.status_code in (401, 403):
-            raise UpstreamError(502, f"Das Dashboard lehnt den Zugang ab: Token prüfen. Lauscht es nicht auf Loopback, verlangt Hermes ab 0.22 eine eigene Anmeldung. {LOOPBACK_HINT}")
-        if res.status_code == 400 and "Invalid Host header" in res.text[:300]:
-            raise UpstreamError(502, f"Das Dashboard lehnt den Rechnernamen im Host-Header ab (Hermes ab 0.22 erlaubt nur 127.0.0.1 und localhost). {LOOPBACK_HINT}")
-        if res.status_code == 404:
-            if _route_unknown(res) and not path.startswith("/api/plugins/"):  # Plugin-Routen behalten ihre eigene Meldung („Plugin nicht installiert“)
-                raise UpstreamError(501, f"Diese Hermes-Version kennt {path} nicht. Hermes aktualisieren (Mindestversion: docs/compatibility.md).")
-            raise UpstreamError(404, missing or "Das Dashboard kennt dieses Profil nicht")
-        if res.status_code >= 400:
-            why = ""
-            if explain:  # Anmeldungen scheitern aus Gründen, die der Person helfen (Netz, abgelaufen, abgelehnt)
-                try:
-                    d = res.json().get("detail")
-                    if isinstance(d, str):
-                        for secret in sorted(_submitted_strings(json_body), key=len, reverse=True):
-                            d = d.replace(secret, "[REDACTED]")
-                    why = f": {d[:200]}" if isinstance(d, str) else ""
-                except (ValueError, AttributeError):
-                    pass
-            raise UpstreamError(502, f"Das Dashboard meldet Fehler {res.status_code}{why}")
+        _fail(res, path, missing=missing, explain=explain, json_body=json_body)
         try:
             return res.json()
         except ValueError as e:
@@ -182,6 +193,37 @@ class DashboardClient:
         """Öffentlicher Durchgriff auf eine Dashboard-Route (Pakete bauen darauf ihre festen, validierten Routen).
         Fehlertexte des Dashboards werden mitgegeben, damit Eingabefehler (z. B. ungültiger Skill-Name) sichtbar werden."""
         return await self._call(method, path, json_body=body, params=params, missing=missing or "Nicht gefunden: das Dashboard kennt diese Ressource nicht", explain=True)
+
+    def _headers(self) -> dict[str, str]:
+        return {"X-Hermes-Session-Token": self._cfg.token} if self._cfg.token else {}
+
+    async def download(self, path: str, *, params: dict[str, str] | None = None, missing: str | None = None,
+                       limit: int = 50 * 1024 * 1024) -> bytes:
+        """Binärdatei vom Dashboard holen (Anhänge, Board-Exporte); die Obergrenze schützt den BFF-Rechner."""
+        try:
+            res = await self._http.request("GET", f"{self._cfg.base_url}{path}", params=params, headers=self._headers())
+        except httpx.TimeoutException as e:
+            raise UpstreamError(504, "Das Dashboard antwortet nicht") from e
+        except httpx.HTTPError as e:
+            raise UpstreamError(503, "Das Dashboard ist nicht erreichbar") from e
+        _fail(res, path, missing=missing, explain=False, json_body=None)
+        return _capped(res.content, limit)
+
+    async def upload(self, path: str, *, filename: str, data: bytes, content_type: str = "application/octet-stream",
+                     form: dict[str, str] | None = None, params: dict[str, str] | None = None, missing: str | None = None) -> Any:
+        """Datei als Multipart-Upload ans Dashboard schicken (Anhänge, Board-Archive)."""
+        try:
+            res = await self._http.request("POST", f"{self._cfg.base_url}{path}", params=params, headers=self._headers(),
+                                           files={"file": (filename, data, content_type)}, data=form or {})
+        except httpx.TimeoutException as e:
+            raise UpstreamError(504, "Das Dashboard antwortet nicht") from e
+        except httpx.HTTPError as e:
+            raise UpstreamError(503, "Das Dashboard ist nicht erreichbar") from e
+        _fail(res, path, missing=missing, explain=True, json_body=form)
+        try:
+            return res.json()
+        except ValueError as e:
+            raise UpstreamError(502, "Das Dashboard antwortet nicht im erwarteten Format") from e
 
     # Nur lesende Host-Daten (Kanban, Logs, MCP, Plugins, Suche): Ersatzquelle, wenn der Host-Dienst sie nicht liefern kann.
     async def kanban_board(self, name: str) -> Any:

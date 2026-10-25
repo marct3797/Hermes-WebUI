@@ -36,6 +36,7 @@ USED: dict[str, list[str]] = {
         "/api/model/info", "/api/model/recommended-default", "/api/model/auxiliary", "/api/model/moa", "/api/model/set",
         "/api/delegation/routing", "/api/delegation/backend", "/api/providers/custom-endpoints", "/api/providers/custom-endpoints/{}/activate", "/api/providers/custom-endpoints/{}", "/api/providers/custom-endpoints/validate", "/api/local-models/status",
         "/api/sessions/stats", "/api/sessions/empty/count", "/api/sessions/empty", "/api/sessions/prune", "/api/sessions/bulk-delete", "/api/sessions/{}/export",
+        "/api/sessions/{}/timeline", "/api/sessions/import", "/api/sessions/owner-backfill",
         "/api/pairing", "/api/pairing/approve", "/api/pairing/revoke", "/api/webhooks", "/api/webhooks/enable", "/api/webhooks/{}", "/api/webhooks/{}/enabled",
         "/api/credentials/pool", "/api/credentials/pool/{}/{}", "/api/audio/voice-live/status", "/api/audio/speak", "/api/audio/transcribe",
         "/api/system/stats", "/api/tools/computer-use/status", "/api/curator", "/api/curator/paused", "/api/curator/run", "/api/learning/graph", "/api/learning/node",

@@ -83,14 +83,28 @@ def test_create_is_always_paused_and_audited_without_content(env):
 def test_create_validation(env):
     ok = {"schedule": "30m", "prompt": "x"}
     for bad in ({**ok, "schedule": ""}, {**ok, "schedule": "x" * 201}, {**ok, "prompt": ""}, {**ok, "prompt": "x" * 20001}, {**ok, "name": "n" * 201}, {**ok, "repeat": 0},
-                {**ok, "repeat": 1_000_001}, {**ok, "skills": ["a"] * 31}, {**ok, "skills": ["../x"]}, {**ok, "script": "x.sh"}, {**ok, "no_agent": True}, {**ok, "paused": False},
-                {**ok, "schedule": "a\nb"}):
+                {**ok, "repeat": 1_000_001}, {**ok, "skills": ["a"] * 31}, {**ok, "skills": ["../x"]}, {**ok, "paused": False},
+                {**ok, "schedule": "a\nb"}, {**ok, "script": "x" * 20001}, {**ok, "script": "a\0b"}):
         assert env.post(f"{CRON}/schedules", json=bad).status_code == 422, bad
     assert not writes(env.dash)
     assert env.post(f"{CRON}/schedules", json={**ok, "deliver": "gibts-nicht"}).status_code == 422  # nicht in den Zustellzielen
     assert not writes(env.dash)
     bad = env.post(f"{CRON}/schedules", json={**ok, "schedule": "irgendwann"})
     assert bad.status_code == 502 and "Invalid schedule" in bad.json()["detail"]  # Dashboard-Grund wird durchgereicht
+
+
+def test_create_script_job_needs_explicit_confirmation(env):
+    base = {"schedule": "30m", "prompt": "x", "script": "echo hi", "no_agent": True}
+    n = len(writes(env.dash))
+    assert env.post(f"{CRON}/schedules", json=base).status_code == 409  # ohne Bestätigung kein Skript-Job
+    assert len(writes(env.dash)) == n
+    r = env.post(f"{CRON}/schedules", json={**base, "confirm_system": True})
+    assert r.status_code == 200, r.text
+    job = r.json()
+    assert job["system"] is True and job["state"] == "paused" and job["script"] == "echo hi" and job["no_agent"] is True
+    sent = writes(env.dash)[-1][3]
+    assert sent["script"] == "echo hi" and sent["no_agent"] is True and "confirm_system" not in sent and sent["paused"] is True
+    assert env.post(f"{CRON}/schedules", json={"schedule": "30m", "prompt": "x", "no_agent": True, "confirm_system": True}).status_code == 422  # ohne Skript sinnlos
 
 
 def test_update_sends_only_changes_and_checks_target(env):

@@ -35,3 +35,41 @@ async def test_401_names_both_causes_wrong_token_and_gate():
 async def test_plain_errors_stay_short():
     status, text = await message(lambda r: httpx.Response(500, json={"detail": "x"}))
     assert text == "Das Dashboard meldet Fehler 500"
+
+
+async def test_download_returns_bytes_and_caps_size():
+    c = client(lambda r: httpx.Response(200, content=b"\x50\x4b\x03\x04daten"))
+    assert await c.download("/api/x", missing="fehlt") == b"\x50\x4b\x03\x04daten"
+    big = client(lambda r: httpx.Response(200, content=b"y" * 11))
+    with pytest.raises(UpstreamError) as e:
+        await big.download("/api/x", missing="fehlt", limit=10)
+    assert e.value.status == 502 and "groß" in e.value.detail
+
+
+async def test_download_maps_dashboard_errors_like_json_calls():
+    nf = client(lambda r: httpx.Response(404, json={"detail": "attachment not found"}))
+    with pytest.raises(UpstreamError) as e:
+        await nf.download("/api/x", missing="Diesen Anhang gibt es nicht")
+    assert e.value.status == 404 and "Anhang" in e.value.detail
+    login = client(lambda r: httpx.Response(302, headers={"location": "/login"}))
+    with pytest.raises(UpstreamError) as e:
+        await login.download("/api/x")
+    assert e.value.status == 502 and "Anmeldung" in e.value.detail
+
+
+async def test_upload_posts_multipart_and_reads_json_answer():
+    seen = {}
+
+    def handler(r: httpx.Request):
+        seen["ct"] = r.headers.get("content-type", "")
+        seen["body"] = r.content
+        return httpx.Response(200, json={"ok": True, "id": 7})
+
+    out = await client(handler).upload("/api/x", filename="notiz.txt", data=b"hallo", form={"a": "b"}, missing="fehlt")
+    assert out == {"ok": True, "id": 7}
+    assert seen["ct"].startswith("multipart/form-data") and b"notiz.txt" in seen["body"] and b"hallo" in seen["body"]
+
+    err = client(lambda r: httpx.Response(400, json={"detail": "kaputt"}))
+    with pytest.raises(UpstreamError) as e:
+        await err.upload("/api/x", filename="n", data=b"d")
+    assert e.value.status == 502 and "400" in e.value.detail

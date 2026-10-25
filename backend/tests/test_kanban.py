@@ -171,12 +171,16 @@ def test_bulk_move_archive_and_rules(kb):
     assert c.post(f"{B}/tasks/bulk", json={"ids": ["t_aaaa0001"], "delete": True}).status_code == 422
 
 
-def test_there_is_no_delete_route(kb):
+def test_only_boards_and_attachments_have_delete_routes(kb):
     c, mock, app, _ = kb
-    assert c.delete(f"{B}/tasks/t_aaaa0001").status_code == 405
-    assert c.delete(f"{B}/boards/alpha").status_code == 405
+    assert c.delete(f"{B}/tasks/t_aaaa0001").status_code == 405  # Aufgaben lassen sich nicht löschen
     assert not [x for x in mock.state.calls if x[0] == "DELETE"]
-    assert not [p for p in app.openapi()["paths"] if "_kanban" in p and "delete" in app.openapi()["paths"][p] and not p.endswith("/links")]
+    paths = app.openapi()["paths"]
+    assert sorted(p for p in paths if "_kanban" in p and "delete" in paths[p]) == [
+        "/bff/h/{host}/_kanban/attachments/{attachment_id}",
+        "/bff/h/{host}/_kanban/boards/{slug}",  # archiviert nur, kein hartes Löschen
+        "/bff/h/{host}/_kanban/links",
+    ]
 
 
 def test_boards_create_and_update(kb):

@@ -1,6 +1,7 @@
 """Sitzungen verwalten (Punkt 9). Schranken siehe tests/test_hermes_sessions.py.
 
-Nicht durchgereicht: Import (fremde Verläufe einschleusen), `owner-backfill` (Migration), Umbenennen/Fork/Liste laufen schon über die Agent-API.
+Zeitachse und Export lesen nur. Import und Profil-Zuordnung (`owner-backfill`) schreiben nur mit frischer
+Anmeldung und Bestätigung; Umbenennen/Fork/Liste laufen schon über die Agent-API.
 """
 from __future__ import annotations
 
@@ -150,3 +151,59 @@ async def export_one(session_id: str, target: Tgt, dash: Dash):
     if not isinstance(b, dict) or not isinstance(b.get("messages"), list):
         raise HTTPException(502, "Das Dashboard liefert die Sitzung in unbekannter Form")
     return b
+
+
+@router.get("/hermes-sessions/{session_id}/timeline")
+async def timeline(session_id: str, target: Tgt, dash: Dash, limit: int = Query(default=100, ge=1, le=200),
+                   after_row_id: int = Query(default=0, ge=0)):
+    try:
+        sid = _sid(session_id)
+    except ValueError as e:
+        raise HTTPException(422, str(e)) from e
+    b = await upstream(dash.request("GET", f"/api/sessions/{sid}/timeline",
+                                    params={"profile": target.agent.id, "limit": str(limit), "after_row_id": str(after_row_id)},
+                                    missing="Sitzung nicht gefunden"))
+    if not isinstance(b, dict) or b.get("session_id") != sid or not isinstance(b.get("events"), list):
+        raise HTTPException(502, "Das Dashboard liefert die Zeitachse in unbekannter Form")
+    return b  # eigene Sitzungsdaten, wie der Export direkt durchgereicht
+
+
+class SessionsImportIn(BaseModel):
+    model_config = {"extra": "forbid"}
+    sessions: list[dict[str, Any]] = Field(min_length=1, max_length=200)
+    confirm_count: int = Field(ge=0)
+
+
+@router.post("/hermes-sessions/import", status_code=201)
+async def import_sessions(request: Request, target: Tgt, dash: Dash, req: SessionsImportIn, user: User = Depends(fresh_user)):
+    _limit(request, user, "hermes-sessions")
+    ids = [s.get("id") for s in req.sessions]
+    if any(not isinstance(i, str) or not i for i in ids):
+        raise HTTPException(422, "Jede Sitzung braucht eine ID als Text")
+    if req.confirm_count != len(req.sessions):
+        raise HTTPException(422, f"Import: {len(req.sessions)} Sitzungen ausgewählt, die eingegebene Zahl stimmt nicht")
+    out = await upstream(dash.request("POST", "/api/sessions/import", body={"sessions": req.sessions, "profile": target.agent.id}))
+    imported = out.get("imported") if isinstance(out, dict) else None
+    if not isinstance(imported, int):
+        raise HTTPException(502, "Das Dashboard hat den Import nicht bestätigt")
+    audit(request, user, "sessions.import", target, imported=imported)
+    return {"ok": True, "imported": imported}
+
+
+class BackfillIn(BaseModel):
+    model_config = {"extra": "forbid"}
+    confirm: bool = False
+
+
+@router.post("/hermes-sessions/owner-backfill")
+async def owner_backfill(request: Request, target: Tgt, dash: Dash, req: BackfillIn, user: User = Depends(fresh_user)):
+    _limit(request, user, "hermes-sessions")
+    if not req.confirm:
+        raise HTTPException(422, "füllt alte Sitzungen ohne Profil mit diesem Profil: confirm=true senden")
+    out = await upstream(dash.request("POST", "/api/sessions/owner-backfill", body={"profile": target.agent.id}))
+    if not isinstance(out, dict) or not out.get("ok"):
+        raise HTTPException(502, "Das Dashboard hat die Zuordnung nicht bestätigt")
+    stamped = out.get("stamped")
+    audit(request, user, "sessions.owner_backfill", target, stamped=stamped if isinstance(stamped, int) else -1)
+    return {"ok": True, "stamped": stamped if isinstance(stamped, int) else None,
+            "profile": out.get("profile") if isinstance(out.get("profile"), str) else target.agent.id}

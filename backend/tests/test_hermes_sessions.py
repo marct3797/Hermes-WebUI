@@ -1,10 +1,11 @@
-"""Sitzungen verwalten (Punkt 9): Statistik, Export, Aufräumen, Mehrfach-Löschen, Leere löschen.
+"""Sitzungen verwalten (Punkt 9): Statistik, Export, Aufräumen, Mehrfach-Löschen, Leere löschen, Zeitachse, Import, Profil-Zuordnung.
 
 Schranken des BFF (Hermes fragt bei Löschen nicht nach):
 - Löschen immer mit frischer Anmeldung und mit der vorher gezeigten Anzahl als Bestätigung (Vorschau -> Zahl eintippen),
 - Aufräumen nie ohne Altersgrenze von mindestens einem Tag (0 würde alles treffen), Mehrfach-Löschen höchstens 500 IDs,
 - Ergebnis wird mit der Statistik gegengelesen; Inhalte der Sitzungen landen nie im Audit.
-Import bleibt bewusst aus (fremde Verläufe einschleusen).
+- Import: höchstens 200 Sitzungen, jede mit ID, Anzahl eintippen, frische Anmeldung; der Verlauf stammt aus einem Export der gleichen Person.
+- Profil-Zuordnung (`owner-backfill`) stempelt nur Sitzungen ohne Profil und nie etwas um, was schon ein Profil hat.
 """
 import json
 import time
@@ -111,6 +112,41 @@ def test_export_returns_one_session_and_404_for_unknown_or_unsafe_ids(env):
     assert b["id"] == "a1" and isinstance(b["messages"], list) and len(b["messages"]) == 3
     assert env.get(f"{S}/gibtsnicht/export").status_code == 404
     assert env.get(f"{S}/..%2Fx/export").status_code in (404, 422)
+
+
+def test_timeline_shows_session_events_and_validates_id(env):
+    r = env.get(f"{S}/a1/timeline")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["session_id"] == "a1" and isinstance(body["events"], list) and len(body["events"]) == 3
+    assert env.get(f"{S}/gibtsnicht/timeline").status_code == 404
+    assert env.get(f"{S}/a%20b/timeline").status_code == 422
+
+
+def test_import_needs_fresh_login_matching_count_and_reads_back(env):
+    payload = {"sessions": [{"id": "neu1", "title": "Importiert", "messages": []}], "confirm_count": 1}
+    stale(env)
+    assert env.post(f"{S}/import", json=payload).status_code == 401
+    env.app.state.sessions.get(env.cookies.get(SESSION_COOKIE)).auth_time = env.app.state.sessions.now()
+    assert env.post(f"{S}/import", json={**payload, "confirm_count": 2}).status_code == 422
+    assert env.post(f"{S}/import", json={"sessions": [{"title": "ohne ID"}], "confirm_count": 1}).status_code == 422
+    assert env.post(f"{S}/import", json={"sessions": [], "confirm_count": 0}).status_code == 422
+    before = total(env)
+    r = env.post(f"{S}/import", json=payload)
+    assert r.status_code == 201, r.text
+    assert r.json() == {"ok": True, "imported": 1}
+    assert total(env) == before + 1
+    assert "sessions.import" in env.audit_file.read_text()
+
+
+def test_owner_backfill_needs_confirm_and_fresh_login(env):
+    assert env.post(f"{S}/owner-backfill", json={}).status_code == 422
+    stale(env)
+    assert env.post(f"{S}/owner-backfill", json={"confirm": True}).status_code == 401
+    env.app.state.sessions.get(env.cookies.get(SESSION_COOKIE)).auth_time = env.app.state.sessions.now()
+    r = env.post(f"{S}/owner-backfill", json={"confirm": True})
+    assert r.status_code == 200, r.text
+    assert r.json()["ok"] is True and r.json()["stamped"] == 3
 
 
 def test_dropped_deletes_are_not_reported_as_success(tmp_path, make_settings):

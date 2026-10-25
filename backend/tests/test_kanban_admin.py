@@ -6,7 +6,11 @@ Schranken des BFF:
 - Spezifizieren/Schätzen verbraucht Modell-Tokens (und Spezifizieren schreibt die Aufgabe um): frisch + Rate-Limit, Spezifizieren nur mit `confirm`,
 - Dispatch: Vorschau (`dry_run`) ist frei, echtes Starten nur frisch und mit `confirm_spawn`, höchstens 8,
 - Board wechseln wird zurückgelesen.
-Nicht durchgereicht: Anhänge, Zerlegen, Board-Import/-Export (freie Serverpfade), Orchestrierung schreiben, Profil-Metadaten schreiben.
+- Zerlegen verbraucht Modell-Tokens und legt Kindaufgaben an (frisch, Rate-Limit, nur mit `confirm`),
+- Anhänge: Hochladen nur frisch (max. 25 MB), Serverpfade (`stored_path`) verlassen den Browser nie,
+- Board-Export/Import laufen über temp-Dateien auf dem Dashboard-Rechner (ein Rechner, ein hostd); Import nur als .tar.gz/.zip, Export als Download,
+- Board löschen archiviert nur (kein hartes Löschen aus der WebUI) und wird gegengelesen.
+Nicht durchgereicht: Orchestrierung schreiben, Profil-Metadaten schreiben, hartes Löschen von Boards.
 """
 import json
 
@@ -63,6 +67,76 @@ def test_workers_and_inspect_never_show_command_lines_pids_or_claim_locks(kb):
     assert i.status_code == 200 and i.json()["alive"] is True and "sk-LEAK" not in i.text and "cmdline" not in i.text and "pid" not in i.json()
     assert kb.get(f"{B}/runs/999/inspect").status_code == 404
     assert kb.get(f"{B}/runs/abc/inspect").status_code == 422
+
+
+def test_decompose_fans_out_with_confirm_and_fresh_login(kb):
+    assert kb.post(f"{B}/tasks/t_aaaa0001/decompose", json={}).status_code == 422
+    stale(kb)
+    assert kb.post(f"{B}/tasks/t_aaaa0001/decompose", json={"confirm": True}).status_code == 401
+    fresh(kb)
+    r = kb.post(f"{B}/tasks/t_aaaa0001/decompose", json={"confirm": True})
+    assert r.status_code == 200, r.text
+    assert r.json()["child_ids"] == ["t_aaaa0010", "t_aaaa0011"] and r.json()["fanout"] is True
+
+
+def test_attachments_roundtrip_and_no_server_paths_leak(kb):
+    empty = kb.get(f"{B}/tasks/t_aaaa0001/attachments").json()
+    assert empty["count"] == 0 and empty["attachments"] == []
+    stale(kb)
+    assert kb.post(f"{B}/tasks/t_aaaa0001/attachments", files={"file": ("n.bin", b"1")}).status_code == 401
+    fresh(kb)
+    up = kb.post(f"{B}/tasks/t_aaaa0001/attachments", files={"file": ("notiz.bin", b"\x00\x01\x02notiz")})
+    assert up.status_code == 201, up.text
+    meta = up.json()
+    assert meta["filename"] == "notiz.bin" and meta["size"] == 8
+    assert "stored_path" not in json.dumps(up.json()) and "/srv/" not in json.dumps(up.json())
+    aid = meta["id"]
+    lst = kb.get(f"{B}/tasks/t_aaaa0001/attachments").json()
+    assert lst["count"] == 1 and "stored_path" not in json.dumps(lst)
+    dl = kb.get(f"{B}/tasks/t_aaaa0001/attachments/{aid}")
+    assert dl.status_code == 200 and dl.content == b"\x00\x01\x02notiz"
+    assert dl.headers["content-type"] == "application/octet-stream"
+    assert "nosniff" in dl.headers.get("x-content-type-options", "")
+    assert kb.get(f"{B}/tasks/t_aaaa0001/attachments/999999").status_code == 404
+    stale(kb)
+    assert kb.delete(f"{B}/attachments/{aid}").status_code == 401
+    fresh(kb)
+    assert kb.delete(f"{B}/attachments/{aid}").status_code == 200
+    assert kb.get(f"{B}/tasks/t_aaaa0001/attachments").json()["count"] == 0
+    assert "/srv/" not in kb.audit_file.read_text()
+
+
+def test_board_export_streams_archive(kb):
+    stale(kb)
+    assert kb.post(f"{B}/boards/alpha/export", json={}).status_code == 401
+    fresh(kb)
+    r = kb.post(f"{B}/boards/alpha/export", json={"attachments": True, "logs": False})
+    assert r.status_code == 200, r.text
+    assert r.content.startswith(b"KB-EXPORT:alpha")
+    assert r.headers["content-type"] == "application/octet-stream"
+    assert "alpha.tar.gz" in r.headers.get("content-disposition", "")
+    assert kb.post(f"{B}/boards/gibts-nicht/export", json={}).status_code == 404
+
+
+def test_board_import_uploads_archive(kb):
+    stale(kb)
+    assert kb.post(f"{B}/boards/import", files={"archive": ("b.tar.gz", b"PK\x03\x04")}).status_code == 401
+    fresh(kb)
+    assert kb.post(f"{B}/boards/import", files={"archive": ("b.txt", b"kein archiv")}).status_code == 422
+    r = kb.post(f"{B}/boards/import", files={"archive": ("b.tar.gz", b"PK\x03\x04daten")})
+    assert r.status_code == 201, r.text
+    assert r.json() == {"ok": True, "board": "importiert"}
+    assert "b.tar.gz" not in kb.audit_file.read_text()  # nur Board-Name, keine Dateinamen im Audit
+
+
+def test_board_delete_archives_with_typed_slug(kb):
+    assert kb.request("DELETE", f"{B}/boards/alpha", json={"confirm": "alpha-x"}).status_code == 422
+    stale(kb)
+    assert kb.request("DELETE", f"{B}/boards/alpha", json={"confirm": "alpha"}).status_code == 401
+    fresh(kb)
+    r = kb.request("DELETE", f"{B}/boards/alpha", json={"confirm": "alpha"})
+    assert r.status_code == 200, r.text
+    assert r.json() == {"ok": True, "board": "alpha"}
 
 
 def test_terminate_needs_fresh_typed_run_number_and_reads_back(kb):

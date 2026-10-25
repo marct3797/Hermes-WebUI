@@ -8,11 +8,12 @@ from __future__ import annotations
 import re
 from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from .dashboard_ops import redact
 
 NO_CONTROL = r"^[^\x00-\x1f\x7f]*$"
+NO_NULL = r"^[^\x00]*$"  # mehrzeilig erlaubt (Skript), nur NUL verboten
 Line = Annotated[str, StringConstraints(max_length=200, pattern=NO_CONTROL)]
 SKILL_RE = r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$"
 Skills = Annotated[list[Annotated[str, StringConstraints(pattern=SKILL_RE)]], Field(max_length=30)]
@@ -43,6 +44,18 @@ class JobFields(Strict):
 class JobCreate(JobFields):
     schedule: Annotated[str, StringConstraints(min_length=1, max_length=200, pattern=NO_CONTROL)]
     prompt: Annotated[str, StringConstraints(min_length=1, max_length=20000)]
+    script: Annotated[str, StringConstraints(min_length=1, max_length=20000, pattern=NO_NULL)] | None = None  # Skript-Job: läuft ohne Agent
+    no_agent: bool = False
+    confirm_system: bool = False
+
+    def creates_system(self) -> bool:
+        return self.no_agent or self.script is not None
+
+    @model_validator(mode="after")
+    def _script_required(self):
+        if self.no_agent and self.script is None:
+            raise ValueError("Ein Job ohne Agent braucht ein Skript")
+        return self
 
 
 class JobUpdate(JobFields):
