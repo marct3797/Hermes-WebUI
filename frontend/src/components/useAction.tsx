@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ApiError } from "../api";
 import { StepUpNote } from "./providers/StepUpNote";
+import { t } from "../i18n";
 
 /** Aufruf mit Zustand: Fehlertext, Hinweis auf frische Anmeldung (401 step_up_required) oder fehlendes Dashboard (501/503). */
 export function useAction() {
@@ -17,6 +18,6 @@ export function useAction() {
     }
     finally { setBusy(false); }
   };
-  const notes = <>{stepUp && <StepUpNote what="Diese Änderung" />}{error && <p className="banner" role="alert">{error}</p>}</>;
+  const notes = <>{stepUp && <StepUpNote what={t("Diese Änderung")} />}{error && <p className="banner" role="alert">{error}</p>}</>;
   return { run, notes, busy };
 }

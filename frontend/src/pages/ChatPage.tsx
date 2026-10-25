@@ -18,14 +18,15 @@ import { useChat } from "../useChat";
 import { parseModelOptions, type ModelGroup } from "../models";
 import { useNow } from "../useNow";
 import { usePreferences } from "../preferences";
+import { t as tr } from "../i18n";
 
 type Props = { agent: AgentRef; label: string; runtimeLabel: string; sessionId?: string };
 
 const OFFLINE_HINT: Record<string, string> = {
-  auth_error: "Der Zugangsschlüssel für diesen Host wurde abgelehnt oder fehlt im BFF.",
-  gone: "Dieses Profil gibt es nicht mehr. Wähle links einen anderen Agent.",
-  unsupported: "Dieser Agent bietet die benötigte API nicht an (ältere Version?).",
-  unreachable: "Der Agent ist nicht erreichbar.",
+  get auth_error() { return tr("Der Zugangsschlüssel für diesen Host wurde abgelehnt oder fehlt im BFF."); },
+  get gone() { return tr("Dieses Profil gibt es nicht mehr. Wähle links einen anderen Agent."); },
+  get unsupported() { return tr("Dieser Agent bietet die benötigte API nicht an (ältere Version?)."); },
+  get unreachable() { return tr("Der Agent ist nicht erreichbar."); },
 };
 
 const RUN_LABEL = { idle: "bereit", starting: "startet …", running: "arbeitet …", done: "fertig", failed: "fehlgeschlagen", stopped: "gestoppt", lost: "getrennt" } as const;
@@ -104,7 +105,7 @@ export function ChatPage({ agent, label, runtimeLabel, sessionId }: Props) {
   // Solange die Liste die neue Session noch nicht kennt, steht die erste Nachricht als Titel da.
   const firstUser = state.items.find((i) => i.kind === "message" && i.role === "user");
   const title = sessions.find((s) => s.id === sessionId)?.title
-    ?? (firstUser?.kind === "message" ? firstUser.text.split("\n")[0].slice(0, 80) : "Neuer Chat");
+    ?? (firstUser?.kind === "message" ? firstUser.text.split("\n")[0].slice(0, 80) : tr("Neuer Chat"));
   const tokens = state.usage ? (state.usage.total_tokens ?? (state.usage.input_tokens ?? 0) + (state.usage.output_tokens ?? 0)) : undefined;
   const tools = state.items.filter((i): i is Extract<Item, { kind: "tool" }> => i.kind === "tool");
   const subagents = state.items.filter((i): i is Extract<Item, { kind: "subagent" }> => i.kind === "subagent");
@@ -124,12 +125,12 @@ export function ChatPage({ agent, label, runtimeLabel, sessionId }: Props) {
   const runTag = !status ? null
     : !status.online ? <span className="tag tag-e">{(STATUS_LABEL[status.state] ?? status.state).toUpperCase()}</span>
     : waiting ? <span className="tag tag-s"><i className="dot dot-wait" />
-        <span className="d-only">{pending ? "WARTET AUF FREIGABE" : "WARTET AUF ANTWORT"}</span><span className="m-only">WARTET</span></span>
+        <span className="d-only">{pending ? "WARTET AUF FREIGABE" : "WARTET AUF ANTWORT"}</span><span className="m-only">{tr("WARTET")}</span></span>
     : state.runStatus === "running" || state.runStatus === "starting"
-      ? <span className="tag tag-c"><i className="dot dot-run" />LÄUFT{state.startedAt ? ` · ${fmtClock((now - state.startedAt) / 1000)}` : ""}</span>
-    : state.runStatus === "failed" ? <span className="tag tag-e">FEHLER</span>
-    : state.runStatus === "lost" ? <span className="tag tag-e">GETRENNT</span>
-    : state.runStatus === "stopped" ? <span className="tag">GESTOPPT</span>
+      ? <span className="tag tag-c"><i className="dot dot-run" />{tr("LÄUFT{startedAt}", { startedAt: state.startedAt ? ` · ${fmtClock((now - state.startedAt) / 1000)}` : "" })}</span>
+    : state.runStatus === "failed" ? <span className="tag tag-e">{tr("FEHLER")}</span>
+    : state.runStatus === "lost" ? <span className="tag tag-e">{tr("GETRENNT")}</span>
+    : state.runStatus === "stopped" ? <span className="tag">{tr("GESTOPPT")}</span>
     : null;
 
   return (
@@ -137,9 +138,9 @@ export function ChatPage({ agent, label, runtimeLabel, sessionId }: Props) {
       <section className="cmain">
         <header className="chead">
           {/* Handy: zurück zum Cockpit, Sigil und Name öffnen die Schublade mit Agents und Sessions */}
-          <Link to="/" className="btn btn-i btn-g m-only back-btn" aria-label="Zurück zum Cockpit"><Icon name="chevr" size={18} className="rot180" /></Link>
+          <Link to="/" className="btn btn-i btn-g m-only back-btn" aria-label={tr("Zurück zum Cockpit")}><Icon name="chevr" size={18} className="rot180" /></Link>
           <h1 className="sr-only m-only">{title}</h1>
-          <button type="button" className="menu-btn m-only chead-open" aria-label="Agents und Sessions öffnen" onClick={openMenu}>
+          <button type="button" className="menu-btn m-only chead-open" aria-label={tr("Agents und Sessions öffnen")} onClick={openMenu}>
             <Sigil name={label} config={sigilFor(sigils, agent)} size="m" state={waiting ? "wait" : busy ? "live" : undefined} />
             <span className="col grow" style={{ minWidth: 0, textAlign: "left" }}>
               <b className="trunc">{label}</b>
@@ -147,9 +148,9 @@ export function ChatPage({ agent, label, runtimeLabel, sessionId }: Props) {
             </span>
           </button>
           <div className="col grow d-only" style={{ gap: 3, minWidth: 0 }}>
-            <nav className="crumb" style={{ fontSize: 11 }} aria-label="Pfad">
+            <nav className="crumb" style={{ fontSize: 11 }} aria-label={tr("Pfad")}>
               <span>{agent.host}</span><Icon name="chevr" size={12} /><span>{agent.runtime}</span><Icon name="chevr" size={12} /><span>{agent.agent}</span>
-              {sessionId && <><Icon name="chevr" size={12} /><b>chat/{sessionId.slice(0, 8)}</b></>}
+              {sessionId && <><Icon name="chevr" size={12} /><b>{tr("chat/{v}", { v: sessionId.slice(0, 8) })}</b></>}
             </nav>
             <h1 className="trunc">{title}</h1>
           </div>
@@ -160,7 +161,7 @@ export function ChatPage({ agent, label, runtimeLabel, sessionId }: Props) {
         {status && !status.online && (
           <p className="banner" role="alert" style={{ margin: "12px 24px 0" }}>
             <Icon name="alert" />
-            <span>{label}: {OFFLINE_HINT[status.state] ?? "Nicht verfügbar."}{status.error ? ` (${status.error})` : ""}</span>
+            <span>{label}: {OFFLINE_HINT[status.state] ?? tr("Nicht verfügbar.")}{status.error ? ` (${status.error})` : ""}</span>
           </p>
         )}
 
@@ -169,7 +170,7 @@ export function ChatPage({ agent, label, runtimeLabel, sessionId }: Props) {
           <div className="convo">
             {state.items.length === 0 && state.runStatus === "idle" && (
               <div className="empty">
-                <h2>Wie kann {label} helfen?</h2>
+                <h2>{tr("Wie kann {label} helfen?", { label })}</h2>
                 <p className="muted mono small">{agent.host} · {agent.runtime}</p>
               </div>
             )}
@@ -183,9 +184,9 @@ export function ChatPage({ agent, label, runtimeLabel, sessionId }: Props) {
               <p className="banner" role="alert">
                 <Icon name="alert" />
                 <span className="grow">{state.error}</span>
-                {state.errorCode === "session_locked" && <button type="button" className="btn btn-s btn-p" onClick={chat.continueInFork}>Als neue Session fortsetzen</button>}
-                {state.errorCode === "step_up_required" && <button type="button" className="btn btn-s btn-p" onClick={() => toLogin(true)}>Erneut anmelden</button>}
-                {state.runStatus === "lost" && state.runId && <button type="button" className="btn btn-s" onClick={chat.reconnect}>Erneut verbinden</button>}
+                {state.errorCode === "session_locked" && <button type="button" className="btn btn-s btn-p" onClick={chat.continueInFork}>{tr("Als neue Session fortsetzen")}</button>}
+                {state.errorCode === "step_up_required" && <button type="button" className="btn btn-s btn-p" onClick={() => toLogin(true)}>{tr("Erneut anmelden")}</button>}
+                {state.runStatus === "lost" && state.runId && <button type="button" className="btn btn-s" onClick={chat.reconnect}>{tr("Erneut verbinden")}</button>}
               </p>
             )}
           </div>
@@ -195,10 +196,10 @@ export function ChatPage({ agent, label, runtimeLabel, sessionId }: Props) {
           <Composer agent={agent} busy={busy} disabled={!canSend} name={label} models={models} model={model ?? ""} defaultModel={defaultModel} onModel={setModel}
             canSteer={canSteer} queued={state.queued} onSend={send} onStop={() => void chat.stop()} onNew={() => navigate(agentPath(agent, "chat"))}
             onSendQueued={chat.sendQueued} onDropQueued={chat.dropQueued} />
-          <div className="dockw"><div className="tkrail" aria-label="Status">
-            {tokens != null && <span className="cnt"><Icon name="layers" size={12} /><b>{fmtCount(tokens)}</b> tok</span>}
+          <div className="dockw"><div className="tkrail" aria-label={tr("Status")}>
+            {tokens != null && <span className="cnt"><Icon name="layers" size={12} /><b>{fmtCount(tokens)}</b> {tr("tok")}</span>}
             <span>{RUN_LABEL[state.runStatus]}</span>
-            {busy && <span className="r cnt"><i className="dot dot-run" />Live</span>}
+            {busy && <span className="r cnt"><i className="dot dot-run" />{tr("Live")}</span>}
           </div></div>
         </div>
       </section>

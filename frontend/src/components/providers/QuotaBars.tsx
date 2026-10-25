@@ -2,6 +2,7 @@ import { useState } from "react";
 import { dec } from "../../format";
 import type { Quota, QuotaProvider, QuotaWindow } from "../../types";
 import { Icon } from "../Icon";
+import { N_, t, tm } from "../../i18n";
 
 export const PLUGIN_CMD = "hermes plugins install ai-usage-tracker --enable";
 
@@ -9,17 +10,17 @@ const WINDOW_DE: Record<string, string> = {
   "Current session": "Aktuelle Sitzung", "Current week": "Aktuelle Woche", Session: "Sitzung", Weekly: "Woche", Monthly: "Monat", "Rolling (5h)": "Rollierend (5 Std)",
   Chat: "Chat", Completions: "Vervollständigungen",
 };
-const BADGE: Record<string, [text: string, cls: string]> = { exhausted: ["Erschöpft", "q-bad"], low: ["Knapp", "q-mid"], auth_failed: ["Zugang prüfen", "q-bad"], unavailable: ["Nicht abfragbar", ""] };
+const BADGE: Record<string, [text: string, cls: string]> = { exhausted: [N_("Erschöpft"), "q-bad"], low: [N_("Knapp"), "q-mid"], auth_failed: [N_("Zugang prüfen"), "q-bad"], unavailable: [N_("Nicht abfragbar"), ""] };
 
 /** „in 1 Std 35 Min“, „in 4 Tagen 3 Std“; unter einer Minute „in weniger als 1 Min“. */
 export function fmtIn(s: number): string {
   const min = Math.floor(s / 60);
-  if (min < 1) return "in weniger als 1 Min";
+  if (min < 1) return t("in weniger als 1 Min");
   if (min < 60) return `in ${min} Min`;
   const h = Math.floor(min / 60);
   if (h < 24) return `in ${h} Std${min % 60 ? ` ${min % 60} Min` : ""}`;
   const d = Math.floor(h / 24);
-  return `in ${d} ${d === 1 ? "Tag" : "Tagen"}${h % 24 ? ` ${h % 24} Std` : ""}`;
+  return `in ${d} ${d === 1 ? t("Tag") : t("Tagen")}${h % 24 ? ` ${h % 24} Std` : ""}`;
 }
 
 const pct = (n: number) => `${Number.isInteger(n) ? n : dec(n)} %`;
@@ -39,12 +40,12 @@ function Window({ w }: { w: QuotaWindow }) {
   return (
     <li className="q-win" title={w.label}>
       <span className="q-wl">{name}</span>
-      <div className="q-track" role="progressbar" aria-label={`${name}: ${rest === null ? "unbekannt" : `${pct(rest)} übrig`}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={rest ?? undefined}>
+      <div className="q-track" role="progressbar" aria-label={`${name}: ${rest === null ? t("unbekannt") : t("{rest} übrig", { rest: pct(rest) })}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={rest ?? undefined}>
         <i className={level(rest)} style={{ width: `${rest ?? 0}%` }} />
       </div>
-      <span className="q-rest mono">{rest === null ? "?" : `${pct(rest)} übrig`}</span>
+      <span className="q-rest mono">{rest === null ? "?" : t("{rest} übrig", { rest: pct(rest) })}</span>
       <span className="q-reset mono t3" title={resetTitle(w)}>{w.reset_in_s !== null ? fmtIn(w.reset_in_s) : (w.reset_at ?? "")}</span>
-      {w.detail && <span className="q-detail t3 small">{w.detail}</span>}
+      {w.detail && <span className="q-detail t3 small">{tm(w.detail)}</span>}
     </li>
   );
 }
@@ -56,7 +57,7 @@ function Block({ p }: { p: QuotaProvider }) {
       <div className="row prov-head">
         <b className="grow">{p.label}</b>
         {p.plan && <span className="tag tag-m">{p.plan}</span>}
-        {badge && <span className={`tag q-tag ${badge[1]}`}>{badge[0]}</span>}
+        {badge && <span className={`tag q-tag ${badge[1]}`}>{t(badge[0])}</span>}
       </div>
       {p.windows.length > 0 && <ul className="q-wins">{p.windows.map((w) => <Window key={w.label} w={w} />)}</ul>}
       {p.reason && <p className="hint">{p.reason}</p>}
@@ -71,12 +72,12 @@ export function PluginMissing({ reason }: { reason: string | null }) {
     <div className="banner q-missing" role="status">
       <Icon name="alert" />
       <div className="col" style={{ gap: 6 }}>
-        <span>{reason ?? "Plugin ai-usage-tracker auf diesem Host nicht installiert"}. Ohne das Plugin gibt es keine Restkontingente.</span>
+        <span>{t("{reason}. Ohne das Plugin gibt es keine Restkontingente.", { reason: reason ?? t("Plugin ai-usage-tracker auf diesem Host nicht installiert") })}</span>
         <span className="row" style={{ gap: 6 }}>
           <code className="mono">{PLUGIN_CMD}</code>
-          <button type="button" className="btn btn-s btn-g" aria-label="Befehl kopieren" onClick={() => void copy()}><Icon name="copy" size={12} />{copied ? "Kopiert" : ""}</button>
+          <button type="button" className="btn btn-s btn-g" aria-label={t("Befehl kopieren")} onClick={() => void copy()}><Icon name="copy" size={12} />{copied ? t("Kopiert") : ""}</button>
         </span>
-        <span className="hint">Oder <code className="mono">deploy/install-quota-plugin.sh</code> (Trockenlauf zeigt die genauen Befehle). Danach das Dashboard neu starten.</span>
+        <span className="hint">{t("Oder")} <code className="mono">deploy/install-quota-plugin.sh</code> {t("(Trockenlauf zeigt die genauen Befehle). Danach das Dashboard neu starten.")}</span>
       </div>
     </div>
   );
@@ -85,15 +86,15 @@ export function PluginMissing({ reason }: { reason: string | null }) {
 /** Kontingente eines Profils: je Anbieter ein Block mit Plan, Balken je Fenster und Zustand. */
 export function QuotaBars({ quota }: { quota: Quota }) {
   if (quota.state === "plugin_missing") return <PluginMissing reason={quota.reason} />;
-  if (quota.state !== "ok") return <p className="banner" role="alert"><Icon name="alert" /><span>Kontingente nicht abfragbar: {quota.reason}</span></p>;
+  if (quota.state !== "ok") return <p className="banner" role="alert"><Icon name="alert" /><span>{t("Kontingente nicht abfragbar: {reason}", { reason: quota.reason })}</span></p>;
   const shown = quota.providers.filter((p) => p.quota_capable || p.windows.length > 0 || p.state === "auth_failed");
   const rest = quota.providers.filter((p) => !shown.includes(p));
   return (
     <div className="col" style={{ gap: 10 }}>
-      {shown.length === 0 ? <p className="panel-empty">Das Plugin meldet keinen Anbieter mit Kontingent.</p> : <ul className="prov-grid q-grid">{shown.map((p) => <Block key={p.id} p={p} />)}</ul>}
+      {shown.length === 0 ? <p className="panel-empty">{t("Das Plugin meldet keinen Anbieter mit Kontingent.")}</p> : <ul className="prov-grid q-grid">{shown.map((p) => <Block key={p.id} p={p} />)}</ul>}
       {rest.length > 0 && (
         <details className="q-rest-list">
-          <summary className="hint">Nicht abfragbar ({rest.length})</summary>
+          <summary className="hint">{t("Nicht abfragbar ({v})", { v: rest.length })}</summary>
           <ul className="hint" style={{ margin: "6px 0 0", paddingLeft: 18 }}>{rest.map((p) => <li key={p.id}><b>{p.label}</b>: {p.reason}</li>)}</ul>
         </details>
       )}
@@ -102,16 +103,16 @@ export function QuotaBars({ quota }: { quota: Quota }) {
 }
 
 /** Abschnitt mit Überschrift und „Neu laden“; `quota` fehlt, solange nichts geladen ist. */
-export function QuotaSection({ title = "Restkontingente", quota, error, loading, onReload, children }: { title?: string; quota?: Quota; error?: string; loading: boolean; onReload: () => void; children?: React.ReactNode }) {
+export function QuotaSection({ title = t("Restkontingente"), quota, error, loading, onReload, children }: { title?: string; quota?: Quota; error?: string; loading: boolean; onReload: () => void; children?: React.ReactNode }) {
   return (
     <section aria-label={title} className="col" style={{ gap: 10 }}>
       <div className="row" style={{ gap: 8 }}>
         <span className="lbl grow">{title}</span>
-        {quota?.cached && <span className="muted small">aus dem Zwischenspeicher</span>}
-        <button type="button" className="btn btn-s btn-g" aria-label={`${title} neu laden`} disabled={loading} onClick={onReload}><Icon name="refresh" size={14} />Neu laden</button>
+        {quota?.cached && <span className="muted small">{t("aus dem Zwischenspeicher")}</span>}
+        <button type="button" className="btn btn-s btn-g" aria-label={t("{title} neu laden", { title })} disabled={loading} onClick={onReload}><Icon name="refresh" size={14} />{t("Neu laden")}</button>
       </div>
-      {error && !quota && <p className="banner" role="alert"><Icon name="alert" /><span>Kontingente nicht ladbar: {error}</span></p>}
-      {!quota && !error && !children && <div className="q-skel" aria-busy="true" aria-label="Lade Kontingente" />}
+      {error && !quota && <p className="banner" role="alert"><Icon name="alert" /><span>{t("Kontingente nicht ladbar: {error}", { error })}</span></p>}
+      {!quota && !error && !children && <div className="q-skel" aria-busy="true" aria-label={t("Lade Kontingente")} />}
       {children ?? (quota && <QuotaBars quota={quota} />)}
     </section>
   );

@@ -3,6 +3,7 @@ import "@fontsource-variable/jetbrains-mono";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { initLanguage } from "./i18n";
 import "./tokens.css";
 import "./styles/icons.css";
 import "./styles/base.css";
@@ -24,4 +25,5 @@ import "./styles/files.css";
 import "./styles/ops2.css";
 import "./styles/mobile.css";
 
-createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);
+// Sprache zuerst laden, damit nichts erst deutsch aufblitzt; ein Ladefehler lässt die Oberfläche deutsch.
+void initLanguage().then(() => createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>));

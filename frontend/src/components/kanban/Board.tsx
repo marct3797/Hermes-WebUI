@@ -3,6 +3,7 @@ import { Icon } from "../Icon";
 import { Sigil } from "../Sigil";
 import { fmtAgo } from "../../format";
 import type { Card, Column } from "../../kanbanApi";
+import { t } from "../../i18n";
 
 const LABEL: Record<string, string> = { triage: "Einordnung", todo: "Offen", scheduled: "Geplant", ready: "Bereit", running: "Läuft", blocked: "Blockiert", review: "Prüfung", done: "Erledigt", archived: "Archiviert" };
 export const columnLabel = (name: string) => LABEL[name] ?? name;
@@ -17,18 +18,18 @@ export function TaskCard({ card, columns, selected, dragging, onOpen, onMove, on
   return (
     <li className={`kb-card${selected ? " sel" : ""}${dragging ? " drag" : ""}`} draggable={card.status !== "archived"} data-task={card.id}
       onDragStart={(e) => { e.dataTransfer?.setData("text/plain", card.id); if (e.dataTransfer) e.dataTransfer.effectAllowed = "move"; onDragStart(); }} onDragEnd={onDragEnd}>
-      <button type="button" className="kb-open" onClick={onOpen} aria-label={`Aufgabe öffnen: ${card.title}`}>
+      <button type="button" className="kb-open" onClick={onOpen} aria-label={t("Aufgabe öffnen: {title}", { title: card.title })}>
         <span className="kb-title">{card.title}</span>
         {card.snippet && <span className="kb-snip">{card.snippet}</span>}
       </button>
       <div className="kb-meta">
-        {card.assignee ? <span className="kb-who"><Sigil name={card.assignee} size="xs" />{card.assignee}</span> : <span className="t3">Niemand</span>}
-        {card.priority !== 0 && <span className="chip chip-s" title="Priorität">P{card.priority}</span>}
-        {card.age_seconds !== null && <span className="t3 small" title="Alter">{fmtAgo(Date.now() - card.age_seconds * 1000)}</span>}
-        {card.comment_count > 0 && <span className="t3 small" title="Kommentare"><Icon name="chat" size={12} /> {card.comment_count}</span>}
-        {warn && <span className="kb-warn" role="img" aria-label={`${card.warnings.count} Warnung${card.warnings.count === 1 ? "" : "en"}`} title="Diagnose an dieser Aufgabe"><Icon name="alert" size={12} /></span>}
+        {card.assignee ? <span className="kb-who"><Sigil name={card.assignee} size="xs" />{card.assignee}</span> : <span className="t3">{t("Niemand")}</span>}
+        {card.priority !== 0 && <span className="chip chip-s" title={t("Priorität")}>P{card.priority}</span>}
+        {card.age_seconds !== null && <span className="t3 small" title={t("Alter")}>{fmtAgo(Date.now() - card.age_seconds * 1000)}</span>}
+        {card.comment_count > 0 && <span className="t3 small" title={t("Kommentare")}><Icon name="chat" size={12} /> {card.comment_count}</span>}
+        {warn && <span className="kb-warn" role="img" aria-label={`${card.warnings.count} Warnung${card.warnings.count === 1 ? "" : "en"}`} title={t("Diagnose an dieser Aufgabe")}><Icon name="alert" size={12} /></span>}
         <select className="kb-move" aria-label={`${card.title} verschieben nach`} value="" onChange={(e) => e.target.value && onMove(e.target.value)}>
-          <option value="">Verschieben nach…</option>
+          <option value="">{t("Verschieben nach…")}</option>
           {columns.filter((c) => c !== card.status && droppable(c)).map((c) => <option key={c} value={c}>{columnLabel(c)}</option>)}
         </select>
       </div>
@@ -56,9 +57,9 @@ export function BoardColumns({ columns, total, filtered, selected, dragId, onOpe
             <ul className="kb-cards">
               {shown.map((c) => <TaskCard key={c.id} card={c} columns={names} selected={selected === c.id} dragging={dragId === c.id} onOpen={() => onOpen(c.id)}
                 onMove={(to) => onMove(c.id, to)} onDragStart={() => onDragId(c.id)} onDragEnd={() => { onDragId(undefined); setOver(undefined); }} />)}
-              {col.tasks.length === 0 && <li className="kb-none t3 small">{filtered ? "Nichts passt zum Filter" : "Leer"}</li>}
+              {col.tasks.length === 0 && <li className="kb-none t3 small">{filtered ? t("Nichts passt zum Filter") : t("Leer")}</li>}
             </ul>
-            {col.tasks.length > shown.length && <button type="button" className="btn btn-s btn-g" onClick={() => setLimit({ ...limit, [col.name]: shown.length + PAGE })}>Mehr laden ({col.tasks.length - shown.length} weitere)</button>}
+            {col.tasks.length > shown.length && <button type="button" className="btn btn-s btn-g" onClick={() => setLimit({ ...limit, [col.name]: shown.length + PAGE })}>{t("Mehr laden ({v} weitere)", { v: col.tasks.length - shown.length })}</button>}
           </section>
         );
       })}

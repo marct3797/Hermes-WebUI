@@ -7,6 +7,7 @@ import { Icon } from "../Icon";
 import { Link } from "../Link";
 import { Sigil } from "../Sigil";
 import { STATUS_LABEL } from "../Status";
+import { t } from "../../i18n";
 
 type Props = {
   agent: AgentRef;
@@ -32,21 +33,21 @@ export function AgentCard({ agent, label, runtime, hostStatus, sigil, act, chat,
   const sessionId = act?.last?.sessionId;
 
   const tag = {
-    off: <span className="tag"><i className="dot dot-off" />{offline === "sleeping" ? "SCHLÄFT" : "OFFLINE"}</span>,
-    wait: <span className="tag tag-s"><i className="dot dot-wait" />WARTET</span>,
-    run: <span className="tag tag-c"><i className="dot dot-run" />LÄUFT</span>,
-    err: <span className="tag tag-e"><i className="dot dot-err" />FEHLER</span>,
-    ready: <span className="tag"><i className="dot dot-on" />BEREIT</span>,
+    off: <span className="tag"><i className="dot dot-off" />{offline === "sleeping" ? t("SCHLÄFT") : t("OFFLINE")}</span>,
+    wait: <span className="tag tag-s"><i className="dot dot-wait" />{t("WARTET")}</span>,
+    run: <span className="tag tag-c"><i className="dot dot-run" />{t("LÄUFT")}</span>,
+    err: <span className="tag tag-e"><i className="dot dot-err" />{t("FEHLER")}</span>,
+    ready: <span className="tag"><i className="dot dot-on" />{t("BEREIT")}</span>,
   }[phase];
 
-  const live = phase === "off" ? { icon: "alert", text: runtime.detail ?? "nicht erreichbar", cls: " err" }
+  const live = phase === "off" ? { icon: "alert", text: runtime.detail ?? t("nicht erreichbar"), cls: " err" }
     : phase === "wait" ? { icon: "bell", text: [act?.activity, elapsed].filter(Boolean).join(" · "), cls: " wait" }
     : phase === "run" ? { icon: "cpu", text: [act?.activity, elapsed].filter(Boolean).join(" · "), cls: " run" }
-    : phase === "err" ? { icon: "alert", text: error ?? "Run fehlgeschlagen", cls: " err" }
+    : phase === "err" ? { icon: "alert", text: error ?? t("Run fehlgeschlagen"), cls: " err" }
     : { icon: "clock", text: chat?.at ? `idle · letzter Chat ${fmtAgo(chat.at, now)}` : "idle", cls: "" };
 
   const cardCls = phase === "wait" ? " need" : phase === "run" ? " live" : phase === "err" ? " err" : "";
-  const quote = phase === "off" ? undefined : chat?.last?.title ?? (chat?.loaded ? (chat.failed ? "Chats nicht ladbar" : "Noch kein Chat") : "Lade …");
+  const quote = phase === "off" ? undefined : chat?.last?.title ?? (chat?.loaded ? (chat.failed ? t("Chats nicht ladbar") : t("Noch kein Chat")) : t("Lade …"));
 
   return (
     <Link to={agentPath(agent, "chat", sessionId)} className={`card pcard${cardCls}`} aria-label={`${label}, ${STATUS_LABEL[offline] ?? ""}`.replace(/, $/, "")}>

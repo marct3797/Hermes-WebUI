@@ -1,5 +1,6 @@
 import { enrichTools, historyItems } from "./history";
 import type { ChatState, Decision, Item, SessionSummary, StreamEvent } from "./types";
+import { t } from "./i18n";
 
 export { historyItems };
 
@@ -81,7 +82,7 @@ export function chatReducer(state: ChatState, a: Action): ChatState {
       // Eine nicht fortsetzbare Session ist kein gescheiterter Run: sie landet nicht in der Inbox, die Ansicht bietet einen Fork an.
       return { ...state, runStatus: a.code === "session_locked" ? "idle" : "failed", error: a.error, errorCode: a.code };
     case "connection-lost":
-      return state.runStatus === "running" ? { ...state, runStatus: "lost", error: "Verbindung zu Hermes unterbrochen" } : state;
+      return state.runStatus === "running" ? { ...state, runStatus: "lost", error: t("Verbindung zu Hermes unterbrochen") } : state;
     case "decided":
       return { ...state, items: state.items.map((i) => (i.kind === "approval" && i.id === a.id ? { ...i, decision: a.decision, decidedAt: Date.now() } : i)) };
     case "decision-failed":
@@ -152,7 +153,7 @@ function applyEvent(s: ChatState, e: StreamEvent): ChatState {
     case "stream.error":
       return { ...s, runStatus: "lost", error: e.error, items: settle(s.items) };
     case "run.steered":
-      return e.accepted ? s : { ...s, error: "Die Nachricht wurde nicht angenommen: der Run hat schon geendet." };
+      return e.accepted ? s : { ...s, error: t("Die Nachricht wurde nicht angenommen: der Run hat schon geendet.") };
     case "subagent.started": {
       const id = subagentId(e.id, e.data) ?? uid("sa");
       if (s.items.some((i) => i.kind === "subagent" && i.id === id)) return s;
@@ -225,7 +226,7 @@ export function sessionList(payload: unknown): SessionSummary[] {
     .filter((s) => typeof s.id === "string" && s.hidden !== true && s.archived !== true)
     .map((s) => ({
       id: s.id as string,
-      title: String(s.title ?? s.name ?? "Ohne Titel"),
+      title: String(s.title ?? s.name ?? t("Ohne Titel")),
       updatedAt: (s.updated_at ?? s.last_active ?? s.last_active_at ?? s.updatedAt) as number | string | undefined,
       source: typeof s.source === "string" ? s.source : undefined,
       pinned: s.pinned === true,

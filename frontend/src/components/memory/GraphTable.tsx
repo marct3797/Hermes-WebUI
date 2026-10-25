@@ -3,6 +3,7 @@ import { api } from "../../api";
 import { fmtCount } from "../../format";
 import type { MemRow } from "../../types";
 import { useAsync } from "../../useAsync";
+import { t as tr } from "../../i18n";
 
 const cut = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 const SHOWN = 500; // shortcut: mehr Zeilen auf einmal machen den DOM träge; Filter eingrenzen oder sortieren, bis eine Seitenlogik nötig wird
@@ -24,11 +25,11 @@ export function GraphTable({ rows, selectedId, onSelect, range, onClearRange }: 
   );
   return (
     <div className="graph-table">
-      {range && <p className="row small" style={{ gap: 8 }}><span>Zeitraum: {range.label}</span><button type="button" className="btn btn-s btn-g" onClick={onClearRange}>Zeitraum aufheben</button></p>}
-      {shown.length === 0 ? <p className="panel-empty">Keine Erinnerungen für diesen Filter</p> : (
+      {range && <p className="row small" style={{ gap: 8 }}><span>{tr("Zeitraum: {label}", { label: range.label })}</span><button type="button" className="btn btn-s btn-g" onClick={onClearRange}>{tr("Zeitraum aufheben")}</button></p>}
+      {shown.length === 0 ? <p className="panel-empty">{tr("Keine Erinnerungen für diesen Filter")}</p> : (
         <div className="graph-table-scroll">
           <table className="tbl">
-            <thead><tr><th>Text</th>{head("context", "Kontext")}<th>Entitäten</th>{head("date", "Datum")}</tr></thead>
+            <thead><tr><th>{tr("Text")}</th>{head("context", tr("Kontext"))}<th>{tr("Entitäten")}</th>{head("date", tr("Datum"))}</tr></thead>
             <tbody>
               {shown.slice(0, SHOWN).map((r) => (
                 <tr key={r.id} className={r.id === selectedId ? "on" : undefined} aria-selected={r.id === selectedId}>
@@ -42,7 +43,7 @@ export function GraphTable({ rows, selectedId, onSelect, range, onClearRange }: 
           </table>
         </div>
       )}
-      {shown.length > SHOWN && <p className="muted small">Die ersten {SHOWN} von {fmtCount(shown.length)} Zeilen. Zeitraum oder Filter eingrenzen.</p>}
+      {shown.length > SHOWN && <p className="muted small">{tr("Die ersten {SHOWN} von {v} Zeilen. Zeitraum oder Filter eingrenzen.", { SHOWN, v: fmtCount(shown.length) })}</p>}
     </div>
   );
 }
@@ -60,7 +61,7 @@ export function bucket(points: Array<{ t: number; count: number }>): { bars: Bar
     const b = out.get(from) ?? { from, to: from + (weekly ? 7 : 1) * DAY, count: 0 };
     b.count += p.count; out.set(from, b);
   }
-  return { bars: [...out.values()].sort((a, b) => a.from - b.from), unit: weekly ? "Woche" : "Tag" };
+  return { bars: [...out.values()].sort((a, b) => a.from - b.from), unit: weekly ? "Woche" : "Tag" }; // i18n-keep: Wert wird verglichen, angezeigt wird tr(unit)
 }
 
 /** Balken je Tag/Woche. Quelle: Hindsight-Zeitreihe der ganzen Bank; ohne sie die geladenen Erinnerungen. Ein Klick wählt den Zeitraum für die Tabelle. */
@@ -72,16 +73,16 @@ export function GraphTimeline({ provider, type, rows, range, onRange }: { provid
   const { bars, unit } = useMemo(() => bucket(fromApi ? pts.map((p) => ({ t: Date.parse(p.t), count: p.count })) : rows.flatMap((r) => (r.date ? [{ t: Date.parse(r.date), count: 1 }] : []))), [fromApi, pts, rows]);
   const max = Math.max(1, ...bars.map((b) => b.count));
   return (
-    <section className="graph-timeline" aria-label="Zeitleiste">
+    <section className="graph-timeline" aria-label={tr("Zeitleiste")}>
       <div className="row small" style={{ gap: 8 }}>
-        <label className="row" style={{ gap: 6 }}><span className="lbl">Zeitraum</span>
-          <select className="field field-line" value={period} onChange={(e) => { setPeriod(e.target.value); onRange(undefined); }} aria-label="Zeitraum der Zeitleiste" disabled={!fromApi && !series.loading}>
+        <label className="row" style={{ gap: 6 }}><span className="lbl">{tr("Zeitraum")}</span>
+          <select className="field field-line" value={period} onChange={(e) => { setPeriod(e.target.value); onRange(undefined); }} aria-label={tr("Zeitraum der Zeitleiste")} disabled={!fromApi && !series.loading}>
             {["30d", "90d", "365d"].map((p) => <option key={p} value={p}>{p.replace("d", " Tage")}</option>)}
           </select></label>
-        <span className="muted">{series.loading ? "Lade…" : fromApi ? `Alle Erinnerungen dieser Art, je ${unit}` : `Nur die geladenen Erinnerungen, je ${unit} (Zeitreihe nicht verfügbar)`}</span>
+        <span className="muted">{series.loading ? tr("Lade…") : fromApi ? tr("Alle Erinnerungen dieser Art, je {unit}", { unit: tr(unit) }) : tr("Nur die geladenen Erinnerungen, je {unit} (Zeitreihe nicht verfügbar)", { unit: tr(unit) })}</span>
       </div>
-      {bars.length === 0 ? <p className="panel-empty">Keine Erinnerungen mit Datum</p> : (
-        <div className="graph-bars" role="group" aria-label="Erinnerungen pro Zeitraum">
+      {bars.length === 0 ? <p className="panel-empty">{tr("Keine Erinnerungen mit Datum")}</p> : (
+        <div className="graph-bars" role="group" aria-label={tr("Erinnerungen pro Zeitraum")}>
           {bars.map((b) => {
             const label = unit === "Woche" ? `Woche ab ${dayLabel(b.from, "UTC")}` : dayLabel(b.from, "UTC"); // Balken sind UTC-Tage
             const on = range?.from === b.from;

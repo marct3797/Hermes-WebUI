@@ -1,5 +1,5 @@
 import { AchievementsPage } from "./pages/AchievementsPage";
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState, Fragment } from "react";
 import { ApiError, api, page as browser } from "./api";
 import { Shell } from "./components/Shell";
 import { PageBoundary } from "./components/PageBoundary";
@@ -12,6 +12,7 @@ import { CockpitPage } from "./pages/CockpitPage";
 import { NotFoundPage } from "./pages/Placeholders";
 import { parsePath, usePath } from "./router";
 import type { Me } from "./types";
+import { t, useLanguage } from "./i18n";
 
 // Seltene oder schwere Seiten laden erst beim Öffnen (kleineres Startbundle); AgentPage und Cockpit bleiben im Start.
 const HostsPage = lazy(() => import("./pages/HostsPage").then(m => ({ default: m.HostsPage })));
@@ -32,7 +33,13 @@ const OperationsPage = lazy(() => import("./pages/OperationsPage").then(m => ({ 
 const TerminalPage = lazy(() => import("./pages/TerminalPage").then(m => ({ default: m.TerminalPage })));
 const WorkspacePage = lazy(() => import("./pages/WorkspacePage").then(m => ({ default: m.WorkspacePage })));
 
+/** Nach einem Sprachwechsel wird die ganze Oberfläche neu gezeichnet, damit jeder Text die neue Sprache nimmt. */
 export function App() {
+  const lang = useLanguage();
+  return <Fragment key={lang}><AppContent /></Fragment>;
+}
+
+function AppContent() {
   const path = usePath();
   const page = useMemo(() => parsePath(path), [path]);
   const [me, setMe] = useState<Me>();
@@ -42,10 +49,10 @@ export function App() {
   if (error) {
     const login = error instanceof ApiError && error.status === 401;
     return <main className="center"><p className={login ? "muted" : "error"} role={login ? "status" : "alert"}>
-      {login ? "Weiterleitung zur Anmeldung…" : `Das BFF ist nicht erreichbar: ${error.message}`}
+      {login ? t("Weiterleitung zur Anmeldung…") : t("Das BFF ist nicht erreichbar: {message}", { message: error.message })}
     </p></main>;
   }
-  if (!me) return <main className="center"><p className="muted">Lade…</p></main>;
+  if (!me) return <main className="center"><p className="muted">{t("Lade…")}</p></main>;
   const logout = () => {
     try {
       for (let i = sessionStorage.length - 1; i >= 0; i--) {
@@ -59,7 +66,7 @@ export function App() {
     <UiProvider><HostsProvider><RunsProvider><RoomNeedsProvider>
       <Shell me={me} path={path} page={page} onLogout={logout}>
         <PageBoundary key={path}>
-          <Suspense fallback={<main className="page" aria-busy="true"><p className="muted" role="status">Lade Ansicht…</p></main>}>
+          <Suspense fallback={<main className="page" aria-busy="true"><p className="muted" role="status">{t("Lade Ansicht…")}</p></main>}>
             {(() => {
               switch (page.name) {
                 case "cockpit": return <CockpitPage />;

@@ -17,15 +17,16 @@ import { ProfilePage } from "./ProfilePage";
 import { ProvidersPage } from "./ProvidersPage";
 import { SoulPage } from "./SoulPage";
 import { ModulePage, NotFoundPage } from "./Placeholders";
+import { t } from "../i18n";
 
 /** Seite eines Agents: löst Host/Runtime/Agent in der Registry auf und zeigt das gewählte Modul. */
 export function AgentPage({ page }: { page: Extract<Page, { name: "agent" }> }) {
   const resolved = useResolvedAgent(page.ref);
   const agent = useAgentRef(page.ref);
-  if (resolved === undefined || !agent) return <main className="page"><p className="muted">Lade…</p></main>;
+  if (resolved === undefined || !agent) return <main className="page"><p className="muted">{t("Lade…")}</p></main>;
   if (resolved === null) {
     // Profile kommen und gehen: ein gelöschtes Profil zeigt einen klaren Hinweis statt Fehlern.
-    return <NotFoundPage what={`Der Agent „${page.ref.agent}“ auf ${page.ref.host}`} />;
+    return <NotFoundPage what={t("Der Agent „{agent}“ auf {host}", { agent: page.ref.agent, host: page.ref.host })} />;
   }
   if (page.module === "profil") return <ProfilePage key={agentKey(page.ref)} agent={agent} label={resolved.label} hostLabel={resolved.host.label} runtimeLabel={resolved.runtimeLabel} />;
   if (page.module === "modelle") return <ModelsPage key={agentKey(page.ref)} agent={agent} />;

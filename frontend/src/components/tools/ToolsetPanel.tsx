@@ -4,6 +4,7 @@ import type { AgentRef, ToolProvider, ToolsetRow } from "../../types";
 import { type Async, useAsync } from "../../useAsync";
 import { Icon } from "../Icon";
 import { StepUpNote, webUrl } from "../providers/StepUpNote";
+import { t } from "../../i18n";
 
 type Props = { agent: AgentRef; row: ToolsetRow; onChanged: () => void };
 
@@ -54,20 +55,20 @@ export function ToolsetPanel({ agent, row, onChanged }: Props) {
   const model = chosen ?? catalog?.current ?? "";
 
   return (
-    <section className="card tool-panel" role="region" aria-label={`Einstellungen für ${row.label ?? row.name}`}>
+    <section className="card tool-panel" role="region" aria-label={t("Einstellungen für {name}", { name: row.label ?? row.name })}>
       <div className="row" style={{ gap: 8 }}>
         <b>{row.label ?? row.name}</b>
-        <span className={`tag${row.enabled ? " tag-c" : ""}`}>{row.enabled ? "aktiv" : "aus"}</span>
+        <span className={`tag${row.enabled ? " tag-c" : ""}`}>{row.enabled ? t("aktiv") : "aus"}</span>
         <button type="button" className={`btn btn-s ${row.enabled ? "btn-g" : "btn-p"}`} disabled={busy} onClick={() => void toggle()}>
-          {row.enabled ? "Ausschalten" : consent !== undefined ? "Zustimmen und einschalten" : "Einschalten"}
+          {row.enabled ? t("Ausschalten") : consent !== undefined ? t("Zustimmen und einschalten") : t("Einschalten")}
         </button>
       </div>
       {consent !== undefined && <p className="banner" role="alert"><Icon name="alert" /><span>{consent}</span></p>}
-      {stepUp && <StepUpNote what="Diese Änderung" />}
+      {stepUp && <StepUpNote what={t("Diese Änderung")} />}
       {error && <p className="banner" role="alert"><Icon name="alert" /><span>{error}</span></p>}
-      {config.loading && !config.data && <p className="muted small">Lade…</p>}
-      {config.error && <p className="banner" role="alert"><Icon name="alert" /><span>Einstellungen nicht ladbar: {config.error}</span></p>}
-      {config.data && !config.data.has_category && <p className="muted small">Diese Gruppe hat keine Anbieter und keine Keys zu verwalten.</p>}
+      {config.loading && !config.data && <p className="muted small">{t("Lade…")}</p>}
+      {config.error && <p className="banner" role="alert"><Icon name="alert" /><span>{t("Einstellungen nicht ladbar: {error}", { error: config.error })}</span></p>}
+      {config.data && !config.data.has_category && <p className="muted small">{t("Diese Gruppe hat keine Anbieter und keine Keys zu verwalten.")}</p>}
       {config.data?.providers.map((p) => (
         <Provider key={p.name} provider={p} name={row.name} busy={busy} agent={agent}
           onChoose={(capability) => run(() => api.setToolProvider(agent, row.name, p.name, capability))}
@@ -75,12 +76,12 @@ export function ToolsetPanel({ agent, row, onChanged }: Props) {
       ))}
       {catalog && (
         <div className="pf-fld">
-          <label htmlFor={`model-${row.name}`}>Modell</label>
+          <label htmlFor={`model-${row.name}`}>{t("Modell")}</label>
           <div className="row" style={{ gap: 8 }}>
             <select id={`model-${row.name}`} className="pf-in" value={model} onChange={(e) => setChosen(e.target.value)}>
               {catalog.models.map((m) => <option key={m.id} value={m.id}>{m.display ?? m.id}{m.price ? ` · ${m.price}` : ""}</option>)}
             </select>
-            <button type="button" className="btn btn-s btn-p" disabled={busy || model === catalog.current} onClick={() => void run(() => api.setToolModel(agent, row.name, model), () => setChosen(undefined))}>Modell speichern</button>
+            <button type="button" className="btn btn-s btn-p" disabled={busy || model === catalog.current} onClick={() => void run(() => api.setToolModel(agent, row.name, model), () => setChosen(undefined))}>{t("Modell speichern")}</button>
           </div>
         </div>
       )}
@@ -99,12 +100,12 @@ function Provider({ provider: p, name, busy, onChoose, onKey }: {
         <b>{p.name}</b>
         {p.badge && <span className="tag tag-m">{p.badge}</span>}
         {p.status && <span className="tag">{STATUS[p.status] ?? p.status}</span>}
-        {p.is_active && <span className="tag tag-c">aktiv</span>}
+        {p.is_active && <span className="tag tag-c">{t("aktiv")}</span>}
         {parts.length > 0 ? parts.map((c) => (
-          <button key={c} type="button" className="btn btn-s btn-g" disabled={busy} aria-label={`${p.name} für ${c === "search" ? "Suche" : "Extraktion"} wählen`} onClick={() => onChoose(c)}>
-            {c === "search" ? "Für Suche" : "Für Extraktion"}
+          <button key={c} type="button" className="btn btn-s btn-g" disabled={busy} aria-label={t("{name} für {Extraktion} wählen", { name: p.name, Extraktion: c === "search" ? t("Suche") : t("Extraktion") })} onClick={() => onChoose(c)}>
+            {c === "search" ? t("Für Suche") : t("Für Extraktion")}
           </button>
-        )) : <button type="button" className="btn btn-s btn-g" disabled={busy} aria-label={`${p.name} wählen`} onClick={() => onChoose()}>Wählen</button>}
+        )) : <button type="button" className="btn btn-s btn-g" disabled={busy} aria-label={t("{name} wählen", { name: p.name })} onClick={() => onChoose()}>{t("Wählen")}</button>}
       </div>
       {p.env_vars.map((v) => <KeyField key={`${name}-${p.name}-${v.key}`} id={`${name}-${p.name}-${v.key}`} envVar={v} busy={busy} onSave={(value) => onKey(v.key, value)} />)}
     </div>
@@ -118,11 +119,11 @@ function KeyField({ id, envVar: v, busy, onSave }: { id: string; envVar: ToolPro
     <form className="pf-fld" onSubmit={(e) => { e.preventDefault(); onSave(value.trim()); setValue(""); }}>
       <label htmlFor={id}>{v.key}</label>
       <div className="row" style={{ gap: 8 }}>
-        <input id={id} aria-label={v.key} className="pf-in mono grow" type="password" autoComplete="off" spellCheck={false} value={value} placeholder={v.is_set ? "Neuen Wert einfügen, um ihn zu ersetzen" : v.prompt ?? ""} onChange={(e) => setValue(e.target.value)} />
-        <span className={`tag${v.is_set ? " tag-c" : ""}`}>{v.is_set ? "gesetzt" : "nicht gesetzt"}</span>
-        <button type="submit" className="btn btn-s btn-p" disabled={busy || !value.trim()} aria-label={`${v.key} speichern`}>Speichern</button>
+        <input id={id} aria-label={v.key} className="pf-in mono grow" type="password" autoComplete="off" spellCheck={false} value={value} placeholder={v.is_set ? t("Neuen Wert einfügen, um ihn zu ersetzen") : v.prompt ?? ""} onChange={(e) => setValue(e.target.value)} />
+        <span className={`tag${v.is_set ? " tag-c" : ""}`}>{v.is_set ? t("gesetzt") : t("nicht gesetzt")}</span>
+        <button type="submit" className="btn btn-s btn-p" disabled={busy || !value.trim()} aria-label={t("{key} speichern", { key: v.key })}>{t("Speichern")}</button>
       </div>
-      {link && <a className="hint" href={link} target="_blank" rel="noreferrer noopener">Key beim Anbieter anlegen</a>}
+      {link && <a className="hint" href={link} target="_blank" rel="noreferrer noopener">{t("Key beim Anbieter anlegen")}</a>}
     </form>
   );
 }

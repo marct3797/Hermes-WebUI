@@ -4,6 +4,7 @@ import type { AgentRef, MsgPlatform, MsgVar } from "../../types";
 import { Icon } from "../Icon";
 import { StepUpNote, webUrl } from "../providers/StepUpNote";
 import { TelegramWizard } from "./TelegramWizard";
+import { t } from "../../i18n";
 
 type Props = { agent: AgentRef; platform: MsgPlatform; onChanged: () => void };
 
@@ -37,9 +38,9 @@ export function PlatformPanel({ agent, platform: p, onChanged }: Props) {
 
   const save = () => run(
     () => api.saveMessaging(agent, p.id, { ...(switched ? { enabled } : {}), ...(changed.length ? { env: Object.fromEntries(changed.map((v) => [v.key, edits[v.key].trim()])) } : {}) }),
-    () => { setEdits({}); setEnabled(undefined); setNote("Gespeichert. Die Änderung gilt ab dem nächsten Start des Gateways."); },
+    () => { setEdits({}); setEnabled(undefined); setNote(t("Gespeichert. Die Änderung gilt ab dem nächsten Start des Gateways.")); },
   );
-  const clear = (key: string) => run(() => api.saveMessaging(agent, p.id, { clear_env: [key] }), () => { setConfirmClear(undefined); setNote("Gespeichert. Die Änderung gilt ab dem nächsten Start des Gateways."); });
+  const clear = (key: string) => run(() => api.saveMessaging(agent, p.id, { clear_env: [key] }), () => { setConfirmClear(undefined); setNote(t("Gespeichert. Die Änderung gilt ab dem nächsten Start des Gateways.")); });
   const check = () => run(async () => { const r = await api.testMessaging(agent, p.id); setNote(r.message); });
 
   const field = (v: MsgVar) => (
@@ -47,38 +48,38 @@ export function PlatformPanel({ agent, platform: p, onChanged }: Props) {
       <label htmlFor={`msg-${p.id}-${v.key}`}>{v.key}</label>
       <div className="row" style={{ gap: 8 }}>
         <input id={`msg-${p.id}-${v.key}`} aria-label={v.key} className="pf-in mono grow" type={v.is_password ? "password" : "text"} autoComplete="off" spellCheck={false}
-          value={edits[v.key] ?? (v.is_password ? "" : v.value ?? "")} placeholder={v.is_password ? (v.is_set ? "Neuen Wert einfügen, um ihn zu ersetzen" : v.prompt ?? "") : v.prompt ?? ""}
+          value={edits[v.key] ?? (v.is_password ? "" : v.value ?? "")} placeholder={v.is_password ? (v.is_set ? t("Neuen Wert einfügen, um ihn zu ersetzen") : v.prompt ?? "") : v.prompt ?? ""}
           onChange={(e) => setEdits({ ...edits, [v.key]: e.target.value })} />
-        {v.required && <span className="tag tag-m">Pflicht</span>}
-        {v.is_password && <span className={`tag${v.is_set ? " tag-c" : ""}`}>{v.is_set ? "gesetzt" : "nicht gesetzt"}</span>}
+        {v.required && <span className="tag tag-m">{t("Pflicht")}</span>}
+        {v.is_password && <span className={`tag${v.is_set ? " tag-c" : ""}`}>{v.is_set ? t("gesetzt") : t("nicht gesetzt")}</span>}
         {v.is_set && (confirmClear === v.key
-          ? <button type="button" className="btn btn-s btn-g" disabled={busy} onClick={() => void clear(v.key)}>Wirklich löschen</button>
-          : <button type="button" className="btn btn-s btn-g" disabled={busy} aria-label={`${v.key} löschen`} onClick={() => setConfirmClear(v.key)}>Löschen</button>)}
+          ? <button type="button" className="btn btn-s btn-g" disabled={busy} onClick={() => void clear(v.key)}>{t("Wirklich löschen")}</button>
+          : <button type="button" className="btn btn-s btn-g" disabled={busy} aria-label={t("{key} löschen", { key: v.key })} onClick={() => setConfirmClear(v.key)}>{t("Löschen")}</button>)}
       </div>
       {v.description && v.description !== v.prompt && <span className="hint">{v.description}</span>}
     </div>
   );
 
   return (
-    <section className="card tool-panel" role="region" aria-label={`Einstellungen für ${p.name}`}>
+    <section className="card tool-panel" role="region" aria-label={t("Einstellungen für {name}", { name: p.name })}>
       <div className="row" style={{ gap: 8 }}>
         <b>{p.name}</b>
-        {docs && <a className="hint" href={docs} target="_blank" rel="noreferrer noopener">Dokumentation</a>}
+        {docs && <a className="hint" href={docs} target="_blank" rel="noreferrer noopener">{t("Dokumentation")}</a>}
       </div>
       {p.description && <p className="muted small" style={{ margin: 0 }}>{p.description}</p>}
       {p.error_message && <p className="banner" role="status"><Icon name="alert" /><span>{p.error_message}</span></p>}
       <label className="row" style={{ gap: 8 }}>
         <input type="checkbox" checked={enabled ?? p.enabled} onChange={(e) => setEnabled(e.target.checked)} />
-        Plattform aktiv
+        {t("Plattform aktiv")}
       </label>
       {p.env_vars.map(field)}
-      {stepUp && <StepUpNote what="Diese Änderung" />}
+      {stepUp && <StepUpNote what={t("Diese Änderung")} />}
       {error && <p className="banner" role="alert"><Icon name="alert" /><span>{error}</span></p>}
       {note && <p className="muted small" role="status" style={{ margin: 0 }}>{note}</p>}
       <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-        <button type="button" className="btn btn-s btn-p" disabled={busy || (!switched && changed.length === 0)} onClick={() => void save()}><Icon name="check" size={14} />Speichern</button>
-        <button type="button" className="btn btn-s btn-g" disabled={busy} onClick={() => void check()}>Verbindung prüfen</button>
-        {p.id === "telegram" && !wizard && <button type="button" className="btn btn-s btn-g" onClick={() => setWizard(true)}>Bot mit Assistent einrichten</button>}
+        <button type="button" className="btn btn-s btn-p" disabled={busy || (!switched && changed.length === 0)} onClick={() => void save()}><Icon name="check" size={14} />{t("Speichern")}</button>
+        <button type="button" className="btn btn-s btn-g" disabled={busy} onClick={() => void check()}>{t("Verbindung prüfen")}</button>
+        {p.id === "telegram" && !wizard && <button type="button" className="btn btn-s btn-g" onClick={() => setWizard(true)}>{t("Bot mit Assistent einrichten")}</button>}
       </div>
       {wizard && <TelegramWizard agent={agent} onClose={() => setWizard(false)} onApplied={onChanged} />}
     </section>

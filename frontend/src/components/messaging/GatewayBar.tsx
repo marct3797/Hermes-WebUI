@@ -4,6 +4,7 @@ import type { AgentRef, GatewayAction, GatewayState } from "../../types";
 import { Icon } from "../Icon";
 import { StepUpNote } from "../providers/StepUpNote";
 import { POLL_MS, sleep } from "./poll";
+import { t } from "../../i18n";
 
 type What = "start" | "stop" | "restart";
 const plural = (n: number) => `${n} laufende Sitzung${n === 1 ? "" : "en"}`;
@@ -49,25 +50,25 @@ export function GatewayBar({ agent, onChanged }: { agent: AgentRef; onChanged: (
   };
 
   return (
-    <section className="card gw-bar" role="region" aria-label="Gateway">
+    <section className="card gw-bar" role="region" aria-label={t("Gateway")}>
       <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
-        <b>Gateway: {state ? (state.running ? "läuft" : "gestoppt") : "…"}</b>
+        <b>{t("Gateway: {running}", { running: state ? (state.running ? "läuft" : t("gestoppt")) : "…" })}</b>
         {state && state.active_sessions > 0 && <span className="tag tag-m">{plural(state.active_sessions)}</span>}
         <span className="grow" />
-        {state && !state.running && <button type="button" className="btn btn-s btn-p" disabled={busy} onClick={() => void run("start")}><Icon name="play" size={14} />Gateway starten</button>}
-        {state?.running && <button type="button" className="btn btn-s btn-g" disabled={busy} onClick={() => void run("restart")}><Icon name="refresh" size={14} />Neu starten</button>}
-        {state?.running && <button type="button" className="btn btn-s btn-g" disabled={busy} onClick={() => void run("stop")}><Icon name="stop" size={14} />Anhalten</button>}
+        {state && !state.running && <button type="button" className="btn btn-s btn-p" disabled={busy} onClick={() => void run("start")}><Icon name="play" size={14} />{t("Gateway starten")}</button>}
+        {state?.running && <button type="button" className="btn btn-s btn-g" disabled={busy} onClick={() => void run("restart")}><Icon name="refresh" size={14} />{t("Neu starten")}</button>}
+        {state?.running && <button type="button" className="btn btn-s btn-g" disabled={busy} onClick={() => void run("stop")}><Icon name="stop" size={14} />{t("Anhalten")}</button>}
       </div>
       {ask && (
         <div className="banner" role="alert"><Icon name="alert" /><span>{ask.message}{" "}
-          <button type="button" className="linkish" disabled={busy} onClick={() => void run(ask.what, true)}>Trotzdem unterbrechen</button>{" "}
-          <button type="button" className="linkish" onClick={() => setAsk(undefined)}>Lieber nicht</button></span></div>
+          <button type="button" className="linkish" disabled={busy} onClick={() => void run(ask.what, true)}>{t("Trotzdem unterbrechen")}</button>{" "}
+          <button type="button" className="linkish" onClick={() => setAsk(undefined)}>{t("Lieber nicht")}</button></span></div>
       )}
-      {stepUp && <StepUpNote what="Das Gateway zu steuern" />}
+      {stepUp && <StepUpNote what={t("Das Gateway zu steuern")} />}
       {error && <p className="banner" role="alert"><Icon name="alert" /><span>{error}</span></p>}
       {log && (
         <div className="muted small" aria-live="polite">
-          <div>{log.running ? "Befehl wird noch ausgeführt…" : log.exit_code === 0 || log.exit_code === null ? "Befehl ausgeführt." : `Befehl endete mit Fehler (Exit ${log.exit_code}).`}</div>
+          <div>{log.running ? t("Befehl wird noch ausgeführt…") : log.exit_code === 0 || log.exit_code === null ? t("Befehl ausgeführt.") : t("Befehl endete mit Fehler (Exit {exit_code}).", { exit_code: log.exit_code })}</div>
           {log.lines.slice(-6).map((l, i) => <div key={i} className="mono">{l}</div>)}
         </div>
       )}

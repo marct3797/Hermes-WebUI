@@ -6,31 +6,32 @@ import { useAsync } from "../../useAsync";
 import { Confirm } from "./Confirm";
 import { ErrBanner } from "./ErrBanner";
 import { JobForm, stamp } from "./JobForm";
+import { t } from "../../i18n";
 
 export function statusOf(j: Job): { key: "active" | "paused" | "error" | "done"; label: string } {
-  if (j.state === "completed") return { key: "done", label: "Beendet" };
-  if (!j.enabled || j.state === "paused") return { key: "paused", label: "Pausiert" };
-  if (j.failure_streak > 0 || (j.last_status != null && j.last_status !== "ok")) return { key: "error", label: "Fehler" };
-  return { key: "active", label: "Aktiv" };
+  if (j.state === "completed") return { key: "done", label: t("Beendet") };
+  if (!j.enabled || j.state === "paused") return { key: "paused", label: t("Pausiert") };
+  if (j.failure_streak > 0 || (j.last_status != null && j.last_status !== "ok")) return { key: "error", label: t("Fehler") };
+  return { key: "active", label: t("Aktiv") };
 }
 
 function Runs({ host, profile, id, revision }: { host: string; profile: string; id: string; revision: number }) {
   const runs = useAsync(() => cronApi.runs(host, profile, id), [host, profile, id, revision]);
   const at = (s: number | null) => (s == null ? "–" : new Date(s * 1000).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }));
   return (
-    <section className="kn-sec" aria-label="Laufverlauf">
-      <h2>Laufverlauf</h2>
-      {runs.loading && <p className="muted small">Lade…</p>}
-      {runs.error && <p className="banner" role="alert"><Icon name="alert" /><span>Laufverlauf nicht ladbar: {runs.error}</span></p>}
-      {runs.data && runs.data.runs.length === 0 && <p className="panel-empty">Noch keine Läufe aufgezeichnet.</p>}
+    <section className="kn-sec" aria-label={t("Laufverlauf")}>
+      <h2>{t("Laufverlauf")}</h2>
+      {runs.loading && <p className="muted small">{t("Lade…")}</p>}
+      {runs.error && <p className="banner" role="alert"><Icon name="alert" /><span>{t("Laufverlauf nicht ladbar: {error}", { error: runs.error })}</span></p>}
+      {runs.data && runs.data.runs.length === 0 && <p className="panel-empty">{t("Noch keine Läufe aufgezeichnet.")}</p>}
       {runs.data && runs.data.runs.length > 0 && (
         <div className="kn-table-scroll"><table className="tbl">
-          <thead><tr><th>Beginn</th><th>Dauer</th><th>Ergebnis</th></tr></thead>
+          <thead><tr><th>{t("Beginn")}</th><th>{t("Dauer")}</th><th>{t("Ergebnis")}</th></tr></thead>
           <tbody>{runs.data.runs.map((r: Run) => (
             <tr key={r.id}>
               <td className="mono small">{at(r.started_at)}</td>
               <td className="mono small">{r.duration_s == null ? "–" : fmtDuration(r.duration_s * 1000)}</td>
-              <td><details><summary><span className={`tag${r.status === "FAILED" ? " err" : ""}`}>{r.active ? "läuft" : r.status ?? "unbekannt"}</span></summary><pre className="jobs-pre">{r.preview || "Keine Ausgabe."}</pre></details></td>
+              <td><details><summary><span className={`tag${r.status === "FAILED" ? " err" : ""}`}>{r.active ? "läuft" : r.status ?? t("unbekannt")}</span></summary><pre className="jobs-pre">{r.preview || t("Keine Ausgabe.")}</pre></details></td>
             </tr>))}</tbody>
         </table></div>)}
     </section>
@@ -64,29 +65,29 @@ export function JobPanel({ host, profile, job, targets, skills, onChanged, onClo
   return (
     <section className="card jobs-panel" aria-label={`Zeitplan ${job.name || job.id}`}>
       <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-        <h2 className="grow trunc" style={{ margin: 0 }}>{job.name || "Ohne Namen"}</h2>
+        <h2 className="grow trunc" style={{ margin: 0 }}>{job.name || t("Ohne Namen")}</h2>
         <span className={`tag jobs-st-${st.key}`}>{st.label}</span>
-        <button type="button" className="btn btn-s" onClick={onClose} aria-label="Detailansicht schließen"><Icon name="x" size={14} /></button>
+        <button type="button" className="btn btn-s" onClick={onClose} aria-label={t("Detailansicht schließen")}><Icon name="x" size={14} /></button>
       </div>
-      <p className="hint mono" style={{ margin: 0 }}>{job.id} · Zeitplan {job.schedule.display ?? "unbekannt"} · nächster Lauf {stamp(job.next_run_at)} · letzter Lauf {stamp(job.last_run_at)}{job.last_status ? ` (${job.last_status})` : ""}</p>
-      {job.paused_reason && <p className="hint" style={{ margin: 0 }}>Pausiert: {job.paused_reason}</p>}
-      {job.last_error && <p className="banner" role="status"><Icon name="alert" /><span>Letzter Fehler: {job.last_error}</span></p>}
+      <p className="hint mono" style={{ margin: 0 }}>{t("{id} · Zeitplan {display} · nächster Lauf {next_run_at} · letzter Lauf {last_run_at}{last_status}", { id: job.id, display: job.schedule.display ?? t("unbekannt"), next_run_at: stamp(job.next_run_at), last_run_at: stamp(job.last_run_at), last_status: job.last_status ? ` (${job.last_status})` : "" })}</p>
+      {job.paused_reason && <p className="hint" style={{ margin: 0 }}>{t("Pausiert: {paused_reason}", { paused_reason: job.paused_reason })}</p>}
+      {job.last_error && <p className="banner" role="status"><Icon name="alert" /><span>{t("Letzter Fehler: {last_error}", { last_error: job.last_error })}</span></p>}
       <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-        <button type="button" className="btn btn-s" disabled={!!busy || st.key === "done"} onClick={() => void toggle()}>{job.enabled && job.state !== "paused" ? "Pausieren" : "Aktivieren"}</button>
-        <button type="button" className="btn btn-s" disabled={!!busy || (locked && job.system)} onClick={() => void trigger()}><Icon name="play" size={14} />Jetzt ausführen</button>
-        <button type="button" className="btn btn-s" disabled={!!busy || locked} onClick={() => setSure(true)}><Icon name="x" size={14} />Löschen</button>
+        <button type="button" className="btn btn-s" disabled={!!busy || st.key === "done"} onClick={() => void toggle()}>{job.enabled && job.state !== "paused" ? t("Pausieren") : t("Aktivieren")}</button>
+        <button type="button" className="btn btn-s" disabled={!!busy || (locked && job.system)} onClick={() => void trigger()}><Icon name="play" size={14} />{t("Jetzt ausführen")}</button>
+        <button type="button" className="btn btn-s" disabled={!!busy || locked} onClick={() => setSure(true)}><Icon name="x" size={14} />{t("Löschen")}</button>
       </div>
       {job.system && (
-        <div className="banner" role="note"><Icon name="alert" /><span>System-Job: läuft als Skript <code>{job.script ?? "ohne Namen"}</code> ohne Agent. Änderungen, Ausführen und Löschen können den Betrieb stören.{" "}
-          <label className="row" style={{ gap: 6, display: "inline-flex" }}><input type="checkbox" checked={unlocked} onChange={(e) => setUnlocked(e.target.checked)} /><span>Ich ändere diesen System-Job bewusst</span></label></span></div>)}
+        <div className="banner" role="note"><Icon name="alert" /><span>{t("System-Job: läuft als Skript")} <code>{job.script ?? t("ohne Namen")}</code> {t("ohne Agent. Änderungen, Ausführen und Löschen können den Betrieb stören.")}{" "}
+          <label className="row" style={{ gap: 6, display: "inline-flex" }}><input type="checkbox" checked={unlocked} onChange={(e) => setUnlocked(e.target.checked)} /><span>{t("Ich ändere diesen System-Job bewusst")}</span></label></span></div>)}
       <ErrBanner err={err} />
       {note && <p className="hint crimt" role="status" style={{ margin: 0 }}>{note}</p>}
-      <JobForm key={job.id + job.next_run_at + job.schedule.display + job.deliver + job.name + job.prompt} job={job} targets={targets} skills={skills} locked={locked} busy={busy === "save"} label="Änderungen speichern" onSubmit={(b) => void save(b)} />
+      <JobForm key={job.id + job.next_run_at + job.schedule.display + job.deliver + job.name + job.prompt} job={job} targets={targets} skills={skills} locked={locked} busy={busy === "save"} label={t("Änderungen speichern")} onSubmit={(b) => void save(b)} />
       <Runs host={host} profile={profile} id={job.id} revision={runsRev} />
       {sure && (
-        <Confirm title="Zeitplan löschen?" label="Endgültig löschen" busy={deleting} onConfirm={() => void remove()} onClose={() => setSure(false)}>
+        <Confirm title={t("Zeitplan löschen?")} label={t("Endgültig löschen")} busy={deleting} onConfirm={() => void remove()} onClose={() => setSure(false)}>
           <p style={{ margin: 0 }}><b>{job.name || job.id}</b> <span className="mono small t3">({job.id})</span></p>
-          <p className="hint" style={{ margin: 0 }}>Der Zeitplan und seine Einstellungen werden entfernt. Das lässt sich nicht rückgängig machen.</p>
+          <p className="hint" style={{ margin: 0 }}>{t("Der Zeitplan und seine Einstellungen werden entfernt. Das lässt sich nicht rückgängig machen.")}</p>
         </Confirm>)}
     </section>
   );

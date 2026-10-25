@@ -14,6 +14,7 @@ import { sigilFor, useUi } from "../ui";
 import { useAgentSessions } from "../useAgentSessions";
 import { useUsage } from "../useUsage";
 import { useNow } from "../useNow";
+import { t } from "../i18n";
 
 type Filter = "all" | "run" | "need" | `host:${string}`;
 
@@ -33,7 +34,7 @@ export function CockpitPage() {
   const usage = useUsage(onlineRefs);
 
   if (!hosts) {
-    return <main className="page">{error ? <p className="banner" role="alert"><Icon name="alert" />Hosts nicht ladbar: {error}</p> : <p className="muted">Lade…</p>}</main>;
+    return <main className="page">{error ? <p className="banner" role="alert"><Icon name="alert" />{t("Hosts nicht ladbar: {error}", { error })}</p> : <p className="muted">{t("Lade…")}</p>}</main>;
   }
 
   const act = (key: string) => byAgent.get(key);
@@ -61,23 +62,22 @@ export function CockpitPage() {
   };
 
   const chips: Array<{ id: Filter; label: string; n: number }> = [
-    { id: "all", label: "Alle", n: counts.all },
+    { id: "all", label: t("Alle"), n: counts.all },
     ...(hosts.length > 1 ? hosts.map((h) => ({ id: `host:${h.id}` as Filter, label: h.label, n: all.filter((x) => x.h.id === h.id).length })) : []),
-    { id: "run", label: "Läuft", n: counts.run },
-    { id: "need", label: "Braucht dich", n: counts.need },
+    { id: "run", label: t("Läuft"), n: counts.run },
+    { id: "need", label: t("Braucht dich"), n: counts.need },
   ];
 
   return (
     <main className="page">
       <header className="ph">
         <div className="col" style={{ gap: 6 }}>
-          <span className="lbl">Profil-Cockpit</span>
-          <h1>Alle Agents</h1>
+          <span className="lbl">{t("Profil-Cockpit")}</span>
+          <h1>{t("Alle Agents")}</h1>
         </div>
         <span className="ph-sub" style={{ marginBottom: 5 }}>
-          {fmtDate(now)} · {fmtTime(now)} · {hosts.length} {hosts.length === 1 ? "Host" : "Hosts"} · {all.length} Agents
-        </span>
-        <div className="row filters" role="group" aria-label="Filter">
+          {t("{now} · {now2} · {v} {v2} · {v3} Agents", { now: fmtDate(now), now2: fmtTime(now), v: hosts.length, v2: hosts.length === 1 ? t("Host") : t("Hosts"), v3: all.length })}</span>
+        <div className="row filters" role="group" aria-label={t("Filter")}>
           {chips.map((c) => (
             <button key={c.id} type="button" className={`chip${filter === c.id ? " on" : ""}`} aria-pressed={filter === c.id} onClick={() => setFilter(c.id)}>
               {c.label}<span className="n">{c.n}</span>
@@ -86,30 +86,30 @@ export function CockpitPage() {
         </div>
       </header>
 
-      {error && <p className="banner" role="alert"><Icon name="alert" />Hosts nicht ladbar: {error}</p>}
+      {error && <p className="banner" role="alert"><Icon name="alert" />{t("Hosts nicht ladbar: {error}", { error })}</p>}
 
-      <div className="kpis" role="group" aria-label="Kennzahlen">
+      <div className="kpis" role="group" aria-label={t("Kennzahlen")}>
         <div className="kpi">
-          <span className="lbl">Aktiv</span>
+          <span className="lbl">{t("Aktiv")}</span>
           <span className="v">{counts.run}<small>/ {onlineAgents}</small></span>
-          <span className="kpi-note">{live.length} {live.length === 1 ? "Run läuft" : "Runs laufen"} · {approvals + questions} warten</span>
+          <span className="kpi-note">{t("{v} {v2} · {questions} warten", { v: live.length, v2: live.length === 1 ? t("Run läuft") : t("Runs laufen"), questions: approvals + questions })}</span>
         </div>
         <div className={`kpi${open ? " hot" : ""}`}>
-          <span className={`lbl${open ? " crimt" : ""}`}>Braucht dich</span>
+          <span className={`lbl${open ? " crimt" : ""}`}>{t("Braucht dich")}</span>
           <span className="v">{open}</span>
           <span className="kpi-note">
-            {open === 0 ? "nichts offen" : [approvals && `${approvals} ${approvals === 1 ? "Freigabe" : "Freigaben"}`, questions && `${questions} ${questions === 1 ? "Rückfrage" : "Rückfragen"}`, calls && `${calls} ${calls === 1 ? "Raum ruft" : "Räume rufen"}`, problems && `${problems} Fehler`].filter(Boolean).join(" · ")}
+            {open === 0 ? t("nichts offen") : [approvals && `${approvals} ${approvals === 1 ? t("Freigabe") : t("Freigaben")}`, questions && `${questions} ${questions === 1 ? t("Rückfrage") : t("Rückfragen")}`, calls && `${calls} ${calls === 1 ? t("Raum ruft") : t("Räume rufen")}`, problems && t("{problems} Fehler", { problems })].filter(Boolean).join(" · ")}
           </span>
         </div>
         <div className="kpi">
-          <span className="lbl">Hosts</span>
+          <span className="lbl">{t("Hosts")}</span>
           <span className="v">{hostsOnline}<small>/ {hosts.length}</small></span>
-          <span className="kpi-note">{offline.length ? `${offline.join(", ")} nicht erreichbar` : "alle erreichbar"}</span>
+          <span className="kpi-note">{offline.length ? t("{join} nicht erreichbar", { join: offline.join(", ") }) : t("alle erreichbar")}</span>
         </div>
         <div className="kpi">
-          <span className="lbl">Agents</span>
+          <span className="lbl">{t("Agents")}</span>
           <span className="v">{all.length}</span>
-          <span className="kpi-note">{onlineAgents} erreichbar</span>
+          <span className="kpi-note">{t("{onlineAgents} erreichbar", { onlineAgents })}</span>
         </div>
         <QuotaKpi />
       </div>
@@ -118,7 +118,7 @@ export function CockpitPage() {
 
       <div className="two">
         <div className="l">
-          {shown.length === 0 && <p className="muted">{all.length === 0 ? "Keine Agents konfiguriert. Hosts und Agents stehen in der hosts.json des BFF." : "Kein Agent passt zu diesem Filter."}</p>}
+          {shown.length === 0 && <p className="muted">{all.length === 0 ? t("Keine Agents konfiguriert. Hosts und Agents stehen in der hosts.json des BFF.") : t("Kein Agent passt zu diesem Filter.")}</p>}
           {hosts.map((h) => {
             const cards = shown.filter((x) => x.h.id === h.id);
             if (cards.length === 0) return null;

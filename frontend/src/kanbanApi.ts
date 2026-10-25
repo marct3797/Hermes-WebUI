@@ -1,4 +1,5 @@
 import { call } from "./api";
+import { t as tr } from "./i18n";
 
 export type Card = {
   id: string; title: string; status: string; assignee: string | null; priority: number; created_at: number | null; completed_at: number | null;
@@ -54,5 +55,5 @@ export const kanbanApi = {
 /** Ein Bulk-Aufruf mit einer ID meldet Einzelfehler im Ergebnis; für die Oberfläche wird daraus ein Fehler. */
 export function assertBulk(r: BulkResult): void {
   const bad = r.results.find((x) => !x.ok);
-  if (bad) throw new Error(bad.error ?? "Das Dashboard hat die Änderung abgelehnt");
+  if (bad) throw new Error(bad.error ?? tr("Das Dashboard hat die Änderung abgelehnt"));
 }

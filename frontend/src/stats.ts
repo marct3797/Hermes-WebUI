@@ -1,4 +1,5 @@
 import { toMs } from "./format";
+import { t as tr } from "./i18n";
 
 /** Auswertung aus den Sessions, die Hermes ohnehin liefert (`/api/sessions`): Tokens, Tool-Aufrufe, Kosten, Modelle. */
 export type SessionStat = {
@@ -34,8 +35,8 @@ export function sessionStats(agent: string, payload: unknown): SessionStat[] {
     const ended = toMs(raw.ended_at as number | string | undefined);
     out.push({
       agent, startedAt: started, durationMs: ended !== undefined && ended >= started ? ended - started : undefined,
-      source: typeof raw.source === "string" && raw.source ? raw.source : "unbekannt",
-      model: typeof raw.model === "string" && raw.model ? raw.model : "unbekannt",
+      source: typeof raw.source === "string" && raw.source ? raw.source : tr("unbekannt"),
+      model: typeof raw.model === "string" && raw.model ? raw.model : tr("unbekannt"),
       messages: num(raw.message_count), toolCalls: num(raw.tool_call_count), apiCalls: num(raw.api_call_count),
       input: num(raw.input_tokens), output: num(raw.output_tokens), cacheRead: num(raw.cache_read_tokens),
       cacheWrite: num(raw.cache_write_tokens), reasoning: num(raw.reasoning_tokens),

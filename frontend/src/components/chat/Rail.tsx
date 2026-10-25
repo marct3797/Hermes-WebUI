@@ -7,6 +7,7 @@ import { Icon } from "../Icon";
 import { Link } from "../Link";
 import { Sigil } from "../Sigil";
 import { activityDot } from "../Status";
+import { t } from "../../i18n";
 
 type Props = { me: Me; active: AgentRef; onLogout: () => void };
 
@@ -16,16 +17,16 @@ export function Rail({ me, active, onLogout }: Props) {
   const { sigils } = useUi();
   const { needs, byAgent } = useActivity();
   return (
-    <nav className="irail" aria-label="Navigation">
-      <Link to="/" className="mk-link" aria-label="Hermes, zum Cockpit"><i className="mk" /></Link>
-      <Link to="/" className="ib" aria-label="Cockpit"><Icon name="grid" size={20} /></Link>
-      <Link to="/inbox" className="ib" aria-label={needs.length ? `Inbox, ${needs.length} offen` : "Inbox"}>
+    <nav className="irail" aria-label={t("Navigation")}>
+      <Link to="/" className="mk-link" aria-label={t("Hermes, zum Cockpit")}><i className="mk" /></Link>
+      <Link to="/" className="ib" aria-label={t("Cockpit")}><Icon name="grid" size={20} /></Link>
+      <Link to="/inbox" className="ib" aria-label={needs.length ? `Inbox, ${needs.length} offen` : t("Inbox")}>
         <Icon name="inbox" size={20} />{needs.length > 0 && <span className="ct">{needs.length}</span>}
       </Link>
-      <Link to={agentPath(active)} className="ib on" aria-label="Chats" aria-current="page"><Icon name="chat" size={20} /></Link>
-      <span className="ib soon" aria-label="Kanban (folgt)" title="Kanban (folgt)"><Icon name="kanban" size={20} /></span>
-      <Link to="/rooms" className="ib" aria-label="Räume" title="Räume"><Icon name="orbit" size={20} /></Link>
-      <Link to="/memory" className="ib" aria-label="Gedächtnis" title="Gedächtnis"><Icon name="memory" size={20} /></Link>
+      <Link to={agentPath(active)} className="ib on" aria-label={t("Chats")} aria-current="page"><Icon name="chat" size={20} /></Link>
+      <span className="ib soon" aria-label={t("Kanban (folgt)")} title={t("Kanban (folgt)")}><Icon name="kanban" size={20} /></span>
+      <Link to="/rooms" className="ib" aria-label={t("Räume")} title={t("Räume")}><Icon name="orbit" size={20} /></Link>
+      <Link to="/memory" className="ib" aria-label={t("Gedächtnis")} title={t("Gedächtnis")}><Icon name="memory" size={20} /></Link>
       {hosts?.map((h) => (
         <div key={h.id} className="rail-group" role="group" aria-label={h.label}>
           <i className="gap" />
@@ -44,10 +45,10 @@ export function Rail({ me, active, onLogout }: Props) {
           }))}
         </div>
       ))}
-      <Link to="/settings" className="ib rail-user-link" aria-label="Darstellung" title="Darstellung"><Icon name="sliders" size={18} /></Link>
+      <Link to="/settings" className="ib rail-user-link" aria-label={t("Darstellung")} title={t("Darstellung")}><Icon name="sliders" size={18} /></Link>
       <span className="avatar rail-user" title={me.user.name} role="img" aria-label={`Angemeldet als ${me.user.name}`}>{me.user.name.slice(0, 1).toUpperCase()}</span>
       {me.auth_mode === "oidc" && (
-        <button type="button" className="ib" aria-label="Abmelden" title="Abmelden" onClick={onLogout}><Icon name="power" size={18} /></button>
+        <button type="button" className="ib" aria-label={t("Abmelden")} title={t("Abmelden")} onClick={onLogout}><Icon name="power" size={18} /></button>
       )}
     </nav>
   );

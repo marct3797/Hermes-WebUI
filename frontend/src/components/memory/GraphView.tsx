@@ -7,10 +7,11 @@ import { useAsync } from "../../useAsync";
 import { Icon } from "../Icon";
 import { Constellation } from "./Constellation";
 import { dayLabel, GraphTable, GraphTimeline, type Range } from "./GraphTable";
+import { t as tr } from "../../i18n";
 
-export const FACT_TYPES = [{ id: "world", label: "Weltfakten" }, { id: "experience", label: "Erfahrung" }, { id: "observation", label: "Beobachtungen" }] as const;
+export const FACT_TYPES = [{ id: "world", get label() { return tr("Weltfakten"); } }, { id: "experience", get label() { return tr("Erfahrung"); } }, { id: "observation", get label() { return tr("Beobachtungen"); } }] as const;
 export const LIMIT_STEPS = [500, 1000, 2000];
-const VIEWS = [{ id: "map", label: "Konstellation" }, { id: "table", label: "Tabelle" }, { id: "timeline", label: "Zeitleiste" }] as const;
+const VIEWS = [{ id: "map", get label() { return tr("Konstellation"); } }, { id: "table", get label() { return tr("Tabelle"); } }, { id: "timeline", get label() { return tr("Zeitleiste"); } }] as const;
 type ViewId = (typeof VIEWS)[number]["id"];
 const cut = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
@@ -93,14 +94,14 @@ export function GraphView({ provider, initial = {} }: { provider: string; initia
     for (const t of tags) p.append("tags", t);
     if (tags.length > 1 && tagsMatch === "all") p.set("tags_match", "all");
     const url = `${location.origin}${location.pathname}?${p}`;
-    try { await navigator.clipboard.writeText(url); setShareNote("Link kopiert"); } catch { setShareNote(`Kopieren nicht möglich. Adresse: ${url}`); }
+    try { await navigator.clipboard.writeText(url); setShareNote(tr("Link kopiert")); } catch { setShareNote(tr("Kopieren nicht möglich. Adresse: {url}", { url })); }
   };
 
-  const label = graph ? `Gedächtnis-Graph, ${fmtCount(graph.nodes.length)} Erinnerungen und ${fmtCount(edges.length)} Verbindungen, gefärbt nach ${COLOR_MODES.find((m) => m.id === mode)!.label}. Pfeiltasten verschieben, Plus und Minus zoomen, 0 zeigt alles. Dieselben Erinnerungen stehen in der Ansicht Tabelle.` : "";
+  const label = graph ? tr("Gedächtnis-Graph, {length} Erinnerungen und {length2} Verbindungen, gefärbt nach {label}. Pfeiltasten verschieben, Plus und Minus zoomen, 0 zeigt alles. Dieselben Erinnerungen stehen in der Ansicht Tabelle.", { length: fmtCount(graph.nodes.length), length2: fmtCount(edges.length), label: COLOR_MODES.find((m) => m.id === mode)!.label }) : "";
 
   return (
     <div className="mem-graph">
-      <div className="tabs" role="tablist" aria-label="Faktenart">
+      <div className="tabs" role="tablist" aria-label={tr("Faktenart")}>
         {FACT_TYPES.map((t) => (
           <button key={t.id} type="button" role="tab" className={`tab${t.id === type ? " on" : ""}`} aria-selected={t.id === type}
             onClick={() => { if (t.id !== type) { reset(); setType(t.id); setLimit(LIMIT_STEPS[0]); } }}>
@@ -111,64 +112,64 @@ export function GraphView({ provider, initial = {} }: { provider: string; initia
 
       <form className="row mem-bar" role="search" onSubmit={apply}>
         <label className="search grow"><Icon name="search" size={14} />
-          <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Nach Text oder Kontext filtern" aria-label="Nach Text oder Kontext filtern" />
+          <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={tr("Nach Text oder Kontext filtern")} aria-label={tr("Nach Text oder Kontext filtern")} />
         </label>
-        <label className="search"><input value={tagDraft} onChange={(e) => setTagDraft(e.target.value)} placeholder="Tags, mit Komma getrennt" aria-label="Nach Tags filtern" /></label>
+        <label className="search"><input value={tagDraft} onChange={(e) => setTagDraft(e.target.value)} placeholder={tr("Tags, mit Komma getrennt")} aria-label={tr("Nach Tags filtern")} /></label>
         {tags.length > 1 && (
-          <select className="field field-line" value={tagsMatch} onChange={(e) => setTagsMatch(e.target.value)} aria-label="Tags kombinieren">
-            <option value="any">mindestens ein Tag</option><option value="all">alle Tags</option>
+          <select className="field field-line" value={tagsMatch} onChange={(e) => setTagsMatch(e.target.value)} aria-label={tr("Tags kombinieren")}>
+            <option value="any">{tr("mindestens ein Tag")}</option><option value="all">{tr("alle Tags")}</option>
           </select>
         )}
-        <button type="submit" className="btn btn-s">Filtern</button>
-        {(q || tags.length > 0) && <button type="button" className="btn btn-s btn-g" onClick={() => { setDraft(""); setQ(""); setTagDraft(""); setTags([]); reset(); }}>Zurücksetzen</button>}
+        <button type="submit" className="btn btn-s">{tr("Filtern")}</button>
+        {(q || tags.length > 0) && <button type="button" className="btn btn-s btn-g" onClick={() => { setDraft(""); setQ(""); setTagDraft(""); setTags([]); reset(); }}>{tr("Zurücksetzen")}</button>}
       </form>
 
       {state.error && (
-        <p className="error small" role="alert">Graph nicht ladbar: {state.error} <button type="button" className="btn btn-s" onClick={() => setAttempt((a) => a + 1)}>Erneut versuchen</button></p>
+        <p className="error small" role="alert">{tr("Graph nicht ladbar:")} {state.error} <button type="button" className="btn btn-s" onClick={() => setAttempt((a) => a + 1)}>{tr("Erneut versuchen")}</button></p>
       )}
-      {state.loading && <div className="graph-skeleton" role="status" aria-label="Lade Graph" />}
+      {state.loading && <div className="graph-skeleton" role="status" aria-label={tr("Lade Graph")} />}
       {graph && !state.loading && (
         <>
           <div className="row graph-count">
-            <p className="muted small mono" role="status">{fmtCount(graph.returned)} von {fmtCount(graph.total)} Erinnerungen werden angezeigt{graph.edges_dropped > 0 ? ` · ${fmtCount(graph.edges_dropped)} schwächere Verbindungen nicht gezeichnet` : ""}</p>
-            {moreExist && nextLimit && <button type="button" className="btn btn-s" onClick={() => { reset(); setLimit(nextLimit); }}>Weitere laden</button>}
+            <p className="muted small mono" role="status">{tr("{returned} von {total} Erinnerungen werden angezeigt{v}", { returned: fmtCount(graph.returned), total: fmtCount(graph.total), v: graph.edges_dropped > 0 ? tr(" · {edges_dropped} schwächere Verbindungen nicht gezeichnet", { edges_dropped: fmtCount(graph.edges_dropped) }) : "" })}</p>
+            {moreExist && nextLimit && <button type="button" className="btn btn-s" onClick={() => { reset(); setLimit(nextLimit); }}>{tr("Weitere laden")}</button>}
             {moreExist && !nextLimit && (
               <>
-                <button type="button" className="btn btn-s" disabled>Weitere laden</button>
-                <span className="muted small">Mehr als 2.000 zeigt die Hindsight-Control-Plane unter Daten.</span>
+                <button type="button" className="btn btn-s" disabled>{tr("Weitere laden")}</button>
+                <span className="muted small">{tr("Mehr als 2.000 zeigt die Hindsight-Control-Plane unter Daten.")}</span>
               </>
             )}
-            <div className="seg" role="group" aria-label="Darstellung" style={{ marginLeft: "auto" }}>
+            <div className="seg" role="group" aria-label={tr("Darstellung")} style={{ marginLeft: "auto" }}>
               {VIEWS.map((v) => <button key={v.id} type="button" className={view === v.id ? "on" : undefined} aria-pressed={view === v.id} onClick={() => setView(v.id)}>{v.label}</button>)}
             </div>
           </div>
 
-          {graph.nodes.length === 0 ? <p className="panel-empty">Keine Erinnerungen für diesen Filter</p> : (
+          {graph.nodes.length === 0 ? <p className="panel-empty">{tr("Keine Erinnerungen für diesen Filter")}</p> : (
             <div className="two">
               <div className="l">
                 {view === "map" && (
                   <Constellation nodes={graph.nodes} edges={edges} colors={coloring.colors} selected={selIndex >= 0 ? selIndex : undefined} highlight={highlight}
                     onSelect={(i) => setSelectedId(i === undefined ? undefined : graph.nodes[i].id)} label={label} onShare={() => void share()} shareNote={shareNote}>
                     <div className="graph-panel graph-colors">
-                      <label className="row small" style={{ gap: 6 }}><span className="lbl">Einfärben nach</span>
-                        <select className="field field-line" value={mode} onChange={(e) => setMode(e.target.value as ColorMode)} aria-label="Einfärben nach">
+                      <label className="row small" style={{ gap: 6 }}><span className="lbl">{tr("Einfärben nach")}</span>
+                        <select className="field field-line" value={mode} onChange={(e) => setMode(e.target.value as ColorMode)} aria-label={tr("Einfärben nach")}>
                           {COLOR_MODES.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
                         </select></label>
                       {coloring.scale ? (
-                        <div className="graph-scale" aria-label={`Aktualität von ${dayLabel(coloring.scale.min)} bis ${dayLabel(coloring.scale.max)}`}>
+                        <div className="graph-scale" aria-label={tr("Aktualität von {min} bis {max}", { min: dayLabel(coloring.scale.min), max: dayLabel(coloring.scale.max) })}>
                           <i style={{ background: `linear-gradient(90deg, ${[0, 0.25, 0.5, 0.75, 1].map(recencyColor).join(",")})` }} />
-                          <span className="small mono">{dayLabel(coloring.scale.min)} (alt)</span><span className="small mono">(neu) {dayLabel(coloring.scale.max)}</span>
+                          <span className="small mono">{tr("{min} (alt)", { min: dayLabel(coloring.scale.min) })}</span><span className="small mono">{tr("(neu) {max}", { max: dayLabel(coloring.scale.max) })}</span>
                         </div>
                       ) : (
                         <ul className="legend">{coloring.legend.map((l) => <li key={l.label}><i className="swatch" style={{ background: l.color }} />{cut(l.label, 28)} <span className="muted">{fmtCount(l.count)}</span></li>)}</ul>
                       )}
                     </div>
                     {linkTypes.length > 0 && (
-                      <fieldset className="graph-panel graph-links"><legend className="lbl">Verknüpfungstypen</legend>
+                      <fieldset className="graph-panel graph-links"><legend className="lbl">{tr("Verknüpfungstypen")}</legend>
                         {linkTypes.map(([t, n]) => (
                           <label key={t} className="row small" style={{ gap: 6 }}>
                             <input type="checkbox" checked={!hiddenLinks.has(t)} onChange={() => toggleLink(t)} />
-                            <i className="swatch" style={{ background: linkColor(t === "?" ? null : t) }} />{LINK_NAMES[t] ?? (t === "?" ? "Ohne Typ" : t)} <span className="muted">{fmtCount(n)}</span>
+                            <i className="swatch" style={{ background: linkColor(t === "?" ? null : t) }} />{LINK_NAMES[t] ?? (t === "?" ? tr("Ohne Typ") : t)} <span className="muted">{fmtCount(n)}</span>
                           </label>
                         ))}
                       </fieldset>
@@ -183,22 +184,22 @@ export function GraphView({ provider, initial = {} }: { provider: string; initia
                   </>
                 )}
               </div>
-              <aside className="r card" aria-label="Auswahl">
+              <aside className="r card" aria-label={tr("Auswahl")}>
                 {sel ? (
                   <div className="wrow">
                     <p className="mem-text">{sel.text ?? sel.label}</p>
-                    <p className="muted small mono">{[sel.date ? new Date(sel.date).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" }) : null, sel.context].filter(Boolean).join(" · ") || "Ohne Datum und Kontext"}</p>
-                    {sel.entities.length > 0 && <div className="row mem-meta" aria-label="Entitäten">{sel.entities.map((e) => <span key={e} className="tag">{e}</span>)}</div>}
-                    <p className="lbl">Verbindungen ({connections.byType.reduce((s, [, n]) => s + n, 0)})</p>
-                    {connections.byType.length === 0 ? <p className="muted small">Keine Verbindungen in diesem Ausschnitt.</p> : (
+                    <p className="muted small mono">{[sel.date ? new Date(sel.date).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" }) : null, sel.context].filter(Boolean).join(" · ") || tr("Ohne Datum und Kontext")}</p>
+                    {sel.entities.length > 0 && <div className="row mem-meta" aria-label={tr("Entitäten")}>{sel.entities.map((e) => <span key={e} className="tag">{e}</span>)}</div>}
+                    <p className="lbl">{tr("Verbindungen ({v})", { v: connections.byType.reduce((s, [, n]) => s + n, 0) })}</p>
+                    {connections.byType.length === 0 ? <p className="muted small">{tr("Keine Verbindungen in diesem Ausschnitt.")}</p> : (
                       <ul className="legend">{connections.byType.map(([t, n]) => <li key={t}><i className="swatch" style={{ background: linkColor(t === "?" ? null : t) }} />{LINK_NAMES[t] ?? t} {n}</li>)}</ul>
                     )}
-                    <button type="button" className="btn btn-s" aria-pressed={highlight} onClick={() => setHighlight((h) => !h)} disabled={connections.list.length === 0}>Nachbarn hervorheben</button>
+                    <button type="button" className="btn btn-s" aria-pressed={highlight} onClick={() => setHighlight((h) => !h)} disabled={connections.list.length === 0}>{tr("Nachbarn hervorheben")}</button>
                     <ul className="mem-plain">
                       {connections.list.map((c, i) => <li key={`${c.id}${i}`}><button type="button" className="linkish" onClick={() => setSelectedId(c.id)}>{cut(c.label, 60)}</button>{c.type && <span className="muted small"> · {LINK_NAMES[c.type] ?? c.type}</span>}</li>)}
                     </ul>
                   </div>
-                ) : <p className="panel-empty">Einen Punkt oder eine Zeile anklicken, um Text, Entitäten und Verbindungen zu sehen.</p>}
+                ) : <p className="panel-empty">{tr("Einen Punkt oder eine Zeile anklicken, um Text, Entitäten und Verbindungen zu sehen.")}</p>}
               </aside>
             </div>
           )}

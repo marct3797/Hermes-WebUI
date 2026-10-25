@@ -8,6 +8,7 @@ import { useHosts } from "../hosts";
 import { agentKey } from "../router";
 import type { AgentRef, DiagReport, Security } from "../types";
 import { useAsync } from "../useAsync";
+import { t } from "../i18n";
 
 type Entry = { busy: boolean; report?: DiagReport; error?: string };
 
@@ -15,14 +16,14 @@ type Entry = { busy: boolean; report?: DiagReport; error?: string };
 function StepUpNote({ step }: { step: Security["step_up"] }) {
   const min = Math.round(step.window_s / 60);
   const text: Record<Security["step_up"]["proof"], string> = {
-    off: "Anmeldeschutz aus: Terminal, Schlüssel und Installationen verlangen keine frische Anmeldung (HERMES_WEBUI_STEP_UP=off). Sinnvoll nur, wenn die WebUI ausschließlich im privaten Netz erreichbar ist.",
-    auth_time: `Anmeldeschutz an: Riskante Aktionen verlangen eine Anmeldung, die höchstens ${min} Minuten alt ist. Der Anbieter belegt die Anmeldezeit (auth_time).`,
-    prompt_login_only: `Anmeldeschutz an, aber die Frische nicht belegbar: Der Anbieter liefert kein auth_time. Die WebUI verlässt sich darauf, dass er die erneute Anmeldung erzwingt (prompt=login). Einmal prüfen: mit einer älteren Sitzung ein Terminal öffnen, die Anmeldung muss verlangt werden. Gültig sind höchstens ${min} Minuten.`,
-    unknown: "Anmeldeschutz an, Frische nicht prüfbar: Der Anbieter nennt weder auth_time noch seine unterstützten Angaben. Riskante Aktionen bleiben gesperrt, bis er auth_time liefert.",
-    unavailable: "Anmeldeschutz an; die Angaben des Anbieters sind gerade nicht lesbar.",
+    off: t("Anmeldeschutz aus: Terminal, Schlüssel und Installationen verlangen keine frische Anmeldung (HERMES_WEBUI_STEP_UP=off). Sinnvoll nur, wenn die WebUI ausschließlich im privaten Netz erreichbar ist."),
+    auth_time: t("Anmeldeschutz an: Riskante Aktionen verlangen eine Anmeldung, die höchstens {min} Minuten alt ist. Der Anbieter belegt die Anmeldezeit (auth_time).", { min }),
+    prompt_login_only: t("Anmeldeschutz an, aber die Frische nicht belegbar: Der Anbieter liefert kein auth_time. Die WebUI verlässt sich darauf, dass er die erneute Anmeldung erzwingt (prompt=login). Einmal prüfen: mit einer älteren Sitzung ein Terminal öffnen, die Anmeldung muss verlangt werden. Gültig sind höchstens {min} Minuten.", { min }),
+    unknown: t("Anmeldeschutz an, Frische nicht prüfbar: Der Anbieter nennt weder auth_time noch seine unterstützten Angaben. Riskante Aktionen bleiben gesperrt, bis er auth_time liefert."),
+    unavailable: t("Anmeldeschutz an; die Angaben des Anbieters sind gerade nicht lesbar."),
   };
   const warn = !["off", "auth_time"].includes(step.proof);
-  return <p role="note" aria-label="Anmeldeschutz" className={`small${warn ? " banner" : " muted"}`} style={{ maxWidth: 720 }}>{warn && <Icon name="alert" />}{text[step.proof]}</p>;
+  return <p role="note" aria-label={t("Anmeldeschutz")} className={`small${warn ? " banner" : " muted"}`} style={{ maxWidth: 720 }}>{warn && <Icon name="alert" />}{text[step.proof]}</p>;
 }
 
 /**
@@ -57,19 +58,19 @@ export function SystemPage() {
     for (let i = 0; i < workers; i++) void worker();
   };
   const all = Object.values(results).flatMap((r) => (r.report ? [r.report.status] : []));
-  const sub = all.length ? `${all.filter((s) => s === "ok").length} in Ordnung · ${all.filter((s) => s === "warn").length} Abweichungen · ${all.filter((s) => s === "fail").length} Fehler` : "noch nicht geprüft";
+  const sub = all.length ? t("{length} in Ordnung · {length2} Abweichungen · {length3} Fehler", { length: all.filter((s) => s === "ok").length, length2: all.filter((s) => s === "warn").length, length3: all.filter((s) => s === "fail").length }) : t("noch nicht geprüft");
 
   return (
     <main className="page">
-      <PageHead title="System" sub={sub}>
-        <button type="button" className="btn btn-s" onClick={checkAll} disabled={agents.every((a) => !a.online)}><Icon name="refresh" size={14} />Alle prüfen</button>
+      <PageHead title={t("System")} sub={sub}>
+        <button type="button" className="btn btn-s" onClick={checkAll} disabled={agents.every((a) => !a.online)}><Icon name="refresh" size={14} />{t("Alle prüfen")}</button>
       </PageHead>
       <p className="muted small" style={{ maxWidth: 720 }}>
-        Die Prüfung liest nur. Der Lauftest schickt einem Agent einen kurzen Auftrag („Antworte nur mit dem Wort OK“) und legt dafür eine Session an, die in dessen Liste bleibt.
+        {t("Die Prüfung liest nur. Der Lauftest schickt einem Agent einen kurzen Auftrag („Antworte nur mit dem Wort OK“) und legt dafür eine Session an, die in dessen Liste bleibt.")}
       </p>
       {security.data && <StepUpNote step={security.data.step_up} />}
-      {hostsError && <p className="banner" role="alert"><Icon name="alert" />Hosts nicht ladbar: {hostsError}</p>}
-      {!hosts && !hostsError && <p className="muted">Lade…</p>}
+      {hostsError && <p className="banner" role="alert"><Icon name="alert" />{t("Hosts nicht ladbar: {hostsError}", { hostsError })}</p>}
+      {!hosts && !hostsError && <p className="muted">{t("Lade…")}</p>}
       <div className="diag-list">
         {agents.map((a) => {
           const key = agentKey(a.ref);
@@ -82,15 +83,15 @@ export function SystemPage() {
                 <span className="muted small">{a.host} · {a.runtimeLabel}</span>
                 <span className="row" style={{ marginLeft: "auto", gap: 6 }}>
                   <button type="button" className="btn btn-s" disabled={!a.online || entry?.busy} onClick={() => void run(a.ref, false)}>
-                    <Icon name="refresh" size={14} />{entry?.busy ? "Prüfe…" : "Prüfen"}
+                    <Icon name="refresh" size={14} />{entry?.busy ? t("Prüfe…") : t("Prüfen")}
                   </button>
-                  <button type="button" className="btn btn-s" disabled={!a.online || entry?.busy} onClick={() => void run(a.ref, true)} title="Startet einen kurzen Lauf und legt eine Session an">
-                    <Icon name="play" size={14} />Lauftest
+                  <button type="button" className="btn btn-s" disabled={!a.online || entry?.busy} onClick={() => void run(a.ref, true)} title={t("Startet einen kurzen Lauf und legt eine Session an")}>
+                    <Icon name="play" size={14} />{t("Lauftest")}
                   </button>
                 </span>
               </header>
               {entry?.error && <p className="error small" role="alert" style={{ padding: "0 14px" }}>{entry.error}</p>}
-              {!a.online && !entry && <p className="muted small" style={{ padding: "0 14px 10px" }}>Runtime nicht erreichbar.</p>}
+              {!a.online && !entry && <p className="muted small" style={{ padding: "0 14px 10px" }}>{t("Runtime nicht erreichbar.")}</p>}
               {entry?.report && <DiagChecks checks={entry.report.checks} />}
             </section>
           );

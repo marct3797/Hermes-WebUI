@@ -5,9 +5,10 @@ import { GatewayBar } from "../components/messaging/GatewayBar";
 import { PlatformPanel } from "../components/messaging/PlatformPanel";
 import { PageHead } from "../components/PageHead";
 import type { AgentRef, MsgPlatform } from "../types";
+import { t } from "../i18n";
 
-const STATE: Record<string, string> = { disabled: "aus", not_configured: "nicht eingerichtet", pending_restart: "Neustart nötig", startup_failed: "Start fehlgeschlagen", gateway_stopped: "Gateway gestoppt", connected: "verbunden", fatal: "Fehler" };
-const stateLabel = (s?: string | null) => (s ? STATE[s] ?? s : "unbekannt");
+const STATE: Record<string, string> = { disabled: "aus", get not_configured() { return t("nicht eingerichtet"); }, get pending_restart() { return t("Neustart nötig"); }, startup_failed: "Start fehlgeschlagen", gateway_stopped: "Gateway gestoppt", connected: "verbunden", fatal: "Fehler" };
+const stateLabel = (s?: string | null) => (s ? STATE[s] ?? s : t("unbekannt"));
 
 /**
  * Messaging-Plattformen eines Agents (Telegram, Discord, Slack, WhatsApp …) und das Gateway, das sie bedient. Plattformen und Variablen kommen
@@ -30,19 +31,19 @@ export function MessagingPage({ agent, label }: { agent: AgentRef; label: string
 
   return (
     <main className="page">
-      <PageHead title="Messaging" sub={rows ? `${label} · ${active} von ${rows.length} aktiv` : label} />
+      <PageHead title={t("Messaging")} sub={rows ? `${label} · ${active} von ${rows.length} aktiv` : label} />
       {error && <p className="banner" role="alert"><Icon name="alert" />{error}</p>}
-      {!rows && !error && <p className="muted">Lade…</p>}
+      {!rows && !error && <p className="muted">{t("Lade…")}</p>}
       {rows && (
         <>
           <GatewayBar agent={agent} onChanged={() => void load()} />
           <div className="row mem-bar">
             <label className="search grow">
               <Icon name="search" size={14} />
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Plattformen durchsuchen" aria-label="Plattformen durchsuchen" />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("Plattformen durchsuchen")} aria-label={t("Plattformen durchsuchen")} />
             </label>
           </div>
-          <ul className="cap-grid" aria-label="Plattformen">
+          <ul className="cap-grid" aria-label={t("Plattformen")}>
             {shown.map((p) => (
               <Fragment key={p.id}>
                 <li className="card cap-card">
@@ -52,14 +53,14 @@ export function MessagingPage({ agent, label }: { agent: AgentRef; label: string
                   </div>
                   {p.description && <p className="muted small">{p.description}</p>}
                   <button type="button" className="btn btn-s btn-g" aria-expanded={open === p.id} aria-label={`${p.name} einrichten`} onClick={() => setOpen(open === p.id ? undefined : p.id)}>
-                    <Icon name="sliders" size={14} />Einrichten
+                    <Icon name="sliders" size={14} />{t("Einrichten")}
                   </button>
                 </li>
                 {open === p.id && <li className="cap-wide"><PlatformPanel agent={agent} platform={p} onChanged={() => void load()} /></li>}
               </Fragment>
             ))}
           </ul>
-          {shown.length === 0 && <p className="panel-empty">Keine Plattform gefunden.</p>}
+          {shown.length === 0 && <p className="panel-empty">{t("Keine Plattform gefunden.")}</p>}
         </>
       )}
     </main>

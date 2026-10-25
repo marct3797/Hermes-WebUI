@@ -11,6 +11,7 @@ import { sigilFor, useUi } from "../../ui";
 import { Icon } from "../Icon";
 import { Link } from "../Link";
 import { Sigil } from "../Sigil";
+import { t } from "../../i18n";
 
 type Props = { agent: AgentRef; label: string; runtimeLabel: string; sessionId?: string };
 
@@ -90,35 +91,35 @@ export function SessionColumn({ agent, label, runtimeLabel, sessionId }: Props) 
           <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
             {agent.runtime === "hermes" && (
               <>
-                <Link to={agentPath(agent, "soul")} className="btn btn-s btn-i btn-g" aria-label={`SOUL von ${label}`} title="SOUL & Profil"><Icon name="spark" size={14} /></Link>
-                <Link to={agentPath(agent, "providers")} className="btn btn-s btn-i btn-g" aria-label={`Keys von ${label}`} title="Keys & Nutzung"><Icon name="coin" size={14} /></Link>
-                <Link to={agentPath(agent, "skills")} className="btn btn-s btn-i btn-g" aria-label={`Skills von ${label}`} title="Skills"><Icon name="layers" size={14} /></Link>
-                <Link to={agentPath(agent, "tools")} className="btn btn-s btn-i btn-g" aria-label={`Werkzeuge von ${label}`} title="Werkzeuge"><Icon name="wrench" size={14} /></Link>
+                <Link to={agentPath(agent, "soul")} className="btn btn-s btn-i btn-g" aria-label={`SOUL von ${label}`} title={t("SOUL & Profil")}><Icon name="spark" size={14} /></Link>
+                <Link to={agentPath(agent, "providers")} className="btn btn-s btn-i btn-g" aria-label={`Keys von ${label}`} title={t("Keys & Nutzung")}><Icon name="coin" size={14} /></Link>
+                <Link to={agentPath(agent, "skills")} className="btn btn-s btn-i btn-g" aria-label={`Skills von ${label}`} title={t("Skills")}><Icon name="layers" size={14} /></Link>
+                <Link to={agentPath(agent, "tools")} className="btn btn-s btn-i btn-g" aria-label={`Werkzeuge von ${label}`} title={t("Werkzeuge")}><Icon name="wrench" size={14} /></Link>
               </>
             )}
-            <Link to={agentPath(agent, "profil")} className="btn btn-s btn-i btn-g" aria-label={`Profil von ${label} bearbeiten`} title="Profil bearbeiten"><Icon name="edit" size={14} /></Link>
+            <Link to={agentPath(agent, "profil")} className="btn btn-s btn-i btn-g" aria-label={`Profil von ${label} bearbeiten`} title={t("Profil bearbeiten")}><Icon name="edit" size={14} /></Link>
           </div>
         </div>
-        <Link to={agentPath(agent)} className="btn btn-p" style={{ width: "100%" }}><Icon name="plus" size={14} />Neuer Chat<span className="kbd">N</span></Link>
+        <Link to={agentPath(agent)} className="btn btn-p" style={{ width: "100%" }}><Icon name="plus" size={14} />{t("Neuer Chat")}<span className="kbd">N</span></Link>
         <label className="search">
           <Icon name="search" size={14} />
-          <input ref={search} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Sessions durchsuchen" aria-label="Sessions durchsuchen" />
+          <input ref={search} value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("Sessions durchsuchen")} aria-label={t("Sessions durchsuchen")} />
           <span className="kbd">/</span>
         </label>
         <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
-          <button type="button" className={`chip chip-s${filter === "chats" ? " on" : ""}`} aria-pressed={filter === "chats"} onClick={() => setFilter("chats")}>Chats<span className="n">{counts.chats}</span></button>
+          <button type="button" className={`chip chip-s${filter === "chats" ? " on" : ""}`} aria-pressed={filter === "chats"} onClick={() => setFilter("chats")}>{t("Chats")}<span className="n">{counts.chats}</span></button>
           {counts.automation > 0 && (
-            <button type="button" className={`chip chip-s${filter === "automation" ? " on" : ""}`} aria-pressed={filter === "automation"} onClick={() => setFilter("automation")}>Automation<span className="n">{counts.automation}</span></button>
+            <button type="button" className={`chip chip-s${filter === "automation" ? " on" : ""}`} aria-pressed={filter === "automation"} onClick={() => setFilter("automation")}>{t("Automation")}<span className="n">{counts.automation}</span></button>
           )}
           {counts.pinned > 0 && (
-            <button type="button" className={`chip chip-s${pinnedOnly ? " on" : ""}`} aria-pressed={pinnedOnly} aria-label="Nur angepinnte" onClick={() => setPinnedOnly(!pinnedOnly)}><Icon name="pin" size={12} />{counts.pinned}</button>
+            <button type="button" className={`chip chip-s${pinnedOnly ? " on" : ""}`} aria-pressed={pinnedOnly} aria-label={t("Nur angepinnte")} onClick={() => setPinnedOnly(!pinnedOnly)}><Icon name="pin" size={12} />{counts.pinned}</button>
           )}
         </div>
       </div>
 
       <div className="sess-list">
-        {sessionsLoading && <p className="muted small" style={{ padding: "12px 16px" }}>Lade…</p>}
-        {!sessionsLoading && empty && <p className="muted small" style={{ padding: "12px 16px" }}>{query ? "Keine Treffer." : "Noch keine Sessions."}</p>}
+        {sessionsLoading && <p className="muted small" style={{ padding: "12px 16px" }}>{t("Lade…")}</p>}
+        {!sessionsLoading && empty && <p className="muted small" style={{ padding: "12px 16px" }}>{query ? t("Keine Treffer.") : t("Noch keine Sessions.")}</p>}
         {(["today", "yesterday", "older"] as const).map((g) => groups[g].length > 0 && (
           <div key={g} role="group" aria-label={DAY_LABEL[g]}>
             <div className="sgrp lbl">{DAY_LABEL[g]}</div>
@@ -132,9 +133,9 @@ export function SessionColumn({ agent, label, runtimeLabel, sessionId }: Props) 
                 <div key={s.id} className="srow-wrap">
                   {editing ? (
                     <form className="srow-edit" onSubmit={(e) => { e.preventDefault(); if (draft.trim() && renameSession) void run(() => renameSession(s.id, draft.trim())); }}>
-                      <input autoFocus value={draft} maxLength={100} onChange={(e) => setDraft(e.target.value)} aria-label="Neuer Titel" onKeyDown={(e) => { if (e.key === "Escape") closeAction(); }} />
-                      <button type="submit" className="btn btn-s btn-p" disabled={busy || !draft.trim()}>Speichern</button>
-                      <button type="button" className="btn btn-s btn-g" onClick={closeAction}>Abbrechen</button>
+                      <input autoFocus value={draft} maxLength={100} onChange={(e) => setDraft(e.target.value)} aria-label={t("Neuer Titel")} onKeyDown={(e) => { if (e.key === "Escape") closeAction(); }} />
+                      <button type="submit" className="btn btn-s btn-p" disabled={busy || !draft.trim()}>{t("Speichern")}</button>
+                      <button type="button" className="btn btn-s btn-g" onClick={closeAction}>{t("Abbrechen")}</button>
                       {actionError && <p className="error small" role="alert" style={{ flexBasis: "100%" }}>{actionError}</p>}
                     </form>
                   ) : (
@@ -146,32 +147,32 @@ export function SessionColumn({ agent, label, runtimeLabel, sessionId }: Props) 
                         <span className="trunc">{s.title}</span>
                       </span>
                       <span className="m">
-                        {s.messageCount != null && <span>{s.messageCount} Nachr.</span>}
+                        {s.messageCount != null && <span>{t("{messageCount} Nachr.", { messageCount: s.messageCount })}</span>}
                         {at !== undefined && <span>{g === "older" ? fmtDay(at) : fmtTime(at)}</span>}
-                        {state && <span className="crimt">{state === "wait" ? "wartet" : "läuft"}</span>}
+                        {state && <span className="crimt">{state === "wait" ? t("wartet") : "läuft"}</span>}
                       </span>
                     </Link>
                   )}
                   {!editing && renameSession && (
-                    <button type="button" className="srow-act btn btn-i btn-g btn-s" aria-label={`Aktionen für ${s.title}`} aria-expanded={menuFor === s.id} onClick={() => { if (menuFor === s.id) closeAction(); else { setMenuFor(s.id); setMode(null); setActionError(null); } }}>
+                    <button type="button" className="srow-act btn btn-i btn-g btn-s" aria-label={t("Aktionen für {title}", { title: s.title })} aria-expanded={menuFor === s.id} onClick={() => { if (menuFor === s.id) closeAction(); else { setMenuFor(s.id); setMode(null); setActionError(null); } }}>
                       <Icon name="dots" size={14} />
                     </button>
                   )}
                   {menuFor === s.id && !editing && (
-                    <div className="srow-menu" role="menu" aria-label={`Aktionen für ${s.title}`}>
+                    <div className="srow-menu" role="menu" aria-label={t("Aktionen für {title}", { title: s.title })}>
                       {!deleting && (
                         <>
-                          <button type="button" role="menuitem" onClick={() => { setDraft(s.title); setMode("rename"); }}><Icon name="edit" size={14} />Umbenennen</button>
-                          <button type="button" role="menuitem" disabled={busy} onClick={() => void run(async () => { const r = await api.fork(agent, s.id); refreshSessions(); navigate(agentPath(agent, "chat", r.session_id)); })}><Icon name="fork" size={14} />Als Kopie abzweigen</button>
-                          <button type="button" role="menuitem" className="danger" onClick={() => setMode("delete")}><Icon name="x" size={14} />Löschen…</button>
+                          <button type="button" role="menuitem" onClick={() => { setDraft(s.title); setMode("rename"); }}><Icon name="edit" size={14} />{t("Umbenennen")}</button>
+                          <button type="button" role="menuitem" disabled={busy} onClick={() => void run(async () => { const r = await api.fork(agent, s.id); refreshSessions(); navigate(agentPath(agent, "chat", r.session_id)); })}><Icon name="fork" size={14} />{t("Als Kopie abzweigen")}</button>
+                          <button type="button" role="menuitem" className="danger" onClick={() => setMode("delete")}><Icon name="x" size={14} />{t("Löschen…")}</button>
                         </>
                       )}
                       {deleting && (
                         <div className="srow-confirm">
-                          <p className="small">„{s.title}“ wird endgültig gelöscht. Das lässt sich nicht rückgängig machen.</p>
+                          <p className="small">{t("„{title}“ wird endgültig gelöscht. Das lässt sich nicht rückgängig machen.", { title: s.title })}</p>
                           <div className="row" style={{ gap: 6 }}>
-                            <button type="button" className="btn btn-s btn-danger" disabled={busy} onClick={() => deleteSession && void run(async () => { await deleteSession(s.id); if (on) navigate(agentPath(agent)); })}>Endgültig löschen</button>
-                            <button type="button" className="btn btn-s btn-g" onClick={closeAction}>Abbrechen</button>
+                            <button type="button" className="btn btn-s btn-danger" disabled={busy} onClick={() => deleteSession && void run(async () => { await deleteSession(s.id); if (on) navigate(agentPath(agent)); })}>{t("Endgültig löschen")}</button>
+                            <button type="button" className="btn btn-s btn-g" onClick={closeAction}>{t("Abbrechen")}</button>
                           </div>
                         </div>
                       )}
@@ -187,7 +188,7 @@ export function SessionColumn({ agent, label, runtimeLabel, sessionId }: Props) 
 
       {hasMoreSessions && !query && (
         <button type="button" className="btn btn-s btn-g sess-more" disabled={loadingMoreSessions} onClick={loadMoreSessions}>
-          {loadingMoreSessions ? "Lade…" : `Ältere laden (${sessions.length} geladen)`}
+          {loadingMoreSessions ? t("Lade…") : t("Ältere laden ({length} geladen)", { length: sessions.length })}
         </button>
       )}
       <div className="sess-foot">

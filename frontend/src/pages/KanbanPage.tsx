@@ -9,6 +9,7 @@ import { TaskPanel } from "../components/kanban/TaskPanel";
 import { useHosts } from "../hosts";
 import { kanbanApi, type BoardData, type BoardMeta } from "../kanbanApi";
 import { poll } from "../poll";
+import { t as tr } from "../i18n";
 
 const NONE = "\u0000none"; // Filter „ohne Zuweisung“, kann kein Profilname sein
 const POLL_MS = 20_000;
@@ -20,13 +21,13 @@ export function KanbanPage({ host }: { host?: string }) {
   const selected = chosen ?? host ?? registry.hosts?.[0]?.id;
   return (
     <main className="page kb-page">
-      <PageHead title="Kanban" sub="Aufgaben der Agents, Boards gelten für alle Profile">
-        {registry.hosts && registry.hosts.length > 0 && <label className="row" style={{ gap: 6 }}>Host
-          <select className="field field-line" aria-label="Host" value={selected} onChange={(e) => setChosen(e.target.value)}>{registry.hosts.map((h) => <option key={h.id} value={h.id}>{h.label}</option>)}</select></label>}
+      <PageHead title={tr("Kanban")} sub={tr("Aufgaben der Agents, Boards gelten für alle Profile")}>
+        {registry.hosts && registry.hosts.length > 0 && <label className="row" style={{ gap: 6 }}>{tr("Host")}
+          <select className="field field-line" aria-label={tr("Host")} value={selected} onChange={(e) => setChosen(e.target.value)}>{registry.hosts.map((h) => <option key={h.id} value={h.id}>{h.label}</option>)}</select></label>}
       </PageHead>
       {registry.error && <Banner error={registry.error} />}
-      {!registry.hosts && !registry.error && <p role="status">Hosts werden geladen…</p>}
-      {registry.hosts && registry.hosts.length === 0 && <p className="panel-empty">Keine Hosts konfiguriert. Trage einen Host mit Dashboard in der Host-Konfiguration ein.</p>}
+      {!registry.hosts && !registry.error && <p role="status">{tr("Hosts werden geladen…")}</p>}
+      {registry.hosts && registry.hosts.length === 0 && <p className="panel-empty">{tr("Keine Hosts konfiguriert. Trage einen Host mit Dashboard in der Host-Konfiguration ein.")}</p>}
       {selected && <HostKanban key={selected} host={selected} />}
     </main>
   );
@@ -108,30 +109,30 @@ function HostKanban({ host }: { host: string }) {
   return (
     <>
       <div className="kb-bar row" style={{ gap: 8, flexWrap: "wrap" }}>
-        <label className="row" style={{ gap: 6 }}>Board
-          <select className="field field-line" aria-label="Board" value={board ?? ""} disabled={boards.length === 0} onChange={(e) => switchBoard(e.target.value)}>
+        <label className="row" style={{ gap: 6 }}>{tr("Board")}
+          <select className="field field-line" aria-label={tr("Board")} value={board ?? ""} disabled={boards.length === 0} onChange={(e) => switchBoard(e.target.value)}>
             {boards.map((b) => <option key={b.slug} value={b.slug}>{b.name} ({b.total})</option>)}</select></label>
-        {current && <button type="button" className="btn btn-s btn-g" onClick={() => setDialog("board-edit")}><Icon name="edit" size={14} />Board bearbeiten</button>}
-        <button type="button" className="btn btn-s" onClick={() => setDialog("board-new")}><Icon name="plus" size={14} />Neues Board</button>
-        <button type="button" className="btn btn-s btn-p" disabled={!data} onClick={() => setDialog("task")}><Icon name="plus" size={14} />Neue Aufgabe</button>
-        <input className="field field-line grow" type="search" aria-label="Aufgaben suchen" placeholder="Suche in Titel, Text und Kennung" value={query} onChange={(e) => setQuery(e.target.value)} />
-        <label className="row small" style={{ gap: 4 }}><input type="checkbox" checked={archived} onChange={(e) => toggleArchived(e.target.checked)} />Archivierte zeigen</label>
-        <button type="button" className="btn btn-s btn-g" onClick={() => { setLoading(true); load().catch(() => undefined); }} disabled={loading}><Icon name="refresh" size={14} />Neu laden</button>
+        {current && <button type="button" className="btn btn-s btn-g" onClick={() => setDialog("board-edit")}><Icon name="edit" size={14} />{tr("Board bearbeiten")}</button>}
+        <button type="button" className="btn btn-s" onClick={() => setDialog("board-new")}><Icon name="plus" size={14} />{tr("Neues Board")}</button>
+        <button type="button" className="btn btn-s btn-p" disabled={!data} onClick={() => setDialog("task")}><Icon name="plus" size={14} />{tr("Neue Aufgabe")}</button>
+        <input className="field field-line grow" type="search" aria-label={tr("Aufgaben suchen")} placeholder={tr("Suche in Titel, Text und Kennung")} value={query} onChange={(e) => setQuery(e.target.value)} />
+        <label className="row small" style={{ gap: 4 }}><input type="checkbox" checked={archived} onChange={(e) => toggleArchived(e.target.checked)} />{tr("Archivierte zeigen")}</label>
+        <button type="button" className="btn btn-s btn-g" onClick={() => { setLoading(true); load().catch(() => undefined); }} disabled={loading}><Icon name="refresh" size={14} />{tr("Neu laden")}</button>
       </div>
-      {data && <p className="mono small t3 kb-stat" aria-label="Kurzstatistik">{all.length} Aufgaben · {stat("blocked")} blockiert · {stat("running")} laufend · {stat("done")} erledigt{data.stats.oldest_ready_age_seconds ? ` · älteste bereite Aufgabe ${Math.round(data.stats.oldest_ready_age_seconds / 60)} Min` : ""}</p>}
-      {data && <div className="chips row kb-chips" role="group" aria-label="Zugewiesen an" style={{ gap: 6, flexWrap: "wrap" }}>
-        <span className="small t3">Zugewiesen an</span>
-        <button type="button" className={`chip${who === undefined ? " on" : ""}`} aria-pressed={who === undefined} onClick={() => setWho(undefined)}>Alle ({all.length})</button>
+      {data && <p className="mono small t3 kb-stat" aria-label={tr("Kurzstatistik")}>{tr("{v} Aufgaben · {stat} blockiert · {stat2} laufend · {stat3} erledigt{oldest_ready_age_seconds}", { v: all.length, stat: stat("blocked"), stat2: stat("running"), stat3: stat("done"), oldest_ready_age_seconds: data.stats.oldest_ready_age_seconds ? tr(" · älteste bereite Aufgabe {v} Min", { v: Math.round(data.stats.oldest_ready_age_seconds / 60) }) : "" })}</p>}
+      {data && <div className="chips row kb-chips" role="group" aria-label={tr("Zugewiesen an")} style={{ gap: 6, flexWrap: "wrap" }}>
+        <span className="small t3">{tr("Zugewiesen an")}</span>
+        <button type="button" className={`chip${who === undefined ? " on" : ""}`} aria-pressed={who === undefined} onClick={() => setWho(undefined)}>{tr("Alle ({v})", { v: all.length })}</button>
         {data.assignees.map((a) => {
           const n = Object.entries(a.counts).reduce((s, [k, v]) => s + (k === "archived" && !archived ? 0 : v), 0);
           return <button key={a.name} type="button" className={`chip${who === a.name ? " on" : ""}`} aria-pressed={who === a.name} onClick={() => setWho(who === a.name ? undefined : a.name)}><Sigil name={a.name} size="xs" />{a.name} ({n})</button>;
         })}
-        {unassigned > 0 && <button type="button" className={`chip${who === NONE ? " on" : ""}`} aria-pressed={who === NONE} onClick={() => setWho(who === NONE ? undefined : NONE)}>Ohne Zuweisung ({unassigned})</button>}
+        {unassigned > 0 && <button type="button" className={`chip${who === NONE ? " on" : ""}`} aria-pressed={who === NONE} onClick={() => setWho(who === NONE ? undefined : NONE)}>{tr("Ohne Zuweisung ({unassigned})", { unassigned })}</button>}
       </div>}
-      {error && <Banner error={`Kanban nicht ladbar: ${error}`} />}
+      {error && <Banner error={tr("Kanban nicht ladbar: {error}", { error })} />}
       <Banner error={moveError} />
-      {loading && !data && !error && <p role="status">Board wird geladen…</p>}
-      {empty && <div className="panel-empty" role="status"><p>Keine Aufgaben, lege die erste an.</p><button type="button" className="btn btn-s btn-p" onClick={() => setDialog("task")}>Neue Aufgabe</button></div>}
+      {loading && !data && !error && <p role="status">{tr("Board wird geladen…")}</p>}
+      {empty && <div className="panel-empty" role="status"><p>{tr("Keine Aufgaben, lege die erste an.")}</p><button type="button" className="btn btn-s btn-p" onClick={() => setDialog("task")}>{tr("Neue Aufgabe")}</button></div>}
       <div className={`kb-layout${open ? " has-panel" : ""}`}>
         {data && <BoardColumns columns={columns} total={totals} filtered={filtered} selected={open} dragId={dragId} onOpen={setOpen} onMove={(id, to) => void move(id, to)} onDragId={setDragId} />}
         {open && <TaskPanel key={`${open}:${rev}`} host={host} board={board} id={open} columns={statuses} assignees={names} allTasks={all} onClose={() => setOpen(undefined)} onChanged={() => void load().catch(() => undefined)} />}

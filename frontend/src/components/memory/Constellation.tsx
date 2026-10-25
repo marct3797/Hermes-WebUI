@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { robustBounds, createSim, fitView, hitTest, settled, setEdges, step, toScreen, type Sim, type View } from "../../graphForce";
 import { linkColor } from "../../graphColor";
 import type { MemEdge, MemNode } from "../../types";
+import { t as tr } from "../../i18n";
 
 const WARMUP = 100;
 const W0 = 1000, H0 = 600; // Maße, solange das Element keine Größe meldet (Tests)
@@ -189,7 +190,7 @@ export function Constellation({ nodes, edges, colors, selected, highlight, onSel
   const toggleFull = async () => {
     const el = stage.current!;
     if (full) { if (document.fullscreenElement) await document.exitFullscreen().catch(() => undefined); setFull(false); }
-    else { try { if (!el.requestFullscreen) throw new Error("nicht unterstützt"); await el.requestFullscreen(); } catch { setFull(true); } }
+    else { try { if (!el.requestFullscreen) throw new Error(tr("nicht unterstützt")); await el.requestFullscreen(); } catch { setFull(true); } }
     setTimeout(kick, 50);
   };
   useEffect(() => { if (!full) return; const esc = (e: KeyboardEvent) => { if (e.key === "Escape" && !document.fullscreenElement) setFull(false); }; window.addEventListener("keydown", esc); return () => window.removeEventListener("keydown", esc); }, [full]);
@@ -200,14 +201,14 @@ export function Constellation({ nodes, edges, colors, selected, highlight, onSel
       <canvas ref={canvas} className="graph-canvas" role="img" aria-label={label} tabIndex={0}
         onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={() => { drag.current = undefined; if (hoverRef.current >= 0) { hoverRef.current = -1; setHover(undefined); kick(); } }}
         onDoubleClick={onDoubleClick} onKeyDown={onKeyDown} />
-      <p className="graph-hint small muted">Scrollen zum Zoomen, Ziehen zum Verschieben, Hover zum Erkunden, Klicken zum Auswählen</p>
+      <p className="graph-hint small muted">{tr("Scrollen zum Zoomen, Ziehen zum Verschieben, Hover zum Erkunden, Klicken zum Auswählen")}</p>
       <div className="graph-actions">
-        <button type="button" className="btn btn-s" onClick={() => zoomAt(1.3)} aria-label="Vergrößern">+</button>
-        <button type="button" className="btn btn-s" onClick={() => zoomAt(1 / 1.3)} aria-label="Verkleinern">−</button>
-        <button type="button" className="btn btn-s" onClick={fit}>Ansicht zurücksetzen</button>
-        <button type="button" className="btn btn-s" aria-pressed={paused} onClick={() => setPaused((p) => !p)}>{paused ? "Weiter" : "Pause"}</button>
-        <button type="button" className="btn btn-s" aria-pressed={full} onClick={() => void toggleFull()}>{full ? "Vollbild beenden" : "Vollbild"}</button>
-        <button type="button" className="btn btn-s" onClick={onShare}>Teilen</button>
+        <button type="button" className="btn btn-s" onClick={() => zoomAt(1.3)} aria-label={tr("Vergrößern")}>+</button>
+        <button type="button" className="btn btn-s" onClick={() => zoomAt(1 / 1.3)} aria-label={tr("Verkleinern")}>−</button>
+        <button type="button" className="btn btn-s" onClick={fit}>{tr("Ansicht zurücksetzen")}</button>
+        <button type="button" className="btn btn-s" aria-pressed={paused} onClick={() => setPaused((p) => !p)}>{paused ? tr("Weiter") : tr("Pause")}</button>
+        <button type="button" className="btn btn-s" aria-pressed={full} onClick={() => void toggleFull()}>{full ? tr("Vollbild beenden") : tr("Vollbild")}</button>
+        <button type="button" className="btn btn-s" onClick={onShare}>{tr("Teilen")}</button>
       </div>
       {shareNote && <p className="graph-share small" role="status">{shareNote}</p>}
       {tip && hover && (

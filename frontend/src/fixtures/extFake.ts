@@ -1,5 +1,6 @@
 // Fester Ersatz für das BFF in den Frontend-Tests des Pakets ext. Formen wie in backend/tests/fixtures/ext_real.json (Dashboard) nach der Umsetzung im BFF.
 import type { CustomSource, Hit, McpServer, Plugin, Scan, Skill } from "../extApi";
+import { t } from "../i18n";
 
 export type Call = { method: string; path: string; query: URLSearchParams; body: Record<string, unknown> | undefined };
 
@@ -8,15 +9,15 @@ const hit = (name: string, identifier: string, extra: Partial<Hit> = {}): Hit =>
 });
 export const SAFE: Scan = { identifier: "", name: "", trust_level: "community", verdict: "safe", summary: "sauber", policy: "allow", policy_reason: "erlaubt", findings: [], severity_counts: {}, tier1: null };
 export const CAUTION: Scan = {
-  ...SAFE, verdict: "caution", policy: "ask", summary: "Hinweise",
-  findings: [{ severity: "medium", category: "network", file: "run.sh", line: 9, description: "Ruft eine Adresse ab" }],
+  ...SAFE, verdict: "caution", policy: "ask", get summary() { return t("Hinweise"); },
+  findings: [{ severity: "medium", category: "network", file: "run.sh", line: 9, get description() { return t("Ruft eine Adresse ab"); } }],
 };
 
 export class FakeBff {
   calls: Call[] = [];
   skills: Skill[] = [
-    { name: "claude-code", description: "Delegate coding to Claude Code CLI", category: "autonomous-ai-agents", enabled: true, usage: 3, provenance: "bundled" },
-    { name: "gamma", description: "Aus dem Hub", category: null, enabled: false, usage: 0, provenance: "hub" },
+    { name: "claude-code", get description() { return t("Delegate coding to Claude Code CLI"); }, category: "autonomous-ai-agents", enabled: true, usage: 3, provenance: "bundled" },
+    { name: "gamma", get description() { return t("Aus dem Hub"); }, category: null, enabled: false, usage: 0, provenance: "hub" },
   ];
   contents: Record<string, string> = {
     "claude-code": "---\nname: claude-code\ndescription: Delegate coding\n---\n# Claude Code\n\nText.\n",
@@ -27,8 +28,8 @@ export class FakeBff {
     { name: "web", transport: "http", url: "https://example.com/mcp", command: null, args: [], env_names: [], auth: "oauth", enabled: true, tool_count: 2, source: "config", plugin: null },
   ];
   plugins: Plugin[] = [
-    { name: "browser-firecrawl", version: "1.0.0", description: "Cloud-Browser", source: "bundled", runtime_status: "enabled", can_remove: false, can_update_git: false, auth_required: false, auth_command: "" },
-    { name: "beta-plugin", version: "0.2.0", description: "Aus Git", source: "user", runtime_status: "disabled", can_remove: true, can_update_git: true, auth_required: false, auth_command: "" },
+    { name: "browser-firecrawl", version: "1.0.0", get description() { return t("Cloud-Browser"); }, source: "bundled", runtime_status: "enabled", can_remove: false, can_update_git: false, auth_required: false, auth_command: "" },
+    { name: "beta-plugin", version: "0.2.0", get description() { return t("Aus Git"); }, source: "user", runtime_status: "disabled", can_remove: true, can_update_git: true, auth_required: false, auth_command: "" },
   ];
   custom: CustomSource[] = [];
   scan: Scan = SAFE;
@@ -53,14 +54,14 @@ export class FakeBff {
     if (p === "/bff/h/server/_manage") return { profiles: [{ id: "default" }, { id: "beta" }] };
     if ((x = p.match(/^\/bff\/h\/server\/_ext\/([^/]+)\/(.*)$/))) return this.ext(m, x[2], b);
     if ((x = p.match(/^\/bff\/h\/server\/_market\/(.*)$/))) return this.market(m, x[1], q, b);
-    if (p === "/bff/market/sources" && m === "GET") return { builtin: [{ id: "official-registry", label: "Offizielles MCP-Registry", kind: "mcp-registry", target: "https://registry.modelcontextprotocol.io", builtin: true }], custom: this.custom, max: 50, kinds: ["github", "well-known", "url", "mcp-registry", "plugin-git"] };
+    if (p === "/bff/market/sources" && m === "GET") return { builtin: [{ id: "official-registry", label: t("Offizielles MCP-Registry"), kind: "mcp-registry", target: "https://registry.modelcontextprotocol.io", builtin: true }], custom: this.custom, max: 50, kinds: ["github", "well-known", "url", "mcp-registry", "plugin-git"] };
     if (p === "/bff/market/sources" && m === "POST") {
       const s = { id: `${b!.kind}-0000000${this.custom.length}`, label: b!.label as string, kind: b!.kind as string, target: b!.target as string };
       this.custom.push(s); return s;
     }
     if ((x = p.match(/^\/bff\/market\/sources\/(.*)$/)) && m === "DELETE") { this.custom = this.custom.filter((c) => c.id !== x![1]); return { ok: true }; }
     if (p === "/bff/market/registry") return { entries: [
-      { name: "io.example/alpha-mcp", slug: "alpha-mcp", description: "Alpha", version: "1.2.0", repo: null, installable: true, transport: "stdio", url: null, command: "npx", args: ["-y", "alpha-mcp@1.2.0"], env: [{ name: "ALPHA_TOKEN", description: "", required: true, secret: true }] },
+      { name: "io.example/alpha-mcp", slug: "alpha-mcp", description: t("Alpha"), version: "1.2.0", repo: null, installable: true, transport: "stdio", url: null, command: "npx", args: ["-y", "alpha-mcp@1.2.0"], env: [{ name: "ALPHA_TOKEN", description: "", required: true, secret: true }] },
     ], cursor: null };
     throw new Error(`unerwartet: ${m} ${p}`);
   }
@@ -82,10 +83,10 @@ export class FakeBff {
       const s: McpServer = { name: b!.name, transport: b!.transport, url: b!.url ?? null, command: b!.command ?? null, args: b!.args ?? [], env_names: Object.keys(b!.env ?? {}), auth: null, enabled: true, tool_count: null, source: "config", plugin: null };
       this.mcp.push(s); return s;
     }
-    if (rest === "mcp/catalog") return { entries: [{ name: "beta-db", description: "Datenbank-Zugriff", transport: "stdio", auth_type: "env", required_env: [{ name: "BETA_DB_KEY", prompt: "Zugangsschlüssel", required: true }], command: "npx", args: [], url: null, source: null, needs_install: false, post_install: "", installed: false, enabled: false }] };
+    if (rest === "mcp/catalog") return { entries: [{ name: "beta-db", description: t("Datenbank-Zugriff"), transport: "stdio", auth_type: "env", required_env: [{ name: "BETA_DB_KEY", prompt: t("Zugangsschlüssel"), required: true }], command: "npx", args: [], url: null, source: null, needs_install: false, post_install: "", installed: false, enabled: false }] };
     if (rest === "mcp/catalog/install") return { ok: true };
     if ((x = rest.match(/^mcp\/([^/]+)\/enabled$/))) { this.mcp.find((s) => s.name === x![1])!.enabled = b!.enabled; return { ok: true }; }
-    if ((x = rest.match(/^mcp\/([^/]+)\/test$/))) return { ok: true, error: null, tools: [{ name: "search", description: "Suche" }, { name: "fetch", description: "Abruf" }], prompts: 0, resources: 1 };
+    if ((x = rest.match(/^mcp\/([^/]+)\/test$/))) return { ok: true, error: null, tools: [{ name: "search", description: t("Suche") }, { name: "fetch", description: t("Abruf") }], prompts: 0, resources: 1 };
     if ((x = rest.match(/^mcp\/([^/]+)\/auth$/))) return { flow_id: "flow_abcdefgh", status: "authorization_required", authorization_url: "https://auth.example.com/authorize" };
     if ((x = rest.match(/^mcp\/([^/]+)$/)) && m === "DELETE") { this.mcp = this.mcp.filter((s) => s.name !== x![1]); return { ok: true }; }
     if (rest === "plugins" && m === "GET") return { plugins: this.plugins };
@@ -98,7 +99,7 @@ export class FakeBff {
 
   private market(m: string, rest: string, q: URLSearchParams, b: Record<string, any> | undefined): unknown {
     if (rest === "sources") return { sources: [
-      { id: "official", ref: "official", label: "Official", kind: "hub", builtin: true, searchable: true },
+      { id: "official", ref: "official", label: t("Official"), kind: "hub", builtin: true, searchable: true },
       { id: "browse-sh", ref: "browse-sh", label: "browse.sh", kind: "hub", builtin: true, searchable: true },
       ...this.custom.filter((c) => c.kind !== "mcp-registry").map((c) => ({ ...c, ref: `custom:${c.id}`, builtin: false, searchable: true })),
     ] };

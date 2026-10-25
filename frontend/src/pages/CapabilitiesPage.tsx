@@ -6,6 +6,7 @@ import { ToolsetPanel } from "../components/tools/ToolsetPanel";
 import { PageHead } from "../components/PageHead";
 import type { AgentRef, TerminalBackends, ToolsetInfo, ToolsetRow } from "../types";
 import { useAsync } from "../useAsync";
+import { t as tr } from "../i18n";
 
 type Props = { agent: AgentRef; label: string; module: "skills" | "tools" };
 
@@ -26,32 +27,32 @@ function Skills({ agent, label }: { agent: AgentRef; label: string }) {
 
   return (
     <main className="page">
-      <PageHead title="Skills" sub={state.data ? `${label} · ${skills.length} installiert` : label} />
-      {state.error && <p className="banner" role="alert"><Icon name="alert" />Skills nicht ladbar: {state.error}</p>}
+      <PageHead title={tr("Skills")} sub={state.data ? `${label} · ${skills.length} installiert` : label} />
+      {state.error && <p className="banner" role="alert"><Icon name="alert" />{tr("Skills nicht ladbar: {error}", { error: state.error })}</p>}
       {state.data?.note && <p className="banner" role="status"><Icon name="alert" />{state.data.note}</p>}
-      {state.loading && <p className="muted">Lade…</p>}
+      {state.loading && <p className="muted">{tr("Lade…")}</p>}
       {state.data && (
         <>
           <div className="row mem-bar">
             <label className="search grow">
               <Icon name="search" size={14} />
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Skills durchsuchen" aria-label="Skills durchsuchen" />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr("Skills durchsuchen")} aria-label={tr("Skills durchsuchen")} />
             </label>
           </div>
           {categories.length > 0 && (
-            <div className="row mem-chips" role="group" aria-label="Kategorie">
-              <button type="button" className={`chip chip-s${!category ? " on" : ""}`} aria-pressed={!category} onClick={() => setCategory(undefined)}>Alle</button>
+            <div className="row mem-chips" role="group" aria-label={tr("Kategorie")}>
+              <button type="button" className={`chip chip-s${!category ? " on" : ""}`} aria-pressed={!category} onClick={() => setCategory(undefined)}>{tr("Alle")}</button>
               {categories.map((c) => <button key={c} type="button" className={`chip chip-s${category === c ? " on" : ""}`} aria-pressed={category === c} onClick={() => setCategory(c)}>{c}</button>)}
             </div>
           )}
-          {shown.length === 0 ? <p className="panel-empty">Keine Skills gefunden.</p> : (
+          {shown.length === 0 ? <p className="panel-empty">{tr("Keine Skills gefunden.")}</p> : (
             <ul className="cap-grid">
               {shown.map((s) => (
                 <li key={s.name} className="card cap-card">
                   <b>{s.name}</b>
                   {s.category && <span className="tag tag-m">{s.category}</span>}
                   {s.provenance && <span className="tag">{PROVENANCE[s.provenance] ?? s.provenance}</span>}
-                  {s.enabled === false && <span className="tag tag-e">aus</span>}
+                  {s.enabled === false && <span className="tag tag-e">{tr("aus")}</span>}
                   {s.description && <p className="muted small">{s.description}</p>}
                 </li>
               ))}
@@ -75,25 +76,25 @@ function Toolsets({ agent, label }: { agent: AgentRef; label: string }) {
   const on = sets.filter((t) => t.enabled).length;
   return (
     <main className="page">
-      <PageHead title="Werkzeuge" sub={state.data || managed ? `${label} · ${on} von ${sets.length} aktiv` : label} />
-      {state.error && !managed && <p className="banner" role="alert"><Icon name="alert" />Werkzeuge nicht ladbar: {state.error}</p>}
+      <PageHead title={tr("Werkzeuge")} sub={state.data || managed ? `${label} · ${on} von ${sets.length} aktiv` : label} />
+      {state.error && !managed && <p className="banner" role="alert"><Icon name="alert" />{tr("Werkzeuge nicht ladbar: {error}", { error: state.error })}</p>}
       {state.data?.note && !managed && <p className="banner" role="status"><Icon name="alert" />{state.data.note}</p>}
-      {state.loading && !managed && <p className="muted">Lade…</p>}
-      {state.data && !managed && sets.length === 0 && <p className="panel-empty">Der Agent meldet keine Toolsets.</p>}
+      {state.loading && !managed && <p className="muted">{tr("Lade…")}</p>}
+      {state.data && !managed && sets.length === 0 && <p className="panel-empty">{tr("Der Agent meldet keine Toolsets.")}</p>}
       <ul className="cap-grid">
         {sets.map((t) => (
           <Fragment key={t.name}>
             <li className="card cap-card">
               <div className="row" style={{ gap: 8 }}>
                 <b>{t.label ?? t.name}</b>
-                {t.enabled !== undefined && <span className={`tag${t.enabled ? " tag-c" : ""}`}>{t.enabled ? "aktiv" : "aus"}</span>}
-                {t.configured === false && <span className="tag tag-e" title="Es fehlt ein Schlüssel oder eine Einstellung">nicht eingerichtet</span>}
+                {t.enabled !== undefined && <span className={`tag${t.enabled ? " tag-c" : ""}`}>{t.enabled ? tr("aktiv") : "aus"}</span>}
+                {t.configured === false && <span className="tag tag-e" title={tr("Es fehlt ein Schlüssel oder eine Einstellung")}>{tr("nicht eingerichtet")}</span>}
               </div>
               {t.description && <p className="muted small">{t.description}</p>}
               {t.tools && t.tools.length > 0 && <div className="row mem-meta">{t.tools.map((n) => <span key={n} className="tag tag-m">{n}</span>)}</div>}
               {managed && (
                 <button type="button" className="btn btn-s btn-g" aria-expanded={open === t.name} aria-label={`${t.label ?? t.name} einrichten`} onClick={() => setOpen(open === t.name ? undefined : t.name)}>
-                  <Icon name="sliders" size={14} />Einrichten
+                  <Icon name="sliders" size={14} />{tr("Einrichten")}
                 </button>
               )}
             </li>
@@ -112,11 +113,10 @@ function Toolsets({ agent, label }: { agent: AgentRef; label: string }) {
 function TerminalNote({ backends }: { backends: TerminalBackends }) {
   const active = backends.backends.find((b) => b.name === backends.active);
   return (
-    <section className="card tool-note" aria-label="Terminal-Backend">
-      <p style={{ margin: 0 }}><b>Terminal-Backend: {backends.active ?? "unbekannt"}</b>{active?.status && active.status !== "ready" ? ` (${active.status})` : ""}</p>
+    <section className="card tool-note" aria-label={tr("Terminal-Backend")}>
+      <p style={{ margin: 0 }}><b>{tr("Terminal-Backend: {active}", { active: backends.active ?? tr("unbekannt") })}</b>{active?.status && active.status !== "ready" ? ` (${active.status})` : ""}</p>
       <p className="muted small" style={{ margin: "4px 0 0" }}>
-        {backends.active === "local" ? "Befehle laufen direkt auf diesem Rechner, es gibt keine Isolation. " : (active?.description ?? "")}{" "}
-        Umstellen nur im Hermes-Dashboard oder per CLI (<code>hermes tools</code>), weil es die Isolation des Agenten ändert.
+        {tr("{description} Umstellen nur im Hermes-Dashboard oder per CLI (", { description: backends.active === "local" ? tr("Befehle laufen direkt auf diesem Rechner, es gibt keine Isolation. ") : (active?.description ?? "") })}<code>hermes tools</code>{tr("), weil es die Isolation des Agenten ändert.")}
       </p>
     </section>
   );

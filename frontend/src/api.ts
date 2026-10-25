@@ -1,6 +1,7 @@
 import { invalidate } from "./dataCache";
 import { getPreferences } from "./preferences";
 import type { AcCreated, AcHooks, AcPairing, SaPreview, SaStats, EpDelegation, EpList, EpLocal, EpValidate, LcCreated, LcList, MdAuxiliary, MdInfo, MdMoa, MdOptions, MdRecommended, MdSetResult, HmField, HmOverview, GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import { t, tm } from "./i18n";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string, public data?: Record<string, unknown>) {
@@ -47,7 +48,7 @@ export async function call<T>(method: string, path: string, body?: unknown, sign
       }
     } catch { /* kein JSON */ }
     if (res.status === 401 && !code) toLogin();
-    throw new ApiError(res.status, detail, code, data);
+    throw new ApiError(res.status, tm(detail), code, data);
   }
   return (res.status === 204 ? undefined : await res.json()) as T;
 }
@@ -89,7 +90,7 @@ export const api = {
   runStatus: (a: AgentRef, rid: string) => call<{ status?: string }>("GET", `${base(a)}/runs/${id(rid)}`),
   stop: (a: AgentRef, rid: string) => call<unknown>("POST", `${base(a)}/runs/${id(rid)}/stop`, {}),
   approve: async (a: AgentRef, rid: string, decision: Decision) => {
-    if (decision !== "deny" && getPreferences().confirmApprovals && !window.confirm(`Freigabe „${decision}“ für ${a.agent} bestätigen?`)) throw new Error("Freigabe abgebrochen");
+    if (decision !== "deny" && getPreferences().confirmApprovals && !window.confirm(t("Freigabe „{decision}“ für {agent} bestätigen?", { decision, agent: a.agent }))) throw new Error(t("Freigabe abgebrochen"));
     return call<unknown>("POST", `${base(a)}/runs/${id(rid)}/approval`, { decision });
   },
   steer: (a: AgentRef, rid: string, text: string) =>
@@ -207,7 +208,7 @@ export const api = {
   lcImport: async (a: AgentRef, file: File, name?: string): Promise<{ ok: boolean; name: string }> => {
     const f = new FormData(); f.append("archive", file, file.name); if (name) f.append("name", name);
     const res = await fetch(`${base(a)}/hermes-profiles/import`, { method: "POST", headers: { "X-Requested-With": "hermes-webui" }, body: f, credentials: "same-origin" });
-    if (!res.ok) { let detail = res.statusText; try { const j = await res.json(); detail = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail ?? j); } catch { /* kein JSON */ } throw new ApiError(res.status, detail); }
+    if (!res.ok) { let detail = res.statusText; try { const j = await res.json(); detail = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail ?? j); } catch { /* kein JSON */ } throw new ApiError(res.status, tm(detail)); }
     return await res.json() as { ok: boolean; name: string };
   },
 };

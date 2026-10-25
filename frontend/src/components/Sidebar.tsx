@@ -10,6 +10,7 @@ import { Icon } from "./Icon";
 import { Link } from "./Link";
 import { Sigil } from "./Sigil";
 import { AgentDot, StatusDot } from "./Status";
+import { t, tm } from "../i18n";
 
 type Props = {
   me: Me;
@@ -26,30 +27,30 @@ type Props = {
 type NavItem = { to: string; label: string; icon: string };
 // Oben immer sichtbar: was Aufmerksamkeit braucht. Darunter die Chats (Agents), danach aufklappbare Gruppen.
 const TOP: NavItem[] = [
-  { to: "/", label: "Cockpit", icon: "grid" },
-  { to: "/inbox", label: "Inbox", icon: "inbox" },
-  { to: "/rooms", label: "Räume", icon: "orbit" },
+  { to: "/", get label() { return t("Cockpit"); }, icon: "grid" },
+  { to: "/inbox", get label() { return t("Inbox"); }, icon: "inbox" },
+  { to: "/rooms", get label() { return t("Räume"); }, icon: "orbit" },
 ];
 const GROUPS: { id: string; label: string; items: NavItem[] }[] = [
-  { id: "work", label: "Arbeit", items: [
-    { to: "/kanban", label: "Kanban", icon: "kanban" },
-    { to: "/achievements", label: "Erfolge", icon: "spark" },
-    { to: "/jobs", label: "Zeitpläne", icon: "clock" },
+  { id: "work", get label() { return t("Arbeit"); }, items: [
+    { to: "/kanban", get label() { return t("Kanban"); }, icon: "kanban" },
+    { to: "/achievements", get label() { return t("Erfolge"); }, icon: "spark" },
+    { to: "/jobs", get label() { return t("Zeitpläne"); }, icon: "clock" },
   ] },
-  { id: "know", label: "Wissen", items: [
-    { to: "/memory", label: "Gedächtnis", icon: "memory" },
-    { to: "/knowledge", label: "Wissen", icon: "file" },
-    { to: "/search", label: "Inhaltssuche", icon: "search" },
+  { id: "know", get label() { return t("Wissen"); }, items: [
+    { to: "/memory", get label() { return t("Gedächtnis"); }, icon: "memory" },
+    { to: "/knowledge", get label() { return t("Wissen"); }, icon: "file" },
+    { to: "/search", get label() { return t("Inhaltssuche"); }, icon: "search" },
   ] },
-  { id: "ext", label: "Erweiterungen", items: [
-    { to: "/extensions", label: "Skills, MCP, Plugins", icon: "wrench" },
-    { to: "/marketplace", label: "Marktplatz", icon: "layers" },
+  { id: "ext", get label() { return t("Erweiterungen"); }, items: [
+    { to: "/extensions", get label() { return t("Skills, MCP, Plugins"); }, icon: "wrench" },
+    { to: "/marketplace", get label() { return t("Marktplatz"); }, icon: "layers" },
   ] },
-  { id: "ops", label: "Betrieb", items: [
-    { to: "/hosts", label: "Hosts", icon: "server" },
-    { to: "/providers", label: "Anbieter", icon: "coin" },
-    { to: "/logs", label: "Logs", icon: "layers" },
-    { to: "/system", label: "System", icon: "shield" },
+  { id: "ops", get label() { return t("Betrieb"); }, items: [
+    { to: "/hosts", get label() { return t("Hosts"); }, icon: "server" },
+    { to: "/providers", get label() { return t("Anbieter"); }, icon: "coin" },
+    { to: "/logs", get label() { return t("Logs"); }, icon: "layers" },
+    { to: "/system", get label() { return t("System"); }, icon: "shield" },
   ] },
 ];
 const STORE = "hermes-nav-groups";
@@ -58,21 +59,21 @@ function readOpen(): Record<string, boolean> {
 }
 // Bereiche eines Hermes-Agents: stehen unter dem gewählten Agent, damit man sie nicht erst in einer Icon-Leiste suchen muss.
 const MODULES = [
-  { module: "soul", label: "SOUL & Profil", icon: "spark" },
-  { module: "lebenszyklus", label: "Profile & Betrieb", icon: "server" },
-  { module: "config", label: "Hermes-Einstellungen", icon: "sliders" },
-  { module: "modelle", label: "Modelle", icon: "spark" },
-  { module: "endpunkte", label: "Eigene Endpunkte", icon: "spark" },
-  { module: "sitzungen-verwalten", label: "Sitzungen verwalten", icon: "spark" },
-  { module: "zugang", label: "Zugang und Webhooks", icon: "spark" },
-  { module: "sprache", label: "Sprache", icon: "spark" },
-  { module: "lerngraph", label: "Lerngraph", icon: "spark" },
-  { module: "einblicke", label: "System und Datenschutz", icon: "spark" },
-  { module: "providers", label: "Keys & Nutzung", icon: "coin" },
-  { module: "skills", label: "Skills", icon: "layers" },
-  { module: "tools", label: "Werkzeuge", icon: "wrench" },
-  { module: "messaging", label: "Messaging", icon: "send" },
-  { module: "hermes-memory", label: "Hermes-Gedächtnis", icon: "memory" },
+  { module: "soul", get label() { return t("SOUL & Profil"); }, icon: "spark" },
+  { module: "lebenszyklus", get label() { return t("Profile & Betrieb"); }, icon: "server" },
+  { module: "config", get label() { return t("Hermes-Einstellungen"); }, icon: "sliders" },
+  { module: "modelle", get label() { return t("Modelle"); }, icon: "spark" },
+  { module: "endpunkte", get label() { return t("Eigene Endpunkte"); }, icon: "spark" },
+  { module: "sitzungen-verwalten", get label() { return t("Sitzungen verwalten"); }, icon: "spark" },
+  { module: "zugang", get label() { return t("Zugang und Webhooks"); }, icon: "spark" },
+  { module: "sprache", get label() { return t("Sprache"); }, icon: "spark" },
+  { module: "lerngraph", get label() { return t("Lerngraph"); }, icon: "spark" },
+  { module: "einblicke", get label() { return t("System und Datenschutz"); }, icon: "spark" },
+  { module: "providers", get label() { return t("Keys & Nutzung"); }, icon: "coin" },
+  { module: "skills", get label() { return t("Skills"); }, icon: "layers" },
+  { module: "tools", get label() { return t("Werkzeuge"); }, icon: "wrench" },
+  { module: "messaging", get label() { return t("Messaging"); }, icon: "send" },
+  { module: "hermes-memory", get label() { return t("Hermes-Gedächtnis"); }, icon: "memory" },
 ] as const;
 
 
@@ -100,17 +101,17 @@ export function Sidebar(p: Props) {
   return (
     <>
       {p.open && <div className="scrim" onClick={p.onClose} aria-hidden />}
-      <aside className={`side${p.open ? " open" : ""}`} aria-label="Navigation">
-        <Link to="/" className="brand" onClick={p.onClose} aria-label="Hermes, zum Cockpit">
+      <aside className={`side${p.open ? " open" : ""}`} aria-label={t("Navigation")}>
+        <Link to="/" className="brand" onClick={p.onClose} aria-label={t("Hermes, zum Cockpit")}>
           <span className="mk" aria-hidden />
-          <b>HERMES</b>
-          <span className="tag" style={{ marginLeft: "auto" }}>WEBUI</span>
+          <b>{t("HERMES")}</b>
+          <span className="tag" style={{ marginLeft: "auto" }}>{t("WEBUI")}</span>
         </Link>
 
         <div className="side-scroll">
-          <nav aria-label="Übersicht" className="nav">{TOP.map(link)}</nav>
+          <nav aria-label={t("Übersicht")} className="nav">{TOP.map(link)}</nav>
 
-          <nav aria-label="Bereiche" className="nav nav-groups">
+          <nav aria-label={t("Bereiche")} className="nav nav-groups">
             {GROUPS.map((g) => {
               const items = g.items.filter((n) => n.to !== "/knowledge" || wissen);
               const expanded = isOpen(g);
@@ -125,8 +126,8 @@ export function Sidebar(p: Props) {
                     {g.id === "ops" && hosts?.map((h) => (
                       <div key={h.id} className="nav-host" role="group" aria-label={`Werkzeuge ${h.label}`}>
                         <span className="lbl">{h.label}</span>
-                        <Link to={`/hosts/${encodeURIComponent(h.id)}/terminal`} className={p.path === `/hosts/${encodeURIComponent(h.id)}/terminal` ? "on" : undefined} onClick={p.onClose}><Icon name="terminal" size={14} />Terminal</Link>
-                        <Link to={`/hosts/${encodeURIComponent(h.id)}/workspace`} className={p.path === `/hosts/${encodeURIComponent(h.id)}/workspace` ? "on" : undefined} onClick={p.onClose}><Icon name="file" size={14} />Dateien & Git</Link>
+                        <Link to={`/hosts/${encodeURIComponent(h.id)}/terminal`} className={p.path === `/hosts/${encodeURIComponent(h.id)}/terminal` ? "on" : undefined} onClick={p.onClose}><Icon name="terminal" size={14} />{t("Terminal")}</Link>
+                        <Link to={`/hosts/${encodeURIComponent(h.id)}/workspace`} className={p.path === `/hosts/${encodeURIComponent(h.id)}/workspace` ? "on" : undefined} onClick={p.onClose}><Icon name="file" size={14} />{t("Dateien & Git")}</Link>
                       </div>
                     ))}
                   </div>}
@@ -135,17 +136,17 @@ export function Sidebar(p: Props) {
             })}
           </nav>
 
-          {error && <p className="error small" role="alert" style={{ padding: "0 16px" }}>Hosts nicht ladbar: {error}</p>}
-          {!hosts && !error && <p className="muted small" style={{ padding: "0 16px" }}>Lade…</p>}
+          {error && <p className="error small" role="alert" style={{ padding: "0 16px" }}>{t("Hosts nicht ladbar: {error}", { error })}</p>}
+          {!hosts && !error && <p className="muted small" style={{ padding: "0 16px" }}>{t("Lade…")}</p>}
           {hosts?.map((h) => (
             <section key={h.id} aria-label={h.label}>
               <h2 className="hostbar">
                 <StatusDot status={h.status} />
                 <b>{h.label.toUpperCase()}</b>
-                {h.kind === "remote" && <span className="tag">remote</span>}
+                {h.kind === "remote" && <span className="tag">{t("remote")}</span>}
                 <span className="r">{h.runtimes.map((r) => `${r.id} · ${r.agents.length}`).join(" · ")}</span>
               </h2>
-              {h.status !== "online" && h.detail && <p className="muted small" style={{ padding: "0 16px 4px" }}>{h.detail}</p>}
+              {h.status !== "online" && h.detail && <p className="muted small" style={{ padding: "0 16px 4px" }}>{tm(h.detail)}</p>}
               {h.runtimes.map((r) => (
                 <div key={r.id}>
                   {h.runtimes.length > 1 && <p className="lbl" style={{ padding: "4px 16px 2px" }}>{r.label}</p>}
@@ -177,8 +178,8 @@ export function Sidebar(p: Props) {
                         )}
                         {isActive && (
                           <div className="side-sessions" role="group" aria-label={`Sessions von ${a.label}`}>
-                            <Link to={agentPath(ref)} onClick={p.onClose}><Icon name="plus" size={14} />Neuer Chat</Link>
-                            {p.sessionsLoading && <p className="muted small" style={{ padding: "0 8px" }}>Lade…</p>}
+                            <Link to={agentPath(ref)} onClick={p.onClose}><Icon name="plus" size={14} />{t("Neuer Chat")}</Link>
+                            {p.sessionsLoading && <p className="muted small" style={{ padding: "0 8px" }}>{t("Lade…")}</p>}
                             {p.sessions.map((s) => (
                               <Link key={s.id} to={agentPath(ref, "chat", s.id)} className={s.id === p.sessionId ? "on" : undefined}
                                 aria-current={s.id === p.sessionId ? "page" : undefined} onClick={p.onClose}>
@@ -200,11 +201,11 @@ export function Sidebar(p: Props) {
 
         <footer className="side-foot">
           <span className="avatar" aria-hidden>{p.me.user.name.slice(0, 1).toUpperCase()}</span>
-          <span className="who"><b title={p.me.user.id}>{p.me.user.name}</b>{p.me.build && <span className="mono t3" style={{ fontSize: 10 }} title="Stand des Codes (Git)">Stand {p.me.build}</span>}</span>
-          <Link to="/settings" className={`btn btn-s btn-i btn-g${p.path === "/settings" ? " on" : ""}`} aria-label="Darstellung" title="Darstellung" onClick={p.onClose}>
+          <span className="who"><b title={p.me.user.id}>{p.me.user.name}</b>{p.me.build && <span className="mono t3" style={{ fontSize: 10 }} title={t("Stand des Codes (Git)")}>{t("Stand {build}", { build: p.me.build })}</span>}</span>
+          <Link to="/settings" className={`btn btn-s btn-i btn-g${p.path === "/settings" ? " on" : ""}`} aria-label={t("Darstellung")} title={t("Darstellung")} onClick={p.onClose}>
             <Icon name="sliders" size={16} />
           </Link>
-          {p.me.auth_mode === "oidc" && <button type="button" className="btn btn-s btn-g" onClick={p.onLogout}>Abmelden</button>}
+          {p.me.auth_mode === "oidc" && <button type="button" className="btn btn-s btn-g" onClick={p.onLogout}>{t("Abmelden")}</button>}
         </footer>
       </aside>
     </>

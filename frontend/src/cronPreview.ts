@@ -1,3 +1,4 @@
+import { t as tr } from "./i18n";
 /** Nächste Läufe eines 5-Felder-Cron-Ausdrucks (Zahlen, `*`, Listen, Bereiche, Schritte) in der Zeitzone des Browsers; sonst `null`.
  * Hermes rechnet in seiner eigenen Zeitzone: die Vorschau ist eine Orientierung, die verbindliche Zeit zeigt die Liste nach dem Speichern. */
 const RANGES: [number, number][] = [[0, 59], [0, 23], [1, 31], [1, 12], [0, 7]];
@@ -39,6 +40,6 @@ export function nextRuns(expr: string, from: Date, count = 3): Date[] | null {
 export function describeInterval(s: string): string | null {
   const m = /^(?:every\s+)?(\d+)\s*([mhd])$/i.exec(s.trim());
   if (!m) return null;
-  const unit = { m: ["Minute", "Minuten"], h: ["Stunde", "Stunden"], d: ["Tag", "Tage"] }[m[2].toLowerCase() as "m"];
-  return Number(m[1]) === 1 ? `jede ${unit[0]}` : `alle ${m[1]} ${unit[1]}`;
+  const unit = { m: [tr("Minute"), tr("Minuten")], h: [tr("Stunde"), tr("Stunden")], d: [tr("Tag"), tr("Tage")] }[m[2].toLowerCase() as "m"];
+  return Number(m[1]) === 1 ? `jede ${unit[0]}` : tr("alle {v} {v2}", { v: m[1], v2: unit[1] });
 }

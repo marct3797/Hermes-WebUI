@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { LANGUAGES, availableLanguages, detectLanguage, getLanguage, setLanguage, t } from "./i18n";
+import { LANGUAGES, availableLanguages, detectLanguage, getLanguage, setLanguage, t, tm } from "./i18n";
 
 const fake = (table: Record<string, string>) => async () => table;
 beforeEach(() => { localStorage.clear(); });
@@ -81,5 +81,41 @@ describe("offered languages", () => {
     expect(LANGUAGES.filter((l) => l.rtl).map((l) => l.id)).toEqual(["ar"]);
     expect(LANGUAGES.find((l) => l.id === "ja")?.endonym).toBe("日本語");
     expect(new Set(LANGUAGES.map((l) => l.id)).size).toBe(LANGUAGES.length);
+  });
+});
+
+describe("tm (Meldungen des BFF)", () => {
+  const cat = fake({
+    "Skill nicht gefunden": "Skill not found",
+    "Das Dashboard meldet Fehler {status_code}{why}": "The dashboard reports error {status_code}{why}",
+    "Diese Hermes-Version kennt {path} nicht. Hermes aktualisieren": "This Hermes version does not know {path}. Update Hermes",
+    "{what} antwortete mit Fehler {status}": "{what} answered with error {status}",
+  });
+
+  it("returns the German message unchanged in German", () => {
+    expect(tm("Skill nicht gefunden")).toBe("Skill nicht gefunden");
+  });
+
+  it("translates an exact message and a message with filled-in values", async () => {
+    await setLanguage("en", cat);
+    expect(tm("Skill nicht gefunden")).toBe("Skill not found");
+    expect(tm("Das Dashboard meldet Fehler 502: kaputt")).toBe("The dashboard reports error 502: kaputt");
+  });
+
+  it("keeps the values from the message, in the order of the translation", async () => {
+    await setLanguage("en", cat);
+    expect(tm("Diese Hermes-Version kennt /api/x/y nicht. Hermes aktualisieren")).toBe("This Hermes version does not know /api/x/y. Update Hermes");
+  });
+
+  it("prefers the more specific pattern over a generic one with a leading placeholder", async () => {
+    await setLanguage("en", cat);
+    expect(tm("Diese Hermes-Version kennt /a nicht. Hermes aktualisieren")).toContain("This Hermes version");
+    expect(tm("Chroma antwortete mit Fehler 500")).toBe("Chroma answered with error 500");
+  });
+
+  it("leaves a message nobody translated as it is, and does not treat regex characters in a message as a pattern", async () => {
+    await setLanguage("en", cat);
+    expect(tm("Ganz neue Meldung (x+)")).toBe("Ganz neue Meldung (x+)");
+    expect(tm("Skill nicht gefunden.*")).toBe("Skill nicht gefunden.*");
   });
 });

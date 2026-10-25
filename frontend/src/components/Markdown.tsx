@@ -2,6 +2,7 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Icon } from "./Icon";
+import { t } from "../i18n";
 
 function CodeBlock({ children }: { children?: React.ReactNode }) {
   const [copied, setCopied] = useState(false);
@@ -20,7 +21,7 @@ function CodeBlock({ children }: { children?: React.ReactNode }) {
       <div className="hd">
         <Icon name="file" size={12} />{lang ?? "text"}
         <span className="row" style={{ marginLeft: "auto" }}>
-          <button type="button" className="btn btn-s btn-g codeb-copy" onClick={copy}><Icon name="copy" size={12} />{copied ? "Kopiert" : "Kopieren"}</button>
+          <button type="button" className="btn btn-s btn-g codeb-copy" onClick={copy}><Icon name="copy" size={12} />{copied ? t("Kopiert") : t("Kopieren")}</button>
         </span>
       </div>
       <div className="pre numbered">

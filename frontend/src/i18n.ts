@@ -27,9 +27,43 @@ const defaultLoader: Loader = async (id) => {
 
 let current: LanguageId = SOURCE;
 let table: Catalog = {};
+type Pattern = { re: RegExp; names: string[]; to: string; weight: number };
+let patterns: Pattern[] = [];
+const NUMERIC = /^(status_code|status|code|count|n|min|max|limit|size)$/;   // neben einem weiteren Platzhalter nur Ziffern: sonst wäre die Trennung nicht eindeutig
+
+/** Aus Schlüsseln mit Platzhaltern entstehen Muster, mit denen Meldungen des BFF (fertig ausgefüllt) erkannt werden. */
+function buildPatterns(tbl: Catalog): Pattern[] {
+  const out: Pattern[] = [];
+  for (const [de, to] of Object.entries(tbl)) {
+    if (!/\{\w+\}/.test(de)) continue;
+    const parts = de.split(/\{(\w+)\}/);   // statisch, name, statisch, name, ...
+    const names: string[] = []; let src = "";
+    for (let i = 0; i < parts.length; i++) {
+      if (i % 2 === 0) { src += parts[i].replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); continue; }
+      const adjacent = parts[i - 1] === "" || parts[i + 1] === "";
+      names.push(parts[i]); src += adjacent && NUMERIC.test(parts[i]) ? "(\\d+)" : "([\\s\\S]+?)";
+    }
+    out.push({ re: new RegExp(`^${src}$`), names, to, weight: parts.filter((_, i) => i % 2 === 0).join("").length });
+  }
+  return out.sort((a, b) => b.weight - a.weight);   // spezifischere Muster zuerst
+}
+
+/** Übersetzt eine Meldung des BFF: erst wörtlich, dann über Muster; unbekannte Meldungen bleiben deutsch. */
+export function tm(msg: string): string {
+  if (table[msg] !== undefined) return table[msg];
+  for (const p of patterns) {
+    const m = p.re.exec(msg);
+    if (m) return p.to.replace(/\{(\w+)\}/g, (x, k: string) => { const i = p.names.indexOf(k); return i >= 0 ? m[i + 1] : x; });
+  }
+  return msg;
+}
 const listeners = new Set<() => void>();
 
-export function t(de: string, vars?: Record<string, string | number>): string {
+/** Markiert einen Text auf Modulebene für die Übersetzungsliste, ohne ihn dort schon zu übersetzen: angezeigt wird er mit `t(wert)`. */
+export const N_ = (de: string): string => de;
+
+export type Value = string | number | boolean | null | undefined;   // keine Elemente: t() liefert Text
+export function t(de: string, vars?: Record<string, Value>): string {
   const s = table[de] ?? de;
   return vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : s; // ein Durchlauf: Werte werden nicht erneut als Vorlage gelesen
 }
@@ -42,7 +76,7 @@ export async function setLanguage(id: LanguageId, loader: Loader = defaultLoader
   const lang = LANGUAGES.find((l) => l.id === id);
   if (!lang) throw new Error(`Unbekannte Sprache: ${String(id)}`);
   const next = id === SOURCE ? {} : await loader(id);
-  current = id; table = next;
+  current = id; table = next; patterns = buildPatterns(next);
   try { localStorage.setItem(KEY, id); } catch { /* ohne Speicher gilt die Wahl nur für diese Sitzung */ }
   document.documentElement.lang = id;
   document.documentElement.dir = lang.rtl ? "rtl" : "ltr";

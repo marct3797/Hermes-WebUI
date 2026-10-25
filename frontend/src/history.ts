@@ -1,4 +1,5 @@
 import type { Item } from "./types";
+import { t as tr } from "./i18n";
 
 type Msg = Record<string, unknown>;
 type Tool = Extract<Item, { kind: "tool" }>;
@@ -72,7 +73,7 @@ export function toolResult(content: unknown): { output: string; failed: boolean 
       }
     }
   } catch { /* kein JSON: Text unverändert */ }
-  if (text.length > MAX_OUTPUT) text = `${text.slice(0, MAX_OUTPUT)}\n… (gekürzt)`;
+  if (text.length > MAX_OUTPUT) text = tr("{MAX_OUTPUT}\n… (gekürzt)", { MAX_OUTPUT: text.slice(0, MAX_OUTPUT) });
   return { output: text, failed };
 }
 

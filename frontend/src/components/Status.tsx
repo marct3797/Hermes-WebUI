@@ -1,13 +1,14 @@
 import type { AgentActivity } from "../attention";
+import { t } from "../i18n";
 
 /** Zustände tragen Form und Farbe, nie nur Farbe: bereit = heller Punkt, offline = hohler Ring, Zugangsfehler = Raute. */
 export const STATUS_LABEL: Record<string, string> = {
   online: "online",
   sleeping: "schläft",
-  unreachable: "nicht erreichbar",
+  get unreachable() { return t("nicht erreichbar"); },
   auth_error: "Zugang abgelehnt",
   gone: "Profil entfernt",
-  unsupported: "nicht unterstützt",
+  get unsupported() { return t("nicht unterstützt"); },
 };
 
 const DOT_CLASS: Record<string, string> = {
@@ -35,6 +36,6 @@ export function activityDot(act: AgentActivity | undefined, status: string): str
 }
 
 export function AgentDot({ act, status }: { act?: AgentActivity; status: string }) {
-  const text = act?.waiting ? "wartet auf dich" : act?.running ? "läuft" : act?.failed ? "Fehler" : STATUS_LABEL[status] ?? status;
+  const text = act?.waiting ? t("wartet auf dich") : act?.running ? "läuft" : act?.failed ? t("Fehler") : STATUS_LABEL[status] ?? status;
   return <span className={`dot ${activityDot(act, status)}`.trim()} role="img" aria-label={text} title={text} />;
 }

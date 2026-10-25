@@ -13,6 +13,7 @@ import { Icon } from "./Icon";
 import { Sidebar } from "./Sidebar";
 import { Rail } from "./chat/Rail";
 import { SessionColumn } from "./chat/SessionColumn";
+import { t } from "../i18n";
 
 type Props = { me: Me; path: string; page: Page; onLogout: () => void; children: ReactNode };
 
@@ -60,7 +61,7 @@ export function Shell({ me, path, page, onLogout, children }: Props) {
     if ([...ids].some((id) => !previousApprovals.current.has(id))) notifyApproval();
     previousApprovals.current = ids;
   }, [needs, roomNeeds]);
-  useEffect(() => { document.title = open ? `(${open}) Hermes` : "Hermes"; }, [open]);
+  useEffect(() => { document.title = open ? `(${open}) Hermes` : t("Hermes"); }, [open]);
   const trail = crumbs(page);
   const sessionId = page.name === "agent" ? page.sessionId : undefined;
   const sidebar = (
@@ -96,8 +97,8 @@ export function Shell({ me, path, page, onLogout, children }: Props) {
         <div className="main">
           <BgFx />
           <div className="top">
-            <button type="button" className="btn btn-i btn-g menu-btn" aria-label="Menü" onClick={() => setMenu(true)}><Icon name="menu" size={18} /></button>
-            <nav className="crumb" aria-label="Pfad">
+            <button type="button" className="btn btn-i btn-g menu-btn" aria-label={t("Menü")} onClick={() => setMenu(true)}><Icon name="menu" size={18} /></button>
+            <nav className="crumb" aria-label={t("Pfad")}>
               <span>{location.hostname}</span>
               {trail.map((c, i) => (
                 <span key={`${c}-${i}`} className="row" style={{ gap: 8 }}>

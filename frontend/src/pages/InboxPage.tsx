@@ -13,22 +13,23 @@ import type { Decision } from "../types";
 import { sigilFor, useUi } from "../ui";
 import { useNow } from "../useNow";
 import { useMedia } from "../useMedia";
+import { t as tr } from "../i18n";
 
 type Tab = "all" | "approval" | "clarify" | "failed";
 const TABS: Array<{ id: Tab; label: string }> = [
-  { id: "all", label: "Alle" }, { id: "approval", label: "Freigaben" }, { id: "clarify", label: "Rückfragen" }, { id: "failed", label: "Fehler" },
+  { id: "all", get label() { return tr("Alle"); } }, { id: "approval", get label() { return tr("Freigaben"); } }, { id: "clarify", get label() { return tr("Rückfragen"); } }, { id: "failed", get label() { return tr("Fehler"); } },
 ];
 const tabOf = (n: Need): Exclude<Tab, "all"> => (n.kind === "approval" || n.kind === "clarify" ? n.kind : "failed");
 
 const GROUPS: Array<{ tab: Tab; label: string; hot?: boolean }> = [
-  { tab: "approval", label: "Läuft ab", hot: true }, { tab: "clarify", label: "Wartet auf dich" }, { tab: "failed", label: "Fehler" },
+  { tab: "approval", get label() { return tr("Läuft ab"); }, hot: true }, { tab: "clarify", get label() { return tr("Wartet auf dich"); } }, { tab: "failed", get label() { return tr("Fehler"); } },
 ];
 
-const title = (n: Need) => n.kind === "approval" ? (n.item.smartDenied ? "Smart-Deny: Freigabe nötig" : "Freigabe nötig")
-  : n.kind === "clarify" ? "Rückfrage" : n.kind === "lost" ? "Verbindung verloren" : "Run fehlgeschlagen";
+const title = (n: Need) => n.kind === "approval" ? (n.item.smartDenied ? tr("Smart-Deny: Freigabe nötig") : tr("Freigabe nötig"))
+  : n.kind === "clarify" ? tr("Rückfrage") : n.kind === "lost" ? tr("Verbindung verloren") : tr("Run fehlgeschlagen");
 const sub = (n: Need) => n.kind === "approval" ? n.item.command : n.kind === "clarify" ? n.item.question : n.error;
 const TAG: Record<Exclude<Tab, "all">, { text: string; cls: string }> = {
-  approval: { text: "FREIGABE", cls: "tag-s" }, clarify: { text: "RÜCKFRAGE", cls: "" }, failed: { text: "FEHLER", cls: "tag-e" },
+  approval: { get text() { return tr("FREIGABE"); }, cls: "tag-s" }, clarify: { get text() { return tr("RÜCKFRAGE"); }, cls: "" }, failed: { get text() { return tr("FEHLER"); }, cls: "tag-e" },
 };
 
 /** Alles, was auf die Person wartet: Liste links, Entscheidung rechts. Zeigt Runs, die diese WebUI gestartet hat. */
@@ -78,10 +79,10 @@ export function InboxPage() {
     <main className="inbox">
       <div className="page" style={{ flex: "none", paddingBottom: 18 }}>
         <header className="ph">
-          <div className="col" style={{ gap: 6 }}><span className="lbl">Inbox</span><h1>Braucht dich</h1></div>
-          <span className="ph-sub" style={{ marginBottom: 5 }}>{needs.length + roomNeeds.length} offen · {expiring} {expiring === 1 ? "läuft" : "laufen"} ab</span>
+          <div className="col" style={{ gap: 6 }}><span className="lbl">{tr("Inbox")}</span><h1>{tr("Braucht dich")}</h1></div>
+          <span className="ph-sub" style={{ marginBottom: 5 }}>{tr("{v} offen · {expiring} {v2} ab", { v: needs.length + roomNeeds.length, expiring, v2: expiring === 1 ? "läuft" : "laufen" })}</span>
           <span className="hint keys" style={{ marginLeft: "auto" }}>
-            <span className="kbd">J</span><span className="kbd">K</span> wechseln · <span className="kbd">⏎</span> einmal erlauben · <span className="kbd">Esc</span> ablehnen
+            <span className="kbd">J</span><span className="kbd">K</span> {tr("wechseln ·")} <span className="kbd">⏎</span> {tr("einmal erlauben ·")} <span className="kbd">{tr("Esc")}</span> {tr("ablehnen")}
           </span>
         </header>
       </div>
@@ -96,8 +97,8 @@ export function InboxPage() {
             ))}
           </div>
           {tab === "all" && roomNeeds.length > 0 && (
-            <div role="group" aria-label="Räume">
-              <div className="grp"><span className="lbl">Räume</span><i className="sp grow" /></div>
+            <div role="group" aria-label={tr("Räume")}>
+              <div className="grp"><span className="lbl">{tr("Räume")}</span><i className="sp grow" /></div>
               {roomNeeds.map((n) => n.ask && n.member ? (
                 <AskCard key={n.id} ask={n.ask} member={n.member} room={{ id: n.room.id, name: n.room.name }} />
               ) : n.ask ? null : (
@@ -105,9 +106,9 @@ export function InboxPage() {
                   <Icon name="orbit" size={18} />
                   <div className="col grow" style={{ gap: 3, minWidth: 0 }}>
                     <span className="tt trunc">{n.room.name}</span>
-                    <span className="ss trunc">Ein Agent hat dich im Raum gerufen.</span>
+                    <span className="ss trunc">{tr("Ein Agent hat dich im Raum gerufen.")}</span>
                     <div className="row" style={{ gap: 8, marginTop: 3 }}>
-                      <span className="tag tag-s">RAUM</span>
+                      <span className="tag tag-s">{tr("RAUM")}</span>
                       <span className="mono t3 trunc" style={{ fontSize: 10.5 }}>{n.room.members.map((m) => m.label).join(", ")}</span>
                     </div>
                   </div>
@@ -137,7 +138,7 @@ export function InboxPage() {
                       </div>
                       {n.kind === "approval" && secs !== undefined && (
                         <>
-                          <span className={`mono${secs < 60 ? " crimt" : " t2"}`} style={{ fontSize: 12, fontWeight: 600 }}>{secs > 0 ? fmtClock(secs) : "abgelaufen"}</span>
+                          <span className={`mono${secs < 60 ? " crimt" : " t2"}`} style={{ fontSize: 12, fontWeight: 600 }}>{secs > 0 ? fmtClock(secs) : tr("abgelaufen")}</span>
                           <span className="bar"><b style={{ width: `${Math.max(0, Math.min(100, (secs / n.item.timeoutS) * 100))}%` }} /></span>
                         </>
                       )}
@@ -150,7 +151,7 @@ export function InboxPage() {
           {visible.length === 0 && !(tab === "all" && roomNeeds.length > 0) && <p className="panel-empty">{needs.length + roomNeeds.length === 0 ? "Nichts offen." : "Nichts in dieser Ansicht."}</p>}
 
           <div className="grp" style={{ marginTop: "auto", paddingTop: 22 }}>
-            <span className="lbl">Erledigt heute</span><span className="mono t3" style={{ fontSize: 10.5 }}>{done.length}</span><i className="sp grow" />
+            <span className="lbl">{tr("Erledigt heute")}</span><span className="mono t3" style={{ fontSize: 10.5 }}>{done.length}</span><i className="sp grow" />
           </div>
           {done.map((d) => (
             <div key={d.id} className="done-row">
@@ -159,15 +160,15 @@ export function InboxPage() {
               <span className="mono t3" style={{ fontSize: 10.5 }}>{fmtTime(d.at)}</span>
             </div>
           ))}
-          {done.length === 0 && <p className="panel-empty" style={{ paddingTop: 4 }}>Noch nichts entschieden.</p>}
+          {done.length === 0 && <p className="panel-empty" style={{ paddingTop: 4 }}>{tr("Noch nichts entschieden.")}</p>}
         </div>
 
         {current ? <Detail key={current.id} need={current} sigils={sigils} now={now} /> : (
-          <section className="detail" aria-label="Details">
+          <section className="detail" aria-label={tr("Details")}>
             <div className="nothing">
               <i className="okmark"><Icon name="check" size={20} /></i>
-              <span style={{ font: "600 18px var(--sans)", color: "var(--t1)" }}>Nichts offen</span>
-              <p>Freigaben und Rückfragen von Runs, die du in dieser WebUI gestartet hast, erscheinen hier und im Cockpit.</p>
+              <span style={{ font: "600 18px var(--sans)", color: "var(--t1)" }}>{tr("Nichts offen")}</span>
+              <p>{tr("Freigaben und Rückfragen von Runs, die du in dieser WebUI gestartet hast, erscheinen hier und im Cockpit.")}</p>
             </div>
           </section>
         )}

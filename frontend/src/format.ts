@@ -1,5 +1,6 @@
 /** Zahlen und Zeiten für die Anzeige: deutsches Format, Zahlen in Mono. */
 import { getPreferences } from "./preferences";
+import { t as tr } from "./i18n";
 
 export const dec = (n: number, digits = 1) => n.toFixed(digits).replace(".", ",");
 
@@ -64,7 +65,7 @@ export function toolIcon(name: string): string {
 /** vor 5 Min · vor 2 Std · vor 3 T; unter einer Minute „gerade eben“. */
 export function fmtAgo(ms: number, now = Date.now()): string {
   const s = Math.max(0, (now - ms) / 1000);
-  if (s < 60) return "gerade eben";
+  if (s < 60) return tr("gerade eben");
   if (s < 3600) return `vor ${Math.floor(s / 60)} Min`;
   if (s < 86_400) return `vor ${Math.floor(s / 3600)} Std`;
   return `vor ${Math.floor(s / 86_400)} T`;

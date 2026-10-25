@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 /** Modelle und Anbieter aus `GET /api/model/options`. Hermes liefert `{ providers[], model, provider }`; Mock und ältere Formen `{ models[], current }`. */
 export type ModelGroup = { provider: string; label: string; models: string[] };
 export type ModelOptions = { groups: ModelGroup[]; current?: string; provider?: string };
@@ -41,6 +42,6 @@ export function parseModelOptions(payload: unknown): ModelOptions {
     const prov = str(rec(m)?.provider) ?? "";
     by.set(prov, [...(by.get(prov) ?? []), id]);
   }
-  for (const [prov, models] of by) out.groups.push({ provider: prov, label: prov || "Modelle", models });
+  for (const [prov, models] of by) out.groups.push({ provider: prov, label: prov || t("Modelle"), models });
   return out;
 }
