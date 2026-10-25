@@ -117,4 +117,29 @@ describe("Hermes-Gedächtnis", () => {
     expect(await screen.findByText(/kein Dashboard eingerichtet/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /zurücksetzen/ })).not.toBeInTheDocument();
   });
+
+  it("groups fields, shows the info text and links the provider docs", async () => {
+    await open((b) => { b.dash.hm.keySet = true; });
+    const p = await screen.findByRole("region", { name: "Anbieter retaindb" });
+    expect(within(p).getByText("RetainDB")).toBeInTheDocument();
+    fireEvent.click(within(p).getByRole("button", { name: "retaindb einrichten" }));
+    await within(p).findByText("Zugang");
+    expect(within(p).getByText("Key aus der RetainDB-Konsole")).toBeInTheDocument();
+    expect(within(p).getByText(/Schnelle Treffer/)).toBeInTheDocument();
+    const docs = within(p).getByRole("link", { name: /Mehr beim Anbieter/ });
+    expect(docs).toHaveAttribute("href", "https://retaindb.com/docs");
+  });
+
+  it("sends a switched boolean and a changed number, and nothing else", async () => {
+    await open((b) => { b.dash.hm.keySet = true; });
+    const p = await screen.findByRole("region", { name: "Anbieter retaindb" });
+    fireEvent.click(within(p).getByRole("button", { name: "retaindb einrichten" }));
+    const cache = await within(p).findByLabelText("Cache");
+    expect(cache).toHaveAttribute("type", "checkbox");
+    fireEvent.click(cache);
+    fireEvent.change(within(p).getByLabelText("Budget"), { target: { value: "7" } });
+    fireEvent.click(within(p).getByRole("button", { name: "Speichern" }));
+    await within(p).findByText(/Gespeichert/);
+    expect(sent("PUT", "/providers/retaindb")[0].body).toEqual({ values: { cache: false, budget: "7" } });
+  });
 });

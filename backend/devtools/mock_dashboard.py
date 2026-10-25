@@ -62,13 +62,17 @@ MESSAGING: dict[str, dict[str, Any]] = {
 }
 
 # Gedächtnis-Anbieter in der Form von GET /api/memory (aus Hermes 0.22.5 gemessen): einer braucht nur einen Key, einer ein fehlendes Programm.
+# Arten/Attribute wie plugins/memory/config_schema.py: text/select/secret/bool/number/json, info/inline/group, options[].description, Anbieter-label/docs_url.
 MEMORY_PROVIDERS: dict[str, dict[str, Any]] = {
-    "retaindb": {"description": "RetainDB, Cloud-Gedächtnis.", "env": {"api_key": "RETAINDB_API_KEY"}, "deps": [], "fields": [
-        {"key": "api_key", "label": "Api Key", "kind": "secret", "description": "RetainDB API key", "required": True, "url": "https://retaindb.com", "options": []},
-        {"key": "project", "label": "Project", "kind": "text", "description": "Projekt", "required": False, "url": "", "options": [], "default": ""},
-        {"key": "mode", "label": "Mode", "kind": "select", "description": "Modus", "required": False, "url": "", "options": [{"value": "fast", "label": "fast"}, {"value": "deep", "label": "deep"}], "default": "fast"}]},
-    "byterover": {"description": "ByteRover, Wissensbaum.", "env": {}, "deps": [{"name": "brv", "install": "curl -fsSL https://byterover.dev/install.sh | sh", "check": "brv --version"}], "fields": [
-        {"key": "auto_extract", "label": "Auto Extract", "kind": "select", "description": "Automatisch", "required": False, "url": "", "options": [{"value": "true", "label": "true"}, {"value": "false", "label": "false"}], "default": "true"}]},
+    "retaindb": {"description": "RetainDB, Cloud-Gedächtnis.", "label": "RetainDB", "docs_url": "https://retaindb.com/docs", "env": {"api_key": "RETAINDB_API_KEY"}, "deps": [], "fields": [
+        {"key": "api_key", "label": "Api Key", "kind": "secret", "description": "RetainDB API key", "info": "Key aus dem RetainDB-Konto; nur geschrieben, nie gelesen.", "inline": True, "group": "Zugang", "required": True, "options": []},
+        {"key": "project", "label": "Project", "kind": "text", "description": "Projekt", "info": "", "inline": True, "group": "Zugang", "required": False, "options": [], "default": ""},
+        {"key": "mode", "label": "Mode", "kind": "select", "description": "Modus", "info": "", "inline": False, "group": "Suche", "required": False, "options": [{"value": "fast", "label": "fast", "description": "Schnelle Treffer"}, {"value": "deep", "label": "deep", "description": "Gründliche Suche"}], "default": "fast"},
+        {"key": "cache", "label": "Cache", "kind": "bool", "description": "Zwischenspeicher", "info": "Treffer zwischenspeichern.", "inline": False, "group": "Suche", "required": False, "options": [], "default": "true"},
+        {"key": "budget", "label": "Budget", "kind": "number", "description": "Abruf-Budget", "info": "Höchstens so viele Treffer je Abfrage.", "inline": False, "group": "Suche", "required": False, "options": [], "default": "10"},
+        {"key": "mapping", "label": "Mapping", "kind": "json", "description": "Feldzuordnung", "info": "Als JSON-Objekt, z. B. {\"titel\": \"name\"}.", "inline": False, "group": "Suche", "required": False, "options": [], "default": ""}]},
+    "byterover": {"description": "ByteRover, Wissensbaum.", "label": "ByteRover", "docs_url": "https://byterover.dev/docs", "env": {}, "deps": [{"name": "brv", "install": "curl -fsSL https://byterover.dev/install.sh | sh", "check": "brv --version"}], "fields": [
+        {"key": "auto_extract", "label": "Auto Extract", "kind": "bool", "description": "Automatisch", "info": "Abgeschlossene Schritte automatisch einsortieren.", "inline": True, "group": "Verhalten", "required": False, "options": [], "default": "true"}]},
 }
 
 OAUTH = [
@@ -883,7 +887,7 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
         prof = profile_or_default(profile)
         st = mem(prof)
         return {"active": st["active"], "builtin_files": dict(st["files"]), "providers": [
-            {"name": n, "description": s["description"], "available": mem_status(prof, n) != "unavailable", "configured": mem_status(prof, n) == "ready", "status": mem_status(prof, n),
+            {"name": n, "label": s.get("label", n), "docs_url": s.get("docs_url", ""), "description": s["description"], "available": mem_status(prof, n) != "unavailable", "configured": mem_status(prof, n) == "ready", "status": mem_status(prof, n),
              "setup": {"pip_dependencies": [], "python_dependencies_declared": False, "external_dependencies": s["deps"], "required_env": list(s["env"].values()), "dependencies_installed": not s["deps"] or n in st["installed"]}}
             for n, s in MEMORY_PROVIDERS.items()]}
 
@@ -919,11 +923,16 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
         spec, cfg = MEMORY_PROVIDERS[name], mem(prof)["cfg"].setdefault(name, {})
         rows = []
         for f in spec["fields"]:
-            secret = f["kind"] == "secret"
+            forgery = app.state._state.get("forged", {}).get((name, f["key"]), {})
+            kind = forgery.get("kind", f["kind"])
+            options, secret = forgery.get("options", f.get("options", [])), kind == "secret"
             is_set = (spec["env"].get(f["key"]) in prof["env"]) if secret else f["key"] in cfg or bool(f.get("default"))
-            rows.append({**{k: f[k] for k in ("key", "label", "kind", "description", "required", "url", "options")}, "placeholder": "", "value": "" if secret else str(cfg.get(f["key"], f.get("default", ""))), "is_set": is_set,
-                         "when": None, "minimum": None, "maximum": None, "step": None})
-        return {"name": name, "label": name.title(), "fields": rows, "setup": {"pip_dependencies": [], "external_dependencies": spec["deps"], "dependencies_installed": not spec["deps"] or name in mem(prof)["installed"]}}
+            val = cfg.get(f["key"], f.get("default", ""))
+            if kind == "bool":
+                val = "true" if str(val).lower() in ("1", "true", "yes", "on") else "false"
+            rows.append({**{k: f.get(k, "") for k in ("key", "label", "description", "info", "inline", "group", "placeholder", "required")}, "kind": kind, "options": list(options),
+                         "value": "" if secret else val, "is_set": is_set})
+        return {"name": name, "label": spec.get("label", name), "docs_url": spec.get("docs_url", ""), "fields": rows, "setup": {"pip_dependencies": [], "external_dependencies": spec["deps"], "dependencies_installed": not spec["deps"] or name in mem(prof)["installed"]}}
 
     @app.put("/api/memory/providers/{name}/config")
     async def memory_cfg_put(name: str, body: MemConfigBody, profile: str | None = None):
@@ -933,6 +942,7 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
         spec = MEMORY_PROVIDERS[name]
         if any(str(v).startswith("echo:") for v in body.values.values()):
             raise HTTPException(400, "Invalid value " + str(next(v for v in body.values.values() if str(v).startswith("echo:"))))
+        app.state._state.setdefault("forged", {}).setdefault("put", []).append(dict(body.values))
         for key, value in body.values.items():
             field = next((f for f in spec["fields"] if f["key"] == key), None)
             if field is None:
@@ -1342,6 +1352,8 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
             return {"ok": False, "reachable": False, "message": "Could not reach the provider to verify the key."}
         return {"ok": True, "reachable": True, "message": ""}
 
+    app.state._state["forged"] = {}
+    app.state._state["forge_fields"] = lambda name, key, patch: app.state._state["forged"].update({(name, key): patch})
     return app
 
 

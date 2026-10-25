@@ -49,7 +49,7 @@ def test_overview_shows_builtin_sizes_and_providers_with_what_is_missing(env):
     p = providers(env)
     assert p["retaindb"]["status"] == "needs_config" and p["retaindb"]["required_env"] == ["RETAINDB_API_KEY"]
     assert p["byterover"]["status"] == "unavailable" and p["byterover"]["missing"] == [{"name": "brv", "install": "curl -fsSL https://byterover.dev/install.sh | sh"}]
-    assert "content" not in json.dumps(body) and "check" not in json.dumps(p["byterover"])
+    assert "content" not in json.dumps(body) and '"check"' not in json.dumps(p["byterover"])
 
 
 def test_overview_is_scoped_to_the_profile(env):
@@ -64,10 +64,34 @@ def test_provider_fields_never_carry_a_secret_value(env):
     f = {x["key"]: x for x in r.json()["fields"]}
     assert KEY not in r.text and f["api_key"]["kind"] == "secret" and f["api_key"]["is_set"] is True and "value" not in f["api_key"]
     assert f["mode"]["value"] == "fast" and [o["value"] for o in f["mode"]["options"]] == ["fast", "deep"]
+    assert f["mode"]["options"][0]["description"] == "Schnelle Treffer"
+    assert f["api_key"]["info"].startswith("Key aus") and f["api_key"]["group"] == "Zugang"
+    assert f["cache"]["kind"] == "bool" and f["budget"]["kind"] == "number" and f["mapping"]["kind"] == "json"
+    assert r.json()["label"] == "RetainDB" and r.json()["docs_url"].startswith("https://retaindb.com")
+    assert "url" not in json.dumps(r.json()).replace("docs_url", "")
+    assert "value" not in json.dumps(f["api_key"])
+
+
+def test_unknown_field_kinds_unknown_options_and_invalid_numbers_are_rejected(env):
+    base = {"values": {"api_key": KEY}}
+    env.dash.state._state.setdefault("forged", {})[("retaindb", "mode")] = {"kind": "geheim"}
+    assert env.get(f"{H}/providers/retaindb").status_code == 502
+    env.dash.state._state.setdefault("forged", {})[("retaindb", "mode")] = {"kind": "select", "options": [{"value": "fast"}]}
+    assert env.put(f"{H}/providers/retaindb", json={**base, "values": {"mode": "deep"}}).status_code == 422
+    env.dash.state._state.setdefault("forged", {})[("retaindb", "mode")] = {"kind": "select", "options": [{"value": "deep", "label": "x" * 500}]}
+    assert len(env.get(f"{H}/providers/retaindb").json()["fields"][2]["options"][0]["label"]) <= 200
+    for values in ({"api_key": KEY, "project": "x" * 5000}, {"budget": "viel"}, {"budget": True}, {"mapping": "kein json"}, {"mapping": "[1"}, {"mapping": "7"}, {"cache": "vielleicht"}):
+        assert env.put(f"{H}/providers/retaindb", json={"values": {**base["values"], **values}}).status_code == 422, values
+
+
+def test_provider_overview_names_labels_and_docs_links(env):
+    p = providers(env)
+    assert p["retaindb"]["label"] == "RetainDB" and p["retaindb"]["docs_url"].startswith("https://retaindb.com")
+    assert "url" not in json.dumps(p["retaindb"]).replace("docs_url", "")
 
 
 def test_configuring_a_provider_stores_the_key_and_activates_it_once_it_is_ready(env):
-    r = env.put(f"{H}/providers/retaindb", json={"values": {"api_key": KEY, "project": "demo", "mode": "deep"}})
+    r = env.put(f"{H}/providers/retaindb", json={"values": {"api_key": KEY, "project": "demo", "mode": "deep", "cache": True, "budget": 5, "mapping": "{\"titel\": \"name\"}"}})
     assert r.status_code == 200 and r.json() == {"ok": True, "active": "retaindb"} and KEY not in r.text
     assert env.dash.state.profiles["default"]["env"]["RETAINDB_API_KEY"] == KEY
     assert env.get(H).json()["active"] == "retaindb" and providers(env)["retaindb"]["status"] == "ready"

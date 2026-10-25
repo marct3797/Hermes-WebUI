@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ApiError, api } from "../api";
 import { Icon } from "../components/Icon";
 import { PageHead } from "../components/PageHead";
-import { StepUpNote, webUrl } from "../components/providers/StepUpNote";
+import { StepUpNote } from "../components/providers/StepUpNote";
 import type { AgentRef, HmField, HmFileName, HmOverview, HmProvider } from "../types";
 import { t } from "../i18n";
 
@@ -184,7 +184,7 @@ function Provider({ agent, p, active, onChanged }: { agent: AgentRef; p: HmProvi
   return (
     <section className="card tool-panel" role="region" aria-label={`Anbieter ${p.name}`}>
       <div className="row" style={{ gap: 8 }}>
-        <b>{p.name}</b>
+        <b>{p.label ?? p.name}</b>
         <span className="tag">{STATUS[p.status ?? ""] ?? p.status}</span>
         {active && <span className="tag tag-c">{t("aktiv")}</span>}
         <span className="grow" />
@@ -208,33 +208,72 @@ function Provider({ agent, p, active, onChanged }: { agent: AgentRef; p: HmProvi
 
 function Fields({ agent, name, onSaved }: { agent: AgentRef; name: string; onSaved: () => void }) {
   const [fields, setFields] = useState<HmField[]>();
-  const [edits, setEdits] = useState<Record<string, string>>({});
+  const [meta, setMeta] = useState<{ label?: string | null; docs_url?: string | null }>({});
+  const [edits, setEdits] = useState<Record<string, string | boolean>>({});
   const [version, setVersion] = useState(0);
   const { run, busy, notes } = useAction();
-  useEffect(() => { void api.hmFields(agent, name).then((r) => setFields(r.fields), () => setFields([])); }, [agent.host, agent.runtime, agent.agent, name, version]); // eslint-disable-line react-hooks/exhaustive-deps
-  const changed = (fields ?? []).filter((f) => edits[f.key] !== undefined && (f.kind === "secret" ? edits[f.key].trim() !== "" : edits[f.key] !== (f.value ?? "")));
+  useEffect(() => { void api.hmFields(agent, name).then((r) => { setFields(r.fields); setMeta({ label: r.label, docs_url: r.docs_url }); }, () => setFields([])); }, [agent.host, agent.runtime, agent.agent, name, version]); // eslint-disable-line react-hooks/exhaustive-deps
+  const changed = (fields ?? []).filter((f) => {
+    const cur = edits[f.key];
+    if (cur === undefined) return false;
+    if (f.kind === "secret") return typeof cur === "string" && cur.trim() !== "";
+    if (f.kind === "bool") return cur !== Boolean(f.value);
+    return String(cur) !== String(f.value ?? "");
+  });
+  const groups = (() => {
+    const order: string[] = [];
+    for (const f of fields ?? []) if (f.group && !order.includes(f.group)) order.push(f.group);
+    return ["", ...order];
+  })();
+  const inGroup = (g: string) => (fields ?? []).filter((f) => (f.group ?? "") === g);
   if (!fields) return <p className="muted small">{t("Lade…")}</p>;
+  const docs = meta.docs_url && /^https?:\/\//.test(meta.docs_url) ? meta.docs_url : null;
   return (
-    <form className="prov-form" onSubmit={async (e) => { e.preventDefault(); if (await run(() => api.hmSave(agent, name, Object.fromEntries(changed.map((f) => [f.key, f.kind === "secret" ? edits[f.key].trim() : edits[f.key]]))))) { setEdits({}); setVersion((v) => v + 1); onSaved(); } }}>
-      {fields.map((f) => {
-        const id = `hm-${name}-${f.key}`, link = webUrl(f.url ?? undefined);
-        return (
-          <div className="pf-fld" key={f.key}>
-            <label htmlFor={id}>{f.label ?? f.key}</label>
-            <div className="row" style={{ gap: 8 }}>
-              {f.kind === "select"
-                ? <select id={id} className="pf-in grow" value={edits[f.key] ?? f.value ?? ""} onChange={(e) => setEdits({ ...edits, [f.key]: e.target.value })}>{f.options.map((o) => <option key={o.value} value={o.value}>{o.label ?? o.value}</option>)}</select>
-                : <input id={id} className="pf-in mono grow" type={f.kind === "secret" ? "password" : "text"} autoComplete="off" spellCheck={false} value={edits[f.key] ?? (f.kind === "secret" ? "" : f.value ?? "")}
-                    placeholder={f.kind === "secret" && f.is_set ? t("Neuen Wert einfügen, um ihn zu ersetzen") : f.placeholder ?? ""} onChange={(e) => setEdits({ ...edits, [f.key]: e.target.value })} />}
-              {f.kind === "secret" && <span className={`tag${f.is_set ? " tag-c" : ""}`}>{f.is_set ? t("gesetzt") : t("nicht gesetzt")}</span>}
-            </div>
-            {f.description && <span className="hint">{f.description}</span>}
-            {link && <a className="hint" href={link} target="_blank" rel="noreferrer noopener">{t("Mehr beim Anbieter")}</a>}
-          </div>
-        );
-      })}
+    <form className="prov-form" onSubmit={async (e) => {
+      e.preventDefault();
+      const values: Record<string, string | boolean | number> = {};
+      for (const f of changed) {
+        const cur = edits[f.key];
+        values[f.key] = f.kind === "bool" ? Boolean(cur) : (typeof cur === "string" && f.kind === "secret" ? cur.trim() : cur as string | number);
+      }
+      if (await run(() => api.hmSave(agent, name, values))) { setEdits({}); setVersion((v) => v + 1); onSaved(); }
+    }}>
+      {groups.map((g) => inGroup(g).length > 0 && (
+        <fieldset key={g || "allgemein"} style={{ border: 0, padding: 0, margin: 0 }}>
+          {g && <legend className="muted small" style={{ padding: 0 }}>{g}</legend>}
+          {inGroup(g).map((f) => <FieldRow key={f.key} agent={agent} name={name} f={f} edit={edits[f.key]} setEdit={(v) => setEdits({ ...edits, [f.key]: v })} />)}
+        </fieldset>
+      ))}
+      {docs && <a className="hint" href={docs} target="_blank" rel="noreferrer noopener">{t("Mehr beim Anbieter")}{meta.label ? ` (${meta.label})` : ""}</a>}
       <div className="row" style={{ gap: 8 }}><button type="submit" className="btn btn-s btn-p" disabled={busy || changed.length === 0}><Icon name="check" size={14} />{t("Speichern")}</button></div>
       {notes}
     </form>
+  );
+}
+
+function FieldRow({ agent, name, f, edit, setEdit }: { agent: AgentRef; name: string; f: HmField; edit: string | boolean | undefined; setEdit: (v: string | boolean) => void }) {
+  void agent; void name;
+  const id = `hm-${name}-${f.key}`;
+  const cur = edit ?? (f.kind === "bool" ? Boolean(f.value) : (f.kind === "secret" ? "" : String(f.value ?? "")));
+  const described = f.options.filter((o) => o.description);
+  return (
+    <div className="pf-fld" key={f.key}>
+      <label htmlFor={id}>{f.label ?? f.key}</label>
+      {f.info && <span className="hint">{f.info}</span>}
+      <div className="row" style={{ gap: 8 }}>
+        {f.kind === "select"
+          ? <select id={id} className="pf-in grow" value={String(cur)} onChange={(e) => setEdit(e.target.value)}>{f.options.map((o) => <option key={o.value} value={o.value}>{o.label ?? o.value}</option>)}</select>
+          : f.kind === "bool"
+            ? <input id={id} type="checkbox" checked={Boolean(cur)} onChange={(e) => setEdit(e.target.checked)} />
+            : <input id={id} className="pf-in mono grow" type={f.kind === "secret" ? "password" : f.kind === "number" ? "number" : "text"} autoComplete="off" spellCheck={false} value={String(cur)}
+                placeholder={f.kind === "secret" && f.is_set ? t("Neuen Wert einfügen, um ihn zu ersetzen") : f.placeholder ?? ""} onChange={(e) => setEdit(e.target.value)} />}
+        {f.kind === "secret" && <span className={`tag${f.is_set ? " tag-c" : ""}`}>{f.is_set ? t("gesetzt") : t("nicht gesetzt")}</span>}
+      </div>
+      {f.kind === "json" && <span className="hint">{t("Als Text: Objekt oder Liste in geschweiften oder eckigen Klammern.")}</span>}
+      {f.description && <span className="hint">{f.description}</span>}
+      {described.length > 0 && f.kind === "select" && (
+        <ul className="hint" style={{ margin: 0, paddingLeft: 16 }}>{described.map((o) => <li key={o.value}>{o.label ?? o.value} — {o.description}</li>)}</ul>
+      )}
+    </div>
   );
 }
