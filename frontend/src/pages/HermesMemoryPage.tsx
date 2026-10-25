@@ -11,7 +11,7 @@ const FILES = [["memory", "MEMORY.md"], ["user", "USER.md"]] as const;
 const MEM_NAMES: HmFileName[] = ["MEMORY.md", "USER.md"];
 const MEM_LIMIT = 262144;
 
-/** Faehigkeit des Hostes: Fehler eines Aufrufs als Text oder als Hinweis auf die frische Anmeldung. */
+/** Fähigkeit des Hosts: Fehler eines Aufrufs als Text oder als Hinweis auf die frische Anmeldung. */
 function useAction() {
   const [error, setError] = useState<string>();
   const [stepUp, setStepUp] = useState(false);
@@ -53,37 +53,34 @@ export function HermesMemoryPage({ agent, label }: { agent: AgentRef; label: str
   );
 }
 
-/** Hermes-Dateien (MEMORY.md, USER.md) lesen und bearbeiten. Inhalt kommt vom Host-Dienst, nicht vom Dashboard. */
+/** Hermes-Dateien (MEMORY.md, USER.md) lesen und bearbeiten. Der Inhalt kommt vom Host-Dienst, nicht vom Dashboard. */
 function MemFiles({ agent }: { agent: AgentRef }) {
-  const [missing, setMissing] = useState(false);
+  const [state, setState] = useState<"ok" | "old" | "nodaemon">("ok");
   const [failed, setFailed] = useState<string>();
   useEffect(() => {
     let stop = false;
-    api.hmFiles(agent).then(() => { if (!stop) { setMissing(false); setFailed(undefined); } },
+    api.hmFiles(agent).then(() => { if (!stop) { setState("ok"); setFailed(undefined); } },
       (e: Error) => {
         if (stop) return;
-        if (e instanceof ApiError && (e.status === 501 || e.status === 503)) setMissing(true);
+        if (e instanceof ApiError && e.status === 501) setState("old");
+        else if (e instanceof ApiError && e.status === 503) setState("nodaemon");
         else setFailed(e.message);
       });
     return () => { stop = true; };
   }, [agent.host, agent.runtime, agent.agent]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (missing) return (
-    <section className="card tool-panel" role="region" aria-label="Hermes-Dateien">
-      <b>Hermes-Dateien</b>
-      <p className="muted small" style={{ margin: 0 }}>Der Host-Dienst kennt diese Funktion nicht und ist vermutlich veraltet. Mit deploy/install-hostd.sh aktualisieren.</p>
-    </section>
-  );
-  if (failed) return (
-    <section className="card tool-panel" role="region" aria-label="Hermes-Dateien">
-      <b>Hermes-Dateien</b>
-      <p className="banner" role="alert"><Icon name="alert" /><span>{failed}</span></p>
-    </section>
-  );
+  const note = state === "old" ? t("Der Host-Dienst kennt diese Funktion nicht und ist vermutlich veraltet. Mit deploy/install-hostd.sh aktualisieren.")
+    : state === "nodaemon" ? t("Für diesen Host ist kein Host-Dienst eingerichtet. Ohne ihn lassen sich die Dateien nicht bearbeiten.") : null;
   return (
-    <section className="card tool-panel" role="region" aria-label="Hermes-Dateien">
-      <b>Hermes-Dateien</b>
-      <p className="muted small" style={{ margin: 0 }}>Einträge sind durch eine Zeile mit § getrennt. Änderungen gelten ab der nächsten Sitzung.</p>
-      {MEM_NAMES.map((name) => <MemCard key={name} agent={agent} name={name} />)}
+    <section className="card tool-panel" role="region" aria-label={t("Hermes-Dateien")}>
+      <b>{t("Hermes-Dateien")}</b>
+      {note && <p className="muted small" style={{ margin: 0 }}>{note}</p>}
+      {failed && <p className="banner" role="alert"><Icon name="alert" /><span>{failed}</span></p>}
+      {!note && !failed && (
+        <>
+          <p className="muted small" style={{ margin: 0 }}>{t("Einträge sind durch eine Zeile mit § getrennt. Änderungen gelten ab der nächsten Sitzung. Hermes begrenzt beide Dateien auf eine eigene Zeichenzahl (memory_char_limit und user_char_limit in der Konfiguration).")}</p>
+          {MEM_NAMES.map((name) => <MemCard key={name} agent={agent} name={name} />)}
+        </>
+      )}
     </section>
   );
 }
@@ -97,7 +94,7 @@ function MemCard({ agent, name }: { agent: AgentRef; name: HmFileName }) {
   const [conflict, setConflict] = useState(false);
   const [done, setDone] = useState<string>();
   const dirty = saved !== undefined && draft !== saved.content;
-  const tooLong = draft.length > MEM_LIMIT;
+  const tooLong = new TextEncoder().encode(draft).length > MEM_LIMIT;
   const load = useCallback(async () => {
     setError(undefined); setConflict(false);
     try {
@@ -114,13 +111,13 @@ function MemCard({ agent, name }: { agent: AgentRef; name: HmFileName }) {
   }, [dirty]);
   const save = async () => {
     if (!saved || !dirty || tooLong) return;
-    if (!window.confirm(t("{key} speichern", { key: name }))) return;
+    if (!window.confirm(t("{name} speichern?", { name }))) return;
     setBusy(true); setError(undefined); setStepUp(false); setConflict(false); setDone(undefined);
     try {
       const r = await api.hmSaveFile(agent, name, draft, saved.sha);
-      const f = await api.hmFile(agent, name);
+      const f = await api.hmFile(agent, name);   // erst nach dem Zurücklesen gilt es als gespeichert
       setSaved({ content: f.content, sha: f.sha256, size: f.size }); setDraft(f.content);
-      setDone(t("Gespeichert. Der bisherige Text liegt im Verlauf."));
+      setDone(r.backup ? t("Gespeichert. Die vorherige Fassung liegt als Sicherung neben der Datei.") : t("Gespeichert."));
     } catch (e) {
       if (e instanceof ApiError && e.code === "step_up_required") setStepUp(true);
       else if (e instanceof ApiError && e.status === 409) setConflict(true);
@@ -131,19 +128,18 @@ function MemCard({ agent, name }: { agent: AgentRef; name: HmFileName }) {
     <div className="pf-fld" role="region" aria-label={name}>
       <div className="row" style={{ gap: 8 }}>
         <b>{name}</b>
-        {saved && <span className="muted small">{t("{reason} · {chars} Zeichen", { reason: name, chars: saved.size.toLocaleString("de-DE") })}</span>}
+        {saved && <span className="muted small">{t("{n} Zeichen gespeichert", { n: saved.size.toLocaleString("de-DE") })}</span>}
         <span className="grow" />
         {conflict && <button type="button" className="btn btn-s btn-g" onClick={() => void load()}>{t("Neu laden")}</button>}
       </div>
-      <label className="hint" htmlFor={`hm-file-${name}`}>Inhalt von {name}</label>
-      <textarea id={`hm-file-${name}`} className="pf-in mono" rows={8} value={draft} spellCheck={false} aria-label={`Inhalt von ${name}`} onChange={(e) => setDraft(e.target.value)} />
+      <textarea id={`hm-file-${name}`} className="pf-in mono" rows={8} value={draft} spellCheck={false} aria-label={t("Inhalt von {name}", { name })} onChange={(e) => setDraft(e.target.value)} />
       <div className="row" style={{ gap: 8 }}>
-        <span className="hint">{t("{toLocaleString} / {toLocaleString2} Zeichen", { toLocaleString: draft.length.toLocaleString("de-DE"), toLocaleString2: MEM_LIMIT.toLocaleString("de-DE") })}</span>
+        <span className="hint">{t("{n} von {max} Zeichen", { n: draft.length.toLocaleString("de-DE"), max: MEM_LIMIT.toLocaleString("de-DE") })}</span>
         <span className="grow" />
         <button type="button" className="btn btn-s btn-p" disabled={busy || !dirty || tooLong} onClick={() => void save()}>{t("Speichern")}</button>
       </div>
-      {tooLong && <span className="hint" role="alert">{t("Der Inhalt ist größer als 200 KB")}</span>}
-      {conflict && <p className="banner" role="alert"><Icon name="alert" /><span>{t("SOUL.md wurde inzwischen geändert")}</span></p>}
+      {tooLong && <span className="hint" role="alert">{t("Der Inhalt ist größer als 256 KiB")}</span>}
+      {conflict && <p className="banner" role="alert"><Icon name="alert" /><span>{t("{name} wurde inzwischen geändert. Lade neu und speichere erneut.", { name })}</span></p>}
       {stepUp && <StepUpNote what={t("Diese Änderung")} />}
       {error && <p className="banner" role="alert"><Icon name="alert" /><span>{error}</span></p>}
       {done && <p className="muted small" role="status" style={{ margin: 0 }}>{done}</p>}
@@ -158,7 +154,7 @@ function Builtin({ agent, files, onChanged }: { agent: AgentRef; files: HmOvervi
   return (
     <section className="card tool-panel" role="region" aria-label={t("Eingebautes Gedächtnis")}>
       <b>{t("Eingebautes Gedächtnis")}</b>
-      <p className="muted small" style={{ margin: 0 }}>{t("Der Inhalt zeigt das Dashboard nicht, nur die Größe. Bearbeiten lässt sich die Datei im Hermes-Profil selbst.")}</p>
+      <p className="muted small" style={{ margin: 0 }}>{t("Das Dashboard liefert nur die Größe. Den Inhalt zeigt der Bereich „Hermes-Dateien“ weiter unten, wenn der Host-Dienst läuft.")}</p>
       {FILES.map(([key, name]) => (
         <div key={key} className="row" style={{ gap: 8 }}>
           <span className="grow">{t("{name}: {key} Bytes", { name, key: files[key] })}</span>

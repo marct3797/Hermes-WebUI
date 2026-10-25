@@ -23,7 +23,7 @@ describe("Hermes-Gedächtnis", () => {
     const b = await screen.findByRole("region", { name: "Eingebautes Gedächtnis" });
     expect(within(b).getByText("MEMORY.md: 120 Bytes")).toBeInTheDocument();
     expect(within(b).getByText("USER.md: 45 Bytes")).toBeInTheDocument();
-    expect(within(b).getByText(/Inhalt zeigt das Dashboard nicht/)).toBeInTheDocument();
+    expect(within(b).getByText(/Das Dashboard liefert nur die Größe/)).toBeInTheDocument();
   });
 
   it("names the program a provider is missing, but offers no way to install it", async () => {

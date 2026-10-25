@@ -28,7 +28,7 @@ describe("Hermes-Dateien", () => {
     await openMem();
     const ta = (await memText("MEMORY.md"));
     expect(ta.value).toContain("Eintrag eins");
-    expect(screen.getByText("28 / 262.144 Zeichen")).toBeInTheDocument();
+    expect(screen.getByText("28 von 262.144 Zeichen")).toBeInTheDocument();
     const save = screen.getAllByRole("button", { name: "Speichern" })[0];
     expect(save).toBeDisabled();
     fireEvent.change(ta, { target: { value: `${ta.value}Neu\n` } });
@@ -50,10 +50,10 @@ describe("Hermes-Dateien", () => {
     fireEvent.change(ta, { target: { value: "neu\n" } });
     vi.spyOn(window, "confirm").mockReturnValue(true);
     fireEvent.click(screen.getAllByRole("button", { name: "Speichern" })[1]);
-    await screen.findByText("SOUL.md wurde inzwischen geändert");
+    await screen.findByText("USER.md wurde inzwischen geändert. Lade neu und speichere erneut.");
     backend.dash.hm.memfiles.conflict = false;
     fireEvent.click(screen.getByRole("button", { name: "Neu laden" }));
-    await waitFor(() => expect(screen.queryByText("SOUL.md wurde inzwischen geändert")).toBeNull());
+    await waitFor(() => expect(screen.queryByText("USER.md wurde inzwischen geändert. Lade neu und speichere erneut.")).toBeNull());
     (window.confirm as unknown as { mockRestore: () => void }).mockRestore?.();
   });
 

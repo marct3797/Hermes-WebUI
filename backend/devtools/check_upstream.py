@@ -53,7 +53,7 @@ USED: dict[str, list[str]] = {
     ],
 }
 # Nicht Teil von Hermes: kommen aus diesem Repo (hostd, Kontingent-Plugin) und werden hier nicht gegen Hermes geprüft.
-OWN = {"hostd": "/v1/info /v1/auth /v1/terminals /v1/workspaces /v1/files /v1/files/write /v1/files/mkdir /v1/files/move /v1/files/download /v1/files/upload /v1/git /v1/search /v1/manage", "quota-plugin": "/api/plugins/ai-usage-tracker/usage"}
+OWN = {"hostd": "/v1/info /v1/auth /v1/terminals /v1/workspaces /v1/files /v1/files/write /v1/files/mkdir /v1/files/move /v1/files/download /v1/files/upload /v1/git /v1/search /v1/manage /v1/profiles/{}/memory-files /v1/profiles/{}/memory-files/{}", "quota-plugin": "/api/plugins/ai-usage-tracker/usage"}
 
 LITERAL = re.compile(r"""["'](/(?:api|v1)/[^"'\s]*)["']""")
 

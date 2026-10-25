@@ -6,6 +6,7 @@ absichtlich: die fehlenden Programme werden nur genannt. Zurücksetzen löscht o
 """
 from __future__ import annotations
 
+import hashlib
 import math
 from typing import Annotated, Any, Literal
 
@@ -139,6 +140,8 @@ async def mem_write(request: Request, target: Tgt, name: MemFile, req: MemFileIn
         raise _mem_err(exc) from exc
     if not isinstance(result, dict):
         raise HTTPException(502, "Der Host-Dienst liefert die Datei in einer unbekannten Form")
+    if result.get("sha256") != hashlib.sha256(req.content.encode()).hexdigest():  # Rücklesen: gespeichert ist nicht, was gesendet wurde
+        raise HTTPException(502, "Der Host-Dienst hat die Datei nicht wie gesendet gespeichert")
     audit(request, user, "hermes_memory.file", target, file=name, chars=len(req.content))
     return result
 

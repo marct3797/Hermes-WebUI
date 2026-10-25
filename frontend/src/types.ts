@@ -215,7 +215,7 @@ export type HmField = { key: string; label?: string; kind: string; description?:
 export type HmFileName = "MEMORY.md" | "USER.md";
 export type HmFileList = { files: Array<{ name: HmFileName; size: number; mtime: string; exists: boolean }> };
 export type HmFile = { name: HmFileName; content: string; sha256: string; size: number; mtime: string };
-export type HmFileSaved = { name: HmFileName; sha256: string; size: number; mtime: string; backup?: string };
+export type HmFileSaved = { name: HmFileName; sha256: string; size: number; mtime: string; backup?: boolean };
 
 /** Profil-Lebenszyklus und Betrieb: Namen kommen als Text vom Dashboard, Serverpfade nie. */
 export type LcEntry = { name: string; is_default?: boolean; has_env?: boolean };

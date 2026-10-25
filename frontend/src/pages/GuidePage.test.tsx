@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { resetRedirect } from "../api";
@@ -13,6 +13,7 @@ async function open(agents = ["gamma"]) {
   render(<App />);
   await screen.findByRole("heading", { name: "Anleitungen", level: 1 });
 }
+const card = (id: string) => within(screen.getByRole("region", { name: GUIDE.find((e) => e.id === id)!.title }));
 
 beforeEach(() => resetRedirect());
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
@@ -22,72 +23,71 @@ describe("GuidePage", () => {
     await open();
     expect(GUIDE.length).toBeGreaterThanOrEqual(8);
     for (const e of GUIDE) {
-      expect(screen.getByText(e.title)).toBeInTheDocument();
-      expect(screen.getByText(e.command)).toBeInTheDocument();
-      expect(screen.getByText(e.caution)).toBeInTheDocument();
+      const c = card(e.id);
+      expect(c.getByRole("heading", { name: e.title })).toBeInTheDocument();
+      expect(c.getByText(e.command)).toBeInTheDocument();
+      expect(c.getByText(e.caution)).toBeInTheDocument();
     }
   });
 
-  it("copies the command to the clipboard", async () => {
+  it("copies the command of the chosen entry to the clipboard", async () => {
     await open();
     const write = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("navigator", { clipboard: { writeText: write } });
-    const cards = screen.getAllByRole("button", { name: "Befehl kopieren" });
-    fireEvent.click(cards[0]);
-    await waitFor(() => expect(write).toHaveBeenCalledWith(GUIDE[0].command));
+    fireEvent.click(card("gateway").getByRole("button", { name: "Befehl kopieren" }));
+    await waitFor(() => expect(write).toHaveBeenCalledWith("hermes gateway migrate --dry-run"));
+    expect(await card("gateway").findByRole("button", { name: "Kopiert" })).toBeInTheDocument();
   });
 
-  it("check calls the recorded read route and shows success and failure", async () => {
+  it("check calls its own read route and shows the result", async () => {
     await open();
-    // WhatsApp-Eintrag: Messaging-Route aufrufen, Erfolg zeigen.
-    const checks = screen.getAllByRole("button", { name: "Ergebnis pruefen" });
-    fireEvent.click(checks[0]);
-    await screen.findByText("Telegram: disabled");
+    fireEvent.click(card("whatsapp").getByRole("button", { name: "Ergebnis prüfen" }));
+    await card("whatsapp").findByText("Telegram: disabled");
     expect(calls.some((c) => c.method === "GET" && c.url.endsWith("/messaging"))).toBe(true);
-    // Gateway-Eintrag: Fehler vom Dashboard wird sichtbar, nichts verschluckt.
+    expect(calls.some((c) => c.url.endsWith("/gateway"))).toBe(false);
+  });
+
+  it("shows a dashboard error instead of swallowing it", async () => {
+    await open();
     const f = vi.mocked(globalThis.fetch);
     const orig = f.getMockImplementation()!;
     f.mockImplementation(async (input: URL | RequestInfo, init?: RequestInit) =>
       String(input).endsWith("/gateway") && (init?.method ?? "GET") === "GET"
         ? new Response(JSON.stringify({ detail: "kaputt" }), { status: 502 })
         : orig(input, init));
-    const gw = GUIDE.findIndex((e) => e.id === "gateway");
-    fireEvent.click(screen.getAllByRole("button", { name: "Ergebnis pruefen" })[gw]);
-    await screen.findByRole("alert");
+    fireEvent.click(card("gateway").getByRole("button", { name: "Ergebnis prüfen" }));
+    expect(await card("gateway").findByRole("alert")).toHaveTextContent(/kaputt|Dashboard/);
   });
 
-  it("sends no POST/PUT/DELETE on open or on check", async () => {
+  it("sends no POST/PUT/DELETE on open or on any check", async () => {
     await open();
-    for (const b of screen.getAllByRole("button", { name: "Ergebnis pruefen" })) fireEvent.click(b);
-    await screen.findAllByText(/Backend|Gateway|Speicher|Modelle|MCP-Server|Hooks|Werkzeug|Dashboard|WhatsApp/);
+    for (const b of screen.getAllByRole("button", { name: "Ergebnis prüfen" })) fireEvent.click(b);
+    await waitFor(() => expect(screen.getAllByRole("status").length + screen.queryAllByRole("alert").length).toBeGreaterThan(0));
     expect(calls.some((c) => c.method !== "GET")).toBe(false);
+  });
+
+  it("entries without a read route link to the page that shows the result", async () => {
+    await open();
+    const env = card("env");
+    expect(env.queryByRole("button", { name: "Ergebnis prüfen" })).toBeNull();
+    expect(env.getByRole("link", { name: "/providers" })).toBeInTheDocument();
   });
 
   it("commands render as plain text in code, never as HTML", async () => {
     await open();
-    for (const e of GUIDE) {
-      const node = screen.getByText(e.command);
-      expect(node.tagName.toLowerCase()).toBe("code");
-    }
-    expect(document.body.innerHTML).not.toContain("dangerouslySetInnerHTML");
+    for (const e of GUIDE) expect(card(e.id).getByText(e.command).tagName.toLowerCase()).toBe("code");
+  });
+
+  it("commands are the verified ones (no invented subcommands)", () => {
+    expect(GUIDE.map((e) => e.command)).toEqual([
+      "hermes whatsapp", "hermes setup terminal", "hermes tools post-setup <schlüssel>", "hermes computer-use install",
+      "hermes update --check", "hermes gateway migrate --dry-run", "hermes hooks list", "hermes config env-path",
+      "hermes config edit", "hermes memory setup",
+    ]);
   });
 
   it("route /guide opens the page and the menu links exist", async () => {
     await open();
-    expect(screen.getByRole("heading", { name: "Anleitungen", level: 1 })).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: /Anleitungen/ }).length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("mutation probe: wrong check route breaks the test", async () => {
-    await open();
-    // Kernlogik kaputt machen: Gateway-Pruefung ruft die falsche Route.
-    const gw = GUIDE.find((e) => e.id === "gateway")!;
-    const orig = gw.run!;
-    gw.run = async () => ({ ok: true, text: "FALSCH" });
-    const idx = GUIDE.findIndex((e) => e.id === "gateway");
-    fireEvent.click(screen.getAllByRole("button", { name: "Ergebnis pruefen" })[idx]);
-    await screen.findByText("FALSCH");
-    expect(calls.some((c) => c.method === "GET" && c.url.endsWith("/gateway"))).toBe(false);
-    gw.run = orig;
   });
 });

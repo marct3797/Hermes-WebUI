@@ -121,7 +121,6 @@ export function SetupAssistantPage() {
 
   const doneCount = steps?.filter((s) => s.state === "done").length ?? 0;
   const allDone = steps !== null && steps.length === 5 && steps.every((s) => s.state === "done");
-  const showGuideText = typeof location !== "undefined" && location.pathname === "/assistant";
 
   return (
     <main className="page">
@@ -163,7 +162,7 @@ export function SetupAssistantPage() {
           <div className="row" style={{ gap: 8 }}>
             <Link to="/" className="btn btn-s btn-p">{t("Zum Cockpit")}</Link>
             <Link to="/settings" className="btn btn-s">{t("Zu den Einstellungen")}</Link>
-            {showGuideText && <span className="muted">{t("Anleitungen unter /guide")}</span>}
+            <Link to="/guide" className="btn btn-s">{t("Zu den Anleitungen")}</Link>
           </div>
         </section>
       )}

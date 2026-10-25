@@ -11,7 +11,7 @@ async function copyText(text: string): Promise<boolean> {
     await navigator.clipboard.writeText(text);
     return true;
   } catch {
-    // Rueckfall: Text zum Markieren auswaehlen (z. B. ohne Clipboard-Rechte).
+    // Rückfall ohne Zwischenablage-Rechte: Text in ein verstecktes Feld legen und kopieren.
     try {
       const ta = document.createElement("textarea");
       ta.value = text;
@@ -49,10 +49,10 @@ function Entry({ entry, agent }: { entry: GuideEntry; agent: AgentRef | null }) 
   };
 
   return (
-    <section className="card" aria-label={entry.title}>
-      <h2>{entry.title}</h2>
-      <p>{entry.purpose}</p>
-      <p className="muted">{entry.whyNot}</p>
+    <section className="card" aria-label={t(entry.title)}>
+      <h2>{t(entry.title)}</h2>
+      <p>{t(entry.purpose)}</p>
+      <p className="muted">{t(entry.whyNot)}</p>
       <pre><code>{entry.command}</code></pre>
       <div className="row">
         <button type="button" onClick={() => copyText(entry.command).then(setCopied)}>
@@ -60,13 +60,13 @@ function Entry({ entry, agent }: { entry: GuideEntry; agent: AgentRef | null }) 
         </button>
         {entry.run && (
           <button type="button" disabled={!agent || busy} onClick={check}>
-            {busy ? t("Pruefe…") : t("Ergebnis pruefen")}
+            {busy ? t("Prüfe …") : t("Ergebnis prüfen")}
           </button>
         )}
       </div>
-      <p className="muted">{entry.caution}</p>
+      <p className="muted">{t(entry.caution)}</p>
       {!entry.run && entry.linkHref && (
-        <p className="muted">{entry.linkLabel} <Link to={entry.linkHref}>{entry.linkHref}</Link></p>
+        <p className="muted">{t(entry.linkLabel ?? "")} <Link to={entry.linkHref}>{entry.linkHref}</Link></p>
       )}
       {result && <p role="status">{result}</p>}
       {failed && <p role="alert" className="error">{failed}</p>}
@@ -75,8 +75,8 @@ function Entry({ entry, agent }: { entry: GuideEntry; agent: AgentRef | null }) 
 }
 
 /**
- * Anleitungen fuer Funktionen, die bewusst nicht in der WebUI laufen:
- * erklaeren, exakten Befehl zeigen, Ergebnis ueber Lese-Routen pruefen. Kein POST/PUT/DELETE.
+ * Anleitungen für Funktionen, die bewusst nicht in der WebUI laufen:
+ * erklären, exakten Befehl zeigen, Ergebnis über Lese-Routen prüfen. Kein POST/PUT/DELETE.
  */
 export function GuidePage({ agent }: { agent?: AgentRef | null }) {
   const { hosts } = useHosts();
@@ -88,7 +88,7 @@ export function GuidePage({ agent }: { agent?: AgentRef | null }) {
   })();
   return (
     <main className="page">
-      <PageHead title={t("Anleitungen")} sub={t("Auf dem Rechner ausfuehren")} />
+      <PageHead title={t("Anleitungen")} sub={t("Auf dem Rechner ausführen")} />
       {!fallback && <p className="muted" role="status">{t("Kein Agent verbunden. Befehle stehen trotzdem bereit.")}</p>}
       {GUIDE.map((entry) => <Entry key={entry.id} entry={entry} agent={fallback} />)}
     </main>

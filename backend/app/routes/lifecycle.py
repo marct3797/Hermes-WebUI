@@ -185,10 +185,11 @@ async def import_upload(request: Request, target: Tgt, dash: Dash, archive: Uplo
         with os.fdopen(fd, "wb") as tmp:
             tmp.write(data)
         try:
-            result = await upstream(dash.request("POST", "/api/profiles/import", body={"archive": tmp_name, **({"name": want} if want else {})}))
+            result = await upstream(dash.request("POST", "/api/profiles/import", body={"archive": tmp_name, **({"name": want} if want else {})}, missing=NOT_SHARED))
         except HTTPException as e:
-            if e.status_code == 404 or e.status_code == 422 or (e.status_code == 502 and "file" in str(e.detail).lower()):
-                raise HTTPException(502, NOT_SHARED)
+            # 404 heißt hier: das Dashboard findet die Archivdatei nicht (unbekannte Route wäre 501); andere Fehler bleiben, wie sie sind
+            if e.status_code == 404:
+                raise HTTPException(502, NOT_SHARED) from None
             raise
     finally:
         try:
@@ -198,12 +199,7 @@ async def import_upload(request: Request, target: Tgt, dash: Dash, archive: Uplo
     got = result.get("name") if isinstance(result, dict) else None
     if not got or (want and got != want):
         raise HTTPException(502, "Das Dashboard hat den Import nicht wie erwartet angelegt")
-    try:
-        after = await upstream(dash.request("GET", "/api/profiles", missing=NOT_SHARED))
-    except HTTPException as e:
-        if e.status_code in (404, 422) or (e.status_code == 502 and "file" in str(e.detail).lower()):
-            raise HTTPException(502, NOT_SHARED)
-        raise
+    after = await upstream(dash.request("GET", "/api/profiles"))
     rows = after.get("profiles") if isinstance(after, dict) else []
     if not any(isinstance(p, dict) and p.get("name") == got for p in rows or []):
         raise HTTPException(502, NOT_SHARED)

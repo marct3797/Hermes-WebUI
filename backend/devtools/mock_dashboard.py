@@ -243,17 +243,13 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
 
     @app.get("/api/profiles")
     async def list_profiles(request: Request):
-        hidden = getattr(app.state, "drop_readback", [])
-        rows = [n for n in state if n not in hidden]
-        if set(rows) != set(state):
-            app.state.drop_readback = []
-            raise HTTPException(404, "profile not found")
+        hidden = getattr(app.state, "drop_readback", [])  # Tests: das Dashboard meldet Erfolg, listet das Profil aber nicht
         return {"profiles": [
             {"name": n, "path": f"/opt/data/profiles/{n}", "is_default": n == "default", "model": p["model"], "provider": p["provider"],
              "has_env": True, "skill_count": 12, "gateway_running": False, "description": p["description"],
              "description_auto": p["description_auto"], "distribution_name": None, "distribution_version": None,
              "distribution_source": None, "has_alias": False}
-            for n, p in state.items()
+            for n, p in state.items() if n not in hidden
         ]}
 
     app.state.profiles.setdefault("beta", {"soul": "# Beta\n", "provider": "nous", "model": "claude-test", "description": "", "description_auto": True, "env": {}, "memory": {"active": "", "files": {"memory": 10, "user": 0}, "cfg": {}, "installed": set()}, "channels": False, "gateway_running": False})

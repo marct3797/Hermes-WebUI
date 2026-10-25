@@ -67,6 +67,9 @@ def mem_hostd(*, old=False, fail=None):
             raise HTTPException(422, "bad")
         app.state.files[profile][name] = body["content"]
         d = doc(profile, name)
+        if app.state.fail == "lie":  # hostd meldet Erfolg, speichert aber etwas anderes
+            app.state.files[profile][name] = body["content"] + "x"
+            d = doc(profile, name)
         return {**d, "backup": "MEMORY.md.bak-1"}
     return app
 
@@ -168,3 +171,16 @@ def test_alter_hostd_501(tmp_path, make_settings, monkeypatch):
 def test_fehler_enthalten_keinen_pfad(env):
     r = env.get(f"{H}/files/MEMORY.md")
     assert "/home" not in r.text and "/profiles" not in r.text
+
+
+@pytest.fixture
+def lie_env(tmp_path, make_settings, monkeypatch):
+    monkeypatch.setenv("TEST_HOSTD", TOKEN)
+    yield from logged(tmp_path, make_settings, mem_hostd(fail="lie"))
+
+
+def test_schreiben_prueft_den_hash_der_antwort(lie_env):
+    cur = lie_env.get(f"{H}/files/MEMORY.md").json()
+    r = lie_env.put(f"{H}/files/MEMORY.md", json={"content": "neu\n", "expected_sha256": cur["sha256"]})
+    assert r.status_code == 502 and "nicht wie gesendet" in r.text
+    assert not lie_env.audit_file.exists() or "hermes_memory.file" not in lie_env.audit_file.read_text()
