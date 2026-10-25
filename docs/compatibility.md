@@ -48,11 +48,11 @@ Welche Hermes-Funktionen die WebUI abbildet und welche nicht (390 Routen, Funkti
 | Zeitpläne, Logs | Dashboard | Pfad vorhanden |
 | Kanban | Kanban-Plugin | Pfad vorhanden |
 | Kontingente | Kontingent-Plugin | nur mit installiertem Plugin; ohne es „nicht eingerichtet“ |
-| Terminal, Dateien, Git, Suche, CLI-Anmeldung | hostd | Die hostd-Tests laufen in CI auf Ubuntu. **Nicht in CI:** die systemd-Installation (`deploy/install-hostd.sh`), macOS (in `hostd/README.md` genannt) und die zwei Integrationstests mit echten CLIs (übersprungen, sofern die CLIs fehlen) |
+| Terminal, Dateien, Git, Suche, CLI-Anmeldung | hostd | CI läuft auf Ubuntu und macOS; die systemd-Installation (`deploy/install-hostd.sh`) läuft nicht in CI, und zwei Integrationstests mit echten CLIs werden übersprungen, sofern die CLIs fehlen |
 | Gedächtnis | Anbieter vom Typ `hindsight` | **nur Hindsight.** Andere Gedächtnis-Plugins von Hermes sind nicht angebunden (offen) |
 | Wissen | `hermes-rag` | nur dieser Typ |
 | Räume (Gruppenchats) | Gateway je Teilnehmer | Pfad vorhanden |
-| Geführter Einrichtungs-Assistent | | Terminal-Skript `deploy/setup.py` (Gateway, Dashboard, Anmeldung, Step-up, ausgeblendete Anbieter, Verbindungsprüfung). Kein Browser-Assistent, mit Absicht |
+| Geführter Einrichtungs-Assistent | | Terminal-Skript `deploy/setup.py` (Gateway, Dashboard, Anmeldung, Step-up, ausgeblendete Anbieter, Verbindungsprüfung) plus Browser-Seite `/assistant` (Host prüfen, Anbieter verlinken, ersten Chat öffnen) |
 
 ## Hermes-Einstellungen: was die Seite zusichert und was nicht
 

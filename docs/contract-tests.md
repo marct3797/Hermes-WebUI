@@ -1,7 +1,8 @@
 # Vertragstests gegen echte Antwortformen
 
 Mocks wichen mehrfach von Hermes ab (z. B. `schedule` kommt als Objekt). Deshalb liegen bereinigte, echte Antworten in
-`backend/tests/fixtures/real/` und `frontend/src/fixtures/real/` (gleiche Dateien). Tests laden sie, statt Formen zu erfinden.
+`backend/tests/fixtures/real/` (Dashboard 0.22.5, Host-Dienst, Aufträge, Anbieter) und teils auch in `frontend/src/fixtures/real/`
+(Chroma, RAG, Host-Dienst, Aufträge, Anbieter). Tests laden sie, statt Formen zu erfinden.
 
 ## Aufnehmen
 1. Im Browser anmelden, das Session-Cookie aus den Entwicklerwerkzeugen kopieren.
