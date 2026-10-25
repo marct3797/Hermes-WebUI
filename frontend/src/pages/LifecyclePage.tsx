@@ -28,13 +28,13 @@ function useAction() {
     try { await fn(); return true; }
     catch (e) {
       if (e instanceof ApiError && e.code === "step_up_required") setStepUp(true);
-      else if (e instanceof ApiError && (e.status === 501)) setMissing(true);
+      else if (e instanceof ApiError && e.status === 501) { setMissing(true); setError(e.message); } // die Meldung des BFF unterscheidet „kein Dashboard“ von „Hermes zu alt“
       else setError((e as Error).message);
       return false;
     }
     finally { setBusy(false); }
   };
-  const notes = <>{stepUp && <StepUpNote what="Diese Änderung" />}{missing && <p className="banner" role="alert"><Icon name="alert" /><span>Für diesen Host ist kein Dashboard eingerichtet.</span></p>}{error && <p className="banner" role="alert"><Icon name="alert" />{error}</p>}</>;
+  const notes = <>{stepUp && <StepUpNote what="Diese Änderung" />}{error && <p className="banner" role="alert"><Icon name="alert" />{error}</p>}</>;
   return { run, busy, notes, setError, missing };
 }
 
@@ -50,12 +50,11 @@ export function LifecyclePage({ agent, label }: { agent: AgentRef; label: string
   const [loadMissing, setLoadMissing] = useState(false);
   const load = useCallback(() => api.lcList(agent).then(
     (r) => { setProfiles(r.profiles); setActive(r.active); setLoadError(undefined); setLoadMissing(false); },
-    (e: Error) => { if (e instanceof ApiError && e.status === 501) { setLoadMissing(true); return; } setLoadError(e.message); }), [agent.host, agent.runtime, agent.agent]); // eslint-disable-line react-hooks/exhaustive-deps
+    (e: Error) => { if (e instanceof ApiError && e.status === 501) setLoadMissing(true); setLoadError(e.message); }), [agent.host, agent.runtime, agent.agent]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { void load(); }, [load]);
   return (
     <main className="page">
       <PageHead title="Profile & Betrieb" sub={label} />
-      {loadMissing && <p className="banner" role="alert"><Icon name="alert" /><span>Für diesen Host ist kein Dashboard eingerichtet.</span></p>}
       {loadError && <p className="banner" role="alert"><Icon name="alert" />{loadError}</p>}
       {!profiles && !loadError && !loadMissing && <p className="muted">Lade…</p>}
       {profiles && <Create agent={agent} onDone={() => void load()} />}

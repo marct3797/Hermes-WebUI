@@ -193,7 +193,7 @@ export type DashState = {
   ep: { backend: string; endpoints: Array<{ id: string; name: string; base_url: string; model: string; hasKey: boolean }>; current: string };
   lcProfiles: string[]; lcActive: string; // Profil-Lebenszyklus: Namen als Text, nie Serverpfade
   p3: { pool: Array<{ provider: string; entries: Array<{ index: number; label: string; source: string; token_tail: string }> }>; voiceOn: boolean; paused: boolean; nodes: Record<string, string>; theme: string; font: string;
-    metrics: { enabled: boolean; send: boolean; decided: boolean; managed: boolean }; unlocked: boolean; workers: Array<{ run_id: number; task_id: string }>; spawnNone?: boolean; stale?: boolean; cuMissing?: boolean; cuNotReady?: boolean; };
+    metrics: { enabled: boolean; send: boolean; decided: boolean; managed: boolean }; unlocked: boolean; workers: Array<{ run_id: number; task_id: string }>; spawnNone?: boolean; stale?: boolean; cuMissing?: boolean; cuNotReady?: boolean; old501?: string; };
 };
 
 const TOOL_CATALOG = [
@@ -474,6 +474,7 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
     if (method !== "GET" && dash.stepUp) return json(stepUpBody, 401);
     const qs = new URL(rest, "http://bff").searchParams;
     if (path === "/hermes-credentials" && method === "GET") return json({ providers: x.pool });
+    if (path === "/hermes-credentials" && method === "POST" && x.old501) return json({ detail: x.old501 }, 501);
     if (path === "/hermes-credentials" && method === "POST") {
       const row = x.pool.find((p) => p.provider === body?.provider) ?? (x.pool.push({ provider: String(body?.provider), entries: [] }), x.pool[x.pool.length - 1]);
       row.entries.push({ index: row.entries.length + 1, label: String(body?.label ?? ""), source: "manual", token_tail: String(body?.api_key).slice(-4) }); return json({ ok: true, count: row.entries.length });

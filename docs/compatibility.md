@@ -66,3 +66,45 @@ Welche Hermes-Funktionen die WebUI abbildet und welche nicht (390 Routen, Funkti
 - **Wirkung:** Hermes meldet nicht, ob eine Einstellung sofort, für neue Sitzungen oder erst nach einem Neustart gilt. Die Seite sagt das
   und behauptet nichts anderes.
 - Listen werden als JSON bearbeitet. Schlüssel, die im Schema fehlen (z. B. `custom_providers`), bleiben unberührt.
+
+## Mehrere Hermes-Versionen (gemessen mit `devtools/compat_matrix.py`)
+
+```
+cd backend
+python -m devtools.compat_matrix /pfad/zu/hermes-agent v2026.8.13 v2026.9.24 v0.21.6 v0.22.5   # Tags aufsteigend
+```
+
+Das Werkzeug holt den Quelltext jedes Tags mit `git archive` (nur lesend) und prüft, ob jeder von der WebUI genutzte Pfad dort vorkommt. Gemessen wurden 44 Stände von `v2026.3.12` bis `v0.22.5`.
+
+| Hermes-Stand | fehlende Pfade (von den genutzten) |
+|---|---:|
+| v2026.4.30 (Hermes 0.12.0) | 124 |
+| v2026.6.19 (0.17.0) | 26 |
+| v2026.7.20 (0.19.0) | 13 |
+| v2026.8.13 (0.20.1) | 8 |
+| v2026.9.7 (0.21.1) | 6 |
+| v2026.9.24 (0.21.5) | 4 |
+| v0.21.6, v0.21.7, v0.22.0 | 3 |
+| v0.22.1, v0.22.3, v0.22.4 | 2 |
+| v0.22.2 | 3 |
+| v0.22.5 | 0 |
+
+**Ab welcher Version gibt es welche Funktion** (erste Version, in der der Pfad vorkommt):
+
+| Funktion | Pfad | ab |
+|---|---|---|
+| Delegation (Seite „Eigene Endpunkte“) | `/api/delegation/routing`, `/api/delegation/backend` | v0.22.5 |
+| Rückfragen des Agenten beantworten | Gateway `/v1/runs/{}/clarify` | v0.22.3 |
+| Einwilligung für Metriken | `/api/shared-metrics/consent` | v0.21.6 |
+| Sprache: Live-Status | `/api/audio/voice-live/status` | v2026.9.14 |
+| Plugin-Katalog | `/api/dashboard/plugins/catalog` | v2026.9.11 |
+| Lokale Modelle, Skills-Hub (offiziell) | `/api/local-models/status`, `/api/skills/hub/official` | v2026.9.7 |
+| Profil-Import, Steuern eines Laufs | `/api/profiles/import`, Gateway `/v1/runs/{}/steer` | v2026.8.13 |
+
+Vor `v2026.8.13` fehlen weitere Gruppen (u. a. Gesundheit, Egress, Aufwandsschätzung im Kanban, Lerngraph, eigene Endpunkte, Mixture of Agents); dort ist die WebUI nicht sinnvoll nutzbar.
+
+**Verhalten bei einer älteren Version.** Kennt das Dashboard eine Route nicht (Hermes antwortet `404 No such API endpoint: …`, in allen geprüften Ständen ab `v2026.7.20` vorhanden), meldet das BFF `501` mit „Diese Hermes-Version kennt <Pfad> nicht. Hermes aktualisieren“, statt „404“ oder „502“. Fehlende Ressourcen (`skill 'x' not found`) bleiben `404` mit ihrem eigenen Text. Plugin-Routen (`/api/plugins/…`) behalten ihre Meldung „Plugin nicht installiert“.
+
+**Was das nicht belegt.** Es prüft nur, ob der Pfad existiert. Ob die Antworten dieselbe Form haben, belegen nur die Vertragstests, und die laufen ausschließlich gegen Hermes 0.22.5 (`tests/fixtures/real/hermes_0_22_5_dashboard.json`). Für andere Versionen sind Formen **nicht** geprüft; das BFF prüft Formen selbst und meldet 502 bei Abweichung, statt zu raten. Die Gateway-Route für Rückfragen (aiohttp) hat keinen „No such API endpoint“-Text und wird bei älteren Ständen nicht gesondert erklärt.
+
+**Offene Entscheidung: Mindestversion.** Vorschlag: Hermes **0.21.6** (die älteste stabile Version der Messung mit nur drei fehlenden Pfaden). Dort fehlen nur Delegation (ab 0.22.5) und Rückfragen (ab 0.22.3); beides endet in einer verständlichen Meldung. Darunter wächst die Zahl der Lücken, ohne dass die WebUI sie bisher je gegen eine echte Installation dieser Version gesehen hat.

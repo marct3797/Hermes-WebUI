@@ -58,6 +58,15 @@ class CacheCfg:
         self.cache, self.models_ttl, self.state_ttl, self.stale_max = cache, models_ttl, state_ttl, stale_max
 
 
+def _route_unknown(res: httpx.Response) -> bool:
+    """Hermes beantwortet eine unbekannte API-Route mit „No such API endpoint“ (seit v2026.7.20 gemessen); fehlende Ressourcen haben eigene Texte."""
+    try:
+        d = res.json().get("detail")
+    except (ValueError, AttributeError):
+        return False
+    return isinstance(d, str) and d.startswith("No such API endpoint")
+
+
 class DashboardClient:
     def __init__(self, cfg: DashboardCfg, http: httpx.AsyncClient, caching: CacheCfg | None = None):
         self._cfg, self._http, self._caching = cfg, http, caching
@@ -93,6 +102,8 @@ class DashboardClient:
         if res.status_code == 400 and "Invalid Host header" in res.text[:300]:
             raise UpstreamError(502, f"Das Dashboard lehnt den Rechnernamen im Host-Header ab (Hermes ab 0.22 erlaubt nur 127.0.0.1 und localhost). {LOOPBACK_HINT}")
         if res.status_code == 404:
+            if _route_unknown(res) and not path.startswith("/api/plugins/"):  # Plugin-Routen behalten ihre eigene Meldung („Plugin nicht installiert“)
+                raise UpstreamError(501, f"Diese Hermes-Version kennt {path} nicht. Hermes aktualisieren (Mindestversion: docs/compatibility.md).")
             raise UpstreamError(404, missing or "Das Dashboard kennt dieses Profil nicht")
         if res.status_code >= 400:
             why = ""

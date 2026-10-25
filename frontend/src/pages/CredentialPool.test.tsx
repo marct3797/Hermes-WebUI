@@ -51,4 +51,16 @@ describe("Schlüssel-Pools", () => {
     await waitFor(() => expect(screen.queryByText(/privat \(manual\)/)).toBeNull());
     expect(sent("DELETE", "/hermes-credentials/openrouter/1")[0].url).toContain("confirm=openrouter");
   });
+
+  it("shows the real reason when Hermes is too old, not a claim that no dashboard exists", async () => {
+    backend = installBackend(["gamma"]);
+    backend.dash.p3.old501 = "Diese Hermes-Version kennt /api/credentials/pool nicht. Hermes aktualisieren (Mindestversion: docs/compatibility.md).";
+    history.pushState(null, "", GO);
+    render(<App />);
+    await screen.findByText(/privat/);
+    type("Pool-Anbieter", "anthropic"); type("Pool-Schlüssel", "sk-geheim-1234");
+    fireEvent.click(screen.getByRole("button", { name: "Zum Pool hinzufügen" }));
+    await screen.findByText(/Diese Hermes-Version kennt \/api\/credentials\/pool nicht/);
+    expect(screen.queryByText(/kein Dashboard eingerichtet/)).toBeNull();
+  });
 });

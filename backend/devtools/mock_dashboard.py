@@ -202,6 +202,13 @@ class MemConfigBody(BaseModel):
 
 def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default", "beta", "eta"), drop_writes: bool = False, quota: dict[str, Any] | None = None, env_put_error: dict[str, Any] | None = None) -> FastAPI:
     app = FastAPI()
+    app.state.hidden = set()  # Pfade, die eine ältere Hermes-Version nicht kennt: Antwort wie Hermes (404 „No such API endpoint“)
+
+    @app.middleware("http")
+    async def old_hermes(request, call_next):
+        if request.url.path in app.state.hidden:
+            return JSONResponse({"detail": f"No such API endpoint: {request.url.path}"}, status_code=404)
+        return await call_next(request)
     app.state.env_put_error = env_put_error  # {"var": ..., "status": 500, "detail": "..."}: PUT /api/env scheitert für diese Variable
     state: dict[str, dict[str, Any]] = {
         name: {"soul": SOULS.get(name), "description": "", "description_auto": False, "provider": "anthropic", "model": "claude-test",

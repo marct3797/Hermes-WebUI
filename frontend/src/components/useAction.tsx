@@ -6,19 +6,17 @@ import { StepUpNote } from "./providers/StepUpNote";
 export function useAction() {
   const [error, setError] = useState<string>();
   const [stepUp, setStepUp] = useState(false);
-  const [missing, setMissing] = useState(false);
   const [busy, setBusy] = useState(false);
   const run = async (fn: () => Promise<unknown>): Promise<boolean> => {
-    setBusy(true); setError(undefined); setStepUp(false); setMissing(false);
+    setBusy(true); setError(undefined); setStepUp(false);
     try { await fn(); return true; }
     catch (e) {
       if (e instanceof ApiError && e.code === "step_up_required") setStepUp(true);
-      else if (e instanceof ApiError && e.status === 501) setMissing(true);
       else setError((e as Error).message);
       return false;
     }
     finally { setBusy(false); }
   };
-  const notes = <>{stepUp && <StepUpNote what="Diese Änderung" />}{missing && <p className="banner">Für diese Runtime ist kein Dashboard eingerichtet.</p>}{error && <p className="banner" role="alert">{error}</p>}</>;
+  const notes = <>{stepUp && <StepUpNote what="Diese Änderung" />}{error && <p className="banner" role="alert">{error}</p>}</>;
   return { run, notes, busy };
 }
