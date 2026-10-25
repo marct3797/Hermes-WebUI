@@ -10,6 +10,7 @@ dependencies = [
   "httpx>=0.27",
   "pydantic-settings>=2.4",
   "PyJWT[crypto]>=2.8",
+  "python-multipart>=0.0.9",  # Profil-Import (Formular-Upload); FastAPI bricht ohne es schon beim Start ab
 ]
 
 [project.optional-dependencies]

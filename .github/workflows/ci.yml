@@ -6,7 +6,9 @@ on:
 
 jobs:
   backend:
-    runs-on: ubuntu-latest
+    # macOS als zweite Plattform für das Backend; dort bisher nie gelaufen. hostd und der Container-Build bleiben auf Linux.
+    strategy: { fail-fast: false, matrix: { os: [ubuntu-latest, macos-latest] } }
+    runs-on: ${{ matrix.os }}
     defaults: { run: { working-directory: backend } }
     steps:
       - uses: actions/checkout@v4

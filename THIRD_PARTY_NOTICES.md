@@ -345,6 +345,7 @@ Bauwerkzeuge (Entwicklungsabhängigkeiten, u. a. `lightningcss` unter MPL-2.0) w
 | pydantic_core | 2.50.1 | MIT |
 | PyJWT | 2.15.1 | MIT |
 | python-dotenv | 1.2.4 | BSD-3-Clause |
+| python-multipart | 0.0.32 | Apache-2.0 |
 | PyYAML | 6.0.3 | MIT License |
 | starlette | 1.9.0 | BSD-3-Clause |
 | typing-inspection | 0.4.4 | MIT |
