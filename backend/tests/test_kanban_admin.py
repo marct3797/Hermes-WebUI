@@ -12,13 +12,17 @@ Schranken des BFF:
 - Board löschen archiviert nur (kein hartes Löschen aus der WebUI) und wird gegengelesen.
 Nicht durchgereicht: Orchestrierung schreiben, Profil-Metadaten schreiben, hartes Löschen von Boards.
 """
+import gzip
 import json
+import tempfile
+from pathlib import Path
 
 import httpx
 import pytest
 from fastapi.testclient import TestClient
 
 from app.auth import SESSION_COOKIE, User
+from app.fileexchange import NOT_ARCHIVE, NOT_SHARED
 from app.main import create_app
 from conftest import HDR, RouterTransport
 from devtools.mock_kanban import create_mock
@@ -110,11 +114,13 @@ def test_board_export_streams_archive(kb):
     stale(kb)
     assert kb.post(f"{B}/boards/alpha/export", json={}).status_code == 401
     fresh(kb)
+    before = set(Path(tempfile.gettempdir()).glob("tmp*.tar.gz"))
     r = kb.post(f"{B}/boards/alpha/export", json={"attachments": True, "logs": False})
     assert r.status_code == 200, r.text
-    assert r.content.startswith(b"KB-EXPORT:alpha")
+    assert r.content[:2] == b"\x1f\x8b" and gzip.decompress(r.content) == b"board:alpha"
     assert r.headers["content-type"] == "application/octet-stream"
     assert "alpha.tar.gz" in r.headers.get("content-disposition", "")
+    assert set(Path(tempfile.gettempdir()).glob("tmp*.tar.gz")) == before
     assert kb.post(f"{B}/boards/gibts-nicht/export", json={}).status_code == 404
 
 
@@ -123,10 +129,68 @@ def test_board_import_uploads_archive(kb):
     assert kb.post(f"{B}/boards/import", files={"archive": ("b.tar.gz", b"PK\x03\x04")}).status_code == 401
     fresh(kb)
     assert kb.post(f"{B}/boards/import", files={"archive": ("b.txt", b"kein archiv")}).status_code == 422
+    before = set(Path(tempfile.gettempdir()).glob("tmp*.tar.gz"))
     r = kb.post(f"{B}/boards/import", files={"archive": ("b.tar.gz", b"PK\x03\x04daten")})
     assert r.status_code == 201, r.text
     assert r.json() == {"ok": True, "board": "importiert"}
+    assert set(Path(tempfile.gettempdir()).glob("tmp*.tar.gz")) == before
     assert "b.tar.gz" not in kb.audit_file.read_text()  # nur Board-Name, keine Dateinamen im Audit
+
+
+def test_board_export_without_shared_fs_fails_502_and_cleans_tmp(kb, tmp_path, make_settings):
+    agent = {"id": "hermes", "base_url": "http://hermes.test", "api_key": "k", "multiplex": True, "agents": ["default"]}
+    f = tmp_path / "hosts2.json"
+    f.write_text(json.dumps({"hosts": [{"id": "ct", "runtimes": [{**agent, "dashboard": {"base_url": "http://dash2.test"}}]}]}))
+    mock = create_mock(shared_fs=False)
+    settings = make_settings(hosts_file=f, auth_mode="oidc", oidc_issuer="https://id.test", oidc_client_id="test",
+                             oidc_client_secret="test", oidc_allowed_sub="user", public_url="http://testserver",
+                             audit_file=tmp_path / "audit2.jsonl")
+    app = create_app(settings, transport=RouterTransport({"dash2.test": httpx.ASGITransport(app=mock)}))
+    before = set(Path(tempfile.gettempdir()).glob("tmp*.tar.gz"))
+    from app.auth import SESSION_COOKIE as _C, User as _U
+    with TestClient(app) as c2:
+        s = app.state.sessions.create(_U("user", "Test"))
+        s.auth_time = app.state.sessions.now()
+        c2.cookies.set(_C, s.id)
+        c2.headers.update(HDR)
+        r = c2.post(f"{B}/boards/alpha/export", json={})
+    assert r.status_code == 502, r.text
+    assert NOT_SHARED in r.text
+    assert set(Path(tempfile.gettempdir()).glob("tmp*.tar.gz")) == before
+
+
+def test_board_export_with_junk_archive_fails_502_and_cleans_tmp(kb):
+    kb.mock.state.export_junk = True
+    before = set(Path(tempfile.gettempdir()).glob("tmp*.tar.gz"))
+    try:
+        r = kb.post(f"{B}/boards/alpha/export", json={})
+    finally:
+        kb.mock.state.export_junk = False
+    assert r.status_code == 502, r.text
+    assert NOT_ARCHIVE in r.text
+    assert set(Path(tempfile.gettempdir()).glob("tmp*.tar.gz")) == before
+
+
+def test_board_import_without_shared_fs_fails_502_and_cleans_tmp(kb, tmp_path, make_settings):
+    agent = {"id": "hermes", "base_url": "http://hermes.test", "api_key": "k", "multiplex": True, "agents": ["default"]}
+    f = tmp_path / "hosts3.json"
+    f.write_text(json.dumps({"hosts": [{"id": "ct", "runtimes": [{**agent, "dashboard": {"base_url": "http://dash3.test"}}]}]}))
+    mock = create_mock(shared_fs=False)
+    settings = make_settings(hosts_file=f, auth_mode="oidc", oidc_issuer="https://id.test", oidc_client_id="test",
+                             oidc_client_secret="test", oidc_allowed_sub="user", public_url="http://testserver",
+                             audit_file=tmp_path / "audit3.jsonl")
+    app = create_app(settings, transport=RouterTransport({"dash3.test": httpx.ASGITransport(app=mock)}))
+    before = set(Path(tempfile.gettempdir()).glob("tmp*.tar.gz"))
+    from app.auth import SESSION_COOKIE as _C, User as _U
+    with TestClient(app) as c3:
+        s = app.state.sessions.create(_U("user", "Test"))
+        s.auth_time = app.state.sessions.now()
+        c3.cookies.set(_C, s.id)
+        c3.headers.update(HDR)
+        r = c3.post(f"{B}/boards/import", files={"archive": ("b.tar.gz", b"PK\x03\x04daten")})
+    assert r.status_code == 502, r.text
+    assert NOT_SHARED in r.text
+    assert set(Path(tempfile.gettempdir()).glob("tmp*.tar.gz")) == before
 
 
 def test_board_delete_archives_with_typed_slug(kb):

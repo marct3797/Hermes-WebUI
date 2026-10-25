@@ -14,6 +14,7 @@ from pydantic import Field
 
 from ..adapters import UpstreamError
 from ..auth import User, current_user, fresh_user, is_fresh
+from ..fileexchange import NOT_SHARED, read_archive
 from ._dash import dash, host_dash
 from .agents import to_http
 from .kanban import MISSING, NO_TASK, SLUG, TASK, HostId, Slug, Strict, TaskId, _bp, BoardQ, _rec
@@ -265,7 +266,7 @@ class BoardExport(Strict):
 async def board_export(request: Request, host: HostId, slug: Slug, body: BoardExport,
                        board: BoardQ = None, user: User = Depends(fresh_user)):
     _limit(request, user, "kanban-admin")
-    # Annahme wie beim Profil-Import: BFF und Dashboard teilen sich das Dateisystem (ein Rechner, ein hostd)
+    # BFF und Dashboard teilen sich das Dateisystem nur auf einem Rechner (ein hostd)
     fd, tmp = tempfile.mkstemp(suffix=".tar.gz")
     os.close(fd)
     try:
@@ -275,12 +276,7 @@ async def board_export(request: Request, host: HostId, slug: Slug, body: BoardEx
         archive = raw.get("archive") if isinstance(raw, dict) else None
         if not isinstance(archive, str) or archive != tmp:
             raise HTTPException(502, "Das Dashboard liefert kein lesbares Archiv zurück")
-        try:
-            if Path(tmp).stat().st_size > ARCHIVE_LIMIT:
-                raise HTTPException(502, "Das Board-Archiv ist zu groß für den Zwischenspeicher")
-            data = Path(tmp).read_bytes()
-        except OSError as e:
-            raise HTTPException(502, "Das Dashboard-Archiv lässt sich nicht lesen") from e
+        data = read_archive(tmp, ARCHIVE_LIMIT)
     finally:
         try:
             os.unlink(tmp)
@@ -317,6 +313,10 @@ async def board_import(request: Request, host: HostId, archive: UploadFile = Fil
     landed = raw.get("board") if isinstance(raw, dict) else None
     if not isinstance(landed, str) or not landed:
         raise HTTPException(502, "Das Dashboard hat das Board nicht angelegt")
+    cur = await dash(request, host, "GET", f"{P}/boards", missing=MISSING)
+    boards = cur.get("boards") if isinstance(cur, dict) else None
+    if not isinstance(boards, list) or not any(isinstance(b, dict) and b.get("slug") == landed for b in boards):
+        raise HTTPException(502, NOT_SHARED)
     _rec(request, user, "kanban.board.import", host, board=landed)
     return {"ok": True, "board": landed}
 

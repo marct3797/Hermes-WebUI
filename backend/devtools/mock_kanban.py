@@ -97,10 +97,11 @@ class Terminate(BaseModel):
     reason: Optional[str] = None
 
 
-def create_mock() -> FastAPI:
+def create_mock(shared_fs: bool = True) -> FastAPI:
     app = FastAPI()
     app.state.db = seed()
     app.state.fail = None
+    app.state.shared_fs = shared_fs
     app.state.calls = []  # (Methode, Pfad, Query, Body) jeder Anfrage, damit Tests prüfen, was wirklich ankam
     app.state.attach = {}  # aid -> {id, task_id, filename, size, content, uploaded_by, created_at, stored_path}
     ids = itertools.count(100)
@@ -424,18 +425,29 @@ def create_mock() -> FastAPI:
         return {"ok": True, "deleted": aid}
 
     @app.post("/api/plugins/kanban/boards/{slug}/export")
-    def boards_export(slug: str, body: dict):
+    def boards_export(slug: str, body: dict, request: Request):
         if slug not in app.state.db["boards"]:
             raise HTTPException(404, f"board {slug!r} does not exist")
         out = (body or {}).get("output") or f"/tmp/{slug}.tar.gz"
-        Path(out).write_bytes(b"KB-EXPORT:" + slug.encode())
+        if not request.app.state.shared_fs:
+            return {"archive": out, "board": slug, "tasks": len(app.state.db["boards"][slug]["tasks"]), "attachments": 0, "logs": 0}
+        if getattr(request.app.state, "export_junk", False):
+            Path(out).write_bytes("kein archiv".encode())
+        else:
+            import gzip
+            Path(out).write_bytes(gzip.compress(b"board:" + slug.encode()))
         return {"archive": out, "board": slug, "tasks": len(app.state.db["boards"][slug]["tasks"]), "attachments": 0, "logs": 0}
 
     @app.post("/api/plugins/kanban/boards/import")
-    def boards_import(body: dict):
+    def boards_import(body: dict, request: Request):
+        if not request.app.state.shared_fs:
+            return {"board": "importiert", "tasks": 2, "attachments": 1, "current": app.state.db["current"]}
         archive = (body or {}).get("archive", "")
         if not archive or not Path(archive).exists():
             raise HTTPException(404, f"archive not found: {archive}")
+        if "importiert" not in app.state.db["boards"]:
+            app.state.db["boards"]["importiert"] = {"meta": {"slug": "importiert", "name": "Importiert", "description": "", "icon": "",
+                "color": "", "archived": False, "db_path": "/x", "default_workdir": None}, "tasks": {}, "comments": {}, "runs": {}}
         return {"board": "importiert", "tasks": 2, "attachments": 1, "current": app.state.db["current"]}
 
     @app.delete("/api/plugins/kanban/boards/{slug}")
