@@ -44,6 +44,11 @@ def env(tmp_path, make_settings):
     yield from logged_in(tmp_path, make_settings, create_dashboard())
 
 
+@pytest.fixture
+def rot_env(tmp_path, make_settings):
+    yield from logged_in(tmp_path, make_settings, create_dashboard(shared_fs=False))
+
+
 def test_list_names_all_profiles_without_server_paths(env):
     body = env.get(H).json()
     assert {"default", "beta"} <= {p["name"] for p in body["profiles"]}
@@ -111,6 +116,24 @@ def test_import_takes_an_uploaded_archive_and_never_a_client_path(env):
     big = io.BytesIO(b"x" * (51 * 1024 * 1024))
     assert env.post(f"{H}/import", files={"archive": ("gross.tar.gz", big, "application/gzip")}).status_code == 413
     assert env.post(f"{H}/import", files={"archive": ("bild.png", io.BytesIO(b"nonsense"), "image/png")}).status_code == 422
+
+
+def test_import_denied_against_a_separate_dashboard_filesystem(rot_env):
+    """ROT: getrenntes Dateisystem -> 502 statt 201 (Ruecklesen schlaegt fehl)."""
+    import glob, tempfile
+    before = set(glob.glob(tempfile.gettempdir() + "/*.tar.gz"))
+    good = io.BytesIO(b"PK-test-archiv-0123456789")
+    r = rot_env.post(f"{H}/import", files={"archive": ("profil.tar.gz", good, "application/gzip")}, data={"name": "getrennt"})
+    assert r.status_code == 502 and "Dateisystem" in r.text and "getrennt" not in rot_env.dash.state.profiles
+    assert set(glob.glob(tempfile.gettempdir() + "/*.tar.gz")) == before  # keine Temp-Datei bleibt liegen
+
+
+def test_import_denied_when_the_dashboard_says_ok_but_the_profile_is_missing(env):
+    """Dashboard meldet Erfolg, Ruecklesen findet das Profil nicht -> 502."""
+    env.dash.state.drop_readback = ["verschwunden"]
+    good = io.BytesIO(b"PK-test-archiv-0123456789")
+    r = env.post(f"{H}/import", files={"archive": ("profil.tar.gz", good, "application/gzip")}, data={"name": "verschwunden"})
+    assert r.status_code == 502 and "Dateisystem" in r.text
 
 
 def test_export_answers_with_a_download_hint_and_never_the_archive_itself(env):

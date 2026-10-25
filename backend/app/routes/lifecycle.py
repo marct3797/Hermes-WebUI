@@ -179,11 +179,17 @@ async def import_upload(request: Request, target: Tgt, dash: Dash, archive: Uplo
     already_running({want} if want else set(), STAGING)
     import os
     import tempfile
+    from ..fileexchange import NOT_SHARED
     fd, tmp_name = tempfile.mkstemp(suffix=".tar.gz")
     try:
         with os.fdopen(fd, "wb") as tmp:
             tmp.write(data)
-        result = await upstream(dash.request("POST", "/api/profiles/import", body={"archive": tmp_name, **({"name": want} if want else {})}))
+        try:
+            result = await upstream(dash.request("POST", "/api/profiles/import", body={"archive": tmp_name, **({"name": want} if want else {})}))
+        except HTTPException as e:
+            if e.status_code == 404 or e.status_code == 422 or (e.status_code == 502 and "file" in str(e.detail).lower()):
+                raise HTTPException(502, NOT_SHARED)
+            raise
     finally:
         try:
             os.unlink(tmp_name)
@@ -192,6 +198,15 @@ async def import_upload(request: Request, target: Tgt, dash: Dash, archive: Uplo
     got = result.get("name") if isinstance(result, dict) else None
     if not got or (want and got != want):
         raise HTTPException(502, "Das Dashboard hat den Import nicht wie erwartet angelegt")
+    try:
+        after = await upstream(dash.request("GET", "/api/profiles", missing=NOT_SHARED))
+    except HTTPException as e:
+        if e.status_code in (404, 422) or (e.status_code == 502 and "file" in str(e.detail).lower()):
+            raise HTTPException(502, NOT_SHARED)
+        raise
+    rows = after.get("profiles") if isinstance(after, dict) else []
+    if not any(isinstance(p, dict) and p.get("name") == got for p in rows or []):
+        raise HTTPException(502, NOT_SHARED)
     audit(request, user, "hermes_profile.import", target, profile=got)
     return {"ok": True, "name": got}
 

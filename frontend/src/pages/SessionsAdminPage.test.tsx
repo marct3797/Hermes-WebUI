@@ -100,19 +100,22 @@ describe("Sitzungen verwalten", () => {
     await open();
     const payload = JSON.stringify({ sessions: [{ id: "n1", title: "Neu", messages: [] }] });
     const origText = File.prototype.text;
-    File.prototype.text = () => Promise.resolve(payload); // jsdom-File kennt .text() nicht, Browser schon
-    const file = new File([payload], "export.json", { type: "application/json" });
-    fireEvent.change(screen.getByLabelText("Exportdatei"), { target: { files: [file] } });
-    await screen.findByText("1 Sitzungen in der Datei.");
-    const btn = screen.getByRole("button", { name: "Jetzt importieren" });
-    expect(btn).toBeDisabled();
-    fireEvent.change(screen.getByLabelText("Anzahl bestätigen"), { target: { value: "2" } });
-    expect(btn).toBeDisabled();
-    fireEvent.change(screen.getByLabelText("Anzahl bestätigen"), { target: { value: "1" } });
-    fireEvent.click(btn);
-    await screen.findByText("1 Sitzungen importiert.");
-    expect(sent("POST", "/hermes-sessions/import")[0].body).toEqual({ sessions: [{ id: "n1", title: "Neu", messages: [] }], confirm_count: 1 });
-    File.prototype.text = origText;
+    try {
+      File.prototype.text = () => Promise.resolve(payload); // jsdom-File kennt .text() nicht, Browser schon
+      const file = new File([payload], "export.json", { type: "application/json" });
+      fireEvent.change(screen.getByLabelText("Exportdatei"), { target: { files: [file] } });
+      await screen.findByText("1 Sitzungen in der Datei.");
+      const btn = screen.getByRole("button", { name: "Jetzt importieren" });
+      expect(btn).toBeDisabled();
+      fireEvent.change(screen.getByLabelText("Anzahl bestätigen"), { target: { value: "2" } });
+      expect(btn).toBeDisabled();
+      fireEvent.change(screen.getByLabelText("Anzahl bestätigen"), { target: { value: "1" } });
+      fireEvent.click(btn);
+      await screen.findByText("1 Sitzungen importiert.");
+      expect(sent("POST", "/hermes-sessions/import")[0].body).toEqual({ sessions: [{ id: "n1", title: "Neu", messages: [] }], confirm_count: 1 });
+    } finally {
+      File.prototype.text = origText;
+    }
   });
 
   it("assigns old sessions to this profile", async () => {

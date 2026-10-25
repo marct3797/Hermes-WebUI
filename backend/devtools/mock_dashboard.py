@@ -200,9 +200,10 @@ class MemConfigBody(BaseModel):
     values: dict[str, Any] = {}
 
 
-def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default", "beta", "eta"), drop_writes: bool = False, quota: dict[str, Any] | None = None, env_put_error: dict[str, Any] | None = None) -> FastAPI:
+def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default", "beta", "eta"), drop_writes: bool = False, shared_fs: bool = True, quota: dict[str, Any] | None = None, env_put_error: dict[str, Any] | None = None) -> FastAPI:
     app = FastAPI()
     app.state.hidden = set()  # Pfade, die eine ältere Hermes-Version nicht kennt: Antwort wie Hermes (404 „No such API endpoint“)
+    app.state.shared_fs = shared_fs  # False: getrenntes Dateisystem (BFF und Dashboard teilen kein Dateisystem)
 
     @app.middleware("http")
     async def old_hermes(request, call_next):
@@ -241,7 +242,12 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
         return {**quota, "profile": profile}
 
     @app.get("/api/profiles")
-    async def list_profiles():
+    async def list_profiles(request: Request):
+        hidden = getattr(app.state, "drop_readback", [])
+        rows = [n for n in state if n not in hidden]
+        if set(rows) != set(state):
+            app.state.drop_readback = []
+            raise HTTPException(404, "profile not found")
         return {"profiles": [
             {"name": n, "path": f"/opt/data/profiles/{n}", "is_default": n == "default", "model": p["model"], "provider": p["provider"],
              "has_env": True, "skill_count": 12, "gateway_running": False, "description": p["description"],
@@ -316,6 +322,8 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
         if not arch.startswith(_tf.gettempdir() + "/"):
             raise HTTPException(422, "Nur Uploads ueber das BFF (temp-Datei), keine freien Pfade")
         name = str(body.get("name") or "rueck")
+        if not request.app.state.shared_fs:
+            raise HTTPException(404, "file not found")  # getrenntes Dateisystem: das Dashboard sieht die temp-Datei des BFF nicht
         state[name] = {"soul": None, "provider": "nous", "model": "claude-test", "description": "", "description_auto": True, "env": {}, "memory": {"active": "", "files": {"memory": 0, "user": 0}, "cfg": {}, "installed": set()}}
         return {"ok": True, "name": name}  # BFF meldet temp-Pfade; profile_calls bleibt leer als Beleg dafuer
 
