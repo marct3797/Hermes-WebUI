@@ -235,3 +235,15 @@ export type EpEndpoint = { id: string; name: string; base_url: string; model: st
 export type EpList = { endpoints: EpEndpoint[]; current: { provider?: string; model?: string; base_url?: string } };
 export type EpValidate = { ok: boolean; reachable: boolean; message: string; models: string[] };
 export type EpLocal = { enabled: boolean; runtime_installed: boolean; server_running: boolean; models: Array<{ id: string; name: string; size_bytes: number }> };
+
+// Punkt 9: Sitzungen verwalten (Inhalte der Sitzungen nie im Typ)
+export type SaStats = { total: number; active_store: number; archived: number; messages: number; by_source: Record<string, number> };
+export type SaPreview = { matched: number; skipped_open: number; sample: Array<{ id: string; title: string }> };
+
+// Punkt 10: Pairing und Webhooks (Codes und Secrets nie im Typ; das Secret gibt es nur in AcCreated, einmalig)
+export type AcPending = { platform: string; request_id: string; user_id: string; user_name: string; age_minutes: number };
+export type AcApproved = { platform: string; user_id: string; user_name: string };
+export type AcPairing = { pending: AcPending[]; approved: AcApproved[] };
+export type AcHook = { name: string; description: string; events: string[]; deliver: string; url: string; secret_set: boolean; enabled: boolean };
+export type AcHooks = { enabled: boolean; base_url: string; subscriptions: AcHook[] };
+export type AcCreated = { ok: boolean; name: string; url: string; secret: string };

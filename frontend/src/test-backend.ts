@@ -187,6 +187,8 @@ export type DashState = {
   msg: { available: boolean; enabled: Record<string, boolean>; env: Record<string, string>; gateway: { running: boolean; busy: boolean; sessions: number }; polls: number; applied: string[] }; // Messaging und Gateway
   hm: { available: boolean; active: string; files: { memory: number; user: number }; keySet: boolean; project: string; mode: string }; // Hermes-Gedächtnis
   tools: { available: boolean; enabled: Record<string, boolean>; keys: Record<string, string>; provider: Record<string, string>; model: string; installed: boolean }; // Werkzeug-Gruppen
+  ac: { pending: Array<{ platform: string; request_id: string; user_id: string; user_name: string }>; approved: Array<{ platform: string; user_id: string; user_name: string }>; hooksOn: boolean; hooks: Array<{ name: string; enabled: boolean }> };
+  sa: { sessions: Array<{ id: string; ageDays: number; messages: number; active?: boolean }> };
   ep: { backend: string; endpoints: Array<{ id: string; name: string; base_url: string; model: string; hasKey: boolean }>; current: string };
   lcProfiles: string[]; lcActive: string; // Profil-Lebenszyklus: Namen als Text, nie Serverpfade
 };
@@ -461,6 +463,57 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
     }
     return json({ detail: "Unbekannte Modell-Route" }, 404);
   }
+  if (path.startsWith("/hermes-pairing") || path.startsWith("/hermes-webhooks")) {
+    if (!dash.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
+    const ac = dash.ac;
+    if (method !== "GET" && dash.stepUp) return json(stepUpBody, 401);
+    const pairing = () => ({ pending: ac.pending.map((p) => ({ ...p, age_minutes: 3 })), approved: ac.approved });
+    const hooks = () => ({ enabled: ac.hooksOn, base_url: "http://gw.test", subscriptions: ac.hooks.map((h) => ({ name: h.name, description: "", events: ["push"], deliver: "log", url: `http://gw.test/webhooks/${h.name}`, secret_set: true, enabled: h.enabled })) });
+    if (path === "/hermes-pairing" && method === "GET") return json(pairing());
+    if (path === "/hermes-pairing/approve" && method === "POST") {
+      const p = ac.pending.find((x) => x.request_id === body?.request_id); if (!p) return json({ detail: "nicht gefunden" }, 404);
+      ac.pending = ac.pending.filter((x) => x !== p); ac.approved.push({ platform: p.platform, user_id: p.user_id, user_name: p.user_name }); return json(pairing());
+    }
+    if (path === "/hermes-pairing/revoke" && method === "POST") {
+      if (body?.confirm !== body?.user_id) return json({ detail: "Sperren: die Nutzer-ID zur Bestätigung eingeben" }, 422);
+      ac.approved = ac.approved.filter((x) => x.user_id !== body?.user_id); return json(pairing());
+    }
+    if (path === "/hermes-webhooks" && method === "GET") return json(hooks());
+    if (path === "/hermes-webhooks/enable" && method === "POST") { if (body?.confirm_restart !== true) return json({ detail: "confirm_restart" }, 422); ac.hooksOn = true; return json({ ok: true, ...hooks() }); }
+    if (path === "/hermes-webhooks" && method === "POST") {
+      if (!ac.hooksOn) return json({ detail: "Die Webhook-Plattform ist ausgeschaltet" }, 409);
+      ac.hooks.push({ name: String(body?.name), enabled: true }); return json({ ok: true, name: String(body?.name), url: `http://gw.test/webhooks/${String(body?.name)}`, secret: "whsec-EINMALIG-123" });
+    }
+    const tog = /^\/hermes-webhooks\/([^/]+)\/enabled$/.exec(path);
+    if (tog && method === "PUT") { const h = ac.hooks.find((x) => x.name === tog[1]); if (h) h.enabled = Boolean(body?.enabled); return json({ ok: true }); }
+    const del = /^\/hermes-webhooks\/([^/?]+)$/.exec(path);
+    if (del && method === "DELETE") {
+      if (new URL(rest, "http://bff").searchParams.get("confirm") !== del[1]) return json({ detail: "Löschen: den Webhook-Namen zur Bestätigung eingeben" }, 422);
+      ac.hooks = ac.hooks.filter((x) => x.name !== del[1]); return json({ ok: true });
+    }
+    return json({ detail: "Unbekannte Zugangs-Route" }, 404);
+  }
+  if (path.startsWith("/hermes-sessions")) {
+    if (!dash.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
+    const sa = dash.sa;
+    if (method !== "GET" && dash.stepUp) return json(stepUpBody, 401);
+    const hit = (days: number) => sa.sessions.filter((s) => s.ageDays > days && !s.active);
+    const empties = () => sa.sessions.filter((s) => s.messages === 0 && !s.active);
+    if (path === "/hermes-sessions/stats" && method === "GET") return json({ total: sa.sessions.length, active_store: sa.sessions.length, archived: 0, messages: sa.sessions.reduce((n, s) => n + s.messages, 0), by_source: { cli: sa.sessions.length } });
+    if (path === "/hermes-sessions/prune/preview" && method === "POST") { const h = hit(Number(body?.older_than_days)); return json({ matched: h.length, skipped_open: 1, sample: h.map((s) => ({ id: s.id, title: `Sitzung ${s.id}` })) }); }
+    if (path === "/hermes-sessions/prune" && method === "POST") {
+      const h = hit(Number(body?.older_than_days));
+      if (Number(body?.confirm_count) !== h.length) return json({ detail: `Aufräumen: die Vorschau zeigt ${h.length} Sitzungen, die eingegebene Zahl stimmt nicht` }, 422);
+      sa.sessions = sa.sessions.filter((s) => !h.includes(s)); return json({ ok: true, removed: h.length, skipped_open: 1 });
+    }
+    if (path === "/hermes-sessions/empty" && method === "GET") return json({ count: empties().length });
+    if (path === "/hermes-sessions/empty" && method === "DELETE") {
+      const e = empties();
+      if (new URL(rest, "http://bff").searchParams.get("confirm") !== String(e.length)) return json({ detail: "Löschen: die eingegebene Zahl stimmt nicht" }, 422);
+      sa.sessions = sa.sessions.filter((s) => !e.includes(s)); return json({ ok: true, deleted: e.length });
+    }
+    return json({ detail: "Unbekannte Sitzungs-Route" }, 404);
+  }
   if (path.startsWith("/hermes-delegation") || path.startsWith("/hermes-endpoints") || path.startsWith("/hermes-local-models")) {
     if (!dash.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
     const ep = dash.ep;
@@ -584,6 +637,8 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
     msg: { available: true, enabled: {}, env: {}, gateway: { running: false, busy: false, sessions: 0 }, polls: 0, applied: [] },
     hm: { available: true, active: "", files: { memory: 120, user: 45 }, keySet: false, project: "", mode: "fast" },
     tools: { available: true, enabled: { terminal: true, web: false, image_gen: true, computer_use: false }, keys: {}, provider: {}, model: "flux-2-pro", installed: false },
+    ac: { pending: [{ platform: "telegram", request_id: "req-1", user_id: "42", user_name: "Anna" }], approved: [{ platform: "telegram", user_id: "7", user_name: "Bob" }], hooksOn: false, hooks: [] },
+    sa: { sessions: [{ id: "a1", ageDays: 200, messages: 3 }, { id: "a2", ageDays: 100, messages: 2 }, { id: "a3", ageDays: 1, messages: 4 }, { id: "e1", ageDays: 5, messages: 0 }, { id: "act", ageDays: 300, messages: 1, active: true }] },
     ep: { backend: "default", endpoints: [], current: "" },
     lcProfiles: [...agents], lcActive: agents[0] ?? "gamma",
   };

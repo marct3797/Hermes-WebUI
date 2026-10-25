@@ -15,30 +15,30 @@ cd backend
 python -m devtools.check_upstream /pfad/zu/hermes-agent --coverage
 ```
 
-Von 390 Routen (Modul, Methode, Pfad) nutzt das BFF 99 pfadgenau. Nach Modul, wenig genutzte zuerst:
+Von 390 Routen (Modul, Methode, Pfad) nutzt das BFF 159 pfadgenau. Nach Modul, wenig genutzte zuerst:
 
 | Modul | Routen | genutzt | Inhalt |
 |---|---:|---:|---|
-| `web_routers/ops.py` | 28 | 2 | Gateway start/stop (genutzt); Doctor, Backup, Import, Checkpoints, Hooks, Webhooks, Pairing, Gedächtnis zurücksetzen, Credential-Pool offen |
+| `web_routers/ops.py` | 28 | 15 | Gateway, Doctor, Backup, Gedächtnis zurücksetzen, Pairing, Webhooks (genutzt); **offen**: Import, Checkpoints, Hooks (bewusst aus), Credential-Pool |
 | `web_routers/git.py` | 21 | 0 | Git im Dashboard (die WebUI nutzt dafür `hostd`) |
-| `web_routers/local_models.py` | 18 | 0 | lokale Modelle: Katalog, Hardware, Download, Server |
+| `web_routers/local_models.py` | 18 | 1 | lokale Modelle: Status (genutzt); **bewusst nicht**: Katalog, Hardware, Download, Server, Installieren (CLI) |
 | `web_routers/files.py` | 18 | 0 | Dateien im Dashboard (die WebUI nutzt dafür `hostd`) |
 | `web_routers/messaging.py` | 11 | 7 | Messaging-Plattformen: Liste, Konfiguration, Test, Telegram-Einrichtung. **Nicht**: WhatsApp-Kopplung (4 Routen, QR-Code) |
 | `web_routers/audio.py` | 10 | 0 | Sprache: TTS, STT, Live-Sprachmodus |
-| `web_routers/actions.py` | 8 | 2 | Gateway neu starten (genutzt), Aktions-Status (genutzt); **nicht**: leeren (Drain), migrieren, Hermes-Update |
+| `web_routers/actions.py` | 8 | 3 | Gateway neu starten (genutzt), Aktions-Status (genutzt); **nicht**: leeren (Drain), migrieren, Hermes-Update |
 | `web_routers/chat_ws.py` | 5 | 0 | Terminal-Chat per WebSocket (die WebUI nutzt die Gateway-API) |
-| `web_routers/delegation.py` | 4 | 0 | Delegation: Routing, Backends, Modellzuordnung |
+| `web_routers/delegation.py` | 4 | 2 | Delegation: Routing lesen, Backend wählen (genutzt); **nicht**: Modellzuordnung und Profil-Routen schreiben |
 | `web_routers/memory_providers.py` | 3 | 2 | Felder lesen/schreiben (genutzt); **bewusst nicht**: `POST .../setup` (führt `curl \| sh` aus) |
-| `web_routers/status.py` | 20 | 2 | Status (Gateway-Zustand genutzt), Gesundheit, Systemwerte, Curator, Lerngraph |
+| `web_routers/status.py` | 20 | 3 | Status (Gateway-Zustand genutzt), Gesundheit, Systemwerte, Curator, Lerngraph |
 | `web_routers/tools.py` | 12 | 8 | Toolsets, Anbieter, Keys, Modelle; **bewusst nicht**: Terminal-Backend setzen, `post-setup`, Computer-Use-Rechte, siehe unten |
-| `web_routers/models.py` | 7 | 1 | Hilfsmodelle, Mixture of Agents, empfohlenes Standardmodell |
+| `web_routers/models.py` | 7 | 7 | Hauptmodell, Auswahl, Hilfsmodelle, Mixture of Agents, empfohlenes Standardmodell (alle genutzt) |
 | `plugins/kanban` | 48 | 18 | Kanban |
-| `web_routers/profiles.py` | 20 | 6 | Profile anlegen, löschen, umbenennen, exportieren, importieren |
+| `web_routers/profiles.py` | 20 | 10 | Profile anlegen, löschen, umbenennen, exportieren, importieren |
 | `web_routers/dashboard_ui.py` | 16 | 3 | Plugin-Verwaltung, Themes, Schrift |
-| `web_routers/sessions.py` | 18 | 6 | Sitzungen exportieren, importieren, aufräumen, Statistik |
+| `web_routers/sessions.py` | 18 | 12 | Statistik, Export, Aufräumen, Mehrfach-Löschen, leere löschen (genutzt); **nicht**: Import, Zeitachse |
 | `gateway/api_server` | 46 | 20 | Läufe, Sitzungen, Jobs; ungenutzt u. a. OpenAI-Schnittstellen, Artefakte, Raum-Mitglieder |
 | `web_routers/mcp.py` | 12 | 5 | MCP testen, aktivieren, entfernen, OAuth |
-| `web_routers/config_env.py` | 15 | 7 | eigene Endpunkte, Defaults, Egress |
+| `web_routers/config_env.py` | 15 | 12 | eigene Endpunkte (genutzt); **offen**: Defaults, Egress, Roh-YAML |
 | `web_routers/cron.py` | 13 | 12 | Zeitpläne |
 | `web_routers/skills.py` | 13 | 13 | Skills |
 
@@ -49,19 +49,19 @@ Pfadgenau heißt: ein Pfad zählt als genutzt, auch wenn nur eine seiner Methode
 | Bereich (Hermes-Doku) | Stand in der WebUI | Beleg |
 |---|---|---|
 | Chat, Läufe, Freigaben, Steuern, Stoppen | abgebildet | Gateway `/v1/runs*` |
-| Sitzungen | teilweise: Liste, Fortsetzen, Umbenennen, Löschen, Fork, Suche. Fehlt: Export, Import, Aufräumen, Statistik, Zeitachse | `sessions.py`: 6 von 18 |
+| Sitzungen | Liste, Fortsetzen, Umbenennen, Löschen, Fork, Suche, **Statistik, Export einer Sitzung, Aufräumen (mit Vorschau und Zahl eintippen), Mehrfach-Löschen (BFF), leere Sitzungen löschen**. **Nicht**: Import (fremde Verläufe einschleusen), Zeitachse, `owner-backfill` | `sessions.py`: 12 von 18, `routes/sessions_admin.py` |
 | Profile (`Profiles`) | teilweise: SOUL, Beschreibung, Standardmodell. Fehlt: anlegen, löschen, umbenennen, Import/Export, aktives Profil | `profiles.py`: 6 von 20 |
 | Konfiguration (`Configuration`) | abgebildet über das Schema (alle Felder, Geheimnisse ausgenommen). Fehlt: Roh-YAML, Migration, Standardwerte | `config_env.py`, `analytics.py` |
 | Modelle und Anbieter (`Providers`) | teilweise: Keys, Anmeldung, Modellwahl, Nutzung. Fehlt: eigene Endpunkte, Credential-Pools, lokale Modelle, Hilfsmodelle und Mixture of Agents als eigene Seite (einzelne Felder stehen im Einstellungs-Editor) | `config_env.py`, `local_models.py`, `models.py` |
 | Werkzeuge (`Tools`) | ja: Gruppen ein-/ausschalten, Anbieter wählen (bei `web` getrennt für Suche und Extraktion), Werkzeug-Keys setzen (nur Variablen, die die Gruppe selbst nennt, nie angezeigt), Bild-/Video-Modell wählen, Terminal-Backend anzeigen. **Bewusst nicht**: Terminal-Backend umstellen, `post-setup` starten, Computer-Use-Rechte vergeben (Hermes prüft das serverseitig nicht) | `tools.py`: 8 von 12; `routes/tools.py`, `ToolsetPanel.tsx` |
 | Skills (`Skills System`) | abgebildet. Fehlt: Curator | `skills.py`: 13 von 13 |
 | Gedächtnis (`Memory`, `Memory Providers`) | Hindsight über einen eigenen Client **und** Hermes-Gedächtnis: Dateigrößen von `MEMORY.md`/`USER.md` (Inhalt liefert das Dashboard nicht), Zurücksetzen mit Namenseingabe, Anbieter wählen und einrichten. **Nicht**: Inhalt der Dateien lesen/bearbeiten, Programme der Anbieter installieren | `routes/hermes_memory.py`, `HermesMemoryPage.tsx`; `ops.py` Gedächtnis-Routen: 3 von 3 |
-| MCP | teilweise: Liste, Katalog, Installieren. Fehlt: Testen, Aktivieren, Entfernen, OAuth | `mcp.py`: 5 von 12 |
-| Plugins | teilweise: Hub, Katalog, Installieren. Fehlt: aktivieren, deaktivieren, aktualisieren, Sichtbarkeit | `dashboard_ui.py` |
+| MCP | Liste, Katalog, Installieren, Testen, Aktivieren, Entfernen, OAuth. **Nicht**: ganze `mcp_servers`-Map ersetzen (`PUT /api/mcp/servers`) | `mcp.py`, `routes/extensions.py` |
+| Plugins | Hub, Katalog, Installieren, Aktivieren, Deaktivieren, Aktualisieren, Entfernen. **Nicht**: Sichtbarkeit in der Seitenleiste, Speicher-/Kontext-Anbieter über `plugin-providers` (stehen im Einstellungs-Editor) | `dashboard_ui.py`, `routes/extensions.py` |
 | Zeitpläne (`Cron Jobs`) | abgebildet (12 von 13 Routen); `POST /api/cron/fire` fehlt. Ob sich Skript-Jobs ohne Agent (`no_agent`) anlegen lassen, ist nicht geprüft, sie werden nur angezeigt | `cron.py`, `app/cron.py` |
 | Kanban | teilweise (18 von 48): Board, Aufgaben, Kommentare, Verknüpfungen. Fehlt: Anhänge, Zerlegen/Spezifizieren/Schätzen, Läufe prüfen und beenden, Worker, Boards importieren/exportieren/wechseln, Orchestrierung | `plugins/kanban` |
-| Hooks, Webhooks, Pairing | nicht abgebildet | `ops.py` |
-| Delegation, Subagenten | nicht als Seite (Felder im Editor) | `delegation.py` |
+| Hooks, Webhooks, Pairing | **Pairing** (offene Anfragen freigeben nur per Anfrage-ID, Zugang sperren mit eingetippter ID) und **Webhooks** (anlegen ohne `script` und ohne eigenes Secret, Secret nur einmal sichtbar, ein-/ausschalten, löschen mit Namenseingabe, Plattform einschalten nur mit Neustart-Bestätigung). **Nicht**: Hooks (führen Shell-Befehle aus), Freigabe per Code, `clear-pending` | `routes/access.py` |
+| Delegation, Subagenten | Backend wählen (nur aus der gemeldeten Liste), Routen lesen (Schlüssel nie). **Nicht**: `model_map`/`profile_routes` schreiben (tragen Schlüssel je Route) | `delegation.py`: 2 von 4, `routes/endpoints.py` |
 | Messaging-Plattformen (35 in der Doku, 32 im Dashboard 0.22.5) | **ja**: Liste mit Zustand, Variablen setzen/löschen (Tokens nie sichtbar), ein-/ausschalten, Verbindung prüfen, Telegram-Assistent. **Nicht**: WhatsApp koppeln (QR-Code), Heimatkanal setzen, Plattform-Plugins verwalten | `routes/messaging.py`, `MessagingPage.tsx`; `messaging.py`: 7 von 11 |
 | Gateway-Betrieb | teilweise: Zustand, starten, anhalten, neu starten (Unterbrechen nur nach Bestätigung), Protokoll des Befehls. **Nicht**: leeren (Drain), migrieren | `actions.py`: 2 von 8, `ops.py` |
 | Sprache (`Voice Mode`, `Text-to-Speech`) | nicht abgebildet | `audio.py`: 0 von 10 |
@@ -97,9 +97,9 @@ Pfadgenau heißt: ein Pfad zählt als genutzt, auch wenn nur eine seiner Methode
 7. ~~Vertragstests gegen 0.22.5~~ für die Lese-Routen aufgenommen; Run-Strom war falsch eingeschätzt (Punkt 3 oben).
 
 **P2**
-8. Modelle: eigene Endpunkte, Credential-Pools, lokale Modelle, Hilfsmodelle, Mixture of Agents, Delegation.
-9. MCP und Plugins verwalten; Kanban in der Tiefe; Sitzungsverwaltung (Export, Import, Aufräumen).
-10. Hooks, Webhooks, Pairing; Sprache.
+8. ~~Modelle~~ umgesetzt: Hauptmodell, Auswahl, Hilfsmodelle, MoA (`routes/models.py`); eigene Endpunkte mit URL-Schranken, Schlüssel write-only, Löschen mit eingetippter ID (`routes/endpoints.py`); Delegations-Backend; lokale Modelle nur lesend. **Offen**: Credential-Pools, lokale Modelle installieren/laden (bewusst CLI), Delegations-Routen schreiben.
+9. ~~MCP und Plugins verwalten~~ (schon vorher im BFF), ~~Sitzungsverwaltung~~ umgesetzt (Import bewusst aus). **Offen**: Kanban in der Tiefe (18 von 48 Routen).
+10. ~~Hooks, Webhooks, Pairing~~ umgesetzt, Hooks bewusst aus. **Offen**: Sprache (`audio.py`, 0 von 10).
 
 **P3**
 11. Curator, Lerngraph, Achievements, Pets, Themes; Artefakte im Chat; Computer Use; Egress und Managed Scope anzeigen.

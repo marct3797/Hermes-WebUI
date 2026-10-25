@@ -62,6 +62,8 @@ const MODULES = [
   { module: "config", label: "Hermes-Einstellungen", icon: "sliders" },
   { module: "modelle", label: "Modelle", icon: "spark" },
   { module: "endpunkte", label: "Eigene Endpunkte", icon: "spark" },
+  { module: "sitzungen-verwalten", label: "Sitzungen verwalten", icon: "spark" },
+  { module: "zugang", label: "Zugang und Webhooks", icon: "spark" },
   { module: "providers", label: "Keys & Nutzung", icon: "coin" },
   { module: "skills", label: "Skills", icon: "layers" },
   { module: "tools", label: "Werkzeuge", icon: "wrench" },

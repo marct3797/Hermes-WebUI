@@ -35,6 +35,8 @@ USED: dict[str, list[str]] = {
         "/api/cron/jobs/{}/trigger", "/api/cron/delivery-targets", "/api/cron/blueprints", "/api/cron/blueprints/instantiate",
         "/api/model/info", "/api/model/recommended-default", "/api/model/auxiliary", "/api/model/moa", "/api/model/set",
         "/api/delegation/routing", "/api/delegation/backend", "/api/providers/custom-endpoints", "/api/providers/custom-endpoints/{}/activate", "/api/providers/custom-endpoints/{}", "/api/providers/custom-endpoints/validate", "/api/local-models/status",
+        "/api/sessions/stats", "/api/sessions/empty/count", "/api/sessions/empty", "/api/sessions/prune", "/api/sessions/bulk-delete", "/api/sessions/{}/export",
+        "/api/pairing", "/api/pairing/approve", "/api/pairing/revoke", "/api/webhooks", "/api/webhooks/enable", "/api/webhooks/{}", "/api/webhooks/{}/enabled",
     ],
     "kanban-plugin": [  # liegt Hermes bei: plugins/kanban/dashboard/plugin_api.py, eingehängt unter /api/plugins/kanban
         "/api/plugins/kanban/board", "/api/plugins/kanban/boards", "/api/plugins/kanban/boards/{}", "/api/plugins/kanban/stats", "/api/plugins/kanban/assignees",

@@ -8,6 +8,8 @@ Start: uvicorn devtools.mock_dashboard:app --port 9122
 """
 from __future__ import annotations
 
+import time
+
 import os
 from typing import Any
 
@@ -948,6 +950,142 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
     async def plugin_hub(profile: str | None = None):
         profile_or_default(profile)
         return {"plugins": [{"name": "disk-cleanup", "version": "1.0", "description": "Räumt auf.", "runtime_status": "enabled", "path": "/geheim/pfad"}]}
+
+    # Punkt 10: Pairing und Webhooks (Form wie Hermes 0.22.5 ops.py; Codes und Secrets nie in Listen)
+    def pairing_of(prof: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+        return prof.setdefault("pairing", {"pending": [], "approved": []})
+
+    def hooks_of(prof: dict[str, Any]) -> dict[str, Any]:
+        return prof.setdefault("webhooks", {"enabled": False, "subs": {}})
+
+    @app.get("/api/pairing")
+    async def pairing_list(profile: str | None = None):
+        return pairing_of(profile_or_default(profile))
+
+    @app.post("/api/pairing/approve")
+    async def pairing_approve(body: dict[str, Any]):
+        pr = pairing_of(profile_or_default(body.get("profile")))
+        hit = next((p for p in pr["pending"] if p["request_id"] == body.get("request_id") and p["platform"] == body.get("platform")), None)
+        if hit is None:
+            raise HTTPException(404, "Pairing request or code not found or expired")
+        if not drop_writes:
+            pr["pending"].remove(hit)
+            pr["approved"].append({"platform": hit["platform"], "user_id": hit["user_id"], "user_name": hit["user_name"], "approved_at": time.time()})
+        return {"ok": True, "user": {"user_id": hit["user_id"]}}
+
+    @app.post("/api/pairing/revoke")
+    async def pairing_revoke(body: dict[str, Any]):
+        pr = pairing_of(profile_or_default(body.get("profile")))
+        hit = next((a for a in pr["approved"] if a["user_id"] == body.get("user_id") and a["platform"] == body.get("platform")), None)
+        if hit is None:
+            raise HTTPException(404, "User not found in approved list")
+        if not drop_writes:
+            pr["approved"].remove(hit)
+        return {"ok": True}
+
+    def hook_summary(name: str, r: dict[str, Any]) -> dict[str, Any]:
+        return {"name": name, "description": r["description"], "events": r["events"], "deliver": r["deliver"], "deliver_only": r.get("deliver_only", False),
+                "prompt": r["prompt"], "script": "", "skills": r["skills"], "created_at": "2026-10-25T00:00:00Z", "url": f"http://gw.test:8644/webhooks/{name}",
+                "secret_set": True, "enabled": r.get("enabled", True), **({"secret": r["secret"]} if getattr(app.state, "leaky", False) else {})}
+
+    @app.get("/api/webhooks")
+    async def webhooks_list(profile: str | None = None):
+        h = hooks_of(profile_or_default(profile))
+        return {"enabled": h["enabled"], "base_url": "http://gw.test:8644", "subscriptions": [hook_summary(n, r) for n, r in h["subs"].items()]}
+
+    @app.post("/api/webhooks/enable")
+    async def webhooks_enable(profile: str | None = None):
+        if not drop_writes:
+            hooks_of(profile_or_default(profile))["enabled"] = True
+        return {"ok": True, "platform": "webhook", "enabled": True, "needs_restart": False, "restart_started": True}
+
+    @app.post("/api/webhooks")
+    async def webhooks_create(body: dict[str, Any], profile: str | None = None):
+        h = hooks_of(profile_or_default(profile))
+        if not h["enabled"]:
+            raise HTTPException(400, "Webhook platform is not enabled")
+        name = str(body.get("name", "")).strip().lower().replace(" ", "-")
+        route = {"description": body.get("description") or "", "events": body.get("events") or [], "prompt": body.get("prompt") or "", "skills": body.get("skills") or [], "deliver": body.get("deliver") or "log", "secret": "whsec-GEHEIM-" + name}
+        if not drop_writes:
+            h["subs"][name] = route
+        return {**hook_summary(name, route), "secret": route["secret"]}
+
+    @app.delete("/api/webhooks/{name}")
+    async def webhooks_delete(name: str, profile: str | None = None):
+        h = hooks_of(profile_or_default(profile))
+        if name not in h["subs"]:
+            raise HTTPException(404, f"No subscription named '{name}'")
+        if not drop_writes:
+            del h["subs"][name]
+        return {"ok": True}
+
+    @app.put("/api/webhooks/{name}/enabled")
+    async def webhooks_toggle(name: str, body: dict[str, Any], profile: str | None = None):
+        h = hooks_of(profile_or_default(profile))
+        if name not in h["subs"]:
+            raise HTTPException(404, f"No subscription named '{name}'")
+        if not drop_writes:
+            h["subs"][name]["enabled"] = bool(body.get("enabled"))
+        return {"ok": True, "name": name, "enabled": bool(body.get("enabled"))}
+
+    # Punkt 9: Sitzungsverwaltung (Form wie Hermes 0.22.5 sessions.py)
+    def sess_of(prof: dict[str, Any]) -> list[dict[str, Any]]:
+        return prof.setdefault("sessions", [])
+
+    def prune_matches(prof: dict[str, Any], body: dict[str, Any]) -> tuple[list[dict[str, Any]], int]:
+        cutoff = time.time() - float(body.get("older_than_days", 90)) * 86400
+        old = [x for x in sess_of(prof) if x["last_active"] < cutoff]
+        return [x for x in old if not x.get("active")], sum(1 for x in old if x.get("active"))
+
+    @app.get("/api/sessions/stats")
+    async def sessions_stats(profile: str | None = None):
+        rows = sess_of(profile_or_default(profile))
+        by: dict[str, int] = {}
+        for x in rows:
+            by[x["source"]] = by.get(x["source"], 0) + 1
+        return {"total": len(rows), "active_store": len(rows), "archived": 0, "messages": sum(x["messages"] for x in rows), "by_source": by}
+
+    @app.get("/api/sessions/empty/count")
+    async def sessions_empty_count(profile: str | None = None):
+        return {"count": sum(1 for x in sess_of(profile_or_default(profile)) if x["messages"] == 0 and not x.get("active"))}
+
+    @app.delete("/api/sessions/empty")
+    async def sessions_empty_delete(profile: str | None = None):
+        prof = profile_or_default(profile)
+        gone = [x for x in sess_of(prof) if x["messages"] == 0 and not x.get("active")]
+        if not drop_writes:
+            prof["sessions"] = [x for x in sess_of(prof) if x not in gone]
+        return {"ok": True, "deleted": len(gone)}
+
+    @app.post("/api/sessions/prune")
+    async def sessions_prune(body: dict[str, Any]):
+        prof = profile_or_default(body.get("profile"))
+        hit, skipped = prune_matches(prof, body)
+        if body.get("dry_run"):
+            return {"ok": True, "removed": 0, "matched": len(hit), "skipped_open": skipped, "sessions": [{"id": x["id"], "title": x["title"]} for x in hit]}
+        if not drop_writes:
+            prof["sessions"] = [x for x in sess_of(prof) if x not in hit]
+        return {"ok": True, "removed": len(hit), "skipped_open": skipped}
+
+    @app.post("/api/sessions/bulk-delete")
+    async def sessions_bulk_delete(body: dict[str, Any]):
+        ids = body.get("ids", [])
+        if len(ids) > 500:
+            raise HTTPException(400, "ids must contain at most 500 entries")
+        prof = profile_or_default(body.get("profile"))
+        known = {x["id"]: x for x in sess_of(prof)}
+        skipped = [i for i in ids if i in known and known[i].get("active")]
+        gone = [i for i in ids if i in known and i not in skipped]
+        if not drop_writes:
+            prof["sessions"] = [x for x in sess_of(prof) if x["id"] not in gone]
+        return {"ok": True, "deleted": len(gone), "skipped_active": skipped}
+
+    @app.get("/api/sessions/{session_id}/export")
+    async def sessions_export(session_id: str, profile: str | None = None):
+        found = next((x for x in sess_of(profile_or_default(profile)) if x["id"] == session_id), None)
+        if found is None:
+            raise HTTPException(404, "Session not found")
+        return {"id": found["id"], "title": found["title"], "messages": [{"id": n, "role": "user", "content": f"m{n}"} for n in range(found["messages"])]}
 
     @app.get("/api/sessions/search")
     async def sessions_search(q: str):

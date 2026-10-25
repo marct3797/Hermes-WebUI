@@ -1,6 +1,6 @@
 import { invalidate } from "./dataCache";
 import { getPreferences } from "./preferences";
-import type { EpDelegation, EpList, EpLocal, EpValidate, LcCreated, LcList, MdAuxiliary, MdInfo, MdMoa, MdOptions, MdRecommended, MdSetResult, HmField, HmOverview, GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import type { AcCreated, AcHooks, AcPairing, SaPreview, SaStats, EpDelegation, EpList, EpLocal, EpValidate, LcCreated, LcList, MdAuxiliary, MdInfo, MdMoa, MdOptions, MdRecommended, MdSetResult, HmField, HmOverview, GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string, public data?: Record<string, unknown>) {
@@ -184,6 +184,19 @@ export const api = {
   epActivate: (a: AgentRef, eid: string) => call<{ ok: boolean }>("POST", `${base(a)}/hermes-endpoints/${encodeURIComponent(eid)}/activate`),
   epDelete: (a: AgentRef, eid: string, confirm: string) => call<{ ok: boolean }>("DELETE", `${base(a)}/hermes-endpoints/${encodeURIComponent(eid)}?confirm=${encodeURIComponent(confirm)}`),
   epLocal: (a: AgentRef) => call<EpLocal>("GET", `${base(a)}/hermes-local-models/status`),
+  saStats: (a: AgentRef) => call<SaStats>("GET", `${base(a)}/hermes-sessions/stats`),
+  saPreview: (a: AgentRef, older_than_days: number) => call<SaPreview>("POST", `${base(a)}/hermes-sessions/prune/preview`, { older_than_days }),
+  saPrune: (a: AgentRef, older_than_days: number, confirm_count: number) => call<{ ok: boolean; removed: number }>("POST", `${base(a)}/hermes-sessions/prune`, { older_than_days, confirm_count }),
+  saEmpty: (a: AgentRef) => call<{ count: number }>("GET", `${base(a)}/hermes-sessions/empty`),
+  saEmptyDelete: (a: AgentRef, confirm: string) => call<{ ok: boolean; deleted: number }>("DELETE", `${base(a)}/hermes-sessions/empty?confirm=${encodeURIComponent(confirm)}`),
+  acPairing: (a: AgentRef) => call<AcPairing>("GET", `${base(a)}/hermes-pairing`),
+  acApprove: (a: AgentRef, platform: string, request_id: string) => call<AcPairing>("POST", `${base(a)}/hermes-pairing/approve`, { platform, request_id }),
+  acRevoke: (a: AgentRef, platform: string, user_id: string, confirm: string) => call<AcPairing>("POST", `${base(a)}/hermes-pairing/revoke`, { platform, user_id, confirm }),
+  acHooks: (a: AgentRef) => call<AcHooks>("GET", `${base(a)}/hermes-webhooks`),
+  acHooksEnable: (a: AgentRef) => call<AcHooks>("POST", `${base(a)}/hermes-webhooks/enable`, { confirm_restart: true }),
+  acHookCreate: (a: AgentRef, body: { name: string; description?: string; events: string[]; prompt?: string }) => call<AcCreated>("POST", `${base(a)}/hermes-webhooks`, body),
+  acHookToggle: (a: AgentRef, name: string, enabled: boolean) => call<{ ok: boolean }>("PUT", `${base(a)}/hermes-webhooks/${encodeURIComponent(name)}/enabled`, { enabled }),
+  acHookDelete: (a: AgentRef, name: string, confirm: string) => call<{ ok: boolean }>("DELETE", `${base(a)}/hermes-webhooks/${encodeURIComponent(name)}?confirm=${encodeURIComponent(confirm)}`),
   lcCreate: (a: AgentRef, body: { name: string; clone_from?: string; description?: string; clone_channels?: boolean }) => call<LcCreated>("POST", `${base(a)}/hermes-profiles`, body),
   lcRename: (a: AgentRef, name: string, new_name: string) => call<{ ok: boolean; name: string }>("PATCH", `${base(a)}/hermes-profiles/${id(name)}`, { new_name }),
   lcDelete: (a: AgentRef, name: string, confirm: string) => call<{ ok: boolean }>("DELETE", `${base(a)}/hermes-profiles/${id(name)}`, { confirm }),
