@@ -444,6 +444,22 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
       return json({ ok: true });
     }
   }
+  if (path.startsWith("/hermes-models")) {
+    if (!dash.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
+    if (method !== "GET" && dash.stepUp) return json(stepUpBody, 401);
+    if (path === "/hermes-models/info" && method === "GET") return json({ provider: "anthropic", model: "claude-test", context_window: 200000, capabilities: { supports_tools: true } });
+    if (path === "/hermes-models/options" && method === "GET") return json({ providers: [{ slug: "anthropic", name: "Anthropic", models: ["claude-test", "claude-small"], authenticated: true }], current: { provider: "anthropic", model: "claude-test" } });
+    if (path === "/hermes-models/recommended-default" && method === "GET") return json({ provider: "anthropic", model: "claude-test" });
+    if (path === "/hermes-models/auxiliary" && method === "GET") return json({ main: { provider: "anthropic", model: "claude-test" }, tasks: [{ task: "coding", provider: "auto", model: "" }] });
+    if (path === "/hermes-models/moa" && method === "GET") return json({ presets: { d: { reference_models: [{ provider: "anthropic", model: "claude-test" }], aggregator: { provider: "anthropic", model: "claude-test" } } }, active_preset: "d", default_preset: "d" });
+    if (path === "/hermes-models/set" && method === "POST") {
+      if (String(body?.scope) !== "main" && String(body?.scope) !== "auxiliary") return json({ detail: [{ loc: ["body", "scope"], msg: "muss main oder auxiliary sein" }] }, 422);
+      if (!String(body?.model ?? "").trim()) return json({ detail: [{ loc: ["body", "model"], msg: "leer ist kein Modell" }] }, 422);
+      if (/opus|o1|o3|gpt-5|claude-teuer/i.test(String(body?.model ?? "")) && !body?.confirm_expensive_model) return json({ ok: false, confirm_required: true, confirm_message: "Teures Modell: bitte bestätigen." });
+      return json({ ok: true, provider: String(body?.provider), model: String(body?.model).trim() });
+    }
+    return json({ detail: "Unbekannte Modell-Route" }, 404);
+  }
   if (path === "/hermes-ops/backup" && method === "POST") {
     if (dash.stepUp) return json(stepUpBody, 401);
     if (String(body?.confirm) !== "gamma") return json({ detail: "Nur mit Namenseingabe" }, 422);

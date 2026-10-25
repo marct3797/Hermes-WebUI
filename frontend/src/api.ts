@@ -1,6 +1,6 @@
 import { invalidate } from "./dataCache";
 import { getPreferences } from "./preferences";
-import type { LcCreated, LcList, HmField, HmOverview, GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import type { LcCreated, LcList, MdAuxiliary, MdInfo, MdMoa, MdOptions, MdRecommended, MdSetResult, HmField, HmOverview, GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string, public data?: Record<string, unknown>) {
@@ -170,6 +170,12 @@ export const api = {
   roomEventsUrl: (rid: string) => `/bff/rooms/${id(rid)}/events`,
   eventsUrl: (a: AgentRef, rid: string) => `${base(a)}/runs/${id(rid)}/events`,
   lcList: (a: AgentRef) => call<LcList>("GET", `${base(a)}/hermes-profiles`),
+  mdInfo: (a: AgentRef) => call<MdInfo>("GET", `${base(a)}/hermes-models/info`),
+  mdOptions: (a: AgentRef) => call<MdOptions>("GET", `${base(a)}/hermes-models/options`),
+  mdRecommended: (a: AgentRef) => call<MdRecommended>("GET", `${base(a)}/hermes-models/recommended-default`),
+  mdAuxiliary: (a: AgentRef) => call<MdAuxiliary>("GET", `${base(a)}/hermes-models/auxiliary`),
+  mdMoa: (a: AgentRef) => call<MdMoa>("GET", `${base(a)}/hermes-models/moa`),
+  mdSet: (a: AgentRef, body: { scope: "main" | "auxiliary"; provider: string; model: string; task?: string; confirm_expensive_model?: boolean }) => call<MdSetResult>("POST", `${base(a)}/hermes-models/set`, body),
   lcCreate: (a: AgentRef, body: { name: string; clone_from?: string; description?: string; clone_channels?: boolean }) => call<LcCreated>("POST", `${base(a)}/hermes-profiles`, body),
   lcRename: (a: AgentRef, name: string, new_name: string) => call<{ ok: boolean; name: string }>("PATCH", `${base(a)}/hermes-profiles/${id(name)}`, { new_name }),
   lcDelete: (a: AgentRef, name: string, confirm: string) => call<{ ok: boolean }>("DELETE", `${base(a)}/hermes-profiles/${id(name)}`, { confirm }),

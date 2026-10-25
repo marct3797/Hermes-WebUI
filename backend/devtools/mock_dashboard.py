@@ -406,7 +406,55 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
     @app.get("/api/model/options")
     async def model_options(profile: str | None = None):
         cur = profile_or_default(profile)
-        return {"providers": [{**p, "is_current": p["slug"] == cur["provider"], "is_user_defined": False, "total_models": len(p["models"]), "source": "hermes"} for p in MODEL_PROVIDERS]}
+        return {"providers": [{**p, "is_current": p["slug"] == cur["provider"], "is_user_defined": False, "total_models": len(p["models"]), "source": "hermes"} for p in MODEL_PROVIDERS],
+                "current": {"provider": cur["provider"], "model": cur["model"]}}
+
+    @app.get("/api/model/info")
+    async def model_info(profile: str | None = None):
+        cur = profile_or_default(profile)
+        return {"provider": cur["provider"], "model": cur["model"], "auto_context_length": 200000,
+                "config_context_length": 0, "effective_context_length": 200000,
+                "capabilities": {"supports_tools": True, "supports_vision": False, "supports_reasoning": False,
+                                 "context_window": 200000, "max_output_tokens": 8192}}
+
+    @app.get("/api/model/recommended-default")
+    async def model_recommended(profile: str | None = None):
+        profile_or_default(profile)
+        return {"provider": "anthropic", "model": "claude-test"}
+
+    @app.get("/api/model/auxiliary")
+    async def model_auxiliary(profile: str | None = None):
+        cur = profile_or_default(profile)
+        return {"main": {"provider": cur["provider"], "model": cur["model"]},
+                "tasks": [{"task": "coding", "provider": "auto", "model": "", "base_url": "", "reasoning_effort": None},
+                          {"task": "vision", "provider": "auto", "model": "", "base_url": "", "reasoning_effort": None}]}
+
+    @app.get("/api/model/moa")
+    async def moa_get(profile: str | None = None):
+        return profile_or_default(profile).setdefault("moa", {"default_preset": "d", "active_preset": "d",
+                "presets": {"d": {"reference_models": [{"provider": "anthropic", "model": "claude-test"}], "aggregator": {"provider": "anthropic", "model": "claude-test"}}}})
+
+    @app.put("/api/model/moa")
+    async def moa_put(body: dict[str, Any], profile: str | None = None):
+        prof = profile_or_default(profile)
+        presets = body.get("presets")
+        if not isinstance(presets, dict) or not presets:
+            raise HTTPException(422, "presets fehlt")
+        if not drop_writes:
+            prof["moa"] = {"default_preset": body.get("default_preset", ""), "active_preset": body.get("active_preset", ""), "presets": presets}
+        return {"ok": True}
+
+    @app.post("/api/model/set")
+    async def model_set(body: dict[str, Any], profile: str | None = None):
+        prof = profile_or_default(profile)
+        scope, provider, model = str(body.get("scope", "")), str(body.get("provider", "")).strip(), str(body.get("model", "")).strip()
+        if scope not in ("main", "auxiliary") or not provider or not model:
+            raise HTTPException(400, "scope/provider/model fehlt oder ungültig")
+        if not body.get("confirm_expensive_model") and any(t in model.lower() for t in ("opus", "o1", "o3", "gpt-5", "claude-teuer")):
+            return {"ok": False, "confirm_required": True}
+        if not drop_writes:
+            prof["provider"], prof["model"] = provider, model
+        return {"ok": True, "provider": provider, "model": model}
 
     sessions: dict[str, dict[str, Any]] = {}
     app.state.oauth_sessions = sessions

@@ -217,3 +217,13 @@ export type HmField = { key: string; label?: string; kind: string; description?:
 export type LcEntry = { name: string; is_default?: boolean; has_env?: boolean };
 export type LcList = { profiles: LcEntry[]; active?: string };
 export type LcCreated = { ok: boolean; name: string; setup?: string };
+
+/** Modelle eines Profils (vom Dashboard): Info, Auswahl, Empfehlung, Hilfsmodelle, MoA. Geheimnisse nie. */
+export type MdInfo = { provider: string; model: string; context_window: number; capabilities: Record<string, unknown> };
+export type MdProvider = { slug: string; name: string; models: string[]; authenticated?: boolean; is_current?: boolean };
+export type MdOptions = { providers: MdProvider[]; current: { provider: string; model: string } };
+export type MdRecommended = { provider: string; model: string };
+export type MdAuxTask = { task: string; provider: string; model: string; base_url?: string; reasoning_effort?: string | null };
+export type MdAuxiliary = { main: { provider: string; model: string }; tasks: MdAuxTask[] };
+export type MdMoa = { presets: Record<string, { reference_models: Array<{ provider: string; model: string }>; aggregator: { provider: string; model: string } }>; active_preset: string; default_preset?: string };
+export type MdSetResult = { ok: boolean; provider?: string; model?: string; confirm_required?: boolean; confirm_message?: string };

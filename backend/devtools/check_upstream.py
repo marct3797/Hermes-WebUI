@@ -33,6 +33,7 @@ USED: dict[str, list[str]] = {
         "/api/dashboard/plugins/catalog", "/api/dashboard/agent-plugins/install",
         "/api/cron/jobs", "/api/cron/jobs/{}", "/api/cron/jobs/{}/runs", "/api/cron/jobs/{}/pause", "/api/cron/jobs/{}/resume",
         "/api/cron/jobs/{}/trigger", "/api/cron/delivery-targets", "/api/cron/blueprints", "/api/cron/blueprints/instantiate",
+        "/api/model/info", "/api/model/recommended-default", "/api/model/auxiliary", "/api/model/moa", "/api/model/set",
     ],
     "kanban-plugin": [  # liegt Hermes bei: plugins/kanban/dashboard/plugin_api.py, eingehängt unter /api/plugins/kanban
         "/api/plugins/kanban/board", "/api/plugins/kanban/boards", "/api/plugins/kanban/boards/{}", "/api/plugins/kanban/stats", "/api/plugins/kanban/assignees",

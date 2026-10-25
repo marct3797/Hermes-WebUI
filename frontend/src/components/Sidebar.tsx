@@ -60,6 +60,7 @@ const MODULES = [
   { module: "soul", label: "SOUL & Profil", icon: "spark" },
   { module: "lebenszyklus", label: "Profile & Betrieb", icon: "server" },
   { module: "config", label: "Hermes-Einstellungen", icon: "sliders" },
+  { module: "modelle", label: "Modelle", icon: "spark" },
   { module: "providers", label: "Keys & Nutzung", icon: "coin" },
   { module: "skills", label: "Skills", icon: "layers" },
   { module: "tools", label: "Werkzeuge", icon: "wrench" },
