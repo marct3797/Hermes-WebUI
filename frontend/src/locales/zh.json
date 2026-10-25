@@ -30,6 +30,7 @@
  ". Geheimnisse verwaltest du unter": "。机密请在以下位置管理：",
  ". Mit": "。使用",
  ". Skills können dem Agenten Anweisungen und Skripte mitgeben.": "。Skill 可以为 Agent 附带指令和脚本。",
+ "QR-Code zum Scannen": "待扫描的二维码",
  "läuft nicht": "未运行",
  "… (Liste gekürzt)": "…（列表已截断）",
  "… {count} unveränderte {v}": "… {count} 个未变化的{v}",

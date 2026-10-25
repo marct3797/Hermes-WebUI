@@ -30,6 +30,7 @@
  ". Geheimnisse verwaltest du unter": ". You manage secrets under",
  ". Mit": ". With",
  ". Skills können dem Agenten Anweisungen und Skripte mitgeben.": ". Skills can give the agent instructions and scripts.",
+ "QR-Code zum Scannen": "QR code to scan",
  "läuft nicht": "not running",
  "… (Liste gekürzt)": "… (list truncated)",
  "… {count} unveränderte {v}": "… {count} unchanged {v}",

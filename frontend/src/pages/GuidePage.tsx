@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type JSX, type ReactNode } from "react";
+import QRCode from "qrcode";
 import { ApiError, api } from "../api";
 import { GUIDE, type GuideEntry, type GuidePanel } from "../guide";
 import { PageHead } from "../components/PageHead";
@@ -39,6 +40,11 @@ function WhatsAppPanel({ agent }: { agent: AgentRef | null }) {
   const op = useOp();
   const [mode, setMode] = useState("bot");
   const [pairing, setPairing] = useState<{ pairing_id: string; status: string; qr_payload?: string | null; account?: { account_name?: string | null } | null; error?: string | null } | null>(null);
+  const [qrSvg, setQrSvg] = useState<string | null>(null);
+  useEffect(() => {
+    if (pairing?.qr_payload) QRCode.toString(pairing.qr_payload, { type: "svg", margin: 1, width: 256 }).then(setQrSvg, () => setQrSvg(null));
+    else setQrSvg(null);
+  }, [pairing?.qr_payload]);
   const live = !!pairing && (pairing.status === "waiting" || pairing.status === "qr" || pairing.status === "pairing");
   useEffect(() => {
     if (!live || !agent || !pairing) return;
@@ -68,7 +74,9 @@ function WhatsAppPanel({ agent }: { agent: AgentRef | null }) {
       )}
       {pairing && live && (
         <>
-          {pairing.qr_payload && <pre className="mono" style={{ whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{pairing.qr_payload}</pre>}
+          {qrSvg
+            ? <div role="img" aria-label={t("QR-Code zum Scannen")} dangerouslySetInnerHTML={{ __html: qrSvg }} />
+            : pairing.qr_payload && <pre className="mono" style={{ whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{pairing.qr_payload}</pre>}
           <p className="muted small">{t("Mit dem Handy scannen, Stand wird von selbst neu gelesen …")}</p>
           <div className="row" style={{ gap: 8 }}>
             <button type="button" className="btn btn-s btn-g" disabled={!agent || op.busy} onClick={() => void op.run(async () => {

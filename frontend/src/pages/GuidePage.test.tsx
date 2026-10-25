@@ -48,6 +48,7 @@ describe("GuidePage als Bedienung", () => {
     await waitFor(() => expect(start).toBeEnabled());
     fireEvent.click(start);
     await c.findByText("WA-QR-1");
+    await c.findByRole("img", { name: "QR-Code zum Scannen" });
     expect(sent("POST", "/messaging/whatsapp/onboarding")).toHaveLength(1);
     await waitFor(() => expect(c.getByRole("button", { name: "Übernehmen" })).toBeInTheDocument(), { timeout: 8000 });
     fireEvent.click(c.getByRole("button", { name: "Übernehmen" }));
