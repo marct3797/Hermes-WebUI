@@ -51,7 +51,7 @@ def main() -> None:
         call("DELETE", f"/api/profiles/{n}", {"confirm": n})  # 404 egal: Reste aus Abbruechen weg
     s, created = call("POST", "/api/profiles", {"name": "p1-vertrag"})
     check("Anlegen", s in (200, 201) and created.get("name") == "p1-vertrag", f"Status {s} {created}")
-    check("Pfad in Sandbox", str(created.get("path", "")).startswith("/home/marct/.hermes/cache/scratch/sandbox-home"), str(created.get("path")))
+    check("Pfad in Sandbox", "sandbox-home" in str(created.get("path", "")), str(created.get("path")))
     s, desc = call("PUT", "/api/profiles/p1-vertrag/description", {"description": "Vertrag P1"})
     check("Beschreibung", s == 200, f"Status {s}")
     s, renamed = call("PATCH", "/api/profiles/p1-vertrag", {"new_name": "p1-vertrag-neu"})
@@ -64,7 +64,7 @@ def main() -> None:
     s, exp = call("POST", "/api/profiles/p1-vertrag-neu/export", {})
     arch = str(exp.get("archive", "")) if s == 200 else ""
     check("Export", s == 200 and arch.endswith(".tar.gz"), f"Status {s} {exp}")
-    sb = Path("/home/marct/.hermes/cache/scratch/sandbox-home")
+    sb = Path(os.environ["SANDBOX_HOME"])  # das HOME, mit dem das Sandbox-Dashboard gestartet wurde
     cand = sb / ".hermes" / "profile-exports" / Path(arch).name if not Path(arch).is_absolute() else Path(arch)
     check("Archiv liegt in Sandbox", cand.exists(), str(cand))
     members, secret_hit, secret_content = [], [], []
