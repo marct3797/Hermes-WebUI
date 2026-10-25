@@ -1,7 +1,8 @@
-"""Pairing und Webhooks (Punkt 10). Schranken siehe tests/test_hermes_access.py.
+"""Pairing und Webhooks (Punkt 10) sowie Shell-Hooks. Schranken siehe tests/test_hermes_access.py.
 
-Nicht durchgereicht: Hooks (`/api/ops/hooks` führen Shell-Befehle aus), Webhook-`script` und eigene Secrets, Pairing per Code,
-`pairing/clear-pending`.
+Shell-Hooks (`/api/ops/hooks`) laufen als Befehle auf dem Rechner: Anlegen und Löschen brauchen frische Anmeldung und
+eingetippte Bestätigung des Befehls, das Audit nennt nur das Ereignis. Nicht durchgereicht: Webhook-`script` und eigene
+Secrets, Pairing per Code, `pairing/clear-pending`.
 """
 from __future__ import annotations
 
@@ -205,4 +206,74 @@ async def hooks_delete(name: str, request: Request, target: Tgt, dash: Dash, con
     if any(s["name"] == name for s in (await _hooks(dash, target.agent.id))["subscriptions"]):
         raise HTTPException(502, "Das Dashboard hat den Webhook nicht gelöscht")
     audit(request, user, "webhooks.delete", target, name=name)
+    return {"ok": True}
+
+
+# --- Shell-Hooks: Liste, anlegen, löschen ---------------------------------------------------------------
+# Hermes führt die Befehle aus, die WebUI schreibt nur Ereignis, Befehl und Zustimmung. Anlegen und Löschen
+# brauchen frische Anmeldung; Anlegen zusätzlich die eingetippte Bestätigung des Befehls. Das Audit nennt nur
+# das Ereignis, nie den Befehl.
+
+class ShellHookIn(BaseModel):
+    model_config = {"extra": "forbid"}
+    event: str = Field(min_length=1, max_length=64)
+    command: str = Field(min_length=1, max_length=2000)
+    matcher: str = Field(default="", max_length=500)
+    timeout: int | None = Field(default=None, ge=1, le=3600)
+    approve: bool = False
+    confirm: str = Field(default="", max_length=2000)
+
+
+def _shell_hooks(body: Any) -> tuple[list[dict[str, Any]], list[str]]:
+    if not isinstance(body, dict) or not isinstance(body.get("hooks"), list) or not isinstance(body.get("valid_events"), list):
+        raise HTTPException(502, "Das Dashboard liefert die Shell-Hooks in einer unbekannten Form")
+    rows = []
+    for h in body["hooks"]:
+        if not isinstance(h, dict) or not isinstance(h.get("event"), str) or not isinstance(h.get("command"), str):
+            continue
+        rows.append({"event": h["event"], "matcher": h.get("matcher") or "", "executable": bool(h.get("executable")),
+                     "allowed": bool(h.get("allowed")), "approved_at": h.get("approved_at"),
+                     "command_preview": (h["command"][:24] + "…") if len(h["command"]) > 25 else h["command"]})
+    return rows, [str(e) for e in body["valid_events"] if isinstance(e, str)]
+
+
+@router.get("/hermes-hooks")
+async def shell_hooks_list(target: Tgt, dash: Dash):
+    rows, events = _shell_hooks(await upstream(dash.request("GET", "/api/ops/hooks", params={"profile": target.agent.id})))
+    return {"hooks": rows, "valid_events": events}
+
+
+@router.post("/hermes-hooks")
+async def shell_hooks_create(request: Request, target: Tgt, dash: Dash, req: ShellHookIn, user: User = Depends(fresh_user)):
+    _limit(request, user, "hermes-access")
+    rows, events = _shell_hooks(await upstream(dash.request("GET", "/api/ops/hooks", params={"profile": target.agent.id})))
+    if req.event not in events:
+        raise HTTPException(422, "Dieses Ereignis kennt Hermes nicht")
+    if req.confirm != req.command:
+        raise HTTPException(422, "Anlegen: den Befehl zur Bestätigung eintippen")
+    payload: dict[str, Any] = {"event": req.event, "command": req.command, "approve": req.approve}
+    if req.matcher:
+        payload["matcher"] = req.matcher
+    if req.timeout is not None:
+        payload["timeout"] = req.timeout
+    body = await upstream(dash.request("POST", "/api/ops/hooks", body=payload, params={"profile": target.agent.id}))
+    if not isinstance(body, dict) or not body.get("ok"):
+        raise HTTPException(502, "Das Dashboard hat den Hook nicht angelegt")
+    after, _ = _shell_hooks(await upstream(dash.request("GET", "/api/ops/hooks", params={"profile": target.agent.id})))
+    if not any(h["event"] == req.event for h in after):
+        raise HTTPException(502, "Das Dashboard hat den Hook nicht übernommen")
+    audit(request, user, "shellhooks.create", target, event=req.event, approved=bool(body.get("approved")))
+    return {"ok": True, "event": req.event, "approved": bool(body.get("approved"))}
+
+
+@router.delete("/hermes-hooks")
+async def shell_hooks_delete(request: Request, target: Tgt, dash: Dash, req: ShellHookIn, user: User = Depends(fresh_user)):
+    _limit(request, user, "hermes-access")
+    if req.confirm != req.command:
+        raise HTTPException(422, "Löschen: den Befehl zur Bestätigung eintippen")
+    await upstream(dash.request("DELETE", "/api/ops/hooks", body={"event": req.event, "command": req.command}, params={"profile": target.agent.id}))
+    after, _ = _shell_hooks(await upstream(dash.request("GET", "/api/ops/hooks", params={"profile": target.agent.id})))
+    if any(h["event"] == req.event for h in after):
+        raise HTTPException(502, "Das Dashboard hat den Hook nicht gelöscht")
+    audit(request, user, "shellhooks.delete", target, event=req.event)
     return {"ok": True}

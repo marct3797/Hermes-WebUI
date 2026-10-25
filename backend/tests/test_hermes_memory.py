@@ -151,10 +151,15 @@ def test_a_reset_that_did_not_happen_is_reported(tmp_path, make_settings):
         assert r.status_code == 502 and "nicht übernommen" in r.text
 
 
-def test_the_install_step_of_hermes_is_not_reachable(env):
-    for method, path in [("POST", f"{H}/providers/byterover/setup"), ("PUT", f"{H}/providers/byterover/setup"), ("POST", f"{BASE}/memory/providers/byterover/setup")]:
+def test_the_install_step_of_hermes_runs_with_typed_confirmation(env):
+    for method, path in [("PUT", f"{H}/providers/byterover/setup"), ("POST", f"{BASE}/memory/providers/byterover/setup")]:
         assert env.request(method, path, json={}).status_code in (404, 405)
     assert env.dash.state.memory_calls == []
+    assert env.post(f"{H}/providers/byterover/setup", json={"confirm": "nein"}).status_code == 422
+    assert env.dash.state.memory_calls == []
+    r = env.post(f"{H}/providers/byterover/setup", json={"confirm": "einrichten"})
+    assert r.status_code == 200 and r.json() == {"ok": True, "provider": "byterover"}
+    assert ("POST", "/api/memory/providers/byterover/setup") in env.dash.state.memory_calls
 
 
 def test_changes_need_a_fresh_login_and_reading_does_not(env):
@@ -183,3 +188,10 @@ def test_without_a_dashboard_the_page_gets_501(make_settings):
     with TestClient(app) as c:
         c.headers.update(HDR)
         assert c.get("/bff/h/laptop/hermes/default/hermes-memory").status_code == 501
+
+
+def test_provider_setup_starts_only_with_typed_confirmation(env):
+    assert env.post(f"{H}/providers/retaindb/setup", json={"confirm": "nein"}).status_code == 422
+    r = env.post(f"{H}/providers/retaindb/setup", json={"confirm": "einrichten"})
+    assert r.status_code == 200 and r.json() == {"ok": True, "provider": "retaindb"}
+    assert ("POST", "/api/memory/providers/retaindb/setup") in env.dash.state.memory_calls

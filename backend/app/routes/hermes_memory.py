@@ -288,3 +288,21 @@ async def save_provider(request: Request, name: Provider, target: Tgt, dash: Das
         raise HTTPException(502, "Das Dashboard hat nicht übernommen: " + ", ".join(wrong))
     audit(request, user, "hermes_memory.config", target, provider=name, keys=sorted(values))
     return {"ok": True, "active": result.get("active") if isinstance(result, dict) else None}
+
+
+class ProviderSetupIn(BaseModel):
+    values: dict[str, str] = Field(default_factory=dict, max_length=40)
+    confirm: str = Field(default="", max_length=64)
+
+
+@router.post("/hermes-memory/providers/{name}/setup")
+async def setup_provider(request: Request, name: Provider, target: Tgt, dash: Dash, req: ProviderSetupIn, user: User = Depends(fresh_user)):
+    """Anbieter-Installation starten (lädt Programme, fragt Schlüssel nur im Terminal). Bestätigung: „einrichten“ eintippen."""
+    _limit(request, user)
+    if req.confirm != "einrichten":
+        raise HTTPException(422, "Starten: „einrichten“ zur Bestätigung eintippen. Das lädt Programme aus dem Netz.")
+    body = await upstream(dash.request("POST", f"/api/memory/providers/{name}/setup", body={"values": req.values}, params=scope(target)))
+    if not isinstance(body, dict):
+        raise HTTPException(502, "Das Dashboard liefert den Start in einer unbekannten Form")
+    audit(request, user, "hermes_memory.setup", target, provider=name)
+    return {"ok": True, "provider": name}

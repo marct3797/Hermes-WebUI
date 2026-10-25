@@ -1,6 +1,6 @@
 import { invalidate } from "./dataCache";
 import { getPreferences } from "./preferences";
-import type { AcCreated, AcHooks, AcPairing, SaPreview, SaStats, SaTimeline, EpDelegation, EpList, EpLocal, EpValidate, LcCreated, LcList, MdAuxiliary, MdInfo, MdMoa, MdOptions, MdRecommended, MdSetResult, HmField, HmFile, HmFileList, HmFileName, HmFileSaved, HmOverview, GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import type { AcCreated, AcHooks, AcPairing, SaPreview, SaStats, SaTimeline, EpDelegation, EpList, EpLocal, EpValidate, LcCreated, LcList, MdAuxiliary, MdInfo, MdMoa, MdOptions, MdRecommended, MdSetResult, HmField, HmFile, HmFileList, HmFileName, HmFileSaved, HmOverview, GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, WhatsAppPairing, ComputerUse, ShellHooks, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 import { t, tm } from "./i18n";
 
 export class ApiError extends Error {
@@ -162,6 +162,24 @@ export const api = {
   telegramPoll: (a: AgentRef, id: string) => call<TelegramPoll>("GET", `${base(a)}/messaging/telegram/onboarding/${encodeURIComponent(id)}`),
   telegramApply: (a: AgentRef, id: string, allowedUserIds: string[]) => call<{ ok: boolean; bot_username: string | null; needs_restart: boolean; restart_started: boolean; restart_error: string | null }>("POST", `${base(a)}/messaging/telegram/onboarding/${encodeURIComponent(id)}/apply`, { allowed_user_ids: allowedUserIds }),
   telegramCancel: (a: AgentRef, id: string) => call<{ ok: boolean }>("DELETE", `${base(a)}/messaging/telegram/onboarding/${encodeURIComponent(id)}`),
+  whatsappStart: (a: AgentRef, mode: string) => call<WhatsAppPairing>("POST", `${base(a)}/messaging/whatsapp/onboarding`, { mode }),
+  whatsappPoll: (a: AgentRef, id: string) => call<WhatsAppPairing>("GET", `${base(a)}/messaging/whatsapp/onboarding/${encodeURIComponent(id)}`),
+  whatsappApply: (a: AgentRef, id: string) => call<{ ok: boolean; platform: string }>("POST", `${base(a)}/messaging/whatsapp/onboarding/${encodeURIComponent(id)}/apply`, {}),
+  whatsappCancel: (a: AgentRef, id: string) => call<{ ok: boolean }>("DELETE", `${base(a)}/messaging/whatsapp/onboarding/${encodeURIComponent(id)}`),
+  setTerminalBackend: (a: AgentRef, backend: string) => call<{ ok: boolean; backend: string }>("PUT", `${base(a)}/terminal-backend`, { backend }),
+  postSetup: (a: AgentRef, name: string, key: string) => call<{ ok: boolean; name: string; key: string }>("POST", `${base(a)}/tools/${encodeURIComponent(name)}/post-setup`, { key }),
+  computerUse: (a: AgentRef) => call<ComputerUse>("GET", `${base(a)}/computer-use/status`),
+  grantComputerUse: (a: AgentRef) => call<{ ok: boolean; name: string }>("POST", `${base(a)}/computer-use/grant`, {}),
+  updateCheck: (a: AgentRef) => call<{ current: string; available: string | null }>("GET", `${base(a)}/hermes-ops/update-check`),
+  runUpdate: (a: AgentRef) => call<{ ok: boolean; already_running: boolean; error?: string | null; message?: string | null; update_command?: string | null }>("POST", `${base(a)}/hermes-ops/update`, { confirm: "aktualisieren" }),
+  updateAction: (a: AgentRef) => call<{ action: string; running: boolean; exit_code: number | null; log: string }>("GET", `${base(a)}/hermes-ops/actions/update`),
+  migratePlan: (a: AgentRef) => call<{ plan: { blocked?: string[]; profiles?: string[]; target?: string } }>("GET", `${base(a)}/gateway/migrate/plan`),
+  runMigrate: (a: AgentRef) => call<{ ok: boolean; name: string }>("POST", `${base(a)}/gateway/migrate`, { confirm: "migrieren" }),
+  shellHooks: (a: AgentRef) => call<ShellHooks>("GET", `${base(a)}/hermes-hooks`),
+  createHook: (a: AgentRef, body: { event: string; command: string; matcher?: string; timeout?: number; approve: boolean; confirm: string }) => call<{ ok: boolean; event: string; approved: boolean }>("POST", `${base(a)}/hermes-hooks`, body),
+  deleteHook: (a: AgentRef, body: { event: string; command: string; confirm: string }) => call<{ ok: boolean }>("DELETE", `${base(a)}/hermes-hooks`, body),
+  deleteEnv: (a: AgentRef, key: string) => call<{ ok: boolean; key: string }>("DELETE", `${base(a)}/env/${encodeURIComponent(key)}`, { key, confirm: key }),
+  hmSetup: (a: AgentRef, name: string) => call<{ ok: boolean; provider: string }>("POST", `${base(a)}/hermes-memory/providers/${encodeURIComponent(name)}/setup`, { confirm: "einrichten" }),
   hmOverview: (a: AgentRef) => call<HmOverview>("GET", `${base(a)}/hermes-memory`),
   hmSetProvider: (a: AgentRef, provider: string) => call<{ ok: boolean; active: string }>("PUT", `${base(a)}/hermes-memory/provider`, { provider }),
   hmReset: (a: AgentRef, target: "all" | "memory" | "user", confirm: string) => call<{ ok: boolean; deleted: string[] }>("POST", `${base(a)}/hermes-memory/reset`, { target, confirm }),

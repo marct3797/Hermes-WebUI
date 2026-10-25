@@ -111,3 +111,23 @@ async def write_config(request: Request, target: Tgt, dash: Dash, req: ConfigIn,
         raise HTTPException(502, "Das Dashboard hat nicht übernommen: " + ", ".join(dropped))
     audit(request, user, "profile.config", target, keys=sorted(req.changes))
     return {"ok": True, "changed": sorted(req.changes)}
+
+
+class EnvDeleteIn(BaseModel):
+    key: str = Field(min_length=1, max_length=64)
+    confirm: str = Field(default="", max_length=64)
+
+
+@router.delete("/env/{key}")
+async def delete_env(request: Request, key: str, target: Tgt, dash: Dash, req: EnvDeleteIn, user: User = Depends(fresh_user)):
+    """Schlüssel aus der .env entfernen (mitsamt Spiegeln in Anbietern). Bestätigung: Schlüssel eintippen. Nie Klartext zurück."""
+    request.app.state.limiter.check(f"{user.id}:dashboard")
+    if not re.match(r"^[A-Z][A-Z0-9_]{0,63}$", key) or req.key != key:
+        raise HTTPException(422, "Schlüssel: nur Großbuchstaben, Ziffern, Unterstrich")
+    if req.confirm != key:
+        raise HTTPException(422, "Löschen: den Schlüsselnamen zur Bestätigung eintippen")
+    body = await upstream(dash.request("DELETE", "/api/env", body={"key": key}, params={"profile": target.agent.id}, missing="Schlüssel nicht gefunden"))
+    if not isinstance(body, dict):
+        raise HTTPException(502, "Das Dashboard liefert die Antwort in einer unbekannten Form")
+    audit(request, user, "profile.env_delete", target, keys=[key])
+    return {"ok": True, "key": key}

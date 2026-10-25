@@ -208,3 +208,26 @@ def test_without_a_dashboard_the_pages_get_501(make_settings):
         c.headers.update(HDR)
         assert c.get("/bff/h/laptop/hermes/default/hermes-profiles").status_code == 501
         assert c.get("/bff/h/laptop/hermes/default/hermes-ops/status").status_code == 501
+
+
+def test_update_starts_only_with_typed_confirmation(env):
+    assert env.post(f"{OPS}/update", json={"confirm": "nein"}).status_code == 422
+    r = env.post(f"{OPS}/update", json={"confirm": "aktualisieren"})
+    assert r.status_code == 200 and r.json()["ok"] is True
+    assert env.get(f"{OPS}/actions/update").status_code == 200
+
+
+def test_migrate_shows_plan_and_runs_only_with_typed_confirmation(env):
+    plan = env.get("/bff/h/server/hermes/default/gateway/migrate/plan").json()
+    assert plan["plan"]["profiles"] == ["default", "beta"]
+    assert env.post("/bff/h/server/hermes/default/gateway/migrate", json={"confirm": "nein"}).status_code == 422
+    r = env.post("/bff/h/server/hermes/default/gateway/migrate", json={"confirm": "migrieren"})
+    assert r.status_code == 200 and r.json() == {"ok": True, "name": "gateway-migrate"}
+    assert ("gateway-migrate", {}) in env.dash.state.gateway_calls
+
+
+def test_update_and_migrate_need_a_fresh_login(env):
+    from app.auth import SESSION_COOKIE
+    env.app.state.sessions.get(env.cookies.get(SESSION_COOKIE)).auth_time = 0
+    assert env.post(f"{OPS}/update", json={"confirm": "aktualisieren"}).status_code == 401
+    assert env.post("/bff/h/server/hermes/default/gateway/migrate", json={"confirm": "migrieren"}).status_code == 401

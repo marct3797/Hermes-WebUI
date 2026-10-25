@@ -281,3 +281,45 @@ async def ops_backup(request: Request, target: Tgt, dash: Dash, req: OpsConfirmI
         raise HTTPException(502, "Das Dashboard liefert keinen gültigen Backup-Pfad")
     audit(request, user, "hermes_ops.backup", target)
     return {"ok": True, "archive": archive, "contains_secrets": True, "note": "Das Archiv liegt auf dem Rechner des Agents und enthält Zugangsdaten."}
+
+
+@router.post("/hermes-ops/update")
+async def ops_update(request: Request, target: Tgt, dash: Dash, req: OpsConfirmIn, user: User = Depends(fresh_user)):
+    """Hermes-Update starten (läuft im Dashboard als Hintergrundaktion). Bestätigung: „aktualisieren“ eintippen."""
+    _limit(request, user, "hermes-ops")
+    if req.confirm != "aktualisieren":
+        raise HTTPException(422, "Zum Bestätigen „aktualisieren“ eintippen. Das Update ersetzt laufende Dateien.")
+    body = await upstream(dash.request("POST", "/api/hermes/update"))
+    if not isinstance(body, dict):
+        raise HTTPException(502, "Das Dashboard liefert den Start in einer unbekannten Form")
+    audit(request, user, "hermes_ops.update", target)
+    return {"ok": body.get("ok", True), "already_running": body.get("already_running", False), "error": body.get("error"), "message": body.get("message"), "update_command": body.get("update_command")}
+
+
+@router.get("/hermes-ops/actions/update")
+async def ops_update_action(target: Tgt, dash: Dash):
+    body = await upstream(dash.request("GET", "/api/actions/hermes-update/status"))
+    if not isinstance(body, dict):
+        raise HTTPException(502, "Das Dashboard liefert den Aktionszustand in einer unbekannten Form")
+    return {"action": "hermes-update", "running": bool(body.get("running")), "exit_code": body.get("exit_code") if isinstance(body.get("exit_code"), int) else None, "log": redact(str(body.get("log") or ""))[-4000:]}
+
+
+@router.get("/gateway/migrate/plan")
+async def migrate_plan(target: Tgt, dash: Dash):
+    body = await upstream(dash.request("GET", "/api/gateway/migrate/plan"))
+    if not isinstance(body, dict):
+        raise HTTPException(502, "Das Dashboard liefert den Umzugsplan in einer unbekannten Form")
+    return {"plan": body}
+
+
+@router.post("/gateway/migrate")
+async def migrate_run(request: Request, target: Tgt, dash: Dash, req: OpsConfirmIn, user: User = Depends(fresh_user)):
+    """Gateway-Umzug starten (läuft im Dashboard als Hintergrundaktion). Bestätigung: „migrieren“ eintippen."""
+    _limit(request, user, "hermes-ops")
+    if req.confirm != "migrieren":
+        raise HTTPException(422, "Zum Bestätigen „migrieren“ eintippen. Der Umzug startet Dienste neu und unterbricht laufende Chats.")
+    body = await upstream(dash.request("POST", "/api/gateway/migrate"))
+    if not isinstance(body, dict):
+        raise HTTPException(502, "Das Dashboard liefert den Start in einer unbekannten Form")
+    audit(request, user, "hermes_ops.gateway_migrate", target)
+    return {"ok": bool(body.get("ok", True)), "name": body.get("name", "gateway-migrate")}

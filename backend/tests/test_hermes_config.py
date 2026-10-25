@@ -124,3 +124,12 @@ def test_without_dashboard_the_page_gets_501(make_settings):
 def test_secret_detection_hits_keys_not_counters_or_switches(key, kind, secret):
     from app.routes.hermes_config import is_secret
     assert is_secret(key, kind) is secret
+
+
+def test_env_delete_needs_the_typed_key_and_reports_missing(env):
+    assert env.request("DELETE", f"{BASE}/env/ANTHROPIC_API_KEY", json={"key": "ANTHROPIC_API_KEY", "confirm": "falsch"}).status_code == 422
+    assert env.request("DELETE", f"{BASE}/env/GIBTSNICHT_KEY", json={"key": "GIBTSNICHT_KEY", "confirm": "GIBTSNICHT_KEY"}).status_code == 404
+    assert env.request("DELETE", f"{BASE}/env/klein", json={"key": "klein", "confirm": "klein"}).status_code == 422
+    r = env.request("DELETE", f"{BASE}/env/ANTHROPIC_API_KEY", json={"key": "ANTHROPIC_API_KEY", "confirm": "ANTHROPIC_API_KEY"})
+    assert r.status_code == 200 and r.json() == {"ok": True, "key": "ANTHROPIC_API_KEY"}
+    assert "ANTHROPIC_API_KEY" in open(env.audit_file).read()

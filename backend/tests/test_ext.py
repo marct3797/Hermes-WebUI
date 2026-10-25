@@ -509,3 +509,17 @@ def test_unregistered_profile_is_refused_for_extensions(ext):
     assert c.get("/bff/h/ct/_ext/ghost/skill-list").status_code == 404
     assert c.post("/bff/h/ct/_ext/ghost/skills", json={"name": "delta", "category": "beispiel", "content": SKILL}).status_code == 404
     assert c.get(f"{E}/skill-list").status_code == 200
+
+
+def test_mcp_replace_needs_typed_confirmation_and_reads_back(ext):
+    c, _, _, tmp = ext
+    body = {"servers": {"neu": {"transport": "stdio", "command": "x"}}}
+    assert c.put(f"{E}/mcp", json=body).status_code == 422
+    assert c.put(f"{E}/mcp", json={**body, "confirm": "falsch"}).status_code == 422
+    assert c.put(f"{E}/mcp", json={"servers": {}, "confirm": "ERSETZEN"}).status_code == 422
+    assert c.put(f"{E}/mcp", json={"servers": {"böse name!": {}}, "confirm": "ERSETZEN"}).status_code == 422
+    r = c.put(f"{E}/mcp", json={**body, "confirm": "ERSETZEN"})
+    assert r.status_code == 200 and r.json() == {"ok": True, "servers": ["neu"]}
+    assert {x["name"] for x in c.get(f"{E}/mcp").json()["servers"]} == {"neu"}
+    audit = audit_text(tmp)
+    assert "ext.mcp.replace" in audit and '"servers":1' in audit and "stdio" not in audit

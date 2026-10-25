@@ -8,8 +8,9 @@ Gateway: Start, Stopp und Neustart melden „gestartet“, nicht „läuft“ (H
 Der Neustart des Dashboards unterbricht laufende Läufe immer (`--interrupt` ist fest), der Stopp tut es mit `interrupt=true`: beides nur nach
 ausdrücklicher Bestätigung, wenn das Gateway beschäftigt ist.
 
-Telegram-Onboarding: Hermes holt über einen Dienst von Nous einen Bot. Das Bot-Token bleibt im Dashboard-Prozess und erreicht nie den Browser.
-Nicht vorhanden: Drain (gilt für das Heimatverzeichnis des Dashboards, nicht für ein Profil), WhatsApp-Kopplung (siehe docs/coverage.md).
+Telegram- und WhatsApp-Onboarding: Hermes legt die Kopplung an, das Bot-Token bzw. die Sitzung bleibt im Dashboard-Prozess
+und erreicht nie den Browser. Der Browser zeigt nur QR-Inhalt und Stand.
+Nicht vorhanden: Drain (gilt für das Heimatverzeichnis des Dashboards, nicht für ein Profil).
 """
 from __future__ import annotations
 
@@ -229,4 +230,68 @@ async def telegram_apply(request: Request, pairing_id: PairingId, target: Tgt, d
 @router.delete("/messaging/telegram/onboarding/{pairing_id}")
 async def telegram_cancel(pairing_id: PairingId, target: Tgt, dash: Dash):
     await upstream(dash.request("DELETE", f"/api/messaging/telegram/onboarding/{pairing_id}"))
+    return {"ok": True}
+
+
+# --- WhatsApp-Kopplung (QR im Browser statt Terminal) ---------------------------------------------------
+
+class WhatsAppStart(BaseModel):
+    mode: str = Field(min_length=1, max_length=32)
+    allowed_users: list[str] = Field(default_factory=list, max_length=50)
+    reset_session: bool = False
+
+
+class WhatsAppApply(BaseModel):
+    mode: str | None = Field(default=None, min_length=1, max_length=32)
+    allowed_users: list[str] | None = Field(default=None, max_length=50)
+
+
+@router.post("/messaging/whatsapp/onboarding")
+async def whatsapp_start(request: Request, target: Tgt, dash: Dash, req: WhatsAppStart, user: User = Depends(fresh_user)):
+    """WhatsApp-Kopplung starten: Hermes legt eine Sitzung an, der Browser zeigt den QR-Inhalt zum Scannen."""
+    _limit(request, user)
+    body = await upstream(dash.request("POST", "/api/messaging/whatsapp/onboarding/start",
+                                       body={"mode": req.mode, "allowed_users": req.allowed_users,
+                                             "reset_session": req.reset_session, "profile": target.agent.id}, params=scope(target)))
+    if not isinstance(body, dict) or not isinstance(body.get("pairing_id"), str):
+        raise HTTPException(502, "Das Dashboard liefert die Kopplung in einer unbekannten Form")
+    if body.get("status") not in ("waiting", "connected", "pairing", "qr", "ready", "error"):
+        raise HTTPException(502, "Das Dashboard liefert den Kopplungsstand in einer unbekannten Form")
+    audit(request, user, "messaging.whatsapp.start", target, mode=req.mode)
+    return {"pairing_id": body["pairing_id"], "status": body.get("status"), "qr_payload": clip(body.get("qr_payload"), 4096),
+            "expires_at": body.get("expires_at"), "mode": body.get("mode"),
+            "account": {k: clip(body.get(k), 64) or None for k in ("account_id", "account_name", "account_phone")},
+            "error": clip(body.get("error"), 300) or None}
+
+
+@router.get("/messaging/whatsapp/onboarding/{pairing_id}")
+async def whatsapp_poll(pairing_id: PairingId, target: Tgt, dash: Dash):
+    body = await upstream(dash.request("GET", f"/api/messaging/whatsapp/onboarding/{pairing_id}", params=scope(target),
+                                       missing="Die WhatsApp-Kopplung ist abgelaufen. Bitte neu beginnen."))
+    if not isinstance(body, dict) or not isinstance(body.get("status"), str):
+        raise HTTPException(502, "Das Dashboard liefert den Stand der Kopplung in einer unbekannten Form")
+    return {"status": body.get("status"), "qr_payload": clip(body.get("qr_payload"), 4096), "expires_at": body.get("expires_at"),
+            "account": {k: clip(body.get(k), 64) or None for k in ("account_id", "account_name", "account_phone")},
+            "error": clip(body.get("error"), 300) or None}
+
+
+@router.post("/messaging/whatsapp/onboarding/{pairing_id}/apply")
+async def whatsapp_apply(request: Request, pairing_id: PairingId, target: Tgt, dash: Dash, req: WhatsAppApply, user: User = Depends(fresh_user)):
+    _limit(request, user)
+    payload: dict[str, Any] = {"profile": target.agent.id}
+    if req.mode is not None:
+        payload["mode"] = req.mode
+    if req.allowed_users is not None:
+        payload["allowed_users"] = req.allowed_users
+    body = await upstream(dash.request("POST", f"/api/messaging/whatsapp/onboarding/{pairing_id}/apply", body=payload, params=scope(target),
+                                       missing="Die WhatsApp-Kopplung ist abgelaufen. Bitte neu beginnen."))
+    if not isinstance(body, dict) or not body.get("ok", True):
+        raise HTTPException(502, "Das Dashboard hat die Kopplung nicht übernommen")
+    audit(request, user, "messaging.whatsapp.apply", target)
+    return {"ok": True, "platform": "whatsapp"}
+
+
+@router.delete("/messaging/whatsapp/onboarding/{pairing_id}")
+async def whatsapp_cancel(pairing_id: PairingId, target: Tgt, dash: Dash):
+    await upstream(dash.request("DELETE", f"/api/messaging/whatsapp/onboarding/{pairing_id}", params=scope(target)))
     return {"ok": True}

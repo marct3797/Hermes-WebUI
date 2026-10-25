@@ -186,7 +186,8 @@ export type DashState = {
   polls: number; // wie oft die laufende Geräte-Anmeldung abgefragt wurde; ab der zweiten Abfrage ist sie bestätigt
   loginError: string | null; // lässt die Anmeldung scheitern
   config: Record<string, unknown>; // Werte der Hermes-Einstellungen (Punkt-Pfad → Wert)
-  msg: { available: boolean; enabled: Record<string, boolean>; env: Record<string, string>; gateway: { running: boolean; busy: boolean; sessions: number }; polls: number; applied: string[] }; // Messaging und Gateway
+  msg: { available: boolean; enabled: Record<string, boolean>; env: Record<string, string>; gateway: { running: boolean; busy: boolean; sessions: number }; polls: number; applied: string[]; waPolls: number; waDone: boolean }; // Messaging und Gateway
+  tmBackend: string | null;
   hm: { available: boolean; active: string; files: { memory: number; user: number }; keySet: boolean; project: string; mode: string; memfiles: { content: Record<string, string>; sha: Record<string, string>; conflict: boolean; oldHostd: boolean } }; // Hermes-Gedächtnis
   tools: { available: boolean; enabled: Record<string, boolean>; keys: Record<string, string>; provider: Record<string, string>; model: string; installed: boolean }; // Werkzeug-Gruppen
   ac: { pending: Array<{ platform: string; request_id: string; user_id: string; user_name: string }>; approved: Array<{ platform: string; user_id: string; user_name: string }>; hooksOn: boolean; hooks: Array<{ name: string; enabled: boolean }> };
@@ -427,6 +428,25 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
       return json({ ok: true, platform: "telegram", bot_username: "hermes_test_bot", needs_restart: true, restart_started: false, restart_error: "Live sessions" });
     }
     if (tg && method === "DELETE") return json({ ok: true });
+    const wa = /^\/messaging\/whatsapp\/onboarding\/(wa_[a-z0-9_]+)(\/apply)?$/.exec(path);
+    if (path === "/messaging/whatsapp/onboarding" && method === "POST") {
+      if (dash.stepUp) return json(stepUpBody, 401);
+      m.waPolls = 0;
+      return json({ pairing_id: "wa_pair_1", status: "waiting", qr_payload: "WA-QR-1", expires_at: "2026-10-24T18:00:00Z", mode: "qr", account: null, error: null });
+    }
+    if (wa && method === "GET") {
+      m.waPolls += 1;
+      return m.waPolls < 2
+        ? json({ pairing_id: "wa_pair_1", status: "waiting", qr_payload: "WA-QR-1", expires_at: "2026-10-24T18:00:00Z", mode: "qr", account: null, error: null })
+        : json({ pairing_id: "wa_pair_1", status: "connected", qr_payload: null, expires_at: "2026-10-24T18:00:00Z", mode: "qr", account: { account_id: "4917", account_name: "Handy", account_phone: "4917" }, error: null });
+    }
+    if (wa && wa[2] && method === "POST") {
+      if (dash.stepUp) return json(stepUpBody, 401);
+      if (m.waPolls < 2) return json({ detail: "WhatsApp setup is not connected yet." }, 502);
+      m.waDone = true;
+      return json({ ok: true, platform: "whatsapp" });
+    }
+    if (wa && method === "DELETE") { m.waPolls = 0; return json({ ok: true }); }
   }
   const lcPath = /^\/hermes-profiles(\/import|\/active|\/([^/]+))?$/.exec(path);
   if (lcPath) {
@@ -651,6 +671,12 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
       h.active = "retaindb";
       return json({ ok: true, active: "retaindb" });
     }
+    const setupProv = /^\/hermes-memory\/providers\/(byterover|retaindb)\/setup$/.exec(path);
+    if (setupProv && method === "POST") {
+      if (dash.stepUp) return json(stepUpBody, 401);
+      if (body?.confirm !== "einrichten") return json({ detail: "Bestätigung" }, 422);
+      return json({ ok: true, provider: setupProv[1] });
+    }
     const memSha = (text: string) => `sha-${text.length}-${text.slice(0, 8)}`;
     const memFile = /^\/hermes-memory\/files\/(MEMORY\.md|USER\.md)$/.exec(path);
     if (path === "/hermes-memory/files" && method === "GET") {
@@ -680,8 +706,56 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
   }
   const toolRows = () => TOOL_CATALOG.map((t) => ({ name: t.name, label: t.label, description: t.description, enabled: dash.tools.enabled[t.name], configured: !t.providers.length || t.providers.some((p) => (p.env as Array<{ key: string }>).every((v) => v.key in dash.tools.keys)), tools: t.tools }));
   const toolPath = /^\/tools(?:\/([a-z_]+)(?:\/(provider|env|model|models))?)?$/.exec(path);
+  if (path === "/terminal-backend" && method === "PUT") {
+    if (dash.stepUp) return json(stepUpBody, 401);
+    const want = String(body?.backend ?? "");
+    if (!["local", "docker"].includes(want)) return json({ detail: "kennt nicht" }, 422);
+    dash.tmBackend = want;
+    return json({ ok: true, backend: want });
+  }
+  if (path === "/computer-use/status" && method === "GET") return json({ ready: false, installed: true, can_grant: false, granted: null, platform: "linux", detail: null });
+  if (path === "/computer-use/grant" && method === "POST") {
+    if (dash.stepUp) return json(stepUpBody, 401);
+    return json({ ok: true, name: "computer-use-grant" });
+  }
+  const postSetup = /^\/tools\/([a-z_]+)\/post-setup$/.exec(path);
+  if (postSetup && method === "POST") {
+    if (dash.stepUp) return json(stepUpBody, 401);
+    return json({ ok: true, name: "tools-post-setup", key: String(body?.key ?? "") });
+  }
+  if (path === "/hermes-ops/update-check" && method === "GET") return json({ current: "mock-1", available: "mock-2" });
+  if (path === "/hermes-ops/update" && method === "POST") {
+    if (dash.stepUp) return json(stepUpBody, 401);
+    if (body?.confirm !== "aktualisieren") return json({ detail: "Bestätigung" }, 422);
+    return json({ ok: true, already_running: false });
+  }
+  if (path === "/hermes-ops/actions/update" && method === "GET") return json({ action: "hermes-update", running: false, exit_code: 0, log: "fertig" });
+  if (path === "/gateway/migrate/plan" && method === "GET") return json({ plan: { blocked: [], profiles: ["default"], target: "host" } });
+  if (path === "/gateway/migrate" && method === "POST") {
+    if (dash.stepUp) return json(stepUpBody, 401);
+    if (body?.confirm !== "migrieren") return json({ detail: "Bestätigung" }, 422);
+    return json({ ok: true, name: "gateway-migrate" });
+  }
+  if (path === "/hermes-hooks" && method === "GET") return json({ hooks: [{ event: "before_tool", matcher: "", executable: true, allowed: false, approved_at: null, command_preview: "echo hi" }], valid_events: ["before_tool", "after_tool"] });
+  if (path === "/hermes-hooks" && method === "POST") {
+    if (dash.stepUp) return json(stepUpBody, 401);
+    if (body?.confirm !== body?.command) return json({ detail: "Bestätigung" }, 422);
+    return json({ ok: true, event: String(body?.event), approved: Boolean(body?.approve) });
+  }
+  if (path === "/hermes-hooks" && method === "DELETE") {
+    if (dash.stepUp) return json(stepUpBody, 401);
+    if (body?.confirm !== body?.command) return json({ detail: "Bestätigung" }, 422);
+    return json({ ok: true });
+  }
+  const envDel = /^\/env\/([A-Z0-9_]+)$/.exec(path);
+  if (envDel && method === "DELETE") {
+    if (dash.stepUp) return json(stepUpBody, 401);
+    if (body?.confirm !== envDel[1]) return json({ detail: "Bestätigung" }, 422);
+    delete dash.keys[envDel[1]];
+    return json({ ok: true, key: envDel[1] });
+  }
   if (path === "/terminal-backends" && method === "GET") {
-    return dash.tools.available ? json({ active: "local", backends: [{ name: "local", label: "Local", description: "Run commands directly on this machine. No isolation.", active: true, status: "ready", detail: "" }, { name: "docker", label: "Docker / Podman", description: "Isolated container.", active: false, status: "needs_setup", detail: "Docker CLI not found" }] }) : json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
+    return dash.tools.available ? json({ active: dash.tmBackend ?? "local", backends: [{ name: "local", label: "Local", description: "Run commands directly on this machine. No isolation.", active: (dash.tmBackend ?? "local") === "local", status: "ready", detail: "" }, { name: "docker", label: "Docker / Podman", description: "Isolated container.", active: (dash.tmBackend ?? "local") === "docker", status: "needs_setup", detail: "Docker CLI not found" }] }) : json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
   }
   if (toolPath) {
     if (!dash.tools.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
@@ -732,7 +806,8 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
     history: [], versions: {}, stepUp: false, keys: { ANTHROPIC_API_KEY: "sk-ant-geheim-1234" },
     loggedIn: new Set(["openai-codex"]), polls: 0, loginError: null,
     config: { model: "claude-test", "agent.service_tier": "normal", "agent.max_turns": 90, "display.streaming": true, fallback_providers: [], "web.api_key": null },
-    msg: { available: true, enabled: {}, env: {}, gateway: { running: false, busy: false, sessions: 0 }, polls: 0, applied: [] },
+    msg: { available: true, enabled: {}, env: {}, gateway: { running: false, busy: false, sessions: 0 }, polls: 0, applied: [], waPolls: 0, waDone: false },
+    tmBackend: null,
     hm: { available: true, active: "", files: { memory: 120, user: 45 }, keySet: false, project: "", mode: "fast", memfiles: { content: { "MEMORY.md": "Eintrag eins\n§\nEintrag zwei\n", "USER.md": "" }, sha: {}, conflict: false, oldHostd: false } },
     tools: { available: true, enabled: { terminal: true, web: false, image_gen: true, computer_use: false }, keys: {}, provider: {}, model: "flux-2-pro", installed: false },
     ac: { pending: [{ platform: "telegram", request_id: "req-1", user_id: "42", user_name: "Anna" }], approved: [{ platform: "telegram", user_id: "7", user_name: "Bob" }], hooksOn: false, hooks: [] },
