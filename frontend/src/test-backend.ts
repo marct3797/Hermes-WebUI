@@ -189,6 +189,8 @@ export type DashState = {
   tools: { available: boolean; enabled: Record<string, boolean>; keys: Record<string, string>; provider: Record<string, string>; model: string; installed: boolean }; // Werkzeug-Gruppen
   ac: { pending: Array<{ platform: string; request_id: string; user_id: string; user_name: string }>; approved: Array<{ platform: string; user_id: string; user_name: string }>; hooksOn: boolean; hooks: Array<{ name: string; enabled: boolean }> };
   mdDown?: boolean; mdFresh: boolean; // frische Installation: noch kein Anbieter, kein Modell (gültige, leere Antworten)
+  hostsEmpty?: boolean; // keine Hosts eingetragen (leere, gültige Antwort)
+  statusDown?: boolean; altDown?: boolean; sessDown?: boolean; sessEmpty?: boolean; provFresh?: boolean; diagDown?: boolean; provDown?: boolean; // Fehler-/Leer-Proben je Schritt
   sa: { down?: boolean; sessions: Array<{ id: string; ageDays: number; messages: number; active?: boolean }> };
   ep: { backend: string; endpoints: Array<{ id: string; name: string; base_url: string; model: string; hasKey: boolean }>; current: string };
   lcProfiles: string[]; lcActive: string; // Profil-Lebenszyklus: Namen als Text, nie Serverpfade
@@ -287,7 +289,11 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
       : { available: false, reason: dash.reason, profile: null });
   }
   const path = rest.split("?")[0];
-  if (path === "/providers" && method === "GET") return json(providersOverview(dash, Number(new URL(rest, "http://bff").searchParams.get("days") ?? 30)));
+  if (path === "/providers" && method === "GET") {
+    if (dash.provDown) return json({ detail: "Anbieterliste nicht lesbar" }, 502);
+    if (dash.provFresh || dash.mdFresh) return json({ providers: [], period_days: Number(new URL(rest, "http://bff").searchParams.get("days") ?? 30), warnings: [] as string[] });
+    return json(providersOverview(dash, Number(new URL(rest, "http://bff").searchParams.get("days") ?? 30)));
+  }
   if (path === "/providers/models" && method === "GET") {
     return json({ providers: [
       { slug: dash.model.provider, name: dash.model.provider === "mock" ? "Mock" : dash.model.provider, current: true, authenticated: true, models: ["mock-large", "mock-small"], warning: null },
@@ -712,7 +718,10 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
     const method = init?.method ?? "GET";
     calls.push({ method, url, body: init?.body instanceof FormData ? { archive: "[datei]" } : init?.body ? JSON.parse(String(init.body)) : undefined });
     if (url === "/bff/me") return json({ user: { id: "42", name: "alex" }, auth_mode: "none", fresh: true, build: "3f5c30c" });
-    if (url === "/bff/hosts") return json({ hosts: hostsFor(agents), config_error: null });
+    if (url === "/bff/hosts") {
+      if (dash.hostsEmpty) return json({ hosts: [], config_error: null });
+      return json({ hosts: hostsFor(agents), config_error: null });
+    }
     if (url === "/bff/ui") return json(uiState);
     if (url.startsWith("/bff/rooms")) {
       const u = new URL(url, "http://bff");
@@ -824,15 +833,25 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
       const d = dashboardRoute(rest, method, m[1], dash, json, parsed, init);
       if (d) return d;
       if (/^\/quota(\?refresh=1)?$/.test(rest)) return json(quotaOf(m[1], qm));
-      if (rest === "/status") return json({ state: "online", online: true, version: "0.21.6", features, error: null });
+      if (rest === "/status") {
+        if (dash.statusDown || (dash.altDown && m[1] !== "gamma")) return json({ detail: "Agent antwortet nicht" }, 503);
+        return json({ state: "online", online: true, version: "0.21.6", features, error: null });
+      }
       if (rest === "/models") return json({ providers: [{ slug: "mock", name: "Mock", authenticated: true, is_current: true, models: ["mock-large", "mock-small"] }], model: "mock-large", provider: "mock" });
       if (rest === "/skills") return json({ object: "list", data: [{ name: "plan", description: "Zerlegt Aufgaben in Schritte.", category: "software-development" }, { name: "himalaya", description: "E-Mail über IMAP.", category: "email" }] });
       if (rest === "/toolsets") return json({ object: "list", data: [{ name: "terminal", label: "Terminal", enabled: true, configured: true, tools: ["terminal"] }, { name: "web", label: "Web", enabled: true, configured: false }, { name: "browser", enabled: false }] });
-      if (rest === "/diagnose") return json(diag(m[1]));
+      if (rest === "/diagnose") {
+        if (dash.diagDown) return json({ detail: "Diagnose nicht lesbar" }, 502);
+        return json(diag(m[1]));
+      }
       if (method === "POST" && rest === "/diagnose/run") return json(diag(m[1], true));
       if (method === "POST" && /^\/sessions\/[^/]+\/fork$/.test(rest)) return json({ session_id: `fork-${m[1]}` });
       if (/^\/sessions\/[^/]+\/messages$/.test(rest)) return json({ object: "list", data: sessionMessages(rest) });
-      if (rest === "/sessions") return json({ data: [{ id: `alt-${m[1]}`, title: `Alter Chat von ${m[1]}`, last_active_at: Math.floor(Date.now() / 1000) - 7260 }] });
+      if (rest === "/sessions") {
+        if (dash.sessDown) return json({ detail: "Sitzungen nicht lesbar" }, 503);
+        if (dash.sessEmpty) return json({ data: [] });
+        return json({ data: [{ id: `alt-${m[1]}`, title: `Alter Chat von ${m[1]}`, last_active_at: Math.floor(Date.now() / 1000) - 7260 }] });
+      }
       if (method === "POST" && rest === "/runs") { runs += 1; return json({ run_id: `run_${runs}`, session_id: `s${runs}` }); }
       if (method === "POST" && /^\/runs\/run_\d+\/(approval|steer|stop|clarify)$/.test(rest)) return json({});
     }
