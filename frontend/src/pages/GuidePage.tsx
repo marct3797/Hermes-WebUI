@@ -200,20 +200,24 @@ function UpdatePanel({ agent }: { agent: AgentRef | null }) {
 
 function GatewayPanel({ agent }: { agent: AgentRef | null }) {
   const op = useOp();
-  const [plan, setPlan] = useState<{ blocked?: string[]; profiles?: string[]; target?: string } | null>(null);
+  type PlanProfile = { profile?: string; pid?: number | null; home?: string | null };
+  const [plan, setPlan] = useState<{ blockers?: string[]; profiles?: (string | PlanProfile)[]; notices?: string[]; eligible?: boolean } | null>(null);
   useEffect(() => { if (agent) void api.migratePlan(agent).then((r) => setPlan(r.plan), () => setPlan(null)); }, [agent]); // eslint-disable-line react-hooks/exhaustive-deps
+  const nameOf = (p: string | PlanProfile) => (typeof p === "string" ? p : p.profile ?? "?");
+  const keyOf = (p: string | PlanProfile, i: number) => `${nameOf(p)}-${i}`;
   return (
     <div className="col" style={{ gap: 8 }}>
       {plan ? (
-        <ul>{(plan.profiles ?? []).map((p) => <li key={p}>{p}</li>)}{(plan.blocked ?? []).map((b) => <li key={b} role="alert" className="error">{b}</li>)}</ul>
+        <><ul>{(plan.profiles ?? []).map((p, i) => <li key={keyOf(p, i)}>{nameOf(p)}{typeof p !== "string" && p.pid ? ` (PID ${p.pid})` : ""}</li>)}{(plan.blockers ?? []).map((b, i) => <li key={`b-${i}`} role="alert" className="error">{b}</li>)}</ul>
+        {(plan.notices ?? []).map((n, i) => <p key={i} className="muted small">{n}</p>)}</>
       ) : <p className="muted small">{t("Kein Plan lesbar.")}</p>}
       <div className="row" style={{ gap: 8 }}>
-        <button type="button" className="btn btn-s btn-p" disabled={!agent || op.busy || (plan?.blocked?.length ?? 0) > 0} onClick={() => void op.run(async () => {
+        <button type="button" className="btn btn-s btn-p" disabled={!agent || op.busy || ((plan?.blockers?.length ?? 0) > 0) || plan?.eligible === false} onClick={() => void op.run(async () => {
           const word = window.prompt(t("Zum Bestätigen „migrieren“ eintippen. Unterbricht laufende Chats."));
           if (word === null) return null;
           if (word !== "migrieren") throw new Error(t("Abgebrochen: Bestätigung stimmt nicht."));
           const r = await api.runMigrate(agent!);
-          return t("Umzug läuft ({action}).", { action: r.name });
+          return t("Umzug läuft ({action}).", { action: String(r.name ?? "?") });
         })}>{t("Umzug starten")}</button>
       </div>
       {op.notes}

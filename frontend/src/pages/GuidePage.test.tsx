@@ -98,7 +98,7 @@ describe("GuidePage als Bedienung", () => {
   it("zeigt den Migrationsplan und startet erst mit Wort", async () => {
     await open();
     const c = card("gateway");
-    await c.findByText("default");
+    await c.findByText(/default \(PID 1258\)/);
     vi.spyOn(window, "prompt").mockReturnValue("migrieren");
     fireEvent.click(c.getByRole("button", { name: "Umzug starten" }));
     await waitFor(() => expect(sent("POST", "/gateway/migrate")).toHaveLength(1));

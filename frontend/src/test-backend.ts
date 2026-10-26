@@ -730,7 +730,7 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
     return json({ ok: true, already_running: false });
   }
   if (path === "/hermes-ops/actions/update" && method === "GET") return json({ action: "hermes-update", running: false, exit_code: 0, log: "fertig" });
-  if (path === "/gateway/migrate/plan" && method === "GET") return json({ plan: { blocked: [], profiles: ["default"], target: "host" } });
+  if (path === "/gateway/migrate/plan" && method === "GET") return json({ plan: { blockers: [], profiles: [{ profile: "default", home: "/home/user/.hermes", pid: 1258, service: { kind: "systemd", system: false }, services: [], run_as_user: null, uid: 1000, runtime_home: null }], notices: [], eligible: true } });
   if (path === "/gateway/migrate" && method === "POST") {
     if (dash.stepUp) return json(stepUpBody, 401);
     if (body?.confirm !== "migrieren") return json({ detail: "Bestätigung" }, 422);

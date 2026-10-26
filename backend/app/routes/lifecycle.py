@@ -249,9 +249,14 @@ async def ops_health(target: Tgt, dash: Dash):
 @router.get("/hermes-ops/update-check")
 async def ops_update_check(target: Tgt, dash: Dash):
     body = await upstream(dash.request("GET", "/api/hermes/update/check"))
-    if not isinstance(body, dict) or not body.get("current"):
+    if not isinstance(body, dict) or not body.get("current_version"):
         raise HTTPException(502, "Das Dashboard liefert die Update-Prüfung in einer unbekannten Form")
-    return {"current": str(body["current"])[:100], "available": str(body["available"])[:100] if body.get("available") else None}
+    avail = body.get("update_available")
+    latest = None
+    if avail:
+        commits = body.get("commits") or []
+        latest = commits[0].get("summary") if commits and isinstance(commits[0], dict) else (body.get("message") or "verfügbar")
+    return {"current": str(body["current_version"])[:100], "available": str(latest)[:200] if latest else None}
 
 
 @router.post("/hermes-ops/doctor", status_code=202)

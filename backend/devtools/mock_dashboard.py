@@ -350,7 +350,7 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
 
     @app.get("/api/hermes/update/check")
     async def update_check():
-        return {"current": "mock-1", "available": None}
+        return {"install_method": "git", "current_version": "mock-1", "behind": 0, "update_available": False, "can_apply": True, "update_command": "hermes update", "message": None}
 
     @app.get("/api/profiles/{name}/soul")
     async def get_soul(name: str):
