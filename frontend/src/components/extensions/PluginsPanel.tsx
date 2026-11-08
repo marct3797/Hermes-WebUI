@@ -3,6 +3,7 @@ import { extApi, type Plugin, type PluginCatalogEntry, type PluginResult } from 
 import { useAsync } from "../../useAsync";
 import { Icon } from "../Icon";
 import { Confirm, Loading, Modal, Pill, Problem, SearchBox, Switch, TRUST, type Scope } from "./common";
+import { PluginUpdates } from "./PluginUpdates";
 import { t } from "../../i18n";
 
 const IDENT_RE = /^([A-Za-z0-9][A-Za-z0-9_.-]{0,99}\/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}|https:\/\/[A-Za-z0-9.-]+\/[A-Za-z0-9_./~-]{1,200})$/;
@@ -131,6 +132,7 @@ export function PluginsPanel({ scope }: { scope: Scope }) {
   return (
     <div className="ext-split">
       <section aria-label={t("Plugins")} className="col" style={{ gap: 10 }}>
+        <PluginUpdates scope={scope} onDone={reload} />
         <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
           <SearchBox value={q} onChange={setQ} label={t("Plugins durchsuchen")} />
           <span className="grow" />

@@ -6,6 +6,8 @@ lokale Modelle installieren/laden/löschen/Server starten (laden Fremdcode und G
 from __future__ import annotations
 
 import ipaddress
+import re
+import socket
 from typing import Any, Literal
 from urllib.parse import urlsplit
 
@@ -28,9 +30,14 @@ def _limit(request: Request, user: User, what: str) -> None:
 def _safe_url(raw: str) -> str:
     # shortcut: prüft nur Schema/Zugangsdaten/Link-Local-IP, löst keine DNS-Namen auf; bei Mehrnutzer-Betrieb Egress-Filter ergänzen.
     u = urlsplit(raw.strip())
-    host = (u.hostname or "").lower()
+    host = (u.hostname or "").lower().rstrip(".")
     if u.scheme not in ("http", "https") or not host or u.username or u.password:
         raise ValueError("URL: nur http(s) ohne Zugangsdaten in der Adresse")
+    if host.isdigit() or re.fullmatch(r"0x[0-9a-f]+|[0-9.]*0[0-7]+[0-9.]*", host):  # ganze Zahl, Hex oder Oktal als IPv4
+        try:
+            host = socket.inet_ntoa(socket.inet_aton(host))
+        except OSError:
+            raise ValueError("URL: ungültige Adresse") from None
     try:
         if ipaddress.ip_address(host).is_link_local:
             raise ValueError("URL: Link-Local-Adressen (Cloud-Metadaten) sind gesperrt")
@@ -42,9 +49,16 @@ def _safe_url(raw: str) -> str:
     return raw.strip().rstrip("/")
 
 
+OPTION_KEYS = ("name", "description", "provider", "model", "base_url", "reasoning_effort", "service_tier")
+
+
 def _scrub(options: Any) -> list[dict[str, Any]]:
-    # Hermes liefert nur eine Vorschau; trotzdem nie ein Schlüsselfeld weitergeben.
-    return [{**{k: v for k, v in o.items() if k != "api_key"}, "has_api_key": bool(o.get("api_key"))} for o in options if isinstance(o, dict)] if isinstance(options, list) else []
+    # Nur die Felder der Maske plus „Schlüssel gesetzt“. Fremdfelder (request_overrides mit Headern, fallback_providers) und jede Schlüsselvorschau bleiben im BFF.
+    return [{**{k: str(o.get(k) or "") for k in OPTION_KEYS}, "has_api_key": bool(o.get("api_key"))} for o in options if isinstance(o, dict)] if isinstance(options, list) else []
+
+
+def _scrub_profiles(rows: Any) -> list[dict[str, str]]:
+    return [{"name": str(r.get("name") or ""), "description": str(r.get("description") or "")} for r in rows if isinstance(r, dict)] if isinstance(rows, list) else []
 
 
 async def _routing(dash: Dash, agent: str) -> dict[str, Any]:
@@ -62,7 +76,7 @@ async def delegation_read(target: Tgt, dash: Dash):
     return {"configured": b["configured"], "blocked_reason": b.get("blocked_reason"),
             "backends": [{"name": x.get("name"), "description": x.get("description", ""), "builtin": bool(x.get("builtin"))} for x in b["backends"] if isinstance(x, dict)],
             "model_map": {"options": _scrub(mm.get("options")), "default": mm.get("default")},
-            "profile_routes": {"profiles": _scrub(pr.get("profiles")), "default": pr.get("default")}, "profiles": b["profiles"]}
+            "profile_routes": {"profiles": _scrub_profiles(pr.get("profiles")), "default": pr.get("default")}, "profiles": b["profiles"]}
 
 
 class BackendIn(BaseModel):

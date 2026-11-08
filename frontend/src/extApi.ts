@@ -9,7 +9,7 @@ const qs = (o: Record<string, string | undefined>) => {
   return p.length ? `?${p.join("&")}` : "";
 };
 
-export type Skill = { name: string; description: string; category: string | null; enabled: boolean; usage: number; provenance: "bundled" | "hub" | "external" | "agent" | string };
+export type Skill = { name: string; description: string; category: string | null; enabled: boolean; locked?: boolean; usage: number; provenance: "bundled" | "hub" | "external" | "agent" | string };
 export type McpServer = {
   name: string; transport: "stdio" | "http" | "unknown"; url: string | null; command: string | null; args: string[]; env_names: string[];
   auth: string | null; enabled: boolean; tool_count: number | null; source: "config" | "plugin"; plugin: string | null;
@@ -56,6 +56,7 @@ export const extApi = {
   saveSkill: (h: string, p: string, n: string, content: string) => call<{ ok: boolean }>("PUT", `${ext(h, p)}/skills/${e(n)}`, { content }),
   createSkill: (h: string, p: string, body: { name: string; category?: string; content: string }) => call<{ ok: boolean; name: string }>("POST", `${ext(h, p)}/skills`, body),
   toggleSkill: (h: string, p: string, n: string, enabled: boolean) => call<{ ok: boolean }>("PUT", `${ext(h, p)}/skills/${e(n)}/enabled`, { enabled }),
+  lockSkill: (h: string, p: string, n: string, locked: boolean) => call<{ ok: boolean; locked: boolean }>("PUT", `${ext(h, p)}/skills/${e(n)}/lock`, { locked }),
   updateSkill: (h: string, p: string, n: string) => call<{ ok: boolean }>("POST", `${ext(h, p)}/skills/${e(n)}/update`, {}),
   uninstallSkill: (h: string, p: string, n: string) => call<{ ok: boolean }>("DELETE", `${ext(h, p)}/skills/${e(n)}`),
   mcp: (h: string, p: string) => call<{ servers: McpServer[] }>("GET", `${ext(h, p)}/mcp`),
@@ -72,6 +73,9 @@ export const extApi = {
   pluginCatalog: (h: string, p: string) => call<{ entries: PluginCatalogEntry[] }>("GET", `${ext(h, p)}/plugins/catalog`),
   pluginAction: (h: string, p: string, n: string, action: "enable" | "disable" | "update", accept = false) =>
     call<PluginResult>("POST", `${ext(h, p)}/plugins/${e(n)}/${action}`, accept ? { accept_capabilities: true } : {}),
+  pluginAutoUpdate: (h: string, p: string) => call<{ auto_apply: boolean; check_hours: number | null }>("GET", `${ext(h, p)}/plugins/auto-update`),
+  setPluginAutoUpdate: (h: string, p: string, enabled: boolean, confirm?: string) => call<{ auto_apply: boolean; check_hours: number | null }>("PUT", `${ext(h, p)}/plugins/auto-update`, { enabled, ...(confirm ? { confirm } : {}) }),
+  updateAllPlugins: (h: string, p: string, confirm: string) => call<{ results: Array<{ name: string; status: string; detail: string }>; skipped: Array<{ name: string; reason: string }>; current: number }>("POST", `${ext(h, p)}/plugins/update-all`, { confirm }),
   removePlugin: (h: string, p: string, n: string) => call<{ ok: boolean }>("DELETE", `${ext(h, p)}/plugins/${e(n)}`),
   installPlugin: (h: string, p: string, body: { identifier?: string; catalog_name?: string; force?: boolean }) => call<PluginResult>("POST", `${ext(h, p)}/plugins/install`, body),
 

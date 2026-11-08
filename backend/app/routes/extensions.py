@@ -12,11 +12,13 @@ from typing import Annotated, Any, Literal
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Request
+from pydantic import Field
 
 from ..auth import User, current_user, fresh_user
-from ..extensions import (MCP_NAME_RE, PLUGIN_NAME_RE, SKILL_OLD_RE, CatalogInstall, McpNew, PluginInstall, PluginUpdate, SkillNew, SkillSave,
+from ..extensions import (Lock, Strict, trim, MCP_NAME_RE, PLUGIN_NAME_RE, SKILL_OLD_RE, CatalogInstall, McpNew, PluginInstall, PluginUpdate, SkillNew, SkillSave,
                           Toggle, check_skill_content, mcp_catalog_view, mcp_test_view, mcp_view, plugin_catalog_view, plugin_view, skill_view)
 from ._dash import dash
+from .ops_more import strip_paths as strip_path
 from .operations import HostId, ProfileId
 
 router = APIRouter(prefix="/bff")
@@ -93,6 +95,23 @@ async def skill_toggle(request: Request, host: HostId, profile: ProfileId, name:
     await dash(request, host, "PUT", "/api/skills/toggle", params=scope(profile), body={"name": name, "enabled": body.enabled})
     rec(request, user, "ext.skill.enable" if body.enabled else "ext.skill.disable", host, profile=profile, skill=name)
     return {"ok": True, "name": name, "enabled": body.enabled}
+
+
+@router.put(P + "/skills/{name}/lock")
+async def skill_lock(request: Request, host: HostId, profile: ProfileId, name: SkillName, body: Lock, user: User = Depends(fresh_user)):
+    """Gegen Änderungen des Agents sperren (wie `hermes curator lock`). Eigene Änderungen bleiben erlaubt."""
+    no_dots(name, "Skill")
+    request.app.state.limiter.check(f"{user.id}:ext-skill-lock")
+    skill = next((s for s in await skills_of(request, host, profile) if s["name"] == name), None)
+    if skill is None:
+        raise HTTPException(404, "Skill nicht gefunden")
+    await dash(request, host, "PUT", "/api/skills/lock", params=scope(profile), body={"name": name, "locked": body.locked})
+    now = next((s for s in await skills_of(request, host, profile) if s["name"] == name), None)
+    ok = now is not None and now["locked"] == body.locked
+    rec(request, user, "ext.skill.lock" if body.locked else "ext.skill.unlock", host, profile=profile, skill=name, verified=ok)
+    if not ok:
+        raise HTTPException(502, "Das Dashboard hat die Sperre nicht übernommen")
+    return {"ok": True, "name": name, "locked": body.locked}
 
 
 @router.post(P + "/skills/{name}/update")
@@ -241,6 +260,59 @@ async def plugin_action(request: Request, host: HostId, profile: ProfileId, name
     raw = await dash(request, host, "POST", f"/api/dashboard/agent-plugins/{quote(name, safe='')}/{action}", body=send)
     rec(request, user, f"ext.plugin.{action}", host, profile=profile, plugin=name)
     return _action_result(raw)
+
+
+@router.get(P + "/plugins/auto-update")
+async def plugin_auto_update(request: Request, host: HostId, profile: ProfileId, _user: User = Depends(current_user)):
+    return _auto_state(await dash(request, host, "GET", "/api/dashboard/plugins/auto-update"))
+
+
+def _auto_state(raw: Any) -> dict[str, Any]:
+    if not isinstance(raw, dict) or not isinstance(raw.get("auto_apply"), bool):
+        raise HTTPException(502, "Das Dashboard liefert die Plugin-Aktualisierung in unbekannter Form")
+    hours = raw.get("check_hours")
+    return {"auto_apply": raw["auto_apply"], "check_hours": hours if isinstance(hours, (int, float)) and not isinstance(hours, bool) else None}
+
+
+@router.put(P + "/plugins/auto-update")
+async def plugin_auto_update_set(request: Request, host: HostId, profile: ProfileId, body: AutoUpdate, user: User = Depends(fresh_user)):
+    """Automatisch aktualisieren führt neuen Plugin-Code ohne Rückfrage aus: darum frische Anmeldung, beim Einschalten das Wort „automatisch“ und Gegenlesen.
+    Die Einstellung gilt für das aktive Profil des Dashboards, nicht für das Profil in der Adresse."""
+    if body.enabled and body.confirm.strip() != "automatisch":
+        raise HTTPException(422, "Zum Bestätigen „automatisch“ eintippen.")
+    request.app.state.limiter.check(f"{user.id}:ext-plugin-auto")
+    await dash(request, host, "PUT", "/api/dashboard/plugins/auto-update", body={"enabled": body.enabled})
+    state = _auto_state(await dash(request, host, "GET", "/api/dashboard/plugins/auto-update"))
+    rec(request, user, "ext.plugin.auto_update_on" if body.enabled else "ext.plugin.auto_update_off", host, verified=state["auto_apply"] == body.enabled)
+    if state["auto_apply"] != body.enabled:
+        raise HTTPException(502, "Das Dashboard hat die automatische Aktualisierung nicht übernommen")
+    return state
+
+
+class AutoUpdate(Strict):
+    enabled: bool
+    confirm: str = Field(default="", max_length=30)
+
+
+class UpdateAll(Strict):
+    confirm: str = Field(max_length=30)
+
+
+@router.post(P + "/plugins/update-all")
+async def plugin_update_all(request: Request, host: HostId, profile: ProfileId, body: UpdateAll, user: User = Depends(fresh_user)):
+    """Alle Plugins mit Update ohne Rückfrage aktualisieren. Was Prüfung braucht (neue Berechtigungen, Warnung der Sicherheitsprüfung),
+    kommt als `needs_review` zurück und ändert nichts; das geht dann einzeln über das Plugin."""
+    if body.confirm.strip() != "aktualisieren":
+        raise HTTPException(422, "Zum Bestätigen „aktualisieren“ eintippen.")
+    request.app.state.limiter.check(f"{user.id}:ext-plugin-update-all")
+    raw = await dash(request, host, "POST", "/api/dashboard/agent-plugins/update-all", body={})
+    if not isinstance(raw, dict) or not isinstance(raw.get("results"), list):
+        raise HTTPException(502, "Das Dashboard liefert das Ergebnis in unbekannter Form")
+    status = ("updated", "current", "failed", "needs_review")
+    results = [{"name": trim(r.get("name"), 100), "status": r["status"], "detail": strip_path(trim(r.get("detail"), 300))} for r in raw["results"] if isinstance(r, dict) and r.get("status") in status]
+    skipped = [{"name": trim(r.get("name"), 100), "reason": strip_path(trim(r.get("reason"), 300))} for r in raw.get("skipped") or [] if isinstance(r, dict)]
+    rec(request, user, "ext.plugin.update_all", host, profile=profile, updated=sum(r["status"] == "updated" for r in results), review=sum(r["status"] == "needs_review" for r in results), failed=sum(r["status"] == "failed" for r in results))
+    return {"results": results, "skipped": skipped, "current": raw["current"] if isinstance(raw.get("current"), int) else 0}
 
 
 @router.delete(P + "/plugins/{name}")

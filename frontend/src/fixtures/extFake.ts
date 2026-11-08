@@ -27,6 +27,7 @@ export class FakeBff {
     { name: "rag", transport: "stdio", url: null, command: "python3", args: ["server.py"], env_names: ["EXAMPLE_API_URL"], auth: null, enabled: true, tool_count: null, source: "config", plugin: null },
     { name: "web", transport: "http", url: "https://example.com/mcp", command: null, args: [], env_names: [], auth: "oauth", enabled: true, tool_count: 2, source: "config", plugin: null },
   ];
+  autoApply = false;
   plugins: Plugin[] = [
     { name: "browser-firecrawl", version: "1.0.0", get description() { return t("Cloud-Browser"); }, source: "bundled", runtime_status: "enabled", can_remove: false, can_update_git: false, auth_required: false, auth_command: "" },
     { name: "beta-plugin", version: "0.2.0", get description() { return t("Aus Git"); }, source: "user", runtime_status: "disabled", can_remove: true, can_update_git: true, auth_required: false, auth_command: "" },
@@ -69,6 +70,7 @@ export class FakeBff {
   private ext(m: string, rest: string, b: Record<string, any> | undefined): unknown {
     let x: RegExpMatchArray | null;
     if (rest === "skill-list") return { skills: this.skills };
+    if ((x = rest.match(/^skills\/([^/]+)\/lock$/))) { this.skills.find((s) => s.name === x![1])!.locked = b!.locked; return { ok: true, locked: b!.locked }; }
     if ((x = rest.match(/^skills\/([^/]+)\/enabled$/))) { this.skills.find((s) => s.name === x![1])!.enabled = b!.enabled; return { ok: true }; }
     if ((x = rest.match(/^skills\/([^/]+)$/))) {
       if (m === "GET") return { name: x[1], content: this.contents[x[1]] };
@@ -91,6 +93,8 @@ export class FakeBff {
     if ((x = rest.match(/^mcp\/([^/]+)$/)) && m === "DELETE") { this.mcp = this.mcp.filter((s) => s.name !== x![1]); return { ok: true }; }
     if (rest === "plugins" && m === "GET") return { plugins: this.plugins };
     if (rest === "plugins/catalog") return { entries: [] };
+    if (rest === "plugins/auto-update") { if (m === "PUT") { if (b!.enabled && b!.confirm !== "automatisch") throw new Error("automatisch eintippen"); this.autoApply = Boolean(b!.enabled); } return { auto_apply: this.autoApply, check_hours: 24 }; }
+    if (rest === "plugins/update-all") return { results: [{ name: "alpha", status: "updated", detail: "" }, { name: "beta", status: "needs_review", detail: "neue Berechtigungen" }], skipped: [], current: 2 };
     if (rest === "plugins/install") return { ok: true, name: "installed" };
     if ((x = rest.match(/^plugins\/([^/]+)\/(enable|disable)$/))) { this.plugins.find((s) => s.name === x![1])!.runtime_status = x[2] === "enable" ? "enabled" : "disabled"; return { ok: true }; }
     if ((x = rest.match(/^plugins\/([^/]+)$/)) && m === "DELETE") { this.plugins = this.plugins.filter((s) => s.name !== x![1]); return { ok: true }; }

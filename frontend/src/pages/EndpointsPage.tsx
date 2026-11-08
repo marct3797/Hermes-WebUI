@@ -3,6 +3,7 @@ import { api } from "../api";
 import { PageHead } from "../components/PageHead";
 import { CredentialPool } from "../components/CredentialPool";
 import { useAction } from "../components/useAction";
+import { DelegationRoutes } from "../components/DelegationRoutes";
 import type { AgentRef, EpDelegation, EpList, EpLocal, EpValidate } from "../types";
 import { t } from "../i18n";
 
@@ -41,7 +42,7 @@ export default function EndpointsPage({ agent }: { agent: AgentRef }) {
             {(del?.backends ?? []).map((b) => <option key={b.name} value={b.name}>{b.name}{b.description ? ` – ${b.description}` : ""}</option>)}
           </select>
         </label>
-        <p>{t("Routen je Modell und Profil bearbeitest du in der Hermes-CLI (sie tragen Schlüssel).")}</p>
+        {del && <DelegationRoutes agent={agent} del={del} onSaved={load} />}
       </section>
       <section aria-label={t("Endpunkte")}>
         <h2>{t("Endpunkte")}</h2>

@@ -80,6 +80,10 @@ class Toggle(Strict):
     enabled: bool
 
 
+class Lock(Strict):
+    locked: bool
+
+
 def safe_url(url: Any) -> str | None:
     """Adresse ohne Zugangsdaten, Query und Fragment."""
     if not isinstance(url, str) or not url:
@@ -217,7 +221,7 @@ def trim(value: Any, limit: int) -> str:
 def skill_view(s: dict[str, Any]) -> dict[str, Any]:
     return {"name": trim(s.get("name"), 100), "description": trim(s.get("description"), 400), "category": trim(s.get("category"), 64) or None,
             "enabled": s.get("enabled") is not False, "usage": s.get("usage") if isinstance(s.get("usage"), int) else 0,
-            "provenance": trim(s.get("provenance"), 16) or "agent"}
+            "provenance": trim(s.get("provenance"), 16) or "agent", "locked": s.get("locked") is True}
 
 
 def mcp_view(s: dict[str, Any]) -> dict[str, Any]:

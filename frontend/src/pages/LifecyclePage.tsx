@@ -108,6 +108,7 @@ function Row({ agent, entry, isActive, onDone }: { agent: AgentRef; entry: LcEnt
         <b>{entry.name}</b>
         {isActive && <span className="muted small"> {t("· aktiv")}</span>}
         {entry.is_default && <span className="muted small"> {t("· Standard")}</span>}
+        {entry.distribution && <span className="muted small"> {t("· Distribution {name}", { name: entry.distribution.name })}{entry.distribution.version ? ` ${entry.distribution.version}` : ""}{entry.distribution.source ? ` (${entry.distribution.source})` : ""}</span>}
         <div className="row">
           <button type="button" className="btn btn-s" disabled={busy} onClick={() => { setMode(mode === "rename" ? "none" : "rename"); setValue(""); }}>{t("Umbenennen")}</button>
           <button type="button" className="btn btn-s" disabled={busy} onClick={() => { setMode(mode === "clone" ? "none" : "clone"); setValue(""); setTokens(false); }}>{t("Klonen")}</button>

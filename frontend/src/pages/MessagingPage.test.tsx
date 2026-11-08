@@ -212,3 +212,26 @@ describe("Telegram-Assistent", () => {
     expect(await within(p).findByRole("alert")).toHaveTextContent("frische Anmeldung");
   });
 });
+
+describe("Team-Gateway (Relay)", () => {
+  it("stays hidden when the instance has no relay", async () => {
+    await open();
+    await screen.findByRole("list", { name: "Plattformen" });
+    expect(screen.queryByRole("region", { name: "Team-Gateway" })).toBeNull();
+  });
+
+  it("issues a link code, checks its state and unlinks only after typing the word", async () => {
+    await open((b) => { b.dash.msg.relay = { accounts: [{ id: "tg-1", label: "Marc", linked_at: "" }], code: 0 }; });
+    const region = await screen.findByRole("region", { name: "Team-Gateway" });
+    fireEvent.click(within(region).getByRole("button", { name: "Konto telegram verknüpfen" }));
+    await within(region).findByText("/link CODE1");
+    fireEvent.click(within(region).getByRole("button", { name: "Stand prüfen" }));
+    await within(region).findByText(/wartet auf deine Nachricht/);
+    const un = within(region).getByRole("button", { name: "Konto Marc trennen" });
+    expect(un).toBeDisabled();
+    fireEvent.change(within(region).getByLabelText("Zum Trennen „trennen“ eintippen: Marc"), { target: { value: "trennen" } });
+    fireEvent.click(un);
+    await waitFor(() => expect(within(region).queryByText("Marc")).toBeNull());
+    expect(sent("DELETE", "?confirm=trennen")).toHaveLength(1);
+  });
+});

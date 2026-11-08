@@ -21,6 +21,16 @@ describe("Erweiterungen: Skills", () => {
     expect(bff.find("PUT", "/skills/gamma/enabled")[0].body).toEqual({ enabled: true });
   });
 
+  it("sperrt einen Skill gegen den Agenten und hebt die Sperre wieder auf", async () => {
+    render(<ExtensionsPage host="server" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Skill claude-code öffnen" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Gegen den Agenten sperren" }));
+    await screen.findByText("Gegen den Agenten gesperrt");
+    expect(bff.find("PUT", "/skills/claude-code/lock")[0].body).toEqual({ locked: true });
+    fireEvent.click(screen.getByRole("button", { name: "Sperre aufheben" }));
+    await waitFor(() => expect(screen.queryByText("Gegen den Agenten gesperrt")).toBeNull());
+  });
+
   it("öffnet den Editor, speichert und verwirft Änderungen", async () => {
     render(<ExtensionsPage host="server" />);
     fireEvent.click(await screen.findByRole("button", { name: "Skill claude-code öffnen" }));
@@ -207,5 +217,24 @@ describe("Erweiterungen: Plugins", () => {
     fireEvent.click(within(screen.getByRole("dialog", { name: "owner/repo installieren?" })).getByRole("button", { name: "Installieren" }));
     await waitFor(() => expect(bff.find("POST", "/plugins/install")).toHaveLength(1));
     expect(bff.find("POST", "/plugins/install")[0].body).toEqual({ identifier: "owner/repo" });
+  });
+});
+
+describe("Erweiterungen: Plugin-Aktualisierung", () => {
+  it("schaltet die automatische Aktualisierung und aktualisiert alles erst nach dem Bestätigungswort", async () => {
+    render(<ExtensionsPage host="server" />);
+    fireEvent.click(await screen.findByRole("tab", { name: /Plugins/ }));
+    const sw = await screen.findByRole("switch", { name: "Automatisch aktualisieren" });
+    expect(sw).toHaveAttribute("aria-checked", "false");
+    fireEvent.change(screen.getByLabelText("Zum Einschalten „automatisch“ eintippen"), { target: { value: "automatisch" } });
+    fireEvent.click(sw);
+    await waitFor(() => expect(screen.getByRole("switch", { name: "Automatisch aktualisieren" })).toHaveAttribute("aria-checked", "true"));
+    expect(bff.find("PUT", "/plugins/auto-update")[0].body).toEqual({ enabled: true, confirm: "automatisch" });
+    const go = screen.getByRole("button", { name: "Alle Plugins aktualisieren" });
+    expect(go).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Zum Aktualisieren „aktualisieren“ eintippen"), { target: { value: "aktualisieren" } });
+    fireEvent.click(go);
+    await screen.findByText(/braucht deine Prüfung/);
+    expect(bff.find("POST", "/plugins/update-all")[0].body).toEqual({ confirm: "aktualisieren" });
   });
 });

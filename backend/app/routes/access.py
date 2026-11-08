@@ -2,7 +2,7 @@
 
 Shell-Hooks (`/api/ops/hooks`) laufen als Befehle auf dem Rechner: Anlegen und Löschen brauchen frische Anmeldung und
 eingetippte Bestätigung des Befehls, das Audit nennt nur das Ereignis. Nicht durchgereicht: Webhook-`script` und eigene
-Secrets, Pairing per Code, `pairing/clear-pending`.
+Secrets, Pairing per Code.
 """
 from __future__ import annotations
 
@@ -68,6 +68,26 @@ async def pairing_approve(request: Request, target: Tgt, dash: Dash, req: Approv
         raise HTTPException(502, "Das Dashboard hat die Anfrage nicht freigegeben")
     audit(request, user, "pairing.approve", target, platform=req.platform, request_id=req.request_id)
     return {"ok": True, **after}
+
+
+class ClearIn(BaseModel):
+    model_config = {"extra": "forbid"}
+    confirm: str
+
+
+@router.post("/hermes-pairing/clear-pending")
+async def pairing_clear(request: Request, target: Tgt, dash: Dash, req: ClearIn, user: User = Depends(fresh_user)):
+    """Alle offenen Anfragen verwerfen. Freigegebene Nutzer bleiben; eine verworfene Anfrage kommt erst mit einer neuen Nachricht wieder."""
+    _limit(request, user, "hermes-access")
+    if req.confirm != "verwerfen":
+        raise HTTPException(422, "Zum Bestätigen „verwerfen“ eintippen.")
+    res = await upstream(dash.request("POST", "/api/pairing/clear-pending", params={"profile": target.agent.id}))
+    cleared = res.get("cleared") if isinstance(res, dict) and isinstance(res.get("cleared"), int) else 0
+    after = await _pairing(dash, target.agent.id)
+    audit(request, user, "pairing.clear_pending", target, cleared=cleared, verified=not after["pending"])
+    if after["pending"]:
+        raise HTTPException(502, "Das Dashboard hat die Anfragen nicht verworfen")
+    return {"ok": True, "cleared": cleared, **after}
 
 
 class RevokeIn(BaseModel):

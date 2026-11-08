@@ -75,6 +75,16 @@ def create_mock(verdict: str = "safe") -> FastAPI:
         next(k for k in s.skills if k["name"] == b["name"])["enabled"] = b["enabled"]
         return {"ok": True, "name": b["name"], "enabled": b["enabled"]}
 
+    @app.put("/api/skills/lock")
+    async def lock(request: Request):
+        b = body_of(request)
+        row = next((k for k in s.skills if k["name"] == b["name"]), None)
+        if row is None:
+            raise HTTPException(404, f"Skill '{b['name']}' not found.")
+        if not getattr(s, "drop_lock", False):
+            row["locked"] = bool(b["locked"])
+        return {"ok": True, "name": b["name"], "locked": bool(b["locked"])}
+
     @app.get("/api/skills/content")
     async def content(name: str):
         if name not in s.contents:
@@ -218,6 +228,22 @@ def create_mock(verdict: str = "safe") -> FastAPI:
     @app.get("/api/dashboard/plugins/catalog")
     async def plugin_catalog():
         return s.fx["plugin_catalog"]
+
+    @app.get("/api/dashboard/plugins/auto-update")
+    async def plugin_auto_get():
+        return {"auto_apply": getattr(s, "auto_apply", False), "check_hours": 24}
+
+    @app.put("/api/dashboard/plugins/auto-update")
+    async def plugin_auto_put(request: Request):
+        if not getattr(s, "drop_auto", False):
+            s.auto_apply = bool(body_of(request)["enabled"])
+        return {"auto_apply": getattr(s, "auto_apply", False), "check_hours": 24}
+
+    @app.post("/api/dashboard/agent-plugins/update-all")
+    async def plugin_update_all():
+        return {"results": [{"name": "alpha-plugin", "status": "updated", "detail": ""}, {"name": "beta-plugin", "status": "needs_review", "detail": "new capabilities in /opt/example/plugins/beta"},
+                            {"name": "weird", "status": "unbekannt", "detail": ""}],
+                "skipped": [{"name": "pinned-one", "reason": "pinned"}], "current": 3}
 
     @app.post("/api/dashboard/agent-plugins/install")
     async def plugin_install(request: Request):

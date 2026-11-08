@@ -256,8 +256,8 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
         return {"profiles": [
             {"name": n, "path": f"/opt/data/profiles/{n}", "is_default": n == "default", "model": p["model"], "provider": p["provider"],
              "has_env": True, "skill_count": 12, "gateway_running": False, "description": p["description"],
-             "description_auto": p["description_auto"], "distribution_name": None, "distribution_version": None,
-             "distribution_source": None, "has_alias": False}
+             "description_auto": p["description_auto"], "distribution_name": p.get("dist", {}).get("name"), "distribution_version": p.get("dist", {}).get("version"),
+             "distribution_source": p.get("dist", {}).get("source"), "has_alias": False}
             for n, p in state.items() if n not in hidden
         ]}
 
@@ -506,8 +506,45 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
         prof = profile_or_default(profile)
         return {"configured": prof.setdefault("delegation", "default"), "blocked_reason": None,
                 "backends": [{"name": "default", "builtin": True, "description": "Eingebaut"}, {"name": "docker", "builtin": False, "description": "Container"}],
-                "model_map": {"options": [{"name": "schnell", "model": "m1", "api_key": "sk-…cdef"}], "default": None},
-                "profile_routes": {"profiles": [], "default": None}, "profiles": list(state)}
+                "model_map": prof.setdefault("model_map", {"options": [{"name": "schnell", "description": "flink", "provider": "custom", "model": "m1", "api_key": "sk-…cdef", "request_overrides": {"top_p": 0.5}}], "default": None, "_keys": {"schnell": "sk-echt-schnell-1234cdef"}}) and
+                {"options": [{**o, **({"api_key": "sk-…" + prof["model_map"]["_keys"][o["name"]][-4:]} if o["name"] in prof["model_map"]["_keys"] else {})} for o in prof["model_map"]["options"]],
+                 "default": prof["model_map"]["default"]},
+                "profile_routes": prof.setdefault("profile_routes", {"profiles": [], "default": None}), "profiles": list(state)}
+
+    @app.put("/api/delegation/backends/model_map")
+    async def delegation_model_map(body: dict[str, Any], profile: str | None = None):
+        prof = profile_or_default(profile)
+        current = prof.setdefault("model_map", {"options": [], "default": None, "_keys": {}})
+        keys: dict[str, str] = {}
+        rows = []
+        for o in body.get("options") or []:
+            if not o.get("name") or not o.get("model") or not o.get("description"):
+                raise HTTPException(400, "Route needs name, description and model")
+            row = {k: v for k, v in o.items() if k not in ("original_name", "api_key")}
+            key = o.get("api_key")
+            if isinstance(key, str) and key.startswith("sk-…"):  # Vorschau: Schlüssel der Quellroute behalten
+                src = current["_keys"].get(o.get("original_name") or o["name"])
+                if src:
+                    keys[o["name"]] = src
+            elif key:
+                keys[o["name"]] = key
+            rows.append(row)
+        names = [r["name"] for r in rows]
+        if body.get("default") and body["default"] not in names:
+            raise HTTPException(400, "Default route is not in the list")
+        if not drop_writes:
+            prof["model_map"] = {"options": rows, "default": body.get("default") or None, "_keys": keys}
+        return {"ok": True}
+
+    @app.put("/api/delegation/backends/profile_routes")
+    async def delegation_profile_routes(body: dict[str, Any], profile: str | None = None):
+        prof = profile_or_default(profile)
+        names = [p.get("name") for p in body.get("profiles") or []]
+        if any(n not in state for n in names):
+            raise HTTPException(400, "Profile does not exist")
+        if not drop_writes:
+            prof["profile_routes"] = {"profiles": [{k: v for k, v in p.items() if v} for p in body.get("profiles") or []], "default": body.get("default") or None}
+        return {"ok": True}
 
     @app.put("/api/delegation/backend")
     async def delegation_backend(body: dict[str, Any], profile: str | None = None):
@@ -775,6 +812,35 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
         return {"version": "0.22.5", "profile": "default", "ok": True, "gateway_running": gw["running"], "gateway_state": gw["state"], "gateway_platforms": {}, "active_agents": gw["active_sessions"],
                 "gateway_busy": gw["busy"], "gateway_drainable": gw["busy"], "restart_drain_timeout": 0.0, "active_sessions": gw["active_sessions"], "install_id": "geheim-install-id",
                 "components": {"gateway": {"status": "ok" if gw["running"] else "degraded", "state": "running" if gw["running"] else "stopped"}}}
+
+    # Team-Gateway (Relay): Form wie gateway/relay/link.py; Konten als Zustand, Einmalcodes werden beim Abfragen "eingelöst"
+    relay: dict[str, Any] = {"accounts": [{"platformUserId": "tg-4711", "displayName": "Marc", "linkedAt": "2026-11-01T10:00:00Z", "token": "geheim-relay-token"}], "codes": {}, "n": 0}
+    app.state.relay = relay
+
+    @app.get("/api/messaging/relay")
+    async def relay_status():
+        return {"managed_by": "connector", "portal_url": "https://portal.example.test/agents", "platforms": [{"platform": "telegram", "bot_url": "https://t.me/teambot", "accounts": relay["accounts"]}]}
+
+    @app.post("/api/messaging/relay/{platform}/link")
+    async def relay_link(platform: str):
+        if platform != "telegram":
+            raise HTTPException(409, {"code": "platform_not_fronted", "message": "Team Gateway does not carry this platform"})
+        relay["n"] += 1
+        code = f"CODE{relay['n']}"
+        relay["codes"][code] = "pending"
+        return {"platform": platform, "code": code, "command": f"/link {code}", "expires_at": "2026-11-08T13:00:00Z", "bot_url": f"https://t.me/teambot?start={code}"}
+
+    @app.get("/api/messaging/relay/link/{code}")
+    async def relay_state(code: str):
+        if code not in relay["codes"]:
+            raise HTTPException(404, "unknown")
+        return {"state": relay["codes"][code], "reason": None}
+
+    @app.delete("/api/messaging/relay/{platform}/accounts/{uid}")
+    async def relay_unlink(platform: str, uid: str):
+        if not drop_writes:
+            relay["accounts"] = [a for a in relay["accounts"] if a["platformUserId"] != uid]
+        return {"unlinked": True}
 
     @app.get("/api/messaging/platforms")
     async def messaging_platforms(profile: str | None = None):
@@ -1276,6 +1342,18 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
     async def ach_list():
         return ach_snapshot()
 
+    @app.get("/api/plugins/hermes-achievements/scan-status")
+    async def ach_status():
+        return {"state": "failed" if getattr(app.state, "ach_failed", False) else "idle", "started_at": 1_790_000_050, "finished_at": 1_790_000_060, "last_error": "scan failed in /home/user/.hermes/sessions/x.db" if getattr(app.state, "ach_failed", False) else None, "last_duration_ms": 10_000, "run_count": 2}
+
+    @app.get("/api/plugins/hermes-achievements/recent-unlocks")
+    async def ach_recent():
+        return [i for i in ach_snapshot()["achievements"] if i["unlocked"]]
+
+    @app.get("/api/plugins/hermes-achievements/sessions/{sid}/badges")
+    async def ach_badges(sid: str):
+        return {"session_id": sid, "badges": [i for i in ach_snapshot()["achievements"] if i["id"] == "let_him_cook"] if sid == "s1" else []}
+
     @app.post("/api/plugins/hermes-achievements/rescan")
     async def ach_rescan():
         return {"ok": True, **ach_snapshot()}
@@ -1355,6 +1433,14 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
             pr["pending"].remove(hit)
             pr["approved"].append({"platform": hit["platform"], "user_id": hit["user_id"], "user_name": hit["user_name"], "approved_at": time.time()})
         return {"ok": True, "user": {"user_id": hit["user_id"]}}
+
+    @app.post("/api/pairing/clear-pending")
+    async def pairing_clear(profile: str | None = None):
+        pr = pairing_of(profile_or_default(profile))
+        n = len(pr["pending"])
+        if not drop_writes:
+            pr["pending"].clear()
+        return {"ok": True, "cleared": n}
 
     @app.post("/api/pairing/revoke")
     async def pairing_revoke(body: dict[str, Any]):

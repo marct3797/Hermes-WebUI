@@ -77,6 +77,9 @@ function Editor({ scope, skill, onClose, onChanged, onDirty }: { scope: Scope; s
       <header className="row" style={{ gap: 8, flexWrap: "wrap" }}>
         <h2 className="grow" style={{ margin: 0 }}>{skill.name}</h2>
         <Pill>{PROVENANCE[skill.provenance] ?? skill.provenance}</Pill>
+        {skill.locked && <Pill>{tr("Gegen den Agenten gesperrt")}</Pill>}
+        <button type="button" className="btn btn-s" disabled={busy} title={tr("Der Agent darf einen gesperrten Skill nicht ändern. Deine eigenen Änderungen bleiben möglich.")}
+          onClick={() => void act(async () => { await extApi.lockSkill(scope.host, scope.profile, skill.name, !skill.locked); onChanged(); }, skill.locked ? tr("Sperre aufgehoben") : tr("Skill gesperrt"))}>{skill.locked ? tr("Sperre aufheben") : tr("Gegen den Agenten sperren")}</button>
         {skill.provenance === "hub" && <>
           <button type="button" className="btn btn-s" disabled={busy} onClick={() => void act(() => extApi.updateSkill(scope.host, scope.profile, skill.name), tr("Aktualisierung gestartet: Hermes aktualisiert alle Marktplatz-Skills dieses Profils."))}><Icon name="refresh" size={14} />{tr("Aktualisieren")}</button>
           <button type="button" className="btn btn-s btn-d" disabled={busy} onClick={() => setAsk("uninstall")}>{tr("Deinstallieren")}</button>

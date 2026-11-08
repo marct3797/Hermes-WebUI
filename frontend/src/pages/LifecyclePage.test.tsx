@@ -26,6 +26,13 @@ describe("Profil-Lebenszyklus & Betrieb", () => {
     expect(document.body.textContent).not.toContain(".hermes/profiles");
   });
 
+  it("shows where a profile's distribution comes from, without credentials", async () => {
+    await open((b) => { b.dash.lcProfiles.push("beta"); });
+    const region = await screen.findByRole("region", { name: "Profil beta" });
+    expect(region).toHaveTextContent("Distribution team-basis 1.2.0 (git.example.test/team/basis.git)");
+    expect(screen.getByRole("region", { name: "Profil gamma" })).not.toHaveTextContent("Distribution");
+  });
+
   it("creates a profile by name and checks the name back", async () => {
     await open();
     fireEvent.change(await screen.findByLabelText("Neuer Profilname"), { target: { value: "ecke" } });

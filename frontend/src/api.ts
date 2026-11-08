@@ -1,6 +1,6 @@
 import { invalidate } from "./dataCache";
 import { getPreferences } from "./preferences";
-import type { AutomationResp, AcCreated, AcHooks, AcPairing, SaPreview, SaStats, SaTimeline, EpDelegation, EpList, EpLocal, EpValidate, LcCreated, LcList, MdAuxiliary, MdInfo, MdMoa, MdOptions, MdRecommended, MdSetResult, HmField, HmFile, HmFileList, HmFileName, HmFileSaved, HmOverview, GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, WhatsAppPairing, ComputerUse, ShellHooks, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProviderRouting, ProviderRoutingResp, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import type { AutomationResp, AcCreated, AcHooks, AcPairing, SaPreview, SaStats, SaTimeline, EpDelegation, RelayStatus, RelayLink, DlgRoute, DlgProfileRoute, DlgRouteIn, EpList, EpLocal, EpValidate, LcCreated, LcList, MdAuxiliary, MdInfo, MdMoa, MdOptions, MdRecommended, MdSetResult, HmField, HmFile, HmFileList, HmFileName, HmFileSaved, HmOverview, GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, WhatsAppPairing, ComputerUse, ShellHooks, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProviderRouting, ProviderRoutingResp, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 import { t, tm } from "./i18n";
 
 export class ApiError extends Error {
@@ -247,6 +247,12 @@ export const api = {
   mdSet: (a: AgentRef, body: { scope: "main" | "auxiliary"; provider: string; model: string; task?: string; confirm_expensive_model?: boolean }) => call<MdSetResult>("POST", `${base(a)}/hermes-models/set`, body),
   epDelegation: (a: AgentRef) => call<EpDelegation>("GET", `${base(a)}/hermes-delegation`),
   epBackend: (a: AgentRef, backend: string) => call<{ ok: boolean; backend: string }>("PUT", `${base(a)}/hermes-delegation/backend`, { backend }),
+  dlgModelMap: (a: AgentRef, body: { options: DlgRouteIn[]; default: string; confirm: string }) => call<{ ok: boolean; options: DlgRoute[]; default: string | null }>("PUT", `${base(a)}/hermes-delegation/model-map`, body),
+  dlgProfileRoutes: (a: AgentRef, body: { profiles: DlgProfileRoute[]; default: string; confirm: string }) => call<{ ok: boolean; profiles: DlgProfileRoute[]; default: string | null }>("PUT", `${base(a)}/hermes-delegation/profile-routes`, body),
+  relayStatus: (a: AgentRef) => call<RelayStatus>("GET", `${base(a)}/messaging-relay`),
+  relayLink: (a: AgentRef, platform: string) => call<RelayLink>("POST", `${base(a)}/messaging-relay/${platform}/link`),
+  relayState: (a: AgentRef, code: string) => call<{ state: string; reason: string | null }>("GET", `${base(a)}/messaging-relay/link/${encodeURIComponent(code)}`),
+  relayUnlink: (a: AgentRef, platform: string, id: string, confirm: string) => call<{ ok: boolean }>("DELETE", `${base(a)}/messaging-relay/${platform}/accounts/${encodeURIComponent(id)}?confirm=${encodeURIComponent(confirm)}`),
   epList: (a: AgentRef) => call<EpList>("GET", `${base(a)}/hermes-endpoints`),
   epSave: (a: AgentRef, body: { name: string; base_url: string; model: string; api_key?: string }) => call<{ ok: boolean; id: string }>("POST", `${base(a)}/hermes-endpoints`, body),
   epValidate: (a: AgentRef, body: { name: string; base_url: string; model: string; api_key?: string }) => call<EpValidate>("POST", `${base(a)}/hermes-endpoints/validate`, body),
@@ -263,6 +269,7 @@ export const api = {
   saBackfill: (a: AgentRef) => call<{ ok: boolean; stamped: number | null; profile: string }>("POST", `${base(a)}/hermes-sessions/owner-backfill`, { confirm: true }),
   acPairing: (a: AgentRef) => call<AcPairing>("GET", `${base(a)}/hermes-pairing`),
   acApprove: (a: AgentRef, platform: string, request_id: string) => call<AcPairing>("POST", `${base(a)}/hermes-pairing/approve`, { platform, request_id }),
+  acClear: (a: AgentRef, confirm: string) => call<AcPairing & { cleared: number }>("POST", `${base(a)}/hermes-pairing/clear-pending`, { confirm }),
   acRevoke: (a: AgentRef, platform: string, user_id: string, confirm: string) => call<AcPairing>("POST", `${base(a)}/hermes-pairing/revoke`, { platform, user_id, confirm }),
   acHooks: (a: AgentRef) => call<AcHooks>("GET", `${base(a)}/hermes-webhooks`),
   acHooksEnable: (a: AgentRef) => call<AcHooks>("POST", `${base(a)}/hermes-webhooks/enable`, { confirm_restart: true }),

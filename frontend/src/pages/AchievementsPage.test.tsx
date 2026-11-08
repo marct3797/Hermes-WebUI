@@ -23,6 +23,20 @@ describe("Erfolge", () => {
     expect(document.body.textContent).toContain("???");
   });
 
+  it("shows the scan state, the latest unlocks and the badges of one session", async () => {
+    await open("/achievements", "Erfolge");
+    await screen.findByText(/Letzte Prüfung abgeschlossen \(2 Läufe\)/);
+    expect(await screen.findByRole("region", { name: "Zuletzt freigeschaltet" })).toHaveTextContent("Let Him Cook");
+    const go = screen.getByRole("button", { name: "Erfolge prüfen" });
+    expect(go).toBeDisabled();
+    type("Sitzungs-ID", "s1");
+    fireEvent.click(go);
+    expect(await screen.findByRole("list", { name: "Erfolge dieser Sitzung" })).toHaveTextContent("Let Him Cook");
+    type("Sitzungs-ID", "s2");
+    fireEvent.click(screen.getByRole("button", { name: "Erfolge prüfen" }));
+    await screen.findByText("Diese Sitzung schaltet nichts frei.");
+  });
+
   it("resets only after typing reset", async () => {
     await open("/achievements", "Erfolge");
     await screen.findByText(/1 von 3 freigeschaltet/);

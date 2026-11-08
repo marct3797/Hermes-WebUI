@@ -204,5 +204,19 @@ def test_achievements_rescan_and_reset_guards(env):
     assert env.get(A).json()["unlocked"] == 0
 
 
+def test_achievements_scan_status_recent_and_session_badges(env):
+    st = env.get(f"{A}/scan-status")
+    assert st.status_code == 200 and st.json() == {"state": "idle", "started_at": 1790000050, "finished_at": 1790000060, "duration_ms": 10000, "runs": 2, "error": None}
+    env.dash.state.ach_failed = True
+    bad = env.get(f"{A}/scan-status").json()
+    assert bad["state"] == "failed" and "/home/user" not in str(bad) and bad["error"]  # Fehler ohne Pfade
+    r = env.get(f"{A}/recent")
+    assert [i["id"] for i in r.json()["items"]] == ["let_him_cook"] and "sk-LEAK" not in r.text and "evidence" not in r.text
+    b = env.get(f"{A}/sessions/s1/badges")
+    assert [i["id"] for i in b.json()["items"]] == ["let_him_cook"] and "sk-LEAK" not in b.text
+    assert env.get(f"{A}/sessions/unbekannt/badges").json() == {"items": []}
+    assert env.get(f"{A}/sessions/a%2Fb/badges").status_code in (404, 422)
+
+
 def test_achievements_reset_that_is_dropped_is_502(lossy):
     assert lossy.post(f"{A}/reset", json={"confirm": "reset"}).status_code == 502

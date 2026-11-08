@@ -229,7 +229,7 @@ export type HmFile = { name: HmFileName; content: string; sha256: string; size: 
 export type HmFileSaved = { name: HmFileName; sha256: string; size: number; mtime: string; backup?: boolean };
 
 /** Profil-Lebenszyklus und Betrieb: Namen kommen als Text vom Dashboard, Serverpfade nie. */
-export type LcEntry = { name: string; is_default?: boolean; has_env?: boolean };
+export type LcEntry = { name: string; is_default?: boolean; has_env?: boolean; distribution?: { name: string; version: string | null; source: string | null } | null };
 export type LcList = { profiles: LcEntry[]; active?: string };
 export type LcCreated = { ok: boolean; name: string; setup?: string };
 
@@ -245,7 +245,10 @@ export type MdSetResult = { ok: boolean; provider?: string; model?: string; conf
 
 // Punkt 8b: Delegation, eigene Endpunkte, lokale Modelle (Schlüssel nie im Typ, nur has_api_key)
 export type EpBackend = { name: string; description: string; builtin: boolean };
-export type EpDelegation = { configured: string; blocked_reason: string | null; backends: EpBackend[]; profiles: string[] };
+export type DlgRoute = { name: string; description: string; provider: string; model: string; base_url: string; reasoning_effort: string; service_tier: string; has_api_key: boolean };
+export type DlgProfileRoute = { name: string; description?: string };
+export type EpDelegation = { configured: string; blocked_reason: string | null; backends: EpBackend[]; profiles: string[]; model_map?: { options: DlgRoute[]; default: string | null }; profile_routes?: { profiles: DlgProfileRoute[]; default: string | null } };
+export type DlgRouteIn = { name: string; original_name: string; description: string; provider: string; model: string; base_url: string; reasoning_effort: string; service_tier: string; api_key: string; clear_api_key: boolean };
 export type EpEndpoint = { id: string; name: string; base_url: string; model: string; has_api_key: boolean; api_key_preview: string; is_current: boolean };
 export type EpList = { endpoints: EpEndpoint[]; current: { provider?: string; model?: string; base_url?: string } };
 export type EpValidate = { ok: boolean; reachable: boolean; message: string; models: string[] };
@@ -267,3 +270,9 @@ export type AcCreated = { ok: boolean; name: string; url: string; secret: string
 
 export type ProviderRouting = { sort: "price" | "throughput" | "latency" | null; only: string[]; ignore: string[]; order: string[]; require_parameters: boolean; data_collection: "allow" | "deny" | null };
 export type ProviderRoutingResp = { routing: ProviderRouting; per_model: string[] };
+
+// Team-Gateway (Relay)
+export type RelayAccount = { id: string; label: string; linked_at: string };
+export type RelayPlatform = { platform: string; bot_url: string | null; accounts: RelayAccount[] };
+export type RelayStatus = { managed_by: string; portal_url: string | null; platforms: RelayPlatform[] };
+export type RelayLink = { platform: string; code: string; command: string; expires_at: string | number | null; bot_url: string | null };
