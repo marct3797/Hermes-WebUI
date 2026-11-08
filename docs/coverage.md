@@ -63,7 +63,7 @@ Funktionen der Hermes-Dokumentation (`user-guide/features`), die in der Liste ob
 | Session-Heartbeats (`heartbeat`, `/heartbeat`) | **Nur lesend** auf derselben Seite (ebenso Schleifen `/loop`) |
 | Wiederkehrende Schleifen (`loops`, `/loop`) | Slash. Keine Übersicht aktiver Schleifen |
 | Fallback-Anbieter (`fallback-providers`) | Maske unter „Modelle“: Reihenfolge, Modell, Mindest-Wartezeit, über die Profil-Einstellungen gespeichert |
-| Anbieter-Routing für OpenRouter (`provider-routing`) | nur als Config-Feld |
+| Anbieter-Routing für OpenRouter (`provider-routing`) | Maske unter „Modelle“ (Sortierung, nur/nie/Reihenfolge, Parameter, Datenspeicherung). Schreibt alle Schlüssel, weil die Tiefenmischung von Hermes fehlende nicht löscht; Ausnahmen je Modell bleiben unberührt |
 | Bot-Bildschirm (`bot-screen`, `/api/display/ws`) | nicht abgebildet (display.py: 1 Route, 0 genutzt) |
 | Credential-Vault (`credential-vault`, `hermes vault`) | nicht abgebildet (nur CLI) |
 | Kanban-Worker-Lanes, Kanban über mehrere Gateways | Worker-Ansicht und Dispatch vorhanden; Lanes und Multi-Gateway nicht gesondert geprüft |
