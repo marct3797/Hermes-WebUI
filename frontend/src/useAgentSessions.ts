@@ -7,7 +7,7 @@ import { agentKey } from "./router";
 import { useRunStore } from "./runs";
 import type { AgentRef, SessionSummary } from "./types";
 
-export type LastChat = { loaded: boolean; failed?: boolean; last?: SessionSummary; at?: number };
+export type LastChat = { loaded: boolean; failed?: boolean; last?: SessionSummary; at?: number; /** Zeitpunkte der Sessions (ms), neueste zuerst: Grundlage des Verlaufs im Cockpit. */ times?: number[] };
 
 const TTL_MS = 10_000;
 const keyOf = (a: AgentRef) => `sessions:${agentKey(a)}`;
@@ -32,7 +32,8 @@ export function useAgentSessions(agents: AgentRef[]): Map<string, LastChat> {
     const summarize = (r: unknown): LastChat => {
       const list = sessionList(r);
       const last = [...list].sort((x, y) => (toMs(y.updatedAt) ?? 0) - (toMs(x.updatedAt) ?? 0))[0];
-      return { loaded: true, last, at: toMs(last?.updatedAt) };
+      const times = list.map((x) => toMs(x.updatedAt)).filter((x): x is number => typeof x === "number").sort((a, b) => b - a);
+      return { loaded: true, last, at: toMs(last?.updatedAt), times };
     };
     const put = (a: AgentRef, v: LastChat) => { if (!stale && alive.current) setData((m) => new Map(m).set(agentKey(a), v)); };
     const load = (a: AgentRef) =>

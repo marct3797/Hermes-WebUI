@@ -1,6 +1,6 @@
 /* composer: Chat-Eingabe mit Slash-Menü, @-Bezügen, Anhängen und Aufwand */
 .dock.composer{position:relative}
-.dock.composer.drop{border-color:var(--crim);border-style:dashed}
+.dock.composer.drop{border-color:var(--t1);border-style:dashed}
 .file-chip{padding-right:2px}
 .chip-x{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border:0;background:transparent;color:inherit;cursor:pointer;border-radius:9px}
 .chip-x:hover,.chip-x:focus-visible{background:var(--s3)}
@@ -11,7 +11,7 @@
 .cmp-menu{position:absolute;left:0;right:0;bottom:calc(100% + 6px);z-index:30;max-height:min(340px,45vh);overflow-y:auto;padding:4px;border:1px solid var(--line);border-radius:8px;background:var(--s2);box-shadow:0 8px 24px rgba(0,0,0,.35)}
 .cmp-group{padding:6px 8px 2px;font:600 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
 .cmp-item{display:grid;grid-template-columns:minmax(120px,max-content) 1fr;column-gap:12px;align-items:baseline;padding:6px 8px;border-radius:6px;cursor:pointer;min-height:32px}
-.cmp-item.on{background:var(--s3);outline:1px solid var(--crim-line)}
+.cmp-item.on{background:var(--s3);outline:1px solid var(--t2)}
 .cmp-item.off{cursor:not-allowed;opacity:.55}
 .cmp-label{color:var(--t1);font-size:12.5px}
 .cmp-detail{color:var(--t2);font-size:12px;min-width:0}
@@ -25,7 +25,7 @@
 .opt-title{padding:4px 6px;font:600 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
 .opt-item{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:32px;padding:4px 8px;border:0;border-radius:6px;background:transparent;color:var(--t1);font:inherit;font-size:13px;text-align:left;cursor:pointer}
 .opt-item:hover,.opt-item:focus-visible{background:var(--s3)}
-.opt-item[aria-checked="true"]{color:var(--crim-hi)}
+.opt-item[aria-checked="true"]{color:var(--t1)}
 .opt-hint{margin:8px 6px 2px;color:var(--t3);font-size:11px;line-height:1.4}
 
 .ws-sel{position:relative;gap:4px;padding:0 6px 0 4px}

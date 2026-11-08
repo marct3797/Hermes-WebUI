@@ -14,7 +14,7 @@
 .operations-page .ops-text{white-space:pre-wrap;overflow-wrap:anywhere}
 .operations-page .field{max-width:100%;min-width:0}
 .operations-page [role=alertdialog]{border-color:var(--crim-line)}
-.operations-page :focus-visible{outline:2px solid var(--crim-hi);outline-offset:3px}
+.operations-page :focus-visible{outline:2px solid var(--t1);outline-offset:3px}
 @media(max-width:640px){
   .operations-page .ops-columns{grid-auto-flow:row;grid-template-columns:minmax(0,1fr)}
   .operations-page .ops-toolbar>label,.operations-page .ops-toolbar>select{width:100%}

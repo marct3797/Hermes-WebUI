@@ -269,7 +269,6 @@
  "alle {minutes} Minuten": "{minutes} 分ごと",
  "alle {v} {v2}": "{v} {v2} ごと",
  "Alle 5 Schritte sind erledigt. Weiter geht es im Cockpit, in den Einstellungen oder in den Anleitungen.": "5 つのステップはすべて完了しました。コックピット、設定、ガイドで続けてください。",
- "Alle Agents": "すべてのエージェント",
  "Alle Änderungen": "すべての変更",
  "Alle Anmeldearten": "すべてのログイン方式",
  "Alle Erinnerungen dieser Art, je {unit}": "この種類のメモリすべて ({unit} ごと)",
@@ -1160,7 +1159,6 @@
  "Helligkeit und Sättigung sind fest, nur der Farbton ist frei. Die Farbe hat auf allen dunklen Flächen einen Kontrast von über 8:1.": "明度と彩度は固定で、色相のみ自由です。この色はすべての暗い面で 8:1 を超えるコントラストがあります。",
  "Herkunft": "出所",
  "Hermes": "Hermes",
- "HERMES": "HERMES",
  "Hermes {hermes_version} auf {system} ({arch}), Python {python_version}": "Hermes {hermes_version} ({system}、{arch})、Python {python_version}",
  "Hermes aktualisieren": "Hermes を更新",
  "Hermes antwortet nicht rechtzeitig ({where})": "Hermes が時間内に応答しません ({where})",
@@ -1799,7 +1797,6 @@
  "Profil bearbeiten": "プロファイルを編集",
  "Profil bearbeiten · {hostLabel} / {runtimeLabel}": "プロファイルを編集 · {hostLabel} / {runtimeLabel}",
  "Profil im Dashboard": "ダッシュボードのプロファイル",
- "Profil-Cockpit": "プロファイルコックピット",
  "Profil(e) installiert:": "インストール済みのプロファイル:",
  "Profile": "プロファイル",
  "Profile & Betrieb": "プロファイルと運用",
@@ -2435,5 +2432,10 @@
  "Gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "保存しましたが、実行を開始できませんでした。セッションの次のメッセージで開始されます。",
  "Heartbeat gesetzt.": "ハートビートを設定しました。",
  "Ziel gesetzt. Hermes arbeitet jetzt daran.": "目標を設定しました。Hermes が取り組み始めます。",
- "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "目標を保存しましたが、実行を開始できませんでした。セッションの次のメッセージで開始されます。"
+ "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "目標を保存しましたが、実行を開始できませんでした。セッションの次のメッセージで開始されます。",
+ "Eine Sache braucht dich.": "1件、あなたの対応が必要です。",
+ "{n} Dinge brauchen dich.": "{n}件、あなたの対応が必要です。",
+ "Nichts braucht dich.": "対応が必要なものはありません。",
+ "jetzt": "現在",
+ "Letzte 24 Stunden": "過去24時間"
 }

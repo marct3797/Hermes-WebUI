@@ -1,5 +1,6 @@
-import "@fontsource-variable/inter";
-import "@fontsource-variable/jetbrains-mono";
+import "@fontsource-variable/sofia-sans";
+import "@fontsource-variable/sofia-sans-condensed";
+import "@fontsource-variable/spline-sans-mono";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
@@ -23,6 +24,7 @@ import "./styles/ext.css";
 import "./styles/composer.css";
 import "./styles/files.css";
 import "./styles/ops2.css";
+import "./styles/leitstand.css";
 import "./styles/mobile.css";
 
 // Sprache zuerst laden, damit nichts erst deutsch aufblitzt; ein Ladefehler lässt die Oberfläche deutsch.

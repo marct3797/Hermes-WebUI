@@ -3,7 +3,7 @@
 .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(236px,1fr));gap:12px}
 .pcard{display:flex;flex-direction:column;gap:11px;padding:14px;min-height:196px;transition:border-color .12s,transform .12s,background .12s}
 .pcard:hover{border-color:var(--line2);background:#131317}
-.pcard.need:hover{border-color:var(--crim)}
+.pcard.need:hover{border-color:var(--t1)}
 .pcard .nm{font:600 15px/18px var(--sans);letter-spacing:-.01em}
 .pcard .quote{font:400 12.5px/18px var(--sans);color:var(--t2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:36px}
 .pfoot .bars{width:84px;height:18px;margin-left:auto}
@@ -63,7 +63,7 @@
 @media (prefers-reduced-motion:reduce){.prog.ind b{animation:none;width:100%;opacity:.45}}
 @media (max-width:800px){.two>.r{max-width:none;flex-basis:100%}}
 
-.filters{gap:8px;margin-left:auto;flex-wrap:wrap}
+.filters{gap:8px;flex-wrap:wrap}
 
 /* System: Diagnose-Ring */
 .diag-list{display:flex;flex-direction:column;gap:10px;margin-top:12px;max-width:900px}
@@ -98,7 +98,7 @@
 .mem-body{margin-top:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .mem-bar{gap:8px;margin:0 0 10px;flex-wrap:wrap}
 .mem-chips{gap:6px;flex-wrap:wrap;margin:0 0 10px}
-.chip.on{border-color:var(--crim);color:var(--t1)}
+.chip.on{border-color:var(--t1);color:var(--t1)}
 .mem-kpis{max-width:960px}
 .mem-list,.mem-plain,.mem-ents{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .mem-list{gap:8px}
@@ -109,9 +109,9 @@
 .mem-models{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
 .ent{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:7px 10px;border:0;border-bottom:1px solid var(--line);background:none;color:var(--t1);font:500 13px var(--sans);text-align:left}
 .ent:hover,.ent.on{background:var(--s1)}
-.ent.on{box-shadow:inset 2px 0 0 var(--crim)}
+.ent.on{box-shadow:inset 2px 0 0 var(--t1)}
 .linkish{border:0;background:none;padding:0;color:var(--t1);font:inherit;text-decoration:underline;text-decoration-color:var(--line2);cursor:pointer}
-.linkish:hover{text-decoration-color:var(--crim)}
+.linkish:hover{text-decoration-color:var(--t1)}
 .swatch.gk0{background:oklch(72% .16 20)}
 .swatch.gk1{background:oklch(74% .12 235)}
 .swatch.gk2{background:oklch(78% .14 150)}
@@ -140,8 +140,8 @@
 .mem-split .legend li{display:flex;align-items:center;gap:8px;font-size:12.5px}
 .mem-open{display:block;width:100%;text-align:left;background:none;border:0;padding:0;color:inherit;cursor:pointer;font:inherit}
 .mem-open:hover .mem-text{color:var(--t1)}
-.mem-open:focus-visible{outline:2px solid var(--crim-hi);outline-offset:2px;border-radius:3px}
-.mem-item.on{box-shadow:inset 2px 0 0 var(--crim)}
+.mem-open:focus-visible{outline:2px solid var(--t1);outline-offset:2px;border-radius:3px}
+.mem-item.on{box-shadow:inset 2px 0 0 var(--t1)}
 .tag-btn{cursor:pointer;border:0;font:inherit}
 .tag-btn:hover{color:var(--t1);background:var(--s3,var(--s2))}
 
@@ -153,7 +153,7 @@
 .graph-stage:fullscreen{border-radius:0}
 .graph-canvas{display:block;width:100%;height:60vh;min-height:420px;touch-action:none;cursor:grab}
 .graph-canvas:active{cursor:grabbing}
-.graph-canvas:focus-visible{outline:2px solid var(--crim-hi);outline-offset:-2px}
+.graph-canvas:focus-visible{outline:2px solid var(--t1);outline-offset:-2px}
 .graph-stage.full .graph-canvas,.graph-stage:fullscreen .graph-canvas{height:100vh}
 .graph-hint{position:absolute;left:10px;bottom:6px;margin:0;pointer-events:none}
 .graph-actions{position:absolute;right:8px;top:8px;display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:70%}
@@ -175,12 +175,12 @@
 .tbl{width:100%;border-collapse:collapse;font:400 12.5px/18px var(--sans)}
 .tbl th{position:sticky;top:0;background:var(--s2);text-align:left;padding:6px 10px;font:600 11px var(--mono);color:var(--t2)}
 .tbl td{padding:6px 10px;border-top:1px solid var(--line);vertical-align:top}
-.tbl tr.on td{background:var(--s1);box-shadow:inset 2px 0 0 var(--crim)}
+.tbl tr.on td{background:var(--s1);box-shadow:inset 2px 0 0 var(--t1)}
 .graph-bars{display:flex;align-items:flex-end;gap:2px;height:140px;margin:10px 0;padding:6px;background:var(--void);border:1px solid var(--line);border-radius:4px;overflow-x:auto}
 .graph-bar{flex:1 0 6px;max-width:28px;border:0;border-radius:2px 2px 0 0;background:oklch(70% .14 250);cursor:pointer;padding:0}
 .graph-bar:hover{background:oklch(78% .14 250)}
-.graph-bar.on{background:var(--crim-hi)}
-.graph-bar:focus-visible{outline:2px solid var(--crim-hi)}
+.graph-bar.on{background:var(--t1)}
+.graph-bar:focus-visible{outline:2px solid var(--t1)}
 @media (prefers-reduced-motion:reduce){.graph-skeleton{animation:none}}
 .kn-chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
 .kn-hits{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}

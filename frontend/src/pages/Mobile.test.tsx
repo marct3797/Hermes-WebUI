@@ -76,7 +76,7 @@ describe("Handy: Tab-Leiste", () => {
     fireEvent.click(screen.getByRole("button", { name: "Agents und Sessions öffnen" }));
     expect(await sidebar()).toHaveClass("open");
     fireEvent.click(screen.getByRole("link", { name: "Zurück zum Cockpit" }));
-    await screen.findByRole("heading", { name: "Alle Agents", level: 1 });
+    await screen.findByRole("heading", { name: "Nichts braucht dich.", level: 1 });
   });
 });
 

@@ -107,7 +107,7 @@ export function Sidebar(p: Props) {
       <aside className={`side${p.open ? " open" : ""}`} aria-label={t("Navigation")}>
         <Link to="/" className="brand" onClick={p.onClose} aria-label={t("Hermes, zum Cockpit")}>
           <span className="mk" aria-hidden />
-          <b>{t("HERMES")}</b>
+          <b>{t("Hermes")}</b>
           <span className="tag" style={{ marginLeft: "auto" }}>{t("WEBUI")}</span>
         </Link>
 

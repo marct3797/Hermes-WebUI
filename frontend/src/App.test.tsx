@@ -57,7 +57,7 @@ describe("App-Shell", () => {
     expect(within(laptop).getByText("remote")).toBeInTheDocument();
     expect(within(laptop).getByText(/Host-Dienst nicht verbunden/)).toBeInTheDocument();
     for (const name of ["Cockpit", "Inbox", "Räume"]) expect(within(side).getByRole("link", { name })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Alle Agents" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Nichts braucht dich." })).toBeInTheDocument();
   });
 
   it("draws sigils from the UI config and falls back to initials without an entry", async () => {
