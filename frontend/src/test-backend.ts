@@ -971,6 +971,10 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
       if (hs[1] === "_achievements") {
         if (sub === "") return json(ach());
         if (sub === "/rescan") return json(ach());
+        if (sub === "/scan-status") return json({ state: "idle", started_at: 1, finished_at: 2, duration_ms: 1000, runs: 2, error: null });
+        if (sub === "/recent") return json({ items: x.unlocked ? ach().items.slice(0, 1) : [] });
+        const sb = /^\/sessions\/([^/]+)\/badges$/.exec(sub);
+        if (sb) return json({ items: sb[1] === "s1" ? ach().items.slice(0, 1) : [] });
         if (sub === "/reset") { if (bd?.confirm !== "reset") return json({ detail: "reset eintippen" }, 422); x.unlocked = false; return json({ ok: true }); }
       } else {
         if (sub === "/diagnostics") return json({ count: 1, items: [{ task_id: "t_1", title: "Hängt", status: "blocked", assignee: "gamma", diagnostics: [{ kind: "stuck", severity: "warning", title: "Aufgabe blockiert", detail: "" }] }] });

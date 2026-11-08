@@ -1342,6 +1342,18 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
     async def ach_list():
         return ach_snapshot()
 
+    @app.get("/api/plugins/hermes-achievements/scan-status")
+    async def ach_status():
+        return {"state": "failed" if getattr(app.state, "ach_failed", False) else "idle", "started_at": 1_790_000_050, "finished_at": 1_790_000_060, "last_error": "scan failed in /home/user/.hermes/sessions/x.db" if getattr(app.state, "ach_failed", False) else None, "last_duration_ms": 10_000, "run_count": 2}
+
+    @app.get("/api/plugins/hermes-achievements/recent-unlocks")
+    async def ach_recent():
+        return [i for i in ach_snapshot()["achievements"] if i["unlocked"]]
+
+    @app.get("/api/plugins/hermes-achievements/sessions/{sid}/badges")
+    async def ach_badges(sid: str):
+        return {"session_id": sid, "badges": [i for i in ach_snapshot()["achievements"] if i["id"] == "let_him_cook"] if sid == "s1" else []}
+
     @app.post("/api/plugins/hermes-achievements/rescan")
     async def ach_rescan():
         return {"ok": True, **ach_snapshot()}

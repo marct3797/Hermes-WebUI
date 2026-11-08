@@ -54,6 +54,7 @@ export type KbWorker = { run_id: number | null; task_id: string; title: string; 
 export type KbDispatch = { dry_run: boolean; spawned: string[]; promoted: string[] };
 export type KbAttachment = { id: number; task_id: string; filename: string; size: number | null; uploaded_by: string; created_at: number | null };
 export type KbDecompose = { ok: boolean; reason: string; fanout: boolean; child_ids: string[]; new_title: string };
+export type AchScan = { state: "idle" | "running" | "failed"; started_at: number | null; finished_at: number | null; duration_ms: number | null; runs: number; error: string | null };
 export type Achievements = { total: number; unlocked: number; discovered: number; secret: number; generated_at: number | null; is_stale: boolean;
   items: Array<{ id: string; name: string; description: string; category: string; icon: string; state: string; unlocked: boolean; tier: string | null; progress: number; next_threshold: number | null; progress_pct: number; unlocked_at: number | null }> };
 export const hostApi = {
@@ -83,5 +84,8 @@ export const hostApi = {
   kbBoardDelete: (host: string, slug: string) => call<{ ok: boolean; board: string }>("DELETE", `${hb(host)}/_kanban/boards/${q(slug)}`, { confirm: slug }),
   achievements: (host: string) => call<Achievements>("GET", `${hb(host)}/_achievements`),
   achRescan: (host: string) => call<Achievements>("POST", `${hb(host)}/_achievements/rescan`),
+  achScan: (host: string) => call<AchScan>("GET", `${hb(host)}/_achievements/scan-status`),
+  achRecent: (host: string) => call<{ items: Achievements["items"] }>("GET", `${hb(host)}/_achievements/recent`),
+  achBadges: (host: string, sid: string) => call<{ items: Achievements["items"] }>("GET", `${hb(host)}/_achievements/sessions/${encodeURIComponent(sid)}/badges`),
   achReset: (host: string) => call<{ ok: boolean }>("POST", `${hb(host)}/_achievements/reset`, { confirm: "reset" }),
 };

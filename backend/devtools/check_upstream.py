@@ -49,7 +49,7 @@ USED: dict[str, list[str]] = {
         "/api/cron/jobs/{}/cancel", "/api/providers/oauth/{}",
         "/api/dashboard/agent-plugins/{}", "/api/dashboard/agent-plugins/{}/enable", "/api/dashboard/agent-plugins/{}/disable", "/api/dashboard/agent-plugins/{}/update",
     ],
-    "achievements-plugin": ["/api/plugins/hermes-achievements/achievements", "/api/plugins/hermes-achievements/rescan", "/api/plugins/hermes-achievements/reset-state"],  # plugins/hermes-achievements/dashboard/plugin_api.py
+    "achievements-plugin": ["/api/plugins/hermes-achievements/achievements", "/api/plugins/hermes-achievements/rescan", "/api/plugins/hermes-achievements/reset-state", "/api/plugins/hermes-achievements/scan-status", "/api/plugins/hermes-achievements/recent-unlocks", "/api/plugins/hermes-achievements/sessions/{}/badges"],  # plugins/hermes-achievements/dashboard/plugin_api.py
     "kanban-plugin": [  # liegt Hermes bei: plugins/kanban/dashboard/plugin_api.py, eingehängt unter /api/plugins/kanban
         "/api/plugins/kanban/config", "/api/plugins/kanban/workflow", "/api/plugins/kanban/orchestration", "/api/plugins/kanban/profiles", "/api/plugins/kanban/profiles/{}", "/api/plugins/kanban/profiles/{}/describe-auto",
         "/api/plugins/kanban/home-channels", "/api/plugins/kanban/tasks/{}/home-subscribe/{}", "/api/plugins/kanban/model-options", "/api/plugins/kanban/projects",
