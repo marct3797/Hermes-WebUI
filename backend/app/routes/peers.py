@@ -24,14 +24,14 @@ ERRORS = {
     404: "Profil ist in hostd nicht eingetragen, oder der Host-Dienst ist zu alt dafür.",
     403: "Für dieses Profil nicht freigeschaltet. Setze allow_peers in der hostd-Konfiguration.",
     409: "Hermes hat die Anfrage abgelehnt.",
-    422: "Hermes oder der Host-Dienst hat die Eingabe abgelehnt (zum Beispiel Name, Adresse oder Lauf-Kennung).",
+    422: "Hermes oder der Host-Dienst hat die Eingabe abgelehnt (zum Beispiel Name, Adresse oder Lauf-Kennung), oder es gibt keinen solchen Peer mit Schlüssel.",
     426: "Hermes ist dafür zu alt. Aktualisiere Hermes auf diesem Rechner.",
     501: "Der Hermes-Client ist in hostd nicht eingerichtet (native_python und native_source).",
     502: "Der Hermes-Client in hostd hat nicht geantwortet.",
     503: "Der Hermes-Client ist nicht erreichbar.",
     504: "Keine Antwort in der Zeit. Das Ergebnis ist unbekannt: lade neu und prüfe, bevor du erneut sendest.",
 }
-WAIT = 140.0  # größer als die Grenze in hostd (120 s)
+WAIT = 220.0  # größer als die Grenze in hostd (200 s)
 NAME = r"^[a-z0-9][a-z0-9_-]{0,63}$"
 TARGET = r"^[a-z0-9][a-z0-9_-]{0,63}(/[A-Za-z0-9][A-Za-z0-9_-]{0,63})?$"
 RUN_ID = r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
@@ -59,6 +59,15 @@ async def _peers(request: Request, target) -> list[dict[str, Any]]:
     return [{k: r.get(k) for k in PEER_KEYS if k in r} for r in rows if isinstance(r, dict) and isinstance(r.get("name"), str)]
 
 
+def _origin(url: Any) -> tuple[str, str, int | None]:
+    from urllib.parse import urlsplit
+    try:
+        p = urlsplit(str(url or ""))
+        return (p.scheme, (p.hostname or "").lower(), p.port or (443 if p.scheme == "https" else 80))
+    except ValueError:
+        return ("", "", None)
+
+
 def _result(body: dict[str, Any]) -> dict[str, Any]:
     res = body.get("result") if isinstance(body.get("result"), dict) else {}
     out = {k: res[k] for k in RESULT_KEYS if isinstance(res.get(k), (str, bool, int, type(None))) and k in res}
@@ -69,7 +78,8 @@ def _result(body: dict[str, Any]) -> dict[str, Any]:
 
 
 @router.get("/peers")
-async def peers(request: Request, target: Tgt) -> dict[str, Any]:
+async def peers(request: Request, target: Tgt, user: User = Depends(current_user)) -> dict[str, Any]:
+    request.app.state.limiter.check(f"{user.id}:peers-read")
     return {"peers": await _peers(request, target)}
 
 
@@ -85,18 +95,23 @@ class PeerIn(BaseModel):
 async def peer_add(request: Request, target: Tgt, req: PeerIn, user: User = Depends(fresh_user)) -> dict[str, Any]:
     request.app.state.limiter.check(f"{user.id}:peers")
     key = req.key.strip()
+    url = req.url.strip().rstrip("/")
     before = {p["name"]: p for p in await _peers(request, target)}
-    if not key and not (before.get(req.name) or {}).get("has_key"):
+    old = before.get(req.name) or {}
+    if not key and not old.get("has_key"):
         raise HTTPException(422, "Für einen neuen Peer braucht es den API-Schlüssel seines Gateways (API_SERVER_KEY).")
+    if not key and _origin(old.get("url")) != _origin(url):
+        raise HTTPException(422, "Bei einer anderen Adresse (Schema, Rechner oder Port) braucht es den Schlüssel erneut: der alte würde sonst an die neue Adresse gehen.")
+    note = req.note.strip() or str(old.get("note") or "")
     verified = False
     try:
-        done = await _call(request, target, {"action": "add", "name": req.name, "url": req.url.strip(), "key": key, "note": req.note.strip()})
+        done = await _call(request, target, {"action": "add", "name": req.name, "url": url, "key": key, "note": note})
         row = next((p for p in await _peers(request, target) if p["name"] == req.name), None)
-        verified = done.get("ok") is True and row is not None and row.get("url") == req.url.strip().rstrip("/") and row.get("has_key") is True
+        verified = done.get("ok") is True and row is not None and row.get("url") == url and row.get("has_key") is True
     except HTTPException as exc:
-        audit(request, user, "peers.add", target, peer=req.name, verified=False, status=exc.status_code)
+        audit(request, user, "peers.add", target, peer=req.name, url=url, verified=False, status=exc.status_code)
         raise
-    audit(request, user, "peers.add", target, peer=req.name, verified=verified, key_changed=bool(key))
+    audit(request, user, "peers.add", target, peer=req.name, url=url, verified=verified, key_changed=bool(key))
     if not verified:
         raise HTTPException(502, "Hermes hat den Peer nicht übernommen")
     return {"ok": True, "peer": row}
@@ -127,7 +142,7 @@ async def peer_remove(request: Request, target: Tgt, name: str, confirm: str = "
 class SendIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     target: str = Field(pattern=TARGET)  # <peer> oder <peer>/<profil>
-    message: str = Field(min_length=1, max_length=20000)
+    message: str = Field(min_length=1, max_length=12000)
     idempotency_key: str = Field(default="", max_length=128, pattern=r"^([A-Za-z0-9][A-Za-z0-9_.:-]*)?$")
 
 
@@ -137,10 +152,6 @@ async def peer_send(request: Request, target: Tgt, req: SendIn, user: User = Dep
     request.app.state.limiter.check(f"{user.id}:peers")
     if not req.message.strip():
         raise HTTPException(422, "Die Nachricht ist leer.")
-    peer = req.target.split("/", 1)[0]
-    row = next((p for p in await _peers(request, target) if p["name"] == peer), None)
-    if row is None or row.get("has_key") is not True:
-        raise HTTPException(422, "Nur an eingetragene Peers mit Schlüssel.")
     body: dict[str, Any] = {"action": "run", "target": req.target, "message": req.message}
     if req.idempotency_key:
         body["idempotency_key"] = req.idempotency_key
@@ -165,7 +176,7 @@ class RunIn(BaseModel):
 
 @router.post("/peers/status")
 async def peer_status(request: Request, target: Tgt, req: RunIn, user: User = Depends(current_user)) -> dict[str, Any]:
-    request.app.state.limiter.check(f"{user.id}:peers")
+    request.app.state.limiter.check(f"{user.id}:peers-read")
     done = await _call(request, target, {"action": "status", "target": req.target, "run_id": req.run_id})
     return {"ok": done.get("ok") is True, **_result(done), **({"error": str(done.get("error") or "")[:1000]} if done.get("ok") is not True else {})}
 

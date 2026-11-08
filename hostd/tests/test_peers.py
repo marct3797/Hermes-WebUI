@@ -8,21 +8,34 @@ from fastapi.testclient import TestClient
 PEER = '''
 import json, os, sys
 def _load_peers(): return json.load(open(os.environ["FAKE_PEERS"])) if os.path.exists(os.environ["FAKE_PEERS"]) else {}
-def _peer_secret(name): return "k" if name in json.load(open(os.environ["FAKE_PEERS"] + ".keys")) else ""
+def _peer_secret(name):
+    # wie Hermes: der Schlüssel steht nur in der Umgebung, die der Helfer erst aus der .env laden muss
+    return os.environ.get("HERMES_PEER_" + name.upper() + "_KEY", "")
 def cmd_peer(a):
     peers = _load_peers()
-    keys = json.load(open(os.environ["FAKE_PEERS"] + ".keys")) if os.path.exists(os.environ["FAKE_PEERS"] + ".keys") else {}
     open(os.environ["FAKE_LOG"], "a").write(json.dumps({"a": a.peer_action, "key": a.key, "message": a.message, "target": a.target, "argv": sys.argv[1:]}) + "\\n")
     if a.peer_action == "add":
-        peers[a.name] = {"url": a.url, "note": a.note}; keys[a.name] = a.key
-        json.dump(peers, open(os.environ["FAKE_PEERS"], "w")); json.dump(keys, open(os.environ["FAKE_PEERS"] + ".keys", "w"))
+        peers[a.name] = {"url": a.url, "note": a.note}
+        json.dump(peers, open(os.environ["FAKE_PEERS"], "w"))
+        if a.key:
+            open(os.environ["FAKE_ENV"], "a").write("HERMES_PEER_" + a.name.upper() + "_KEY=" + a.key + "\\n")
         print("saved " + a.key)
         return 0
     if a.peer_action == "remove":
         peers.pop(a.name, None); json.dump(peers, open(os.environ["FAKE_PEERS"], "w")); return 0
     if a.peer_action == "run":
         print(json.dumps({"peer": a.target, "run_id": "run_1", "status": "started", "session_id": "s1"})); return 0
+    if a.peer_action == "status":
+        print(json.dumps({"run_id": a.run_id, "status": "completed", "output": os.environ.get("FAKE_OUTPUT", "") or "Antwort"})); return 0
     print("Could not reach peer", file=sys.stderr); return 1
+'''
+LOADER = '''
+import os
+def load_hermes_dotenv(**kw):
+    if os.path.exists(os.environ["FAKE_ENV"]):
+        for line in open(os.environ["FAKE_ENV"]):
+            k, _, v = line.strip().partition("=")
+            if k: os.environ[k] = v
 '''
 
 
@@ -33,11 +46,12 @@ def setup(tmp_path, monkeypatch, flag=True, python=True):
     (tmp_path / 'src' / 'hermes_cli' / '__init__.py').write_text('')
     (pkg / '__init__.py').write_text('')
     (pkg / 'peer.py').write_text(PEER)
+    (tmp_path / 'src' / 'hermes_cli' / 'env_loader.py').write_text(LOADER)
     root = tmp_path / 'p'
     root.mkdir(exist_ok=True)
     monkeypatch.setenv('FAKE_PEERS', str(tmp_path / 'peers.json'))
     monkeypatch.setenv('FAKE_LOG', str(tmp_path / 'log'))
-    (tmp_path / 'peers.json.keys').write_text('{}')
+    monkeypatch.setenv('FAKE_ENV', str(tmp_path / 'env'))
     app = FastAPI()
     settings = {'workspaces': [], 'profiles': [{'id': 'p', 'path': str(root), 'allow_peers': flag}]}
     if python:
@@ -66,6 +80,7 @@ def test_add_list_remove_never_returns_the_key(tmp_path, monkeypatch):
 
 def test_run_passes_message_by_stdin_and_returns_the_run(tmp_path, monkeypatch):
     c = setup(tmp_path, monkeypatch)
+    post(c, action='add', name='spark', url='http://spark.lan:8377', key='K1')
     r = post(c, action='run', target='spark/researcher', message='Hallo Peer', idempotency_key='ticket-1')
     assert r.status_code == 200 and r.json()['result']['run_id'] == 'run_1'
     line = json.loads((tmp_path / 'log').read_text().splitlines()[-1])
@@ -74,8 +89,36 @@ def test_run_passes_message_by_stdin_and_returns_the_run(tmp_path, monkeypatch):
 
 def test_status_failure_is_reported_without_a_result(tmp_path, monkeypatch):
     c = setup(tmp_path, monkeypatch)
+    post(c, action='add', name='spark', url='http://spark.lan:8377', key='K1')
+    (tmp_path / 'src' / 'hermes_cli' / 'subcommands' / 'peer.py').write_text(PEER.replace('"status"', '"nope"'))
     r = post(c, action='status', target='spark', run_id='run_1')
     assert r.status_code == 200 and r.json()['ok'] is False and r.json()['result'] is None and 'Could not reach' in r.json()['error']
+
+
+def test_key_comes_from_the_env_file_so_list_and_run_see_it(tmp_path, monkeypatch):
+    c = setup(tmp_path, monkeypatch)
+    assert post(c, action='run', target='spark', message='x').status_code == 422  # nicht eingetragen
+    post(c, action='add', name='nokey', url='http://x.lan')
+    assert post(c, action='run', target='nokey', message='x').status_code == 422  # eingetragen, aber ohne Schlüssel
+    post(c, action='add', name='spark', url='http://spark.lan', key='K1')
+    assert post(c, action='list').json()['peers'][1]['has_key'] is True
+
+
+def test_reply_is_parsed_before_cleaning_and_keeps_long_text(tmp_path, monkeypatch):
+    c = setup(tmp_path, monkeypatch)
+    post(c, action='add', name='spark', url='http://spark.lan', key='K1')
+    long = 'Pfad:\n/home/user/projekt/' + 'a' * 60 + '/datei.txt\n' + 'ü' * 30000
+    monkeypatch.setenv('FAKE_OUTPUT', long)
+    resp = post(c, action='status', target='spark', run_id='run_1')
+    r = resp.json()
+    assert r['result']['status'] == 'completed' and '/home/user/projekt/' + 'a' * 60 in r['result']['output'] and r['result']['output'].count('ü') == 12000 - len(long.split('ü')[0])
+
+
+def test_unicode_message_up_to_the_limit_fits(tmp_path, monkeypatch):
+    c = setup(tmp_path, monkeypatch)
+    post(c, action='add', name='spark', url='http://spark.lan', key='K1')
+    assert post(c, action='run', target='spark', message='日' * 12000).status_code == 200
+    assert json.loads((tmp_path / 'log').read_text().splitlines()[-1])['message'] == '日' * 12000
 
 
 def test_inputs_are_checked(tmp_path, monkeypatch):
@@ -88,6 +131,9 @@ def test_inputs_are_checked(tmp_path, monkeypatch):
         dict(action='add', name='spark', url='http://x#f', key='k'),
         dict(action='add', name='spark', url='http://x:99999', key='k'),
         dict(action='add', name='spark', url='http://x', key='a\nb'),
+        dict(action='add', name='spark', url='http://x', key='schlüssel'),
+        dict(action='add', name='spark', url='http://169.254.169.254/latest', key='k'),
+        dict(action='add', name='spark', url='http://[fe80::1]/', key='k'),
         dict(action='run', target='../x', message='m'),
         dict(action='run', target='spark', message='  '),
         dict(action='run', target='spark', message='m', idempotency_key='a b'),

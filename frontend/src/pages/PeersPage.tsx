@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { PageHead } from "../components/PageHead";
 import { useAction } from "../components/useAction";
@@ -19,6 +19,7 @@ export default function PeersPage({ agent }: { agent: AgentRef }) {
   const [profile, setProfile] = useState("");
   const [message, setMessage] = useState("");
   const [sent, setSent] = useState<Sent[]>([]);
+  const pending = useRef<{ sig: string; key: string } | null>(null);   // Schlüssel gegen Doppelausführung: gleiche Nachricht an dasselbe Ziel = derselbe Lauf
   const { run, notes, busy } = useAction();
   const load = useCallback(() => api.peerList(agent).then((l) => { setRows(l.peers); setLoadErr(""); }, (e: Error) => { setLoadErr(e.message); }), [agent.host, agent.runtime, agent.agent]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { void load(); }, [load]);
@@ -38,12 +39,14 @@ export default function PeersPage({ agent }: { agent: AgentRef }) {
     if (!ok) void load();
   };
   const send = async () => {
-    const ok = await run(async () => {
-      const r = await api.peerSend(agent, { target, message, idempotency_key: `ui-${crypto.randomUUID()}` });
+    const sig = `${target}\n${message}`;
+    if (pending.current?.sig !== sig) pending.current = { sig, key: `ui-${crypto.randomUUID()}` };
+    await run(async () => {
+      const r = await api.peerSend(agent, { target, message, idempotency_key: pending.current?.key });
+      pending.current = null;
       setSent((o) => [{ target, run: r }, ...o].slice(0, 10));
       setMessage("");
-    });
-    void ok;   // nach Zeitüberschreitung nicht blind noch einmal senden: der Peer hat die Nachricht eventuell schon
+    });   // nach Fehler oder Zeitüberschreitung bleibt der Schlüssel: ein erneuter Klick mit gleichem Text führt den Lauf beim Peer nicht doppelt aus
   };
   const refresh = (s: Sent, stop: boolean) => run(async () => {
     const r = stop ? await api.peerStop(agent, s.target, s.run.run_id ?? "") : await api.peerStatus(agent, s.target, s.run.run_id ?? "");
@@ -78,11 +81,11 @@ export default function PeersPage({ agent }: { agent: AgentRef }) {
         {usable.length === 0 ? <p className="muted">{t("Senden geht nur an eingetragene Peers mit Schlüssel.")}</p> : <>
           <label>{t("Peer")} <select aria-label={t("Peer")} value={peer} onChange={(e) => setTo(e.target.value)}>{usable.map((r) => <option key={r.name} value={r.name}>{r.name}</option>)}</select></label>
           <label>{t("Agent beim Peer (optional)")} <input aria-label={t("Agent beim Peer")} placeholder="researcher" value={profile} onChange={(e) => setProfile(e.target.value)} /></label>
-          <label>{t("Nachricht")} <textarea aria-label={t("Nachricht an den Peer")} maxLength={20000} value={message} onChange={(e) => setMessage(e.target.value)} /></label>
+          <label>{t("Nachricht")} <textarea aria-label={t("Nachricht an den Peer")} maxLength={12000} value={message} onChange={(e) => setMessage(e.target.value)} /></label>
           <button type="button" disabled={busy || !message.trim() || !/^[a-z0-9][a-z0-9_-]*(\/[A-Za-z0-9][A-Za-z0-9_-]*)?$/.test(target)} onClick={() => void send()}>{t("An {peer} senden", { peer: target })}</button>
         </>}
-        <ul>{sent.map((s) => (
-          <li key={s.run.run_id}>
+        <ul>{sent.map((s, i) => (
+          <li key={`${s.run.run_id}-${i}`}>
             <strong>{s.target}</strong> <span className="muted">{s.run.run_id} · {s.run.status ?? ""}</span>
             <button type="button" disabled={busy} onClick={() => void refresh(s, false)}>{t("Status von {run}", { run: s.run.run_id ?? "" })}</button>
             <button type="button" disabled={busy} onClick={() => void refresh(s, true)}>{t("Lauf {run} stoppen", { run: s.run.run_id ?? "" })}</button>

@@ -354,7 +354,7 @@ class PeerAct(BaseModel):
     note: str | None = Field(default=None, max_length=200)
     target: str | None = Field(default=None, max_length=130)
     run_id: str | None = Field(default=None, max_length=128)
-    message: str | None = Field(default=None, max_length=20000)
+    message: str | None = Field(default=None, max_length=12000)
     idempotency_key: str | None = Field(default=None, max_length=128)
 
 

@@ -7,21 +7,25 @@ Gebaut wie der Tresor (`credentials.py`): ein Hilfsskript im Python von Hermes r
 - Senden geht nur an bereits eingetragene Peers (`<peer>` oder `<peer>/<profil>`), asynchron über `hermes peer run`; Status und Stopp über die Lauf-Kennung.
 Braucht das Flag `allow_peers` am Profil.
 """
+import ipaddress
 import json
 import re
+import threading
 from urllib.parse import urlsplit
 
 from fastapi import HTTPException
 
 from . import native
-from .credentials import MARK, MAX_REQUEST, _env, _need, clean
+from .credentials import ANSI, MARK, MAX_REQUEST, USERINFO, _env, _need, clean
 
-TIMEOUT = 120
+TIMEOUT = 200  # `run` macht bis zu fünf Anfragen nacheinander, jede darf in Hermes 30 s dauern
+LOCKS: dict = {}
+LOCKS_GUARD = threading.Lock()
 NAME = re.compile(r'^[a-z0-9][a-z0-9_-]{0,63}$')
 TARGET = re.compile(r'^[a-z0-9][a-z0-9_-]{0,63}(/[A-Za-z0-9][A-Za-z0-9_-]{0,63})?$')
 RUN_ID = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$')
 IDEM = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$')
-MAX_MESSAGE = 20000
+MAX_MESSAGE = 12000  # höchstens 4 Bytes je Zeichen in UTF-8: bleibt unter MAX_REQUEST
 CONTROL = re.compile(r'[\x00-\x1f\x7f-\x9f  ]')
 
 SCRIPT = r"""import sys, json, io, contextlib
@@ -39,8 +43,16 @@ class TooOld(Exception):
 def main():
     try:
         from hermes_cli.subcommands import peer as P
-    except ImportError as exc:
+        for needed in ('_load_peers', '_peer_secret', 'cmd_peer'):
+            getattr(P, needed)
+    except (ImportError, AttributeError) as exc:
         raise TooOld(str(exc)[:200])
+    try:
+        # Hermes liest die .env (mit den Peer-Schlüsseln) nur beim Start seiner eigenen Programme in die Umgebung.
+        from hermes_cli.env_loader import load_hermes_dotenv
+        load_hermes_dotenv()
+    except Exception:
+        pass
     act = req['action']
     if act == 'list':
         rows = []
@@ -61,10 +73,24 @@ def main():
     ns.peer_action = {'add': 'add', 'remove': 'remove', 'run': 'run', 'status': 'status', 'stop': 'stop'}.get(act)
     if ns.peer_action is None:
         return {'refused': 'unknown action'}
+    if act in ('run', 'status', 'stop'):
+        peer_name = str(ns.target).split('/', 1)[0]
+        if peer_name not in P._load_peers() or not P._peer_secret(peer_name):
+            return {'refused': 'No such peer, or it has no key'}
     out, err = io.StringIO(), io.StringIO()
     with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
         code = P.cmd_peer(ns)
-    return {'code': int(code or 0), 'out': out.getvalue()[-20000:], 'err': err.getvalue()[-2000:]}
+    result = None
+    for text in reversed(out.getvalue().splitlines()):
+        if text.startswith('{'):
+            try:
+                result = json.loads(text)
+            except ValueError:
+                result = None
+            break
+    if isinstance(result, dict):
+        result = {k: (v[:12000] if isinstance(v, str) else v) for k, v in result.items() if isinstance(v, (str, int, float, bool, type(None)))}
+    return {'code': int(code or 0), 'result': result, 'out': '' if result is not None else out.getvalue()[:4000], 'err': err.getvalue()[-2000:]}
 
 try:
     out = {'ok': True, 'reply': main()}
@@ -72,7 +98,7 @@ except TooOld as exc:
     out = {'ok': False, 'error': 'hermes_too_old: ' + str(exc)}
 except BaseException as exc:
     out = {'ok': False, 'error': type(exc).__name__ + ': ' + str(exc)[:200]}
-print('@@RESULT@@' + json.dumps(out))
+print('@@RESULT@@' + json.dumps(out, ensure_ascii=False))
 """
 
 
@@ -86,17 +112,23 @@ def check_url(url):
             or parts.query or parts.fragment or len(url) > 200 or CONTROL.search(url) or re.search(r'[\s"\'`\\<>]', url)
             or (port is not None and not 0 < port < 65536)):
         raise HTTPException(422, 'Invalid peer URL')
+    try:
+        address = ipaddress.ip_address(parts.hostname.strip('[]'))
+    except ValueError:
+        address = None
+    if address is not None and (address.is_link_local or address.is_unspecified or address.is_multicast):
+        raise HTTPException(422, 'Invalid peer URL')  # u. a. der Metadaten-Dienst 169.254.169.254; Loopback und Tailnet bleiben erlaubt
     return url.rstrip('/')
 
 
 def call(settings, profile, request):
     """Ruft das Peer-Skript mit einer Anfrage (stdin). Liefert die Antwort oder wirft HTTPException."""
     python, source, path = _need(settings, profile, 'allow_peers')
-    data = json.dumps(request).encode()
+    data = json.dumps(request, ensure_ascii=False).encode('utf-8')
     if len(data) > MAX_REQUEST:
         raise HTTPException(422, 'Request too large')
     try:
-        output, cut, code = native.run([python, '-I', '-c', SCRIPT, source], cwd=source, env=_env(settings, profile), timeout=TIMEOUT, stdin_data=data)
+        output, cut, code = native.run([python, '-I', '-c', SCRIPT, source], cwd=source, env={**_env(settings, profile), 'PYTHONIOENCODING': 'utf-8', 'PYTHONUTF8': '1'}, timeout=TIMEOUT, stdin_data=data)
     except OSError:
         raise HTTPException(503, 'Hermes client unavailable') from None
     line = next((l for l in reversed(output.splitlines()) if l.startswith(MARK)), None)
@@ -126,7 +158,7 @@ def act(settings, profile, req):
         if not NAME.fullmatch(req.get('name') or ''):
             raise HTTPException(422, 'Invalid peer name')
         payload.update(name=req['name'], url=check_url(req.get('url') or ''), key=req.get('key') or '', note=req.get('note') or '')
-        if len(payload['key']) > 500 or CONTROL.search(payload['key']) or len(payload['note']) > 200 or CONTROL.search(payload['note']):
+        if len(payload['key']) > 500 or not payload['key'].isascii() or CONTROL.search(payload['key']) or len(payload['note']) > 200 or CONTROL.search(payload['note']):
             raise HTTPException(422, 'Invalid key or note')
     elif action == 'remove':
         if not NAME.fullmatch(req.get('name') or ''):
@@ -152,19 +184,25 @@ def act(settings, profile, req):
             payload['run_id'] = req['run_id']
     elif action != 'list':
         raise HTTPException(422, 'Unknown action')
-    reply = call(settings, profile, payload)
+    if action in ('add', 'remove'):
+        with LOCKS_GUARD:
+            lock = LOCKS.setdefault(str(native.value(profile, 'path')), threading.Lock())
+        if not lock.acquire(blocking=False):
+            raise HTTPException(409, 'Another peer change is running')
+        try:
+            reply = call(settings, profile, payload)
+        finally:
+            lock.release()
+    else:
+        reply = call(settings, profile, payload)
     if action == 'list':
         return {'peers': reply.get('peers') or []}
     out = clean(reply.get('out') or '')
-    result = None
-    for text in reversed(out.splitlines()):
-        if text.startswith('{'):
-            try:
-                result = json.loads(text)
-            except ValueError:
-                result = None
-            break
+    result = reply.get('result') if isinstance(reply.get('result'), dict) else None
+    if result is not None:
+        # erst parsen, dann nur die Werte bereinigen; die Antwort des Peers ist Inhalt und wird nicht auf „schlüsselähnlich“ gekürzt
+        result = {k: ((USERINFO.sub(r'\1', ANSI.sub('', v)) if k in ('output', 'error') else clean(v)) if isinstance(v, str) else v) for k, v in result.items()}
     if action in ('add', 'remove'):
         return {'ok': reply.get('code') == 0, 'result': None, 'output': '', 'error': ''}  # nichts zurückgeben, was den Schlüssel enthalten könnte
-    return {'ok': reply.get('code') == 0, 'result': result if isinstance(result, dict) else None,
+    return {'ok': reply.get('code') == 0, 'result': result,
             'output': out[:4000] if result is None else '', 'error': clean(reply.get('err') or '')[:1000]}

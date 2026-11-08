@@ -15,6 +15,8 @@ def hostd(mode="ok"):
     async def peers(profile: str, body: dict):
         SEEN.append(body)
         a = body["action"]
+        if a == "run" and body["target"].split("/")[0] not in ("spark",):
+            raise HTTPException(422, "intern: /home/geheim")
         if mode == "old":
             raise HTTPException(404, "intern: /home/geheim")
         if mode == "forbidden":
@@ -79,7 +81,11 @@ def test_add_is_verified_audited_without_key_and_needs_fresh_login(tmp_path, mak
 def test_add_needs_a_key_for_new_peers_but_not_for_updates(tmp_path, make_settings, monkeypatch):
     for c in make(tmp_path, make_settings, monkeypatch):
         assert c.post(f"{BASE}/peers", json={"name": "neu", "url": "http://neu.lan"}).status_code == 422
-        assert c.post(f"{BASE}/peers", json={"name": "spark", "url": "http://spark.lan:9000"}).status_code == 200
+        assert c.post(f"{BASE}/peers", json={"name": "spark", "url": "http://spark.lan:8377/"}).status_code == 200  # gleiche Adresse: alter Schlüssel bleibt
+        for url in ("http://attacker.example", "http://spark.lan:9000", "https://spark.lan:8377"):
+            assert c.post(f"{BASE}/peers", json={"name": "spark", "url": url}).status_code == 422, url
+        assert c.post(f"{BASE}/peers", json={"name": "spark", "url": "http://spark.lan:9000", "key": "neu"}).status_code == 200
+        assert '"url": "http://spark.lan:9000"' in c.audit_file.read_text() or "spark.lan:9000" in c.audit_file.read_text()
         assert c.post(f"{BASE}/peers", json={"name": "Bad Name", "url": "http://x.lan", "key": "k"}).status_code == 422
         assert c.post(f"{BASE}/peers", json={"name": "neu", "url": "http://neu.lan", "key": "k", "extra": 1}).status_code == 422
 
@@ -108,11 +114,10 @@ def test_send_only_to_registered_peers_with_key_and_audit_has_no_text(tmp_path, 
         log = c.audit_file.read_text()
         assert "peers.send" in log and "Geheimer Auftragstext" not in log
         n = len(SEEN)
-        for body in ({"target": "unbekannt", "message": "x"}, {"target": "nokey", "message": "x"}):
-            assert c.post(f"{BASE}/peers/send", json=body).status_code == 422
         for body in ({"target": "../x", "message": "x"}, {"target": "spark", "message": ""}, {"target": "spark", "message": "  "}, {"target": "spark", "message": "x", "idempotency_key": "a b"}):
             assert c.post(f"{BASE}/peers/send", json=body).status_code == 422
-        assert [s["action"] for s in SEEN[n:]] == ["list", "list"]
+        assert len(SEEN) == n
+        assert c.post(f"{BASE}/peers/send", json={"target": "unbekannt", "message": "x"}).status_code == 422
         stale(c)
         assert c.post(f"{BASE}/peers/send", json={"target": "spark", "message": "x"}).status_code == 401
 

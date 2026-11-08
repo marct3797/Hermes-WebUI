@@ -60,6 +60,22 @@ describe("Bot-Modus und Peers", () => {
     await waitFor(() => expect(screen.getByText(/stopped/)).toBeTruthy());
   });
 
+  it("sendet nach einer Zeitüberschreitung mit demselben Schlüssel erneut und behält den Text", async () => {
+    const backend = await open();
+    backend.dash.peers.failSend = 1;
+    await screen.findByRole("button", { name: "Entfernen spark" });
+    type("Nachricht an den Peer", "Wichtig");
+    const send = screen.getByRole("button", { name: "An spark senden" });
+    fireEvent.click(send);
+    await screen.findByText(/Keine Antwort in der Zeit/);
+    expect((screen.getByLabelText("Nachricht an den Peer") as HTMLTextAreaElement).value).toBe("Wichtig");
+    fireEvent.click(screen.getByRole("button", { name: "An spark senden" }));
+    await screen.findByRole("button", { name: "Status von run_1" });
+    const [a, b] = backend.dash.peers.sent as Array<{ idempotency_key: string }>;
+    expect(a.idempotency_key).toBeTruthy();
+    expect(b.idempotency_key).toBe(a.idempotency_key);
+  });
+
   it("nennt den fehlenden Schalter in hostd", async () => {
     await open(true);
     expect((await screen.findAllByText(/allow_peers/)).length).toBeGreaterThan(0);
