@@ -256,8 +256,8 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
         return {"profiles": [
             {"name": n, "path": f"/opt/data/profiles/{n}", "is_default": n == "default", "model": p["model"], "provider": p["provider"],
              "has_env": True, "skill_count": 12, "gateway_running": False, "description": p["description"],
-             "description_auto": p["description_auto"], "distribution_name": None, "distribution_version": None,
-             "distribution_source": None, "has_alias": False}
+             "description_auto": p["description_auto"], "distribution_name": p.get("dist", {}).get("name"), "distribution_version": p.get("dist", {}).get("version"),
+             "distribution_source": p.get("dist", {}).get("source"), "has_alias": False}
             for n, p in state.items() if n not in hidden
         ]}
 

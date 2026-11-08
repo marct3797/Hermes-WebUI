@@ -477,7 +477,7 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
     if (!dash.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
     if (method !== "GET" && dash.stepUp) return json(stepUpBody, 401);
     if (path === "/hermes-profiles" && method === "GET") {
-      return json({ profiles: dash.lcProfiles.map((n: string) => ({ name: n, is_default: n === dash.lcProfiles[0], has_env: true })), active: dash.lcActive });
+      return json({ profiles: dash.lcProfiles.map((n: string) => ({ name: n, is_default: n === dash.lcProfiles[0], has_env: true, ...(n === "beta" ? { distribution: { name: "team-basis", version: "1.2.0", source: "git.example.test/team/basis.git" } } : {}) })), active: dash.lcActive });
     }
     if (path === "/hermes-profiles" && method === "POST") {
       if (body?.clone_from && !dash.lcProfiles.includes(String(body.clone_from))) return json({ detail: "Quelle: unbekanntes Profil" }, 422);

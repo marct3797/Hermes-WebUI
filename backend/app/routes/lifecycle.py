@@ -81,6 +81,24 @@ def already_running(names: set[str], staging: dict[str, str]) -> None:
 STAGING: dict[str, str] = {}
 
 
+def _source(raw: Any) -> str | None:
+    """Herkunft einer Distribution zeigen, ohne Zugangsdaten oder lokale Pfade: nur Rechner und Pfad einer Git-Adresse."""
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    m = re.match(r"^(?:https?|ssh|git)://(?:[^@/]*@)?([^/:?#]+)(?::\d+)?(/[^?#]*)?", raw.strip()) or re.match(r"^[\w.-]+@([^:/]+):(.+?)(?:\?.*)?$", raw.strip())
+    if not m:
+        return None  # lokaler Ordner: der Pfad bleibt im BFF
+    return clip(f"{m.group(1)}/{(m.group(2) or '').lstrip('/')}".rstrip("/"), 200)
+
+
+def _distribution(p: dict[str, Any]) -> dict[str, Any] | None:
+    name = p.get("distribution_name")
+    if not isinstance(name, str) or not name:
+        return None
+    ver = p.get("distribution_version")
+    return {"name": clip(name, 100), "version": clip(ver, 50) if isinstance(ver, str) and ver else None, "source": _source(p.get("distribution_source"))}
+
+
 @router.get("/hermes-profiles")
 async def profiles(target: Tgt, dash: Dash):
     try:
@@ -102,7 +120,8 @@ async def profiles(target: Tgt, dash: Dash):
         out.append({"name": p["name"], "is_default": bool(p.get("is_default", p["name"] == "default")),
                     "model": p.get("model"), "provider": p.get("provider"), "gateway_running": bool(p.get("gateway_running")),
                     "skill_count": p.get("skill_count") if isinstance(p.get("skill_count"), int) else None,
-                    "description": clip(p.get("description"), 300), "description_auto": bool(p.get("description_auto"))})
+                    "description": clip(p.get("description"), 300), "description_auto": bool(p.get("description_auto")),
+                    "distribution": _distribution(p)})
     return {"profiles": out, "active": active}
 
 

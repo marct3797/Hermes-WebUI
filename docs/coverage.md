@@ -66,18 +66,18 @@ Funktionen der Hermes-Dokumentation (`user-guide/features`), die in der Liste ob
 | Fallback-Anbieter (`fallback-providers`) | Maske unter „Modelle“: Reihenfolge, Modell, Mindest-Wartezeit, über die Profil-Einstellungen gespeichert |
 | Anbieter-Routing für OpenRouter (`provider-routing`) | Maske unter „Modelle“ (Sortierung, nur/nie/Reihenfolge, Parameter, Datenspeicherung). Schreibt alle Schlüssel, weil die Tiefenmischung von Hermes fehlende nicht löscht; Ausnahmen je Modell bleiben unberührt |
 | Bot-Bildschirm (`bot-screen`, `/api/display/ws`) | nicht abgebildet (display.py: 1 Route, 0 genutzt) |
-| Credential-Vault (`credential-vault`, `hermes vault`) | nicht abgebildet (nur CLI) |
+| Credential-Vault (`credential-vault`, `hermes vault`) | bewusst nicht abgebildet: Hermes bietet nur die CLI (`vault.py`, `secrets_cli.py`), keine HTTP-Route; im Dashboard taucht der Tresor nur als Schwärzungsmarke auf. Ein Tresor-Bildschirm der WebUI müsste Geheimnisse selbst anfassen und hätte keine Hermes-Schnittstelle zum Prüfen |
 | Kanban-Worker-Lanes, Kanban über mehrere Gateways | Worker-Ansicht und Dispatch vorhanden; Lanes und Multi-Gateway nicht gesondert geprüft |
 | Abo-Proxy (`subscription-proxy`), Tool-Gateway (`tool-gateway`, Portal) | nicht abgebildet (CLI und OpenAI-Schnittstellen) |
 | Tool-Suche (`tool-search`), LSP (`lsp`), X-Suche (`x-search`), Spotify, Wake-Word, Honcho | nicht gesondert abgebildet; teils Config oder Werkzeug-Gruppen |
-| Bot-Modus (`user-guide/bot-mode`: benannte Bots mit eigenem Chat, Rolle, Modell, Gedächtnis, Avatar, geteilte Gruppenchats) | nicht als Hermes-Funktion angebunden. Die Räume der WebUI sind ein eigenes Konzept (`rooms.db`), keine Anbindung an Hermes-Bots |
-| Remote-Config (`remote-config`), Managed Scope (`managed-scope`) | nicht abgebildet |
-| Secrets-Anbieter (`user-guide/secrets`: Bitwarden, 1Password, Befehl) | nicht abgebildet |
-| Profil-Distributionen (`profile-distributions`) | nicht abgebildet; Profil-Import/Export ist vorhanden |
+| Bot-Modus (`user-guide/bot-mode`: Agenten schreiben einander, `hermes peer`) | bewusst nicht als eigene Seite: der Verkehr läuft über die CLI (`subcommands/peer.py`) und das Session-WebSocket des Gateways (nur Loopback), nicht über HTTP. Die zwei Einstellungen `bot_mode.envelope_ttl_seconds` und `bot_mode.turn_wait_seconds` stehen im Einstellungs-Editor. Die Räume der WebUI sind ein eigenes Konzept (`rooms.db`) |
+| Remote-Config (`remote-config`), Managed Scope (`managed-scope`) | bewusst nicht abgebildet: Managed Scope ist eine Dateischicht des Betriebssystems (`managed_scope.py`, Rechte auf dem Host), kein HTTP-Thema. Wirkung sichtbar: Schreibwege melden eine verwaltete Installation als Fehler, die WebUI zeigt den Hinweis (`blocked`) statt zu raten |
+| Secrets-Anbieter (`user-guide/secrets`: Bitwarden, 1Password, Befehl) | bewusst nicht abgebildet: nur CLI (`secrets_cli.py`, `onepassword_secrets_cli.py`), keine HTTP-Route. Schlüssel setzen die Seiten „Modelle“ und „Messaging“ weiter write-only |
+| Profil-Distributionen (`profile-distributions`) | Anzeige: die Profil-Liste nennt Name, Version und Herkunft einer Distribution (Zugangsdaten und lokale Pfade entfernt). Installieren und Aktualisieren bewusst nicht: nur CLI (`profile_distribution.py`) mit Git-Clone auf dem Host. Profil-Import/Export ist vorhanden |
 | Messaging-Relay (`messaging/relay`, `messaging_relay.py`: 4 von 4) | abgebildet in der Messaging-Seite (`RelayPanel.tsx`, `routes/messaging_relay.py`) |
-| A2A (`messaging/a2a`) | nicht abgebildet, Etappe 4 prüft, ob Hermes dafür eine HTTP-Schnittstelle hat |
+| A2A (`messaging/a2a`) | bewusst nicht abgebildet: A2A läuft über das Session-WebSocket des Gateways (`gateway/session_a2a.py`, nur Loopback), nicht über HTTP; die WebUI hat keine Verbindung dorthin außer dem Chat-Weg des Gateways |
 
-Die letzten fünf Zeilen stammen aus dem Nutzerhandbuch (`website/docs/user-guide`), nicht aus der Entwickler-Doku. Diese Tabelle ist aus den Titeln und Beschreibungen der Doku abgeleitet, nicht aus einem Lauf gegen eine echte Instanz.
+Die letzten Zeilen ab „Bot-Modus“ stammen aus dem Nutzerhandbuch (`website/docs/user-guide`), nicht aus der Entwickler-Doku. Diese Tabelle ist aus den Titeln und Beschreibungen der Doku abgeleitet, nicht aus einem Lauf gegen eine echte Instanz.
 
 ## Funktionsbereiche
 

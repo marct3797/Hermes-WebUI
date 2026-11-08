@@ -57,6 +57,18 @@ def test_list_names_all_profiles_without_server_paths(env):
     assert "/opt/data" not in env.get(H).text
 
 
+def test_list_shows_the_distribution_without_credentials_or_local_paths(env):
+    prof = env.dash.state.profiles
+    prof["beta"]["dist"] = {"name": "team-basis", "version": "1.2.0", "source": "https://bot:geheim-token@git.example.test/team/basis.git?ref=main"}
+    prof["default"]["dist"] = {"name": "lokal", "version": None, "source": "/home/marc/dists/lokal"}
+    rows = {p["name"]: p for p in env.get(H).json()["profiles"]}
+    assert rows["beta"]["distribution"] == {"name": "team-basis", "version": "1.2.0", "source": "git.example.test/team/basis.git"}
+    assert rows["default"]["distribution"] == {"name": "lokal", "version": None, "source": None}
+    assert "geheim-token" not in env.get(H).text and "/home/marc" not in env.get(H).text
+    prof["beta"]["dist"] = {}
+    assert next(p for p in env.get(H).json()["profiles"] if p["name"] == "beta")["distribution"] is None
+
+
 def test_create_validates_the_name_before_anything_reaches_the_dashboard(env):
     for name in ["", " Groß ", "Mit Leerzeichen!", "ROOT", "hermes", "x" * 65, "UPPER", "mit/Schrägstrich", "a..b"]:
         r = env.post(H, json={"name": name})

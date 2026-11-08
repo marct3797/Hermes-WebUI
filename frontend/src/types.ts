@@ -229,7 +229,7 @@ export type HmFile = { name: HmFileName; content: string; sha256: string; size: 
 export type HmFileSaved = { name: HmFileName; sha256: string; size: number; mtime: string; backup?: boolean };
 
 /** Profil-Lebenszyklus und Betrieb: Namen kommen als Text vom Dashboard, Serverpfade nie. */
-export type LcEntry = { name: string; is_default?: boolean; has_env?: boolean };
+export type LcEntry = { name: string; is_default?: boolean; has_env?: boolean; distribution?: { name: string; version: string | null; source: string | null } | null };
 export type LcList = { profiles: LcEntry[]; active?: string };
 export type LcCreated = { ok: boolean; name: string; setup?: string };
 
