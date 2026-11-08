@@ -32,6 +32,17 @@ except ImportError:
     pass
 req = json.loads(sys.argv[2])
 
+class TooOld(Exception):
+    pass
+
+async def call(client, method, **params):
+    try:
+        return await client.rpc(method, **params)
+    except Exception as exc:
+        if getattr(exc, 'code', None) == -32601 or 'unknown method' in str(exc).lower():
+            raise TooOld(method)
+        raise
+
 async def main():
     from hermes_cli.gateway_client import connect_gateway
     from hermes_cli.gateway_runtime import attachable, discover_gateway_endpoint, gateway_profile_home
@@ -45,9 +56,9 @@ async def main():
         # Wie das Dashboard von Hermes: antwortet das gewählte Profil auf einem eigenen Socket (vom Multiplexer bedient), das Ticket dort prägen lassen.
         endpoint = dataclasses.replace(endpoint, control_home=str(Path(home).expanduser().resolve()))
     async with connect_gateway(endpoint) as client:
-        snapshot = await client.rpc('session.resume', session_id=req['session_id'])
+        snapshot = await call(client, 'session.resume', session_id=req['session_id'])
         live = snapshot.get('session_id') or snapshot.get('stored_session_id') or req['session_id']
-        reply = await client.rpc('session.automation', session_id=live, kind=req['kind'], call=req['call'],
+        reply = await call(client, 'session.automation', session_id=live, kind=req['kind'], call=req['call'],
                                  args=req['args'], kwargs=req['kwargs'])
         kick = None
         if not reply.get('error'):
@@ -59,13 +70,19 @@ async def main():
                 kick = value.get('prompt') if isinstance(value, dict) else None
         started = False
         if kick:
-            receipt = await client.rpc('prompt.submit', session_id=live, submission_id=uuid.uuid4().hex, text=kick, queued=True)
+            receipt = await call(client, 'prompt.submit', session_id=live, submission_id=uuid.uuid4().hex, text=kick, queued=True)
             started = bool((receipt or {}).get('admission_id'))
         reply['started'] = started
         return reply
 
 try:
     out = {'ok': True, 'reply': asyncio.run(main())}
+except TooOld as exc:
+    out = {'ok': False, 'error': 'hermes_too_old: ' + str(exc)}
+except ImportError as exc:
+    name = getattr(exc, 'name', '') or ''
+    old = name.split('.')[0] in ('hermes_cli', 'hermes_constants', 'gateway') or 'cannot import name' in str(exc)
+    out = {'ok': False, 'error': ('hermes_too_old: ' if old else '') + type(exc).__name__ + ': ' + str(exc)[:200]}
 except BaseException as exc:
     out = {'ok': False, 'error': type(exc).__name__ + ': ' + str(exc)[:200]}
 print('@@RESULT@@' + json.dumps(out))
@@ -115,6 +132,8 @@ def apply(settings, profile, session_id, kind, action, text=None, max_turns=None
         raise HTTPException(502, 'Hermes client gave no usable answer')
     if not result.get('ok'):
         message = native.redact(str(result.get('error') or ''))[:200]
+        if 'hermes_too_old' in message:
+            raise HTTPException(426, 'Hermes too old for changes')
         if 'gateway_not_running' in message:
             raise HTTPException(503, 'Hermes gateway not running for this profile')
         raise HTTPException(409, f'Hermes refused: {message}')

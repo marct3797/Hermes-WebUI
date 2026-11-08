@@ -182,7 +182,7 @@ export type DashState = {
   available: boolean; reason: string | null; soul: string; description: string; model: { provider: string; model: string };
   history: Array<{ id: string; at: string; reason: string; chars: number }>; versions: Record<string, string>; stepUp: boolean;
   routing: { sort: string | null; only: string[]; ignore: string[]; order: string[]; require_parameters: boolean; data_collection: string | null }; routingModels: string[];
-  auto: Array<Record<string, unknown>>;
+  auto: Array<Record<string, unknown>>; autoOld: boolean;
   keys: Record<string, string>; // gesetzte Anbieter-Keys (Variable → Wert); der Wert verlässt die Attrappe nie
   loggedIn: Set<string>; // Anbieter mit Anmeldung (Codex ist von Anfang an angemeldet)
   polls: number; // wie oft die laufende Geräte-Anmeldung abgefragt wurde; ab der zweiten Abfrage ist sie bestätigt
@@ -508,6 +508,7 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
   }
   if (path === "/automation" && method === "POST") {
     if (dash.stepUp) return json(stepUpBody, 401);
+    if (dash.autoOld) return json({ detail: "Hermes ist für das Ändern zu alt. Aktualisiere Hermes auf diesem Rechner (getestet ab Version 0.23.0; es braucht den Gateway-Client mit session.automation)." }, 501);
     const { session_id, kind, action, text } = body as { session_id: string; kind: string; action: string; text?: string };
     const hit = dash.auto.findIndex((i) => i.kind === kind && i.session_id === session_id);
     if (action === "clear") { if (hit >= 0) dash.auto.splice(hit, 1); return json({ ok: true, kind, action, status: "cleared" }); }
@@ -827,6 +828,7 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
   const dash: DashState = {
     available: true, reason: null, soul: "Du bist Gamma.\nDu antwortest knapp.\n", description: "", model: { provider: "mock", model: "mock-large" },
     history: [], versions: {}, stepUp: false, routing: { sort: null, only: [], ignore: [], order: [], require_parameters: false, data_collection: null }, routingModels: ["anthropic/x"],
+    autoOld: false,
     auto: [
       { kind: "goal", session_id: "s1", title: "Release prüfen", text: "Alle Tests grün", status: "active", turns_used: 3, max_turns: 20, gates: 1, subgoals: ["ruff sauber"], last_reason: "noch 2 rot", last_turn_at: Date.now() / 1000 - 120 },
       { kind: "heartbeat", session_id: "s1", title: "Release prüfen", text: "CI prüfen", status: "paused", interval_seconds: 600, fire_count: 4 },

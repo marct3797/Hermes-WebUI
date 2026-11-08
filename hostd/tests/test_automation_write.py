@@ -210,3 +210,25 @@ def test_probe_tool_runs_the_same_helper(tmp_path, monkeypatch):
     assert 'prompt.submit' not in [c[0] for c in calls(log)]  # Standard: nur lesen, kein Lauf
     wrote = subprocess.run(base + ['--set', 'Probe-Ziel'], capture_output=True, text=True, env={**__import__('os').environ, 'FAKE_LOG': str(log)})
     assert wrote.returncode == 0 and calls(log)[-1][0] == 'prompt.submit'
+
+
+def test_missing_gateway_client_module_means_hermes_too_old(tmp_path, monkeypatch):
+    client, _ = setup(tmp_path, monkeypatch)
+    (tmp_path / 'src' / 'hermes_cli' / 'gateway_runtime.py').unlink()
+    r = post(client, kind='goal', action='clear')
+    assert r.status_code == 426
+
+
+def test_unknown_session_automation_verb_means_hermes_too_old(tmp_path, monkeypatch):
+    client, log = setup(tmp_path, monkeypatch)
+    path = tmp_path / 'src' / 'hermes_cli' / 'gateway_client.py'
+    path.write_text(path.read_text().replace('        if params["call"] == "state":', '        if method == "session.automation":\n            e = RuntimeError("unknown method: session.automation"); e.code = -32601; raise e\n        if params["call"] == "state":', 1))
+    r = post(client, kind='goal', action='clear')
+    assert r.status_code == 426
+    assert 'prompt.submit' not in [c[0] for c in calls(log)]
+
+
+def test_other_import_errors_are_not_reported_as_too_old(tmp_path, monkeypatch):
+    client, _ = setup(tmp_path, monkeypatch)
+    (tmp_path / 'src' / 'hermes_cli' / 'gateway_client.py').write_text('import websockets_gibt_es_nicht')
+    assert post(client, kind='goal', action='clear').status_code == 409

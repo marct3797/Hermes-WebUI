@@ -89,4 +89,13 @@ describe("Ziele und Schleifen", () => {
     expect(await screen.findByText(/erneut anmelden|frische Anmeldung|Anmeldung/i)).toBeTruthy();
     expect(screen.queryByText("aktiv")).toBeTruthy();
   });
+
+  it("zeigt bei zu altem Hermes die klare Meldung und ändert nichts", async () => {
+    const backend = await open();
+    await screen.findByText("Alle Tests grün");
+    backend.dash.autoOld = true;
+    fireEvent.click(screen.getByRole("button", { name: "Pausieren" }));
+    expect(await screen.findByText(/Hermes ist für das Ändern zu alt/)).toBeTruthy();
+    expect(screen.getAllByText("aktiv")).toHaveLength(1);
+  });
 });

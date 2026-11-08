@@ -65,6 +65,7 @@ WRITE_ERRORS = {
     409: "Hermes hat die Änderung abgelehnt, zum Beispiel weil die Sitzung nicht gefunden wurde.",
     422: "Hermes hat die Eingabe abgelehnt, zum Beispiel weil das Intervall zu kurz ist.",
     502: "Der Hermes-Client in hostd hat nicht geantwortet.",
+    426: "Hermes ist für das Ändern zu alt. Aktualisiere Hermes auf diesem Rechner (getestet ab Version 0.23.0; es braucht den Gateway-Client mit session.automation).",
     503: "Der Gateway dieses Profils läuft nicht. hostd startet keinen. Starte ihn und versuche es erneut.",
     504: "Keine Antwort in der Zeit. Das Ergebnis ist unbekannt: lade die Liste neu und prüfe.",
 }
@@ -84,8 +85,8 @@ async def change(request: Request, target: Tgt, req: ChangeIn, user: User = Depe
     except HTTPException as exc:
         if exc.status_code in (401, 405):
             raise HTTPException(502, "Der Host-Dienst lehnt die Anfrage ab") from exc
-        if exc.status_code == 404:
-            raise HTTPException(501, OLD_HOSTD) from exc
+        if exc.status_code in (404, 426):
+            raise HTTPException(501, WRITE_ERRORS[exc.status_code] if exc.status_code == 426 else OLD_HOSTD) from exc
         raise
     if not isinstance(body, dict) or body.get("ok") is not True:
         raise HTTPException(502, "Der Host-Dienst liefert die Antwort in einer unbekannten Form")

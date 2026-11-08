@@ -57,7 +57,7 @@ def writable(mode="ok"):
     @app.post("/v1/profiles/{profile}/automation")
     async def change(profile: str, body: dict):
         POSTED.append(body)
-        codes = {"forbidden": 403, "notfound": 404, "refused": 409, "bad": 422, "notconfigured": 501, "timeout": 504, "down": 503}
+        codes = {"forbidden": 403, "notfound": 404, "refused": 409, "bad": 422, "notconfigured": 501, "timeout": 504, "down": 503, "old": 426}
         if mode in codes:
             raise HTTPException(codes[mode], "intern: /home/geheim")
         return {"ok": True, "kind": body["kind"], "action": body["action"], "status": "paused", "started": True if body["action"] == "set" else None}
@@ -92,7 +92,7 @@ def test_invalid_changes_never_reach_hostd(tmp_path, make_settings, monkeypatch,
     assert c.post(BASE_URL, json={"session_id": "../x", "kind": "goal", "action": "clear"}).status_code == 422
 
 
-@pytest.mark.parametrize("mode,status", [("forbidden", 403), ("notfound", 501), ("refused", 409), ("bad", 422), ("notconfigured", 501), ("timeout", 504), ("down", 503)])
+@pytest.mark.parametrize("mode,status", [("forbidden", 403), ("notfound", 501), ("refused", 409), ("bad", 422), ("notconfigured", 501), ("timeout", 504), ("down", 503), ("old", 501)])
 def test_hostd_refusals_become_german_hints_without_internals(tmp_path, make_settings, monkeypatch, mode, status):
     for c in make_w(tmp_path, make_settings, monkeypatch, mode):
         r = c.post(BASE_URL, json={"session_id": "s1", "kind": "goal", "action": "clear"})
@@ -102,3 +102,9 @@ def test_hostd_refusals_become_german_hints_without_internals(tmp_path, make_set
 def test_delete_route_does_not_exist(tmp_path, make_settings, monkeypatch):
     for c in make_w(tmp_path, make_settings, monkeypatch):
         assert c.delete(BASE_URL).status_code in (404, 405)
+
+
+def test_too_old_hermes_gets_a_clear_501_message(tmp_path, make_settings, monkeypatch):
+    for c in make_w(tmp_path, make_settings, monkeypatch, "old"):
+        r = c.post(BASE_URL, json={"session_id": "s1", "kind": "goal", "action": "clear"})
+        assert r.status_code == 501 and "zu alt" in r.json()["detail"] and "session.automation" in r.json()["detail"]
