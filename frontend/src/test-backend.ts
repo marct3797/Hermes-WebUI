@@ -6,7 +6,7 @@ import ragStats from "./fixtures/real/rag_stats_clean.json";
 import ragQuery from "./fixtures/real/rag_query_clean.json";
 import chromaGet from "./fixtures/real/chroma_get_clean.json";
 import { invalidate } from "./dataCache";
-import type { HostInfo, KnowledgeProvider, MemGraph, ProfileInput, Room, RoomEvent, SigilConfig, StreamEvent, UiConfig } from "./types";
+import type { DlgRoute, HostInfo, KnowledgeProvider, MemGraph, ProfileInput, Room, RoomEvent, SigilConfig, StreamEvent, UiConfig } from "./types";
 
 /** Gemeinsame Test-Attrappen: BFF-Antworten und EventSource für die Seiten-Tests. */
 
@@ -188,7 +188,7 @@ export type DashState = {
   polls: number; // wie oft die laufende Geräte-Anmeldung abgefragt wurde; ab der zweiten Abfrage ist sie bestätigt
   loginError: string | null; // lässt die Anmeldung scheitern
   config: Record<string, unknown>; // Werte der Hermes-Einstellungen (Punkt-Pfad → Wert)
-  msg: { available: boolean; enabled: Record<string, boolean>; env: Record<string, string>; gateway: { running: boolean; busy: boolean; sessions: number }; polls: number; applied: string[]; waPolls: number; waDone: boolean }; // Messaging und Gateway
+  msg: { available: boolean; enabled: Record<string, boolean>; env: Record<string, string>; gateway: { running: boolean; busy: boolean; sessions: number }; polls: number; applied: string[]; waPolls: number; waDone: boolean; relay?: { accounts: Array<{ id: string; label: string; linked_at: string }>; code: number } }; // Messaging und Gateway
   tmBackend: string | null;
   hm: { available: boolean; active: string; files: { memory: number; user: number }; keySet: boolean; project: string; mode: string; memfiles: { content: Record<string, string>; sha: Record<string, string>; conflict: boolean; oldHostd: boolean } }; // Hermes-Gedächtnis
   tools: { available: boolean; enabled: Record<string, boolean>; keys: Record<string, string>; provider: Record<string, string>; model: string; installed: boolean }; // Werkzeug-Gruppen
@@ -197,7 +197,7 @@ export type DashState = {
   hostsEmpty?: boolean; // keine Hosts eingetragen (leere, gültige Antwort)
   statusDown?: boolean; altDown?: boolean; sessDown?: boolean; sessEmpty?: boolean; provFresh?: boolean; diagDown?: boolean; provDown?: boolean; diagWarn?: string[]; // Fehler-/Leer-Proben je Schritt
   sa: { down?: boolean; sessions: Array<{ id: string; ageDays: number; messages: number; active?: boolean }> };
-  ep: { backend: string; endpoints: Array<{ id: string; name: string; base_url: string; model: string; hasKey: boolean }>; current: string };
+  ep: { backend: string; endpoints: Array<{ id: string; name: string; base_url: string; model: string; hasKey: boolean }>; current: string; modelMap: { options: DlgRoute[]; default: string | null }; profileRoutes: { profiles: Array<{ name: string; description?: string }>; default: string | null }; lastModelMapBody?: unknown };
   lcProfiles: string[]; lcActive: string; omPoints: { session: string; files: number; bytes: number }[]; omReceipt: boolean; kbImportFail?: string | null; // Profil-Lebenszyklus: Namen als Text, nie Serverpfade
   p3: { pool: Array<{ provider: string; entries: Array<{ index: number; label: string; source: string; token_tail: string }> }>; voiceOn: boolean; paused: boolean; nodes: Record<string, string>; theme: string; font: string;
     metrics: { enabled: boolean; send: boolean; decided: boolean; managed: boolean }; unlocked: boolean; workers: Array<{ run_id: number; task_id: string }>;    spawnNone?: boolean; stale?: boolean; cuMissing?: boolean; cuNotReady?: boolean; old501?: string; kbImportFail?: string | null; };
@@ -393,6 +393,15 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
   }
   if (rest === "/profile/description" && method === "PUT") { dash.description = String(body?.description).trim(); return json({ ok: true, description: dash.description }); }
   if (rest === "/profile/model" && method === "PUT") { dash.model = { provider: String(body?.provider), model: String(body?.model) }; return json({ ok: true, ...dash.model }); }
+  if (path.startsWith("/messaging-relay")) {
+    const rl = dash.msg.relay;
+    if (!rl) return json({ detail: "Diese Hermes-Version kennt /api/messaging/relay nicht." }, 501);
+    if (path === "/messaging-relay" && method === "GET") return json({ managed_by: "connector", portal_url: null, platforms: [{ platform: "telegram", bot_url: "https://t.me/teambot", accounts: rl.accounts }] });
+    if (path === "/messaging-relay/telegram/link" && method === "POST") { rl.code += 1; return json({ platform: "telegram", code: `CODE${rl.code}`, command: `/link CODE${rl.code}`, expires_at: null, bot_url: null }); }
+    if (/^\/messaging-relay\/link\//.test(path) && method === "GET") return json({ state: "pending", reason: null });
+    const un = /^\/messaging-relay\/telegram\/accounts\/([^?]+)/.exec(path);
+    if (un && method === "DELETE") { rl.accounts = rl.accounts.filter((a) => a.id !== decodeURIComponent(un[1])); return json({ ok: true }); }
+  }
   if (path.startsWith("/messaging") || path.startsWith("/gateway")) {
     if (!dash.msg.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
     const m = dash.msg;
@@ -638,7 +647,14 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
     const ep = dash.ep;
     if (method !== "GET" && dash.stepUp) return json(stepUpBody, 401);
     const rows = () => ep.endpoints.map((e) => ({ ...e, models: [e.model], has_api_key: e.hasKey, api_key_preview: e.hasKey ? "sk-…9876" : "", is_current: ep.current === e.id }));
-    if (path === "/hermes-delegation" && method === "GET") return json({ configured: ep.backend, blocked_reason: null, backends: [{ name: "default", description: "Eingebaut", builtin: true }, { name: "docker", description: "Container", builtin: false }], profiles: ["gamma"] });
+    if (path === "/hermes-delegation" && method === "GET") return json({ configured: ep.backend, blocked_reason: null, backends: [{ name: "default", description: "Eingebaut", builtin: true }, { name: "docker", description: "Container", builtin: false }], profiles: ["gamma", "delta"], model_map: ep.modelMap, profile_routes: ep.profileRoutes });
+    if (path === "/hermes-delegation/model-map" && method === "PUT") {
+      const opts = (body?.options as Array<Record<string, unknown>>).map((o) => ({ name: String(o.name), description: String(o.description), provider: String(o.provider), model: String(o.model), base_url: String(o.base_url), reasoning_effort: String(o.reasoning_effort), service_tier: String(o.service_tier), has_api_key: Boolean(o.api_key) || (!o.clear_api_key && ep.modelMap.options.some((x) => x.name === (o.original_name || o.name) && x.has_api_key)) }));
+      ep.modelMap = { options: opts, default: body?.default ? String(body.default) : null };
+      ep.lastModelMapBody = body;
+      return json({ ok: true, ...ep.modelMap });
+    }
+    if (path === "/hermes-delegation/profile-routes" && method === "PUT") { ep.profileRoutes = { profiles: body?.profiles as Array<{ name: string; description?: string }>, default: body?.default ? String(body.default) : null }; return json({ ok: true, ...ep.profileRoutes }); }
     if (path === "/hermes-delegation/backend" && method === "PUT") { ep.backend = String(body?.backend); return json({ ok: true, backend: ep.backend }); }
     if (path === "/hermes-endpoints" && method === "GET") return json({ endpoints: rows(), current: {} });
     if (path === "/hermes-endpoints" && method === "POST") {
@@ -864,7 +880,7 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
     ac: { pending: [{ platform: "telegram", request_id: "req-1", user_id: "42", user_name: "Anna" }], approved: [{ platform: "telegram", user_id: "7", user_name: "Bob" }], hooksOn: false, hooks: [] },
     mdFresh: false,
     sa: { sessions: [{ id: "a1", ageDays: 200, messages: 3 }, { id: "a2", ageDays: 100, messages: 2 }, { id: "a3", ageDays: 1, messages: 4 }, { id: "e1", ageDays: 5, messages: 0 }, { id: "act", ageDays: 300, messages: 1, active: true }] },
-    ep: { backend: "default", endpoints: [], current: "" },
+    ep: { backend: "default", endpoints: [], current: "", modelMap: { options: [{ name: "schnell", description: "flink", provider: "custom", model: "m1", base_url: "", reasoning_effort: "", service_tier: "", has_api_key: true }], default: null }, profileRoutes: { profiles: [], default: null } },
     lcProfiles: [...agents], omPoints: [{ session: "run_aaa", files: 3, bytes: 2048 }], omReceipt: true, lcActive: agents[0] ?? "gamma",
     p3: { pool: [{ provider: "openrouter", entries: [{ index: 1, label: "privat", source: "manual", token_tail: "abcd" }, { index: 2, label: "aus .env", source: "env:OPENROUTER_API_KEY", token_tail: "wxyz" }] }], voiceOn: true, paused: false,
       nodes: { "skill-a": "# Skill A", "memory:memory:0:aaaaaaaaaaaa": "Merke dir das" }, theme: "default", font: "theme", metrics: { enabled: false, send: false, decided: false, managed: false }, unlocked: true, workers: [{ run_id: 7, task_id: "t_1" }] },

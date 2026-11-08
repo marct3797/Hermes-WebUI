@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import { Icon } from "../components/Icon";
 import { GatewayBar } from "../components/messaging/GatewayBar";
+import { RelayPanel } from "../components/messaging/RelayPanel";
 import { PlatformPanel } from "../components/messaging/PlatformPanel";
 import { PageHead } from "../components/PageHead";
 import type { AgentRef, MsgPlatform } from "../types";
@@ -37,6 +38,7 @@ export function MessagingPage({ agent, label }: { agent: AgentRef; label: string
       {rows && (
         <>
           <GatewayBar agent={agent} onChanged={() => void load()} />
+          <RelayPanel agent={agent} />
           <div className="row mem-bar">
             <label className="search grow">
               <Icon name="search" size={14} />

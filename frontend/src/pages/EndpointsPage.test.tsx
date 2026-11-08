@@ -63,3 +63,50 @@ describe("Eigene Endpunkte", () => {
     await waitFor(() => expect(sent("PUT", "/hermes-delegation/backend")).toHaveLength(1));
   });
 });
+
+describe("Delegation: Routen schreiben", () => {
+  it("renames a route without sending a key, and keeps the stored key marker", async () => {
+    await open();
+    const name = await screen.findByLabelText("Routenname 1");
+    expect(screen.getByLabelText("Routenschlüssel 1")).toHaveValue("");
+    expect(screen.getByLabelText("Routenschlüssel 1")).toHaveAttribute("placeholder", "gesetzt – leer lassen zum Behalten");
+    fireEvent.change(name, { target: { value: "flott" } });
+    const save = screen.getByRole("button", { name: "Modellrouten speichern" });
+    expect(save).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Bestätigung Modellrouten"), { target: { value: "gamma" } });
+    fireEvent.click(save);
+    await screen.findByText("Modellrouten gespeichert.");
+    const body = sent("PUT", "/hermes-delegation/model-map")[0].body as { options: Array<Record<string, unknown>>; confirm: string };
+    expect(body.confirm).toBe("gamma");
+    expect(body.options[0]).toMatchObject({ name: "flott", original_name: "schnell", api_key: "", clear_api_key: false });
+    expect(document.body.textContent).not.toMatch(/sk-/);
+  });
+
+  it("needs name, description and model before saving, and a unique name", async () => {
+    await open();
+    await screen.findByLabelText("Routenname 1");
+    fireEvent.click(screen.getByRole("button", { name: "Route hinzufügen" }));
+    fireEvent.change(screen.getByLabelText("Bestätigung Modellrouten"), { target: { value: "gamma" } });
+    expect(screen.getByRole("button", { name: "Modellrouten speichern" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Routenname 2"), { target: { value: "schnell" } });
+    fireEvent.change(screen.getByLabelText("Routenbeschreibung 2"), { target: { value: "x" } });
+    fireEvent.change(screen.getByLabelText("Routenmodell 2"), { target: { value: "m" } });
+    fireEvent.change(screen.getByLabelText("Routenanbieter 2"), { target: { value: "custom" } });
+    expect(screen.getByRole("button", { name: "Modellrouten speichern" })).toBeDisabled(); // Name doppelt
+    fireEvent.change(screen.getByLabelText("Routenname 2"), { target: { value: "gründlich" } });
+    expect(screen.getByRole("button", { name: "Modellrouten speichern" })).toBeEnabled();
+  });
+
+  it("saves profile routes only after typing the agent", async () => {
+    await open();
+    const add = await screen.findByLabelText("Profil hinzufügen");
+    fireEvent.change(add, { target: { value: "delta" } });
+    fireEvent.change(screen.getByLabelText("Standardprofil"), { target: { value: "delta" } });
+    const save = screen.getByRole("button", { name: "Profilrouten speichern" });
+    expect(save).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Bestätigung Profilrouten"), { target: { value: "gamma" } });
+    fireEvent.click(save);
+    await screen.findByText("Profilrouten gespeichert.");
+    expect(sent("PUT", "/hermes-delegation/profile-routes")[0].body).toMatchObject({ profiles: [{ name: "delta" }], default: "delta", confirm: "gamma" });
+  });
+});
