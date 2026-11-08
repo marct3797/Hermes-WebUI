@@ -183,6 +183,7 @@ export type DashState = {
   history: Array<{ id: string; at: string; reason: string; chars: number }>; versions: Record<string, string>; stepUp: boolean;
   routing: { sort: string | null; only: string[]; ignore: string[]; order: string[]; require_parameters: boolean; data_collection: string | null }; routingModels: string[];
   auto: Array<Record<string, unknown>>; autoOld: boolean;
+  dist: { off: boolean; sources: Array<{ id: string; label: string; source: string }>; existing: boolean; installs: Array<Record<string, unknown>> }; // Distributionen
   vault: { off: boolean; items: Array<Record<string, unknown>>; enabled: Record<string, boolean>; refs: Record<string, string>; added: unknown[] }; // Tresor und Secrets-Anbieter
   keys: Record<string, string>; // gesetzte Anbieter-Keys (Variable → Wert); der Wert verlässt die Attrappe nie
   loggedIn: Set<string>; // Anbieter mit Anmeldung (Codex ist von Anfang an angemeldet)
@@ -394,6 +395,14 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
   }
   if (rest === "/profile/description" && method === "PUT") { dash.description = String(body?.description).trim(); return json({ ok: true, description: dash.description }); }
   if (rest === "/profile/model" && method === "PUT") { dash.model = { provider: String(body?.provider), model: String(body?.model) }; return json({ ok: true, ...dash.model }); }
+  if (path === "/distributions" || path.startsWith("/distributions/")) {
+    const d = dash.dist;
+    if (d.off) return json({ detail: "Für dieses Profil nicht freigeschaltet. Setze allow_vault, allow_secrets bzw. allow_distributions in der hostd-Konfiguration (bei Updates: die gespeicherte Quelle ist nicht freigegeben)." }, 403);
+    if (path === "/distributions" && method === "GET") return json({ sources: d.sources });
+    if (path === "/distributions/preview" && method === "POST") return json({ preview: { name: body?.name ?? body?.profile, version: "1.2.0", description: "Späher", files: ["SOUL.md", "mcp.json"], file_count: 2, has_mcp: true, has_cron: false, existing: d.existing, preserves_config: d.existing, digest: "a".repeat(64), env_requires: [{ name: "API_KEY", description: "", required: true }] } });
+    const chg = /^\/distributions\/(install|update)$/.exec(path);
+    if (chg && method === "POST") { d.installs.push({ action: chg[1], ...body }); return json({ ok: true, name: body?.name ?? body?.profile, version: "1.2.0" }); }
+  }
   if (path === "/vault" || path.startsWith("/vault/") || path.startsWith("/secrets/")) {
     const v = dash.vault;
     if (v.off) return json({ detail: "Für dieses Profil nicht freigeschaltet. Setze allow_vault bzw. allow_secrets in der hostd-Konfiguration." }, 403);
@@ -896,6 +905,7 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
     available: true, reason: null, soul: "Du bist Gamma.\nDu antwortest knapp.\n", description: "", model: { provider: "mock", model: "mock-large" },
     history: [], versions: {}, stepUp: false, routing: { sort: null, only: [], ignore: [], order: [], require_parameters: false, data_collection: null }, routingModels: ["anthropic/x"],
     autoOld: false,
+    dist: { off: false, sources: [{ id: "team", label: "Team", source: "https://git.example.org/team/profile.git" }], existing: false, installs: [] },
     vault: { off: false, items: [{ id: "vault_aaa", kind: "login", label: "GitHub", origin: "https://github.com", identifier: "a@b.de", identifier_type: "email" }], enabled: { bitwarden: true, onepassword: true }, refs: {}, added: [] },
     auto: [
       { kind: "goal", session_id: "s1", title: "Release prüfen", text: "Alle Tests grün", status: "active", turns_used: 3, max_turns: 20, gates: 1, subgoals: ["ruff sauber"], last_reason: "noch 2 rot", last_turn_at: Date.now() / 1000 - 120 },

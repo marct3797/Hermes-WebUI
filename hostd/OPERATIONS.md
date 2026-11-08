@@ -36,6 +36,7 @@ Example **operator-managed** configuration fragment (not a usable deployment):
       "allow_automation": false,
       "allow_vault": false,
       "allow_secrets": false,
+      "allow_distributions": false,
       "allowed_plugins": []
     }
   },
@@ -234,3 +235,15 @@ temporary profile, and the real native Kanban read API against synthetic tasks;
 CI without that local installation skips those explicit integration checks.
 No live inference, real credential reads into output, real profile config writes,
 SSH or publication form part of verification.
+
+### Profile distributions (CLI-only in Hermes)
+
+A distribution ships SOUL, `mcp.json`, skills, cron jobs and config: foreign code with the agent's permissions. Off unless the profile sets `allow_distributions: true`.
+- Sources come only from the hostd config: `"distribution_sources": [{"id": "team", "label": "Team", "source": "https://git.example.org/team/profile.git"}]`.
+  Git URLs only (`https://`, `ssh://`, `git@host:path`); local directories are not accepted. Callers send a `source_id`, never a URL or path.
+- `GET /v1/profiles/{profile}/distributions` lists them (credentials in the URL are removed). `POST .../distributions/preview|install|update`
+  (`{source_id, name | profile, digest?, force?, force_config?}`) runs Hermes' own `profile_distribution` in `native_python` (`-I`, cwd = `native_source`, required).
+- `preview` clones, validates and returns the manifest, the file list and a SHA-256 digest over the manifest and all file contents. `install` and `update` require that exact digest and
+  copy from the same clone that was hashed (`409` if the source changed). `update` re-pulls from the source recorded in the profile, which must equal an approved source (`403` otherwise,
+  because the agent can edit `distribution.yaml` in its profile). It uses Hermes' private installer functions; a Hermes without them gives `426`.
+
