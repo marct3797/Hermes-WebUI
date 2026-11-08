@@ -34,6 +34,10 @@ export default function AccessPage({ agent }: { agent: AgentRef }) {
         <ul>{(pairing?.pending ?? []).map((p) => (
           <li key={p.request_id}>{t("{user_id} ({platform}, vor {age_minutes} Min.)", { user_id: p.user_name || p.user_id, platform: p.platform, age_minutes: p.age_minutes })}<button type="button" disabled={busy || !p.request_id} onClick={() => void run(async () => { setPairing(await api.acApprove(agent, p.platform, p.request_id)); })}>{t("Freigeben {user_id}", { user_id: p.user_id })}</button>
           </li>))}</ul>
+        {(pairing?.pending.length ?? 0) > 0 && <>
+          <input aria-label={t("Zum Verwerfen „verwerfen“ eintippen")} placeholder={t("verwerfen")} value={typed["clear"] ?? ""} onChange={(e) => setTyped({ ...typed, clear: e.target.value })} />
+          <button type="button" disabled={busy || typed["clear"]?.trim() !== "verwerfen"} onClick={() => void run(async () => { setPairing(await api.acClear(agent, "verwerfen")); setTyped({ ...typed, clear: "" }); })}>{t("Alle offenen Anfragen verwerfen")}</button>
+        </>}
         <h3>{t("Freigegeben")}</h3>
         <ul>{(pairing?.approved ?? []).map((a) => (
           <li key={`${a.platform}:${a.user_id}`}>{t("{user_id} ({platform}, ID {user_id2})", { user_id: a.user_name || a.user_id, platform: a.platform, user_id2: a.user_id })}<input aria-label={`ID zum Sperren ${a.user_id}`} placeholder={a.user_id} value={typed[`p:${a.user_id}`] ?? ""} onChange={(e) => setTyped({ ...typed, [`p:${a.user_id}`]: e.target.value })} />

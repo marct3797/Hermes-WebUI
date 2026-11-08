@@ -269,6 +269,7 @@ export const api = {
   saBackfill: (a: AgentRef) => call<{ ok: boolean; stamped: number | null; profile: string }>("POST", `${base(a)}/hermes-sessions/owner-backfill`, { confirm: true }),
   acPairing: (a: AgentRef) => call<AcPairing>("GET", `${base(a)}/hermes-pairing`),
   acApprove: (a: AgentRef, platform: string, request_id: string) => call<AcPairing>("POST", `${base(a)}/hermes-pairing/approve`, { platform, request_id }),
+  acClear: (a: AgentRef, confirm: string) => call<AcPairing & { cleared: number }>("POST", `${base(a)}/hermes-pairing/clear-pending`, { confirm }),
   acRevoke: (a: AgentRef, platform: string, user_id: string, confirm: string) => call<AcPairing>("POST", `${base(a)}/hermes-pairing/revoke`, { platform, user_id, confirm }),
   acHooks: (a: AgentRef) => call<AcHooks>("GET", `${base(a)}/hermes-webhooks`),
   acHooksEnable: (a: AgentRef) => call<AcHooks>("POST", `${base(a)}/hermes-webhooks/enable`, { confirm_restart: true }),

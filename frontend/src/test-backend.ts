@@ -593,6 +593,10 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
       const p = ac.pending.find((x) => x.request_id === body?.request_id); if (!p) return json({ detail: "nicht gefunden" }, 404);
       ac.pending = ac.pending.filter((x) => x !== p); ac.approved.push({ platform: p.platform, user_id: p.user_id, user_name: p.user_name }); return json(pairing());
     }
+    if (path === "/hermes-pairing/clear-pending" && method === "POST") {
+      if (body?.confirm !== "verwerfen") return json({ detail: "verwerfen eintippen" }, 422);
+      const n = ac.pending.length; ac.pending = []; return json({ ...pairing(), ok: true, cleared: n });
+    }
     if (path === "/hermes-pairing/revoke" && method === "POST") {
       if (body?.confirm !== body?.user_id) return json({ detail: "Sperren: die Nutzer-ID zur Bestätigung eingeben" }, 422);
       ac.approved = ac.approved.filter((x) => x.user_id !== body?.user_id); return json(pairing());

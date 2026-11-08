@@ -95,7 +95,18 @@ def test_revoke_needs_fresh_and_typed_user_id(env):
     assert env.get(P).json()["approved"] == []
 
 
+def test_clear_pending_needs_fresh_and_the_word_and_keeps_approved_users(env):
+    stale(env)
+    assert env.post(f"{P}/clear-pending", json={"confirm": "verwerfen"}).status_code == 401
+    fresh(env)
+    assert env.post(f"{P}/clear-pending", json={"confirm": "ja"}).status_code == 422
+    r = env.post(f"{P}/clear-pending", json={"confirm": "verwerfen"})
+    assert r.status_code == 200 and r.json()["cleared"] == 1 and r.json()["pending"] == []
+    assert len(env.get(P).json()["approved"]) == 1
+
+
 def test_dropped_pairing_writes_are_not_success(lossy):
+    assert lossy.post(f"{P}/clear-pending", json={"confirm": "verwerfen"}).status_code == 502
     assert lossy.post(f"{P}/approve", json={"platform": "telegram", "request_id": "req-1"}).status_code == 502
     assert lossy.post(f"{P}/revoke", json={"platform": "telegram", "user_id": "7", "confirm": "7"}).status_code == 502
 

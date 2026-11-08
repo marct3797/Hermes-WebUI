@@ -25,6 +25,17 @@ describe("Zugang und Webhooks", () => {
     expect(sent("POST", "/hermes-pairing/approve")).toHaveLength(1);
   });
 
+  it("discards all pending requests only after typing the word, and keeps approved users", async () => {
+    await open();
+    const btn = await screen.findByRole("button", { name: "Alle offenen Anfragen verwerfen" });
+    expect(btn).toBeDisabled();
+    type("Zum Verwerfen „verwerfen“ eintippen", "verwerfen");
+    fireEvent.click(screen.getByRole("button", { name: "Alle offenen Anfragen verwerfen" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Freigeben 42" })).toBeNull());
+    expect(sent("POST", "/hermes-pairing/clear-pending")[0].body).toEqual({ confirm: "verwerfen" });
+    expect(screen.getByRole("button", { name: "Sperren 7" })).toBeInTheDocument();
+  });
+
   it("revokes only after typing the user id", async () => {
     await open();
     const btn = await screen.findByRole("button", { name: "Sperren 7" });

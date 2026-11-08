@@ -1434,6 +1434,14 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
             pr["approved"].append({"platform": hit["platform"], "user_id": hit["user_id"], "user_name": hit["user_name"], "approved_at": time.time()})
         return {"ok": True, "user": {"user_id": hit["user_id"]}}
 
+    @app.post("/api/pairing/clear-pending")
+    async def pairing_clear(profile: str | None = None):
+        pr = pairing_of(profile_or_default(profile))
+        n = len(pr["pending"])
+        if not drop_writes:
+            pr["pending"].clear()
+        return {"ok": True, "cleared": n}
+
     @app.post("/api/pairing/revoke")
     async def pairing_revoke(body: dict[str, Any]):
         pr = pairing_of(profile_or_default(body.get("profile")))
