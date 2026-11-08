@@ -267,12 +267,19 @@ async def ops_start(request: Request, target: Tgt, dash: Dash, user: User = Depe
     return {"ok": True, "action": "doctor", "note": "Läuft im Hintergrund; Zustand und Protokoll unten."}
 
 
+def _action_text(body: dict[str, Any]) -> str:
+    """Hermes liefert den Aktions-Log als `lines` (Liste); das Mock-Dashboard als `log`."""
+    if isinstance(body.get("lines"), list):
+        return "\n".join(str(x) for x in body["lines"])
+    return str(body.get("log") or "")
+
+
 @router.get("/hermes-ops/actions/doctor")
 async def ops_action(target: Tgt, dash: Dash):
     body = await upstream(dash.request("GET", f"/api/actions/{DOCTOR}/status"))
     if not isinstance(body, dict):
         raise HTTPException(502, "Das Dashboard liefert den Aktionszustand in einer unbekannten Form")
-    return {"action": "doctor", "running": bool(body.get("running")), "exit_code": body.get("exit_code") if isinstance(body.get("exit_code"), int) else None, "log": redact(str(body.get("log") or ""))[-4000:]}
+    return {"action": "doctor", "running": bool(body.get("running")), "exit_code": body.get("exit_code") if isinstance(body.get("exit_code"), int) else None, "log": redact(_action_text(body))[-4000:], "lines": redact(_action_text(body))[-4000:].splitlines()}
 
 
 @router.post("/hermes-ops/backup")
@@ -306,7 +313,7 @@ async def ops_update_action(target: Tgt, dash: Dash):
     body = await upstream(dash.request("GET", "/api/actions/hermes-update/status"))
     if not isinstance(body, dict):
         raise HTTPException(502, "Das Dashboard liefert den Aktionszustand in einer unbekannten Form")
-    return {"action": "hermes-update", "running": bool(body.get("running")), "exit_code": body.get("exit_code") if isinstance(body.get("exit_code"), int) else None, "log": redact(str(body.get("log") or ""))[-4000:]}
+    return {"action": "hermes-update", "running": bool(body.get("running")), "exit_code": body.get("exit_code") if isinstance(body.get("exit_code"), int) else None, "log": redact(_action_text(body))[-4000:], "lines": redact(_action_text(body))[-4000:].splitlines()}
 
 
 @router.get("/gateway/migrate/plan")

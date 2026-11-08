@@ -45,10 +45,14 @@ USED: dict[str, list[str]] = {
         "/api/system/stats", "/api/tools/computer-use/status", "/api/curator", "/api/curator/paused", "/api/curator/run", "/api/learning/graph", "/api/learning/node",
         "/api/dashboard/themes", "/api/dashboard/theme", "/api/dashboard/font", "/api/egress/status", "/api/shared-metrics/consent",
         "/api/mcp/servers/{}", "/api/mcp/servers/{}/test", "/api/mcp/servers/{}/auth", "/api/mcp/servers/{}/enabled", "/api/mcp/oauth/flows/{}",
+        "/api/ops/checkpoints", "/api/ops/checkpoints/prune", "/api/ops/security-audit", "/api/gateway/drain", "/api/hermes/update/receipt", "/api/config/defaults", "/api/config/raw",
+        "/api/cron/jobs/{}/cancel", "/api/providers/oauth/{}",
         "/api/dashboard/agent-plugins/{}", "/api/dashboard/agent-plugins/{}/enable", "/api/dashboard/agent-plugins/{}/disable", "/api/dashboard/agent-plugins/{}/update",
     ],
     "achievements-plugin": ["/api/plugins/hermes-achievements/achievements", "/api/plugins/hermes-achievements/rescan", "/api/plugins/hermes-achievements/reset-state"],  # plugins/hermes-achievements/dashboard/plugin_api.py
     "kanban-plugin": [  # liegt Hermes bei: plugins/kanban/dashboard/plugin_api.py, eingehängt unter /api/plugins/kanban
+        "/api/plugins/kanban/config", "/api/plugins/kanban/workflow", "/api/plugins/kanban/orchestration", "/api/plugins/kanban/profiles", "/api/plugins/kanban/profiles/{}", "/api/plugins/kanban/profiles/{}/describe-auto",
+        "/api/plugins/kanban/home-channels", "/api/plugins/kanban/tasks/{}/home-subscribe/{}", "/api/plugins/kanban/model-options", "/api/plugins/kanban/projects",
         "/api/plugins/kanban/board", "/api/plugins/kanban/boards", "/api/plugins/kanban/boards/{}", "/api/plugins/kanban/stats", "/api/plugins/kanban/assignees",
         "/api/plugins/kanban/tasks", "/api/plugins/kanban/tasks/bulk", "/api/plugins/kanban/tasks/{}", "/api/plugins/kanban/tasks/{}/log",
         "/api/plugins/kanban/tasks/{}/comments", "/api/plugins/kanban/tasks/{}/reassign", "/api/plugins/kanban/tasks/{}/reclaim", "/api/plugins/kanban/links",

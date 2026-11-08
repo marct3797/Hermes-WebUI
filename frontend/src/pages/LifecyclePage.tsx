@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { ApiError, api } from "../api";
 import { Icon } from "../components/Icon";
 import { PageHead } from "../components/PageHead";
-import { StepUpNote } from "../components/providers/StepUpNote";
+import { OpsMore } from "../components/OpsMore";
+import { useAction } from "../useAction";
 import type { AgentRef, LcEntry } from "../types";
 import { t } from "../i18n";
 
@@ -16,27 +17,6 @@ function nameError(v: string): string | undefined {
   if (RESERVED.has(raw)) return t("Dieser Name ist für Hermes reserviert.");
   if (!OK.test(raw)) return t("Erlaubt: Kleinbuchstaben, Ziffern, - und _, Beginn mit Buchstabe oder Ziffer.");
   return undefined;
-}
-
-/** Fehler eines Aufrufs als Text oder Hinweis auf frische Anmeldung / fehlendes Dashboard. */
-function useAction() {
-  const [error, setError] = useState<string>();
-  const [stepUp, setStepUp] = useState(false);
-  const [missing, setMissing] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const run = async (fn: () => Promise<unknown>): Promise<boolean> => {
-    setBusy(true); setError(undefined); setStepUp(false); setMissing(false);
-    try { await fn(); return true; }
-    catch (e) {
-      if (e instanceof ApiError && e.code === "step_up_required") setStepUp(true);
-      else if (e instanceof ApiError && e.status === 501) { setMissing(true); setError(e.message); } // die Meldung des BFF unterscheidet „kein Dashboard“ von „Hermes zu alt“
-      else setError((e as Error).message);
-      return false;
-    }
-    finally { setBusy(false); }
-  };
-  const notes = <>{stepUp && <StepUpNote what={t("Diese Änderung")} />}{error && <p className="banner" role="alert"><Icon name="alert" />{error}</p>}</>;
-  return { run, busy, notes, setError, missing };
 }
 
 /**
@@ -202,6 +182,7 @@ function Ops({ agent, agentName }: { agent: AgentRef; agentName: string }) {
         {notes}
       </section>
       <Doctor agent={agent} />
+      <OpsMore agent={agent} agentName={agentName} />
     </>
   );
 }

@@ -84,10 +84,16 @@ async def update_job(request: Request, host: Host, profile: Profile, job_id: Job
 
 
 @router.post(BASE + "/schedules/{job_id}/{action}")
-async def job_action(request: Request, host: Host, profile: Profile, job_id: JobId, action: Literal["pause", "resume", "trigger"],
+async def job_action(request: Request, host: Host, profile: Profile, job_id: JobId, action: Literal["pause", "resume", "trigger", "cancel"],
                      req: C.Confirmed = C.Confirmed(), user: User = Depends(fresh_user)):
     if action == "trigger":
         _need_confirm(await _get(request, host, profile, job_id), req.confirm_system, "Ausführen geht")
+    if action == "cancel":
+        request.app.state.limiter.check(f"{user.id}:cron-cancel")
+        # laufenden Lauf stoppen; der Zeitplan bleibt. Antwort ist kein Job.
+        res = await dash(request, host, "POST", f"/api/cron/jobs/{job_id}/cancel", params={"profile": profile}, missing=NOT_FOUND)
+        _audit(request, user, "cron.cancel", host, profile, job_id)
+        return {"ok": True, "cancelled": bool(res.get("cancelled")) if isinstance(res, dict) else False}
     job = C.job_view(await dash(request, host, "POST", f"/api/cron/jobs/{job_id}/{action}", params={"profile": profile}, missing=NOT_FOUND))
     _audit(request, user, f"cron.{action}", host, profile, job_id)
     return job

@@ -198,7 +198,7 @@ export type DashState = {
   statusDown?: boolean; altDown?: boolean; sessDown?: boolean; sessEmpty?: boolean; provFresh?: boolean; diagDown?: boolean; provDown?: boolean; diagWarn?: string[]; // Fehler-/Leer-Proben je Schritt
   sa: { down?: boolean; sessions: Array<{ id: string; ageDays: number; messages: number; active?: boolean }> };
   ep: { backend: string; endpoints: Array<{ id: string; name: string; base_url: string; model: string; hasKey: boolean }>; current: string };
-  lcProfiles: string[]; lcActive: string; kbImportFail?: string | null; // Profil-Lebenszyklus: Namen als Text, nie Serverpfade
+  lcProfiles: string[]; lcActive: string; omPoints: { session: string; files: number; bytes: number }[]; omReceipt: boolean; kbImportFail?: string | null; // Profil-Lebenszyklus: Namen als Text, nie Serverpfade
   p3: { pool: Array<{ provider: string; entries: Array<{ index: number; label: string; source: string; token_tail: string }> }>; voiceOn: boolean; paused: boolean; nodes: Record<string, string>; theme: string; font: string;
     metrics: { enabled: boolean; send: boolean; decided: boolean; managed: boolean }; unlocked: boolean; workers: Array<{ run_id: number; task_id: string }>;    spawnNone?: boolean; stale?: boolean; cuMissing?: boolean; cuNotReady?: boolean; old501?: string; kbImportFail?: string | null; };
 };
@@ -305,6 +305,12 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
       { slug: "anthropic", name: "Anthropic", current: false, authenticated: dash.loggedIn.has("anthropic") || "ANTHROPIC_API_KEY" in dash.keys, models: ["claude-test", "claude-test-2"], warning: null },
       { slug: "openai-codex", name: "OpenAI Codex", current: false, authenticated: dash.loggedIn.has("openai-codex"), models: ["codex-test"], warning: null },
     ] });
+  }
+  const logout = /^\/providers\/oauth\/([a-z0-9-]+)$/.exec(path);
+  if (logout && method === "DELETE") {
+    if (dash.stepUp) return json({ detail: { code: "step_up_required", message: "Bitte erneut anmelden" } }, 401);
+    if (body?.confirm !== logout[1]) return json({ detail: "Bestätigung fehlt" }, 422);
+    dash.loggedIn.delete(logout[1]); return json({ ok: true, provider: logout[1] });
   }
   const oauth = /^\/providers\/oauth\/([a-z0-9-]+)\/(start|submit|poll\/[A-Za-z0-9_-]+)$/.exec(path);
   if (oauth) {
@@ -661,6 +667,22 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
     if (dash.stepUp) return json(stepUpBody, 401);
     return json({ ok: true, name: "doctor" });
   }
+  if (path === "/hermes-ops/checkpoints" && method === "GET") return json({ sessions: dash.omPoints, total_bytes: dash.omPoints.length * 1024, truncated: false });
+  if (path === "/hermes-ops/checkpoints/prune" && method === "POST") {
+    if (dash.stepUp) return json(stepUpBody, 401);
+    if (String(body?.confirm) !== "gamma") return json({ detail: "Nur mit Namenseingabe" }, 422);
+    dash.omPoints = []; return json({ ok: true, action: "checkpoints-prune" });
+  }
+  if (path === "/hermes-ops/security-audit" && method === "POST") return dash.stepUp ? json(stepUpBody, 401) : json({ ok: true, action: "security-audit" });
+  if (/^\/hermes-ops\/actions\/(checkpoints-prune|security-audit)$/.test(path) && method === "GET") return json({ action: path.split("/").pop(), running: false, exit_code: 0, log: "2 Hinweise" });
+  if (path === "/gateway/drain" && method === "POST") {
+    if (dash.stepUp) return json(stepUpBody, 401);
+    if (body?.action === "drain" && body?.confirm !== "leeren") return json({ detail: "Bestätigung fehlt" }, 422);
+    return json({ ok: true, action: body?.action, was_draining: true });
+  }
+  if (path === "/hermes-ops/update-receipt" && method === "GET") return json({ receipt: dash.omReceipt ? { outcome: "success", post_version: "0.22.5", followups: ["Gateway neu starten"], user_action: { message: "hermes setup ausführen" } } : null });
+  if (path === "/hermes-config/raw" && method === "GET") return json({ yaml: "terminal:\n  backend: local\n  cwd: '[Pfad]'\n", truncated: false, redacted: true });
+  if (path === "/hermes-config/defaults" && method === "GET") return json({ defaults: { agent: { max_turns: 90 } } });
   if (path === "/hermes-ops/actions/doctor" && method === "GET") return json({ name: "doctor", lines: ["alles bereit"] });
   if (path.startsWith("/hermes-memory")) {
     if (!dash.hm.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
@@ -843,7 +865,7 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
     mdFresh: false,
     sa: { sessions: [{ id: "a1", ageDays: 200, messages: 3 }, { id: "a2", ageDays: 100, messages: 2 }, { id: "a3", ageDays: 1, messages: 4 }, { id: "e1", ageDays: 5, messages: 0 }, { id: "act", ageDays: 300, messages: 1, active: true }] },
     ep: { backend: "default", endpoints: [], current: "" },
-    lcProfiles: [...agents], lcActive: agents[0] ?? "gamma",
+    lcProfiles: [...agents], omPoints: [{ session: "run_aaa", files: 3, bytes: 2048 }], omReceipt: true, lcActive: agents[0] ?? "gamma",
     p3: { pool: [{ provider: "openrouter", entries: [{ index: 1, label: "privat", source: "manual", token_tail: "abcd" }, { index: 2, label: "aus .env", source: "env:OPENROUTER_API_KEY", token_tail: "wxyz" }] }], voiceOn: true, paused: false,
       nodes: { "skill-a": "# Skill A", "memory:memory:0:aaaaaaaaaaaa": "Merke dir das" }, theme: "default", font: "theme", metrics: { enabled: false, send: false, decided: false, managed: false }, unlocked: true, workers: [{ run_id: 7, task_id: "t_1" }] },
   };

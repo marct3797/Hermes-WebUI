@@ -140,4 +140,54 @@ describe("Profil-Lebenszyklus & Betrieb", () => {
     await open((b) => { b.dash.available = false; });
     expect(await screen.findByRole("alert")).toHaveTextContent("kein Dashboard");
   });
+
+  it("lists checkpoints without paths and prunes only after typing the agent name", async () => {
+    await open();
+    const box = await screen.findByRole("region", { name: "Checkpoints" });
+    fireEvent.click(within(box).getByRole("button", { name: "Laden" }));
+    await within(box).findByText(/run_aaa/);
+    expect(box.textContent).not.toContain("/opt/");
+    fireEvent.click(within(box).getByRole("button", { name: "Aufräumen" }));
+    const go = within(box).getByRole("button", { name: "Endgültig aufräumen" });
+    expect(go).toBeDisabled();
+    fireEvent.change(within(box).getByLabelText("Zum Bestätigen „gamma“ eintippen"), { target: { value: "gamma" } });
+    fireEvent.click(go);
+    await within(box).findByText("Keine Checkpoints.");
+    expect(sent("POST", "/hermes-ops/checkpoints/prune")[0].body).toEqual({ confirm: "gamma" });
+  });
+
+  it("starts the security audit and shows its log", async () => {
+    await open();
+    const box = await screen.findByRole("region", { name: "Sicherheitsprüfung" });
+    fireEvent.click(within(box).getByRole("button", { name: "Prüfung starten" }));
+    await within(box).findByText("2 Hinweise");
+  });
+
+  it("drains only after typing the word, cancel needs none", async () => {
+    await open();
+    const box = await screen.findByRole("region", { name: "Gateway leeren" });
+    fireEvent.click(within(box).getByRole("button", { name: "Leeren" }));
+    const go = within(box).getByRole("button", { name: "Gateway leeren" });
+    expect(go).toBeDisabled();
+    fireEvent.change(within(box).getByLabelText("Zum Bestätigen „leeren“ eintippen"), { target: { value: "leeren" } });
+    fireEvent.click(go);
+    await within(box).findByText("Das Gateway wird geleert.");
+    fireEvent.click(within(box).getByRole("button", { name: "Leeren abbrechen" }));
+    await within(box).findByText("Leeren abgebrochen.");
+    expect(sent("POST", "/gateway/drain").map((c) => (c.body as { action: string }).action)).toEqual(["drain", "cancel"]);
+  });
+
+  it("shows the update receipt and the read-only configuration", async () => {
+    await open();
+    const rc = await screen.findByRole("region", { name: "Update-Beleg" });
+    fireEvent.click(within(rc).getByRole("button", { name: "Laden" }));
+    await within(rc).findByText("0.22.5");
+    expect(within(rc).getByText("Gateway neu starten")).toBeInTheDocument(); // offene Folgeschritte
+    expect(within(rc).getByText(/hermes setup ausführen/)).toBeInTheDocument();
+    const cf = screen.getByRole("region", { name: "Konfiguration lesen" });
+    fireEvent.click(within(cf).getByRole("button", { name: "config.yaml" }));
+    await within(cf).findByText(/backend: local/);
+    expect(within(cf).getByLabelText("config.yaml").textContent).not.toContain("/home");
+    expect(sent("PUT", "/hermes-config/raw")).toHaveLength(0);
+  });
 });

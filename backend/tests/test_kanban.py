@@ -180,6 +180,7 @@ def test_only_boards_and_attachments_have_delete_routes(kb):
         "/bff/h/{host}/_kanban/attachments/{attachment_id}",
         "/bff/h/{host}/_kanban/boards/{slug}",  # archiviert nur, kein hartes Löschen
         "/bff/h/{host}/_kanban/links",
+        "/bff/h/{host}/_kanban/tasks/{task}/home-subscribe/{platform}",  # Benachrichtigung abbestellen, löscht keine Aufgabe
     ]
 
 

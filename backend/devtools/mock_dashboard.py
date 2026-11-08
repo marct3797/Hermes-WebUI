@@ -868,10 +868,67 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
 
     app.state.shell_hooks = []
 
+    # ---- Etappe 1: Betrieb und Konfiguration ----
+    app.state.checkpoints = [{"session": "run_aaa", "files": 3, "bytes": 2048, "path": "/opt/data/checkpoints/run_aaa"}, {"session": "run_bbb", "files": 1, "bytes": 512}]
+    app.state.drain = {"draining": False}
+    app.state.cron_cancels = []
+    app.state.oauth_logouts = []
+
+    @app.get("/api/ops/checkpoints")
+    async def ops_checkpoints(profile: str | None = None):
+        return {"sessions": app.state.checkpoints, "total_bytes": sum(c["bytes"] for c in app.state.checkpoints)}
+
+    @app.post("/api/ops/checkpoints/prune")
+    async def ops_checkpoints_prune(profile: str | None = None):
+        app.state.checkpoints = []
+        app.state.action_logs["checkpoints-prune"] = "aufgeräumt token=sk-LEAK-prune\nverwaist: /home/geheim/work"
+        return {"ok": True, "name": "checkpoints-prune"}
+
+    @app.post("/api/ops/security-audit")
+    async def ops_security_audit(profile: str | None = None):
+        app.state.action_logs["security-audit"] = "2 Hinweise\nAuthorization: Bearer sk-LEAK-audit"
+        return {"ok": True, "name": "security-audit"}
+
+    @app.post("/api/gateway/drain")
+    async def gateway_drain(body: dict[str, Any]):
+        if body.get("action") not in ("drain", "cancel"):
+            raise HTTPException(400, "Unknown drain action")
+        was = app.state.drain["draining"]
+        app.state.drain["draining"] = body["action"] == "drain"
+        return {"ok": True, "action": body["action"], "was_draining": was, "requested_at": "2026-11-08T04:00:00Z"} if body["action"] == "cancel" else {"ok": True, "action": "drain", "requested_at": "2026-11-08T04:00:00Z"}
+
+    @app.get("/api/hermes/update/receipt")
+    async def update_receipt():
+        if not getattr(app.state, "receipt", True):
+            raise HTTPException(404, "No update receipt found")
+        return {"receipt": {"steps": [{"name": "git pull", "ok": True}], "path": "/opt/data/x"}, "summary": {"outcome": "success", "started_at": "2026-11-07T09:58:00Z", "finished_at": "2026-11-07T10:00:00Z", "action_id": "upd-1", "pre_sha": "aaa", "post_sha": "bbb", "post_version": "0.22.5", "fleet_states": [], "followups": ["Gateway manuell neu starten (/opt/data/gateway)"], "user_action": {"message": "Bitte hermes setup ausführen"}}}
+
+    @app.get("/api/config/defaults")
+    async def config_defaults():
+        return {"model": {"default": "", "api_key": "sk-LEAK-default"}, "agent": {"max_turns": 90}, "terminal": {"backend": "local"}}
+
+    @app.get("/api/config/raw")
+    async def config_raw(profile: str | None = None):
+        return {"yaml": "# Kommentar\nmodel:\n  default: claude-test\n  api_key: sk-LEAK-raw\nterminal:\n  backend: local\n  cwd: /home/geheim/projekt\nmax_tokens: 4096\nredact_secrets: true\nmcp_servers:\n  gh:\n    command: npx\n    env:\n      GITHUB_PAT: ghp_LEAKLEAKLEAKLEAK\n      STRIPE_KEY: rk_live_LEAKLEAKLEAK\n    args: [\"--token\", \"x\"]\n", "path": "/opt/data/config.yaml"}
+
+    @app.post("/api/cron/jobs/{job_id}/cancel")
+    async def cron_cancel(job_id: str, profile: str | None = None):
+        app.state.cron_cancels.append(job_id)
+        return {"ok": True, "cancelled": True}
+
+    @app.delete("/api/providers/oauth/{provider_id}")
+    async def oauth_logout(provider_id: str, profile: str | None = None):
+        if provider_id == "nope":
+            raise HTTPException(400, "Unknown provider: nope")
+        app.state.oauth_logouts.append(provider_id)
+        return {"ok": True, "provider": provider_id}
+
     @app.get("/api/actions/{name}/status")
     async def action_status(name: str, lines: int = 200):
-        if name not in ("gateway-start", "gateway-stop", "gateway-restart", "gateway-migrate", "tools-post-setup", "hermes-update", "doctor", "curator-run"):
+        if name not in ("gateway-start", "gateway-stop", "gateway-restart", "gateway-migrate", "tools-post-setup", "hermes-update", "doctor", "curator-run", "security-audit", "checkpoints-prune"):
             raise HTTPException(404, "Unknown action")
+        if name in ("security-audit", "checkpoints-prune"):
+            return {"name": name, "running": False, "exit_code": 0, "log": app.state.action_logs.get(name, "")}
         if name == "curator-run":
             return {"name": name, "running": False, "exit_code": 0, "pid": 4711, "lines": ["Curator fertig", "Authorization: Bearer sk-LEAK-curator"]}
         if name == "doctor":

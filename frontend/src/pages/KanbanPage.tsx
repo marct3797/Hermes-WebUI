@@ -1,4 +1,5 @@
 import { KanbanAdminPanel } from "../components/KanbanAdminPanel";
+import { KanbanSettingsPanel } from "../components/KanbanSettingsPanel";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PageHead } from "../components/PageHead";
 import { Icon } from "../components/Icon";
@@ -141,6 +142,7 @@ function HostKanban({ host }: { host: string }) {
         const r = await kanbanApi.createTask(host, board, t);
         setDialog(undefined); await load().catch(() => undefined); if (r.id) setOpen(r.id);
       }} />}
+      <KanbanSettingsPanel host={host} />
       <KanbanAdminPanel host={host} board={board} onChanged={() => void load().catch(() => undefined)} onImported={(slug) => switchBoard(slug)} />
       {dialog === "board-new" && <BoardDialog onClose={() => setDialog(undefined)} onSave={async (b) => {
         await kanbanApi.createBoard(host, { slug: b.slug, name: b.name, ...(b.description ? { description: b.description } : {}), ...(b.color ? { color: b.color } : {}) });

@@ -172,4 +172,17 @@ describe("Anbieter-Hauptseite", () => {
     fireEvent.click(screen.getByRole("button", { name: "Mehr" }));
     expect(within(screen.getByRole("dialog", { name: "Mehr" })).getByRole("link", { name: "Anbieter" })).toHaveAttribute("href", "/providers");
   });
+
+  it("logs a profile out only after typing the provider", async () => {
+    const server = await open();
+    fireEvent.click(cell(server, "gamma", "OpenAI Codex"));
+    const panel = within(await screen.findByRole("region", { name: "OpenAI Codex in gamma" }));
+    fireEvent.click(panel.getByRole("button", { name: "Abmelden …" }));
+    const go = panel.getByRole("button", { name: "Abmelden" });
+    expect(go).toBeDisabled();
+    fireEvent.change(panel.getByLabelText("Zum Bestätigen „openai-codex“ eintippen"), { target: { value: "openai-codex" } });
+    fireEvent.click(go);
+    await waitFor(() => expect(writes("/providers/oauth/openai-codex", "DELETE")[0].body).toEqual({ confirm: "openai-codex" }));
+    await waitFor(() => expect(cell(server, "gamma", "OpenAI Codex")).toHaveAccessibleName(/nicht eingerichtet/));
+  });
 });

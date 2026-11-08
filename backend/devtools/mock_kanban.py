@@ -374,6 +374,85 @@ def create_mock(shared_fs: bool = True) -> FastAPI:
     def dispatch(dry_run: bool = False, max: int = 8, board: Optional[str] = None):
         return {"spawned": [] if dry_run else ["t_aaaa0003"], "promoted": ["t_aaaa0004"], "dry_run": dry_run, "skipped_unassigned": []}
 
+
+    # ---- Etappe 2: Kanban-Einstellungen ----
+    app.state.orch = {"orchestrator_profile": "", "default_assignee": "", "auto_decompose": True, "auto_promote_children": True, "active_profile": "default"}
+    app.state.profiles = [{"name": "default", "is_default": True, "model": "claude-test", "provider": "nous", "description": "Allrounder", "description_auto": False, "skill_count": 3},
+                          {"name": "beta", "is_default": False, "model": "", "provider": "", "description": "", "description_auto": False, "skill_count": 0}]
+    app.state.homes = [{"platform": "telegram", "chat_id": "12345", "thread_id": "", "name": "Marc privat"}]
+    app.state.subs = set()
+
+    @app.get("/api/plugins/kanban/config")
+    def kb_config():
+        return {"default_tenant": "", "lane_by_profile": True, "include_archived_by_default": False, "render_markdown": True}
+
+    @app.get("/api/plugins/kanban/workflow")
+    def kb_workflow():
+        return {"columns": [{"key": "todo", "label": "To do", "icon": "o", "drag_target": True}, {"key": "ready", "label": "Bereit", "icon": "o", "drag_target": True}, {"key": "done", "label": "Fertig", "icon": "o", "drag_target": True}], "manual": {}, "archived": "archived"}
+
+    def orch_view():
+        o = app.state.orch
+        return {**o, "resolved_orchestrator_profile": o["orchestrator_profile"] or "default", "resolved_default_assignee": o["default_assignee"] or "default"}
+
+    @app.get("/api/plugins/kanban/orchestration")
+    def kb_orch():
+        return orch_view()
+
+    @app.put("/api/plugins/kanban/orchestration")
+    def kb_orch_put(p: dict):
+        for k, v in p.items():
+            if k in ("orchestrator_profile", "default_assignee") and v and v not in {x["name"] for x in app.state.profiles}:
+                raise HTTPException(400, f"profile '{v}' does not exist")
+            if not getattr(app.state, "drop_orch", False):
+                app.state.orch[k] = v
+        return orch_view()
+
+    @app.get("/api/plugins/kanban/profiles")
+    def kb_profiles():
+        return {"profiles": app.state.profiles}
+
+    @app.patch("/api/plugins/kanban/profiles/{name}")
+    def kb_profile_patch(name: str, p: dict):
+        row = next((x for x in app.state.profiles if x["name"] == name), None)
+        if row is None:
+            raise HTTPException(404, f"profile '{name}' not found")
+        row["description"], row["description_auto"] = (p.get("description") or "").strip(), False
+        return {"ok": True, "profile": name, "description": row["description"]}
+
+    @app.post("/api/plugins/kanban/profiles/{name}/describe-auto")
+    def kb_describe_auto(name: str, p: dict):
+        row = next((x for x in app.state.profiles if x["name"] == name), None)
+        if row is None or (row["description"] and not p.get("overwrite")):
+            return {"ok": False, "profile": name, "reason": "already described", "description": row["description"] if row else ""}
+        row["description"], row["description_auto"] = "Automatisch beschrieben", True
+        return {"ok": True, "profile": name, "reason": None, "description": row["description"]}
+
+    @app.get("/api/plugins/kanban/home-channels")
+    def kb_homes(task_id: Optional[str] = None, board: Optional[str] = None):
+        return {"home_channels": [{**h, "subscribed": (task_id, h["platform"]) in app.state.subs} for h in app.state.homes]}
+
+    @app.post("/api/plugins/kanban/tasks/{tid}/home-subscribe/{platform}")
+    def kb_sub(tid: str, platform: str, board: Optional[str] = None):
+        home = next((h for h in app.state.homes if h["platform"] == platform), None)
+        if home is None:
+            raise HTTPException(404, f"No home channel configured for platform {platform!r}.")
+        tk(bd(board), tid)
+        app.state.subs.add((tid, platform))
+        return {"ok": True, "task_id": tid, "home_channel": home}
+
+    @app.delete("/api/plugins/kanban/tasks/{tid}/home-subscribe/{platform}")
+    def kb_unsub(tid: str, platform: str, board: Optional[str] = None):
+        app.state.subs.discard((tid, platform))
+        return {"ok": True, "task_id": tid, "home_channel": next((h for h in app.state.homes if h["platform"] == platform), {})}
+
+    @app.get("/api/plugins/kanban/model-options")
+    def kb_models():
+        return {"providers": [{"slug": "nous", "label": "Nous", "models": ["claude-test", "claude-test-2"]}]}
+
+    @app.get("/api/plugins/kanban/projects")
+    def kb_projects():
+        return {"projects": [{"id": "p1", "slug": "web", "name": "Web", "primary_path": "/home/geheim/web", "icon": "", "color": ""}]}
+
     @app.post("/api/plugins/kanban/boards/{slug}/switch")
     def switch(slug: str):
         if slug not in app.state.db["boards"]:
