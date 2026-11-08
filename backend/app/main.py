@@ -20,9 +20,10 @@ from .dashboard import CacheCfg, SoulHistory
 from .hosts import HostService
 from .oidc import OidcClient
 from .registry import AGENT_RE, Registry
+from .forgejo import ForgejoRegistry
 from .knowledge import KnowledgeRegistry
 from .memory import MemoryRegistry
-from .routes import composer as composer_routes, cron as cron_routes, extensions as extensions_routes, hermes_config as config_routes, tools as tools_routes, messaging as messaging_routes, hermes_memory as hermes_memory_routes, lifecycle as lifecycle_routes, kanban as kanban_routes, marketplace as marketplace_routes, models as models_routes, endpoints as endpoints_routes, sessions_admin as sessions_admin_routes, access as access_routes, kanban_admin as kanban_admin_routes, credentials as credentials_routes, voice as voice_routes, insights as insights_routes, achievements as achievements_routes, automation as automation_routes
+from .routes import composer as composer_routes, cron as cron_routes, extensions as extensions_routes, hermes_config as config_routes, tools as tools_routes, messaging as messaging_routes, hermes_memory as hermes_memory_routes, lifecycle as lifecycle_routes, kanban as kanban_routes, forgejo as forgejo_routes, marketplace as marketplace_routes, models as models_routes, endpoints as endpoints_routes, sessions_admin as sessions_admin_routes, access as access_routes, kanban_admin as kanban_admin_routes, credentials as credentials_routes, voice as voice_routes, insights as insights_routes, achievements as achievements_routes, automation as automation_routes
 from .rooms import RoomService
 from .routes import agents, auth, cli_auth, dashboard as dashboard_routes, hosts, knowledge as knowledge_routes, memory as memory_routes, operations as operations_routes, rooms as rooms_routes, ui as ui_routes
 from .redaction import RedactionMiddleware
@@ -97,6 +98,7 @@ def create_app(
     app.state.ui = UiConfig(settings.ui_file)
     app.state.memory = MemoryRegistry(settings.memory_file)
     app.state.knowledge = KnowledgeRegistry(settings.knowledge_file)
+    app.state.forgejo = ForgejoRegistry(settings.forgejo_file)
     app.state.limiter = RateLimiter(settings.runs_per_minute)
     app.state.quota_gate = RefreshGate()
     app.state.login_limiter = RateLimiter(settings.logins_per_minute)
@@ -135,6 +137,7 @@ def create_app(
     app.include_router(dashboard_routes.quota_router)
     app.include_router(memory_routes.router)
     app.include_router(knowledge_routes.router)
+    app.include_router(forgejo_routes.router)
     app.include_router(rooms_routes.router)
     app.include_router(ui_routes.router)
     for extra in (kanban_routes, extensions_routes, marketplace_routes, composer_routes, cron_routes):

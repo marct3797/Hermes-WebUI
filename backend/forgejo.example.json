@@ -1,0 +1,12 @@
+{
+  "instances": [
+    {
+      "id": "forgejo",
+      "label": "Forgejo",
+      "base_url": "https://git.example.com",
+      "token_env": "FORGEJO_API_TOKEN",
+      "repos": ["owner/repo"],
+      "progress_labels": ["in-progress", "review"]
+    }
+  ]
+}
