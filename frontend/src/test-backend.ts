@@ -680,8 +680,8 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
     if (body?.action === "drain" && body?.confirm !== "leeren") return json({ detail: "Bestätigung fehlt" }, 422);
     return json({ ok: true, action: body?.action, was_draining: true });
   }
-  if (path === "/hermes-ops/update-receipt" && method === "GET") return json({ receipt: dash.omReceipt ? { from_version: "0.22.4", to_version: "0.22.5" } : null });
-  if (path === "/hermes-config/raw" && method === "GET") return json({ yaml: "terminal:\n  backend: local\n", truncated: false, redacted: true });
+  if (path === "/hermes-ops/update-receipt" && method === "GET") return json({ receipt: dash.omReceipt ? { outcome: "success", post_version: "0.22.5", followups: ["Gateway neu starten"], user_action: { message: "hermes setup ausführen" } } : null });
+  if (path === "/hermes-config/raw" && method === "GET") return json({ yaml: "terminal:\n  backend: local\n  cwd: '[Pfad]'\n", truncated: false, redacted: true });
   if (path === "/hermes-config/defaults" && method === "GET") return json({ defaults: { agent: { max_turns: 90 } } });
   if (path === "/hermes-ops/actions/doctor" && method === "GET") return json({ name: "doctor", lines: ["alles bereit"] });
   if (path.startsWith("/hermes-memory")) {

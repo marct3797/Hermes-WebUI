@@ -881,7 +881,7 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
     @app.post("/api/ops/checkpoints/prune")
     async def ops_checkpoints_prune(profile: str | None = None):
         app.state.checkpoints = []
-        app.state.action_logs["checkpoints-prune"] = "aufgeräumt token=sk-LEAK-prune"
+        app.state.action_logs["checkpoints-prune"] = "aufgeräumt token=sk-LEAK-prune\nverwaist: /home/geheim/work"
         return {"ok": True, "name": "checkpoints-prune"}
 
     @app.post("/api/ops/security-audit")
@@ -901,7 +901,7 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
     async def update_receipt():
         if not getattr(app.state, "receipt", True):
             raise HTTPException(404, "No update receipt found")
-        return {"receipt": {"steps": [{"name": "git pull", "ok": True}], "path": "/opt/data/x"}, "summary": {"ok": True, "from_version": "0.22.4", "to_version": "0.22.5", "finished_at": "2026-11-07T10:00:00Z", "gateway_restart": "ok"}}
+        return {"receipt": {"steps": [{"name": "git pull", "ok": True}], "path": "/opt/data/x"}, "summary": {"outcome": "success", "started_at": "2026-11-07T09:58:00Z", "finished_at": "2026-11-07T10:00:00Z", "action_id": "upd-1", "pre_sha": "aaa", "post_sha": "bbb", "post_version": "0.22.5", "fleet_states": [], "followups": ["Gateway manuell neu starten (/opt/data/gateway)"], "user_action": {"message": "Bitte hermes setup ausführen"}}}
 
     @app.get("/api/config/defaults")
     async def config_defaults():
@@ -909,7 +909,7 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
 
     @app.get("/api/config/raw")
     async def config_raw(profile: str | None = None):
-        return {"yaml": "model:\n  default: claude-test\n  api_key: sk-LEAK-raw\nterminal:\n  backend: local\n", "path": "/opt/data/config.yaml"}
+        return {"yaml": "# Kommentar\nmodel:\n  default: claude-test\n  api_key: sk-LEAK-raw\nterminal:\n  backend: local\n  cwd: /home/geheim/projekt\nmax_tokens: 4096\nredact_secrets: true\nmcp_servers:\n  gh:\n    command: npx\n    env:\n      GITHUB_PAT: ghp_LEAKLEAKLEAKLEAK\n      STRIPE_KEY: rk_live_LEAKLEAKLEAK\n    args: [\"--token\", \"x\"]\n", "path": "/opt/data/config.yaml"}
 
     @app.post("/api/cron/jobs/{job_id}/cancel")
     async def cron_cancel(job_id: str, profile: str | None = None):

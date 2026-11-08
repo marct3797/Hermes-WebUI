@@ -182,10 +182,12 @@ describe("Profil-Lebenszyklus & Betrieb", () => {
     const rc = await screen.findByRole("region", { name: "Update-Beleg" });
     fireEvent.click(within(rc).getByRole("button", { name: "Laden" }));
     await within(rc).findByText("0.22.5");
+    expect(within(rc).getByText("Gateway neu starten")).toBeInTheDocument(); // offene Folgeschritte
+    expect(within(rc).getByText(/hermes setup ausführen/)).toBeInTheDocument();
     const cf = screen.getByRole("region", { name: "Konfiguration lesen" });
     fireEvent.click(within(cf).getByRole("button", { name: "config.yaml" }));
     await within(cf).findByText(/backend: local/);
-    expect(within(cf).getByText("Zeilen mit Geheimnissen sind ausgeblendet.")).toBeInTheDocument();
+    expect(within(cf).getByLabelText("config.yaml").textContent).not.toContain("/home");
     expect(sent("PUT", "/hermes-config/raw")).toHaveLength(0);
   });
 });
