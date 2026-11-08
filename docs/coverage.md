@@ -28,6 +28,8 @@ Von 425 Routen auf Hermes `main` (Modul, Methode, Pfad) nutzt das BFF 219 pfadge
 | `web_routers/local_models.py` | 18 | 1 | lokale Modelle: Status (genutzt); **bewusst nicht**: Katalog, Hardware, Download, Server, Installieren (CLI) |
 | `web_routers/messaging.py` | 11 | 11 | Messaging-Plattformen: Liste, Konfiguration, Test, Telegram-Einrichtung. WhatsApp-Kopplung mit QR-Bild im Guide, Relay-Routen siehe unten |
 | `web_routers/audio.py` | 10 | 3 | Sprache: Live-Status, Vorlesen, Abschrift (genutzt, Aufnahmen höchstens 1,4 MB); **bewusst nicht**: `voice-config` (liefert Anbieter-Schlüssel), Live-Sitzungen, WebSockets |
+| `web_routers/ops.py` | 28 | 21 | Betrieb: Status, Gesundheit, Doctor, Backup, Update-Prüfung, Gedächtnis-Routen (siehe Funktionsbereiche „Betrieb“ und „Gedächtnis“) |
+| `plugins/hermes-achievements` | 6 | 3 | Achievements: Liste, erneutes Prüfen, Zurücksetzen (siehe „Achievements, Pets“) |
 | `web_routers/actions.py` | 8 | 6 | Gateway neu starten (genutzt), Aktions-Status, Update-Prüfung (genutzt); **nicht**: leeren (Drain), Hermes-Update, Migration |
 | `web_routers/delegation.py` | 4 | 2 | Delegation: Routing lesen, Backend wählen (genutzt); **nicht**: Modellzuordnung und Profil-Routen schreiben |
 | `web_routers/memory_providers.py` | 3 | 2 | Felder lesen/schreiben (genutzt); **bewusst nicht**: `POST .../setup` (führt `curl \| sh` aus) |
@@ -67,9 +69,13 @@ Funktionen der Hermes-Dokumentation (`user-guide/features`), die in der Liste ob
 | Kanban-Worker-Lanes, Kanban über mehrere Gateways | Worker-Ansicht und Dispatch vorhanden; Lanes und Multi-Gateway nicht gesondert geprüft |
 | Abo-Proxy (`subscription-proxy`), Tool-Gateway (`tool-gateway`, Portal) | nicht abgebildet (CLI und OpenAI-Schnittstellen) |
 | Tool-Suche (`tool-search`), LSP (`lsp`), X-Suche (`x-search`), Spotify, Wake-Word, Honcho | nicht gesondert abgebildet; teils Config oder Werkzeug-Gruppen |
-| Remote-Config, Secrets (Bitwarden/1Password), Profil-Distributionen, A2A, Hermes-Relay | nicht geprüft (Entwickler-Doku, nicht Nutzerdoku) |
+| Bot-Modus (`user-guide/bot-mode`: benannte Bots mit eigenem Chat, Rolle, Modell, Gedächtnis, Avatar, geteilte Gruppenchats) | nicht als Hermes-Funktion angebunden. Die Räume der WebUI sind ein eigenes Konzept (`rooms.db`), keine Anbindung an Hermes-Bots |
+| Remote-Config (`remote-config`), Managed Scope (`managed-scope`) | nicht abgebildet |
+| Secrets-Anbieter (`user-guide/secrets`: Bitwarden, 1Password, Befehl) | nicht abgebildet |
+| Profil-Distributionen (`profile-distributions`) | nicht abgebildet; Profil-Import/Export ist vorhanden |
+| Messaging-Relay (`messaging/relay`, `messaging_relay.py`: 4 Routen, 0 genutzt) und A2A (`messaging/a2a`) | nicht abgebildet |
 
-Diese Tabelle ist aus den Titeln und Beschreibungen der Doku abgeleitet, nicht aus einem Lauf gegen eine echte Instanz.
+Die letzten fünf Zeilen stammen aus dem Nutzerhandbuch (`website/docs/user-guide`), nicht aus der Entwickler-Doku. Diese Tabelle ist aus den Titeln und Beschreibungen der Doku abgeleitet, nicht aus einem Lauf gegen eine echte Instanz.
 
 ## Funktionsbereiche
 
