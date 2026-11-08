@@ -2668,5 +2668,10 @@
  "Vorhandenes Profil aktualisieren": "Update an existing profile",
  "Vorhandenes Profil überschreiben (Nutzerdaten bleiben)": "Overwrite the existing profile (user data stays)",
  "Vorschau laden": "Load preview",
- "Zum Bestätigen den Profilnamen eintippen": "Type the profile name to confirm"
+ "Zum Bestätigen den Profilnamen eintippen": "Type the profile name to confirm",
+ "Bringt weitere Ordner mit: {names}": "Brings further folders: {names}",
+ "Die config.yaml setzt: {keys}. Das kann Befehle starten.": "config.yaml sets: {keys}. This can start commands.",
+ "Dieses Profil ist keine Distribution. Überschreiben ersetzt SOUL.md, mcp.json, config.yaml und gleichnamige Skills.": "This profile is not a distribution. Overwriting replaces SOUL.md, mcp.json, config.yaml and skills of the same name.",
+ "Quelle: {source}": "Source: {source}",
+ "Überschreibt config.yaml und die Dateien der Distribution.": "Overwrites config.yaml and the files of the distribution."
 }

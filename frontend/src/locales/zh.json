@@ -2668,5 +2668,10 @@
  "Vorhandenes Profil aktualisieren": "更新现有配置文件",
  "Vorhandenes Profil überschreiben (Nutzerdaten bleiben)": "覆盖现有配置文件（用户数据保留）",
  "Vorschau laden": "加载预览",
- "Zum Bestätigen den Profilnamen eintippen": "输入配置文件名称以确认"
+ "Zum Bestätigen den Profilnamen eintippen": "输入配置文件名称以确认",
+ "Bringt weitere Ordner mit: {names}": "还带有其他文件夹：{names}",
+ "Die config.yaml setzt: {keys}. Das kann Befehle starten.": "config.yaml 设置了：{keys}。这可能会启动命令。",
+ "Dieses Profil ist keine Distribution. Überschreiben ersetzt SOUL.md, mcp.json, config.yaml und gleichnamige Skills.": "此配置文件不是发行版。覆盖会替换 SOUL.md、mcp.json、config.yaml 和同名技能。",
+ "Quelle: {source}": "来源：{source}",
+ "Überschreibt config.yaml und die Dateien der Distribution.": "会覆盖 config.yaml 和发行版的文件。"
 }

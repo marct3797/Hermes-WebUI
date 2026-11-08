@@ -23,7 +23,7 @@ def hostd(mode="ok"):
             raise HTTPException(409, "intern /home/x")
         if action == "preview":
             return {"preview": {"name": "scout", "version": "1.0.0", "files": ["SOUL.md", "mcp.json"], "file_count": 2, "has_mcp": True, "has_cron": False,
-                                "existing": False, "digest": DIGEST, "env_requires": [], "evil": "x"}}
+                                "existing": False, "digest": DIGEST, "env_requires": [], "risky_config": ["hooks"], "extra_top_level": ["plugins"], "source": "https://git.example.org/team/profile.git", "evil": "x"}}
         name = body.get("name") or body.get("profile")
         return {"done": {"name": name, "version": "1.0.0" if mode != "wrong" else None, "digest": DIGEST}}
     return app
@@ -44,7 +44,7 @@ def test_sources_and_preview_are_filtered(tmp_path, make_settings, monkeypatch):
     for c in make(tmp_path, make_settings, monkeypatch):
         assert c.get(BASE).json() == {"sources": [{"id": "team", "label": "Team", "source": "https://git.example.org/team/profile.git"}]}
         p = c.post(f"{BASE}/preview", json={"source_id": "team", "name": "scout"}).json()["preview"]
-        assert p["digest"] == DIGEST and p["has_mcp"] is True and "evil" not in p
+        assert p["digest"] == DIGEST and p["has_mcp"] is True and "evil" not in p and p["risky_config"] == ["hooks"] and p["extra_top_level"] == ["plugins"] and p["source"].startswith("https://")
         assert c.post(f"{BASE}/preview", json={"source_id": "team"}).status_code == 422
         assert c.post(f"{BASE}/preview", json={"source_id": "team", "name": "a", "profile": "b"}).status_code == 422
         assert c.post(f"{BASE}/preview", json={"source_id": "https://evil", "name": "scout"}).status_code == 422
@@ -61,7 +61,7 @@ def test_install_needs_name_digest_and_fresh_login_and_is_audited_without_conten
         assert r.status_code == 200 and r.json() == {"ok": True, "name": "scout", "version": "1.0.0"}
         assert SEEN == [("install", {"source_id": "team", "name": "scout", "digest": DIGEST, "force": False, "force_config": False})]
         log = c.audit_file.read_text()
-        assert "distribution.install" in log and "scout" in log and "verified" in log and "git.example.org" not in log
+        assert "distribution.install" in log and "scout" in log and "verified" in log and DIGEST[:12] in log and "git.example.org" not in log
         stale(c)
         assert c.post(f"{BASE}/install", json=body).status_code == 401 and len(SEEN) == 1
 

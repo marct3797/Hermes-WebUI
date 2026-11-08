@@ -283,4 +283,4 @@ export type VaultIn = { kind: VaultItem["kind"]; label: string; origin: string; 
 export type SecretsView = { ok: boolean; output: string; truncated: boolean; enabled?: boolean | null };
 export type SecretsProvider = "bitwarden" | "onepassword";
 export type DistSource = { id: string; label: string; source: string };
-export type DistPreview = { name: string; version: string; description?: string; author?: string; license?: string; hermes_requires?: string; env_requires?: Array<{ name: string; description: string; required: boolean }>; files: string[]; file_count: number; has_mcp: boolean; has_cron: boolean; existing: boolean; preserves_config?: boolean; digest: string };
+export type DistPreview = { name: string; version: string; description?: string; author?: string; license?: string; hermes_requires?: string; env_requires?: Array<{ name: string; description: string; required: boolean }>; files: string[]; file_count: number; has_mcp: boolean; has_cron: boolean; existing: boolean; existing_is_distribution?: boolean; existing_source?: string; preserves_config?: boolean; risky_config?: string[]; extra_top_level?: string[]; source?: string; digest: string };

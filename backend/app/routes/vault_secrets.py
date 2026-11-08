@@ -22,8 +22,8 @@ router = APIRouter(prefix="/bff/h/{host}/{runtime}/{agent}", dependencies=[Depen
 OLD_HOSTD = "Der Host-Dienst ist zu alt für Tresor und Secrets. Aktualisiere hostd auf dem Rechner."
 ERRORS = {
     404: "Profil oder Quelle sind in hostd nicht eingetragen, oder der Host-Dienst ist zu alt dafür.",
-    403: "Für dieses Profil nicht freigeschaltet. Setze allow_vault, allow_secrets bzw. allow_distributions in der hostd-Konfiguration (bei Updates: die gespeicherte Quelle ist nicht freigegeben).",
-    409: "Hermes hat die Änderung abgelehnt, oder die Quelle hat sich seit der Vorschau geändert (Vorschau neu laden), oder im Profil ist eine andere Voreinstellung (active_profile) gesetzt.",
+    403: "Für dieses Profil nicht freigeschaltet. Setze allow_vault, allow_secrets bzw. allow_distributions in der hostd-Konfiguration (bei Distributionen auch: das Zielprofil ist nicht freigegeben, oder die im Profil gespeicherte Quelle weicht von der gewählten ab).",
+    409: "Hermes hat die Änderung abgelehnt, oder die Quelle hat sich seit der Vorschau geändert (Vorschau neu laden), oder das Profil ist schon vorhanden (dann bewusst überschreiben), oder eine andere Änderung desselben Profils läuft noch, oder im Profil ist eine andere Voreinstellung (active_profile) gesetzt.",
     422: "Hermes oder der Host-Dienst hat die Eingabe abgelehnt (zum Beispiel ein Pflichtfeld oder ein ungültiges Zeichen).",
     426: "Hermes ist dafür zu alt. Aktualisiere Hermes auf diesem Rechner.",
     501: "Der Hermes-Client ist in hostd nicht eingerichtet (native_python und native_source).",

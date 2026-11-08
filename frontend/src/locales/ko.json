@@ -2668,5 +2668,10 @@
  "Vorhandenes Profil aktualisieren": "기존 프로필 업데이트",
  "Vorhandenes Profil überschreiben (Nutzerdaten bleiben)": "기존 프로필 덮어쓰기(사용자 데이터는 유지)",
  "Vorschau laden": "미리보기 불러오기",
- "Zum Bestätigen den Profilnamen eintippen": "확인하려면 프로필 이름을 입력하세요"
+ "Zum Bestätigen den Profilnamen eintippen": "확인하려면 프로필 이름을 입력하세요",
+ "Bringt weitere Ordner mit: {names}": "다른 폴더도 포함됩니다: {names}",
+ "Die config.yaml setzt: {keys}. Das kann Befehle starten.": "config.yaml이 설정함: {keys}. 명령이 시작될 수 있습니다.",
+ "Dieses Profil ist keine Distribution. Überschreiben ersetzt SOUL.md, mcp.json, config.yaml und gleichnamige Skills.": "이 프로필은 배포판이 아닙니다. 덮어쓰면 SOUL.md, mcp.json, config.yaml과 같은 이름의 스킬이 교체됩니다.",
+ "Quelle: {source}": "소스: {source}",
+ "Überschreibt config.yaml und die Dateien der Distribution.": "config.yaml과 배포판의 파일을 덮어씁니다."
 }

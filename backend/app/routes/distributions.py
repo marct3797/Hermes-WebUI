@@ -23,7 +23,7 @@ router = APIRouter(prefix="/bff/h/{host}/{runtime}/{agent}", dependencies=[Depen
 WAIT = 170.0  # Klonen und Kopieren; größer als die Grenze in hostd (150 s)
 NAME = r"^[a-z0-9][a-z0-9_-]{0,63}$"
 SOURCE_ID = r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
-PREVIEW_KEYS = ("name", "version", "description", "author", "license", "hermes_requires", "env_requires", "files", "file_count", "has_mcp", "has_cron", "existing", "preserves_config", "digest")
+PREVIEW_KEYS = ("name", "version", "description", "author", "license", "hermes_requires", "env_requires", "files", "file_count", "has_mcp", "has_cron", "existing", "existing_is_distribution", "existing_source", "preserves_config", "risky_config", "extra_top_level", "source", "digest")
 
 
 def _preview(body: dict[str, Any]) -> dict[str, Any]:
@@ -84,7 +84,7 @@ async def _change(request: Request, target, user: User, action: str, req: Change
     except HTTPException as exc:
         audit(request, user, f"distribution.{action}", target, source=req.source_id, name=subject, verified=False, status=exc.status_code)
         raise
-    audit(request, user, f"distribution.{action}", target, source=req.source_id, name=subject, version=done.get("version") if ok else None, force=req.force, verified=ok)
+    audit(request, user, f"distribution.{action}", target, source=req.source_id, name=subject, version=done.get("version") if ok else None, force=req.force, digest=req.digest[:12], verified=ok)
     if not ok:
         raise HTTPException(502, "Hermes hat die Distribution nicht bestätigt")
     return {"ok": True, "name": subject, "version": done["version"]}

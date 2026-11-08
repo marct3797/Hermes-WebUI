@@ -2668,5 +2668,10 @@
  "Vorhandenes Profil aktualisieren": "Var olan bir profili güncelle",
  "Vorhandenes Profil überschreiben (Nutzerdaten bleiben)": "Var olan profilin üzerine yaz (kullanıcı verileri kalır)",
  "Vorschau laden": "Önizlemeyi yükle",
- "Zum Bestätigen den Profilnamen eintippen": "Onaylamak için profil adını yazın"
+ "Zum Bestätigen den Profilnamen eintippen": "Onaylamak için profil adını yazın",
+ "Bringt weitere Ordner mit: {names}": "Başka klasörler getirir: {names}",
+ "Die config.yaml setzt: {keys}. Das kann Befehle starten.": "config.yaml şunları ayarlar: {keys}. Bu komutlar başlatabilir.",
+ "Dieses Profil ist keine Distribution. Überschreiben ersetzt SOUL.md, mcp.json, config.yaml und gleichnamige Skills.": "Bu profil bir dağıtım değil. Üzerine yazmak SOUL.md, mcp.json, config.yaml ve aynı adlı becerileri değiştirir.",
+ "Quelle: {source}": "Kaynak: {source}",
+ "Überschreibt config.yaml und die Dateien der Distribution.": "config.yaml ve dağıtımın dosyalarının üzerine yazar."
 }

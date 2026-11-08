@@ -2668,5 +2668,10 @@
  "Vorhandenes Profil aktualisieren": "تحديث ملف شخصي موجود",
  "Vorhandenes Profil überschreiben (Nutzerdaten bleiben)": "الكتابة فوق الملف الشخصي الموجود (تبقى بيانات المستخدم)",
  "Vorschau laden": "تحميل المعاينة",
- "Zum Bestätigen den Profilnamen eintippen": "اكتب اسم الملف الشخصي للتأكيد"
+ "Zum Bestätigen den Profilnamen eintippen": "اكتب اسم الملف الشخصي للتأكيد",
+ "Bringt weitere Ordner mit: {names}": "يأتي بمجلدات أخرى: {names}",
+ "Die config.yaml setzt: {keys}. Das kann Befehle starten.": "يضبط config.yaml: {keys}. قد يشغّل هذا أوامر.",
+ "Dieses Profil ist keine Distribution. Überschreiben ersetzt SOUL.md, mcp.json, config.yaml und gleichnamige Skills.": "هذا الملف الشخصي ليس توزيعًا. الكتابة فوقه تستبدل SOUL.md وmcp.json وconfig.yaml والمهارات بالاسم نفسه.",
+ "Quelle: {source}": "المصدر: {source}",
+ "Überschreibt config.yaml und die Dateien der Distribution.": "يكتب فوق config.yaml وملفات التوزيع."
 }

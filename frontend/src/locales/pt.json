@@ -2668,5 +2668,10 @@
  "Vorhandenes Profil aktualisieren": "Atualizar um perfil existente",
  "Vorhandenes Profil überschreiben (Nutzerdaten bleiben)": "Substituir o perfil existente (os dados do utilizador ficam)",
  "Vorschau laden": "Carregar pré-visualização",
- "Zum Bestätigen den Profilnamen eintippen": "Escreve o nome do perfil para confirmar"
+ "Zum Bestätigen den Profilnamen eintippen": "Escreve o nome do perfil para confirmar",
+ "Bringt weitere Ordner mit: {names}": "Traz outras pastas: {names}",
+ "Die config.yaml setzt: {keys}. Das kann Befehle starten.": "config.yaml define: {keys}. Isto pode iniciar comandos.",
+ "Dieses Profil ist keine Distribution. Überschreiben ersetzt SOUL.md, mcp.json, config.yaml und gleichnamige Skills.": "Este perfil não é uma distribuição. Substituir troca SOUL.md, mcp.json, config.yaml e as skills com o mesmo nome.",
+ "Quelle: {source}": "Fonte: {source}",
+ "Überschreibt config.yaml und die Dateien der Distribution.": "Substitui config.yaml e os ficheiros da distribuição."
 }

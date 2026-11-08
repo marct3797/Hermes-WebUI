@@ -399,7 +399,7 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
     const d = dash.dist;
     if (d.off) return json({ detail: "Für dieses Profil nicht freigeschaltet. Setze allow_vault, allow_secrets bzw. allow_distributions in der hostd-Konfiguration (bei Updates: die gespeicherte Quelle ist nicht freigegeben)." }, 403);
     if (path === "/distributions" && method === "GET") return json({ sources: d.sources });
-    if (path === "/distributions/preview" && method === "POST") return json({ preview: { name: body?.name ?? body?.profile, version: "1.2.0", description: "Späher", files: ["SOUL.md", "mcp.json"], file_count: 2, has_mcp: true, has_cron: false, existing: d.existing, preserves_config: d.existing, digest: "a".repeat(64), env_requires: [{ name: "API_KEY", description: "", required: true }] } });
+    if (path === "/distributions/preview" && method === "POST") return json({ preview: { name: body?.name ?? body?.profile, version: "1.2.0", description: "Späher", files: ["SOUL.md", "mcp.json"], file_count: 2, has_mcp: true, has_cron: false, existing: d.existing, existing_is_distribution: false, preserves_config: d.existing, risky_config: ["hooks"], extra_top_level: ["plugins"], source: d.sources[0]?.source, digest: "a".repeat(64), env_requires: [{ name: "API_KEY", description: "", required: true }] } });
     const chg = /^\/distributions\/(install|update)$/.exec(path);
     if (chg && method === "POST") { d.installs.push({ action: chg[1], ...body }); return json({ ok: true, name: body?.name ?? body?.profile, version: "1.2.0" }); }
   }

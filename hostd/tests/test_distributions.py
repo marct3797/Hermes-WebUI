@@ -83,7 +83,8 @@ def setup(tmp_path, monkeypatch, allow=True, sources=None):
     host.mkdir(exist_ok=True)
     settings = {'workspaces': [], 'native_python': sys.executable, 'native_source': str(tmp_path / 'src'),
                 'distribution_sources': sources if sources is not None else [{'id': 'team', 'label': 'Team', 'source': URL}],
-                'profiles': [{'id': 'p', 'path': str(host), 'allow_distributions': allow}]}
+                'profiles': [{'id': 'p', 'path': str(host), 'allow_distributions': allow}, {'id': 'scout', 'path': str(host), 'allow_distributions': True},
+                             {'id': 'other', 'path': str(host), 'allow_distributions': False}]}
     app.state.settings = settings
     app.include_router(router)
     return TestClient(app), root, repo
@@ -95,10 +96,14 @@ def preview(c, **kw):
 
 def test_sources_are_listed_without_credentials_and_only_git_urls(tmp_path, monkeypatch):
     c, *_ = setup(tmp_path, monkeypatch, sources=[
-        {'id': 'team', 'label': 'Team', 'source': 'https://user:pw@git.example.org/team/profile.git'},
-        {'id': 'local', 'label': 'Lokal', 'source': '/home/x/dist'}, {'id': 'file', 'label': 'x', 'source': 'file:///etc'}, {'id': 'bad id', 'source': URL}])
+        {'id': 'team', 'label': 'Team', 'source': URL},
+        {'id': 'ssh', 'label': 'SSH', 'source': 'git@git.example.org:team/profile.git'}, {'id': 'ssh2', 'label': 'SSH2', 'source': 'ssh://git@git.example.org/team/profile.git'},
+        {'id': 'cred', 'label': 'x', 'source': 'https://user:pw@git.example.org/team/profile.git'},
+        {'id': 'local', 'label': 'Lokal', 'source': '/home/x/dist'}, {'id': 'file', 'label': 'x', 'source': 'file:///etc'}, {'id': 'bad id', 'source': URL},
+        {'id': 'dash', 'label': 'x', 'source': 'ssh://-oProxyCommand=x/y'}, {'id': 'dash2', 'label': 'x', 'source': 'git@-host:x'}, {'id': 'git', 'label': 'x', 'source': 'git://git.example.org/x'},
+        {'id': 'http', 'label': 'x', 'source': 'http://git.example.org/x'}, {'id': 'space', 'label': 'x', 'source': 'https://git.example.org/a b'}, {'id': 'ext', 'label': 'x', 'source': 'ext::sh -c id'}])
     body = c.get('/v1/profiles/p/distributions').json()
-    assert [s['id'] for s in body['sources']] == ['team'] and 'pw' not in json.dumps(body)
+    assert [s['id'] for s in body['sources']] == ['team', 'ssh', 'ssh2']
 
 
 def test_preview_shows_manifest_files_and_a_digest_without_changing_anything(tmp_path, monkeypatch):
@@ -127,7 +132,7 @@ def test_existing_profile_needs_force(tmp_path, monkeypatch):
     pre = preview(c).json()['preview']
     assert pre['existing'] is True
     req = {'source_id': 'team', 'name': 'scout', 'digest': pre['digest']}
-    assert c.post('/v1/profiles/p/distributions/install', json=req).status_code == 422
+    assert c.post('/v1/profiles/p/distributions/install', json=req).status_code == 409
     assert c.post('/v1/profiles/p/distributions/install', json={**req, 'force': True}).status_code == 200
 
 
@@ -172,3 +177,61 @@ def test_update_of_a_non_distribution_is_refused(tmp_path, monkeypatch):
     c, root, _ = setup(tmp_path, monkeypatch)
     (root / 'plain').mkdir()
     assert c.post('/v1/profiles/p/distributions/preview', json={'source_id': 'team', 'profile': 'plain'}).status_code == 422
+
+
+def test_a_profile_without_the_flag_cannot_be_changed_through_another(tmp_path, monkeypatch):
+    c, root, _ = setup(tmp_path, monkeypatch)
+    (root / 'other').mkdir()
+    (root / 'other' / 'distribution.yaml').write_text(json.dumps({'name': 'other', 'version': '1', 'source': URL}))
+    assert preview(c, name='other').status_code == 403
+    assert c.post('/v1/profiles/p/distributions/preview', json={'source_id': 'team', 'profile': 'other'}).status_code == 403
+    req = {'source_id': 'team', 'name': 'other', 'digest': '0' * 64, 'force': True}
+    assert c.post('/v1/profiles/p/distributions/install', json=req).status_code == 403
+    assert not any(l for l in (tmp_path / 'log').read_text().splitlines()) if (tmp_path / 'log').exists() else True
+
+
+def test_update_uses_the_chosen_source_not_just_any_approved_one(tmp_path, monkeypatch):
+    other = 'https://git.example.org/labs/profile.git'
+    c, root, repo = setup(tmp_path, monkeypatch, sources=[{'id': 'team', 'label': 'Team', 'source': URL}, {'id': 'labs', 'label': 'Labs', 'source': other}])
+    monkeypatch.setenv('FAKE_REPOS', json.dumps({URL: str(repo), other: str(repo)}))
+    install(c, tmp_path)
+    manifest = json.loads((root / 'scout' / 'distribution.yaml').read_text())
+    manifest['source'] = other                      # der Agent schreibt auf eine andere freigegebene Quelle um
+    (root / 'scout' / 'distribution.yaml').write_text(json.dumps(manifest))
+    assert c.post('/v1/profiles/p/distributions/preview', json={'source_id': 'team', 'profile': 'scout'}).status_code == 403
+    assert c.post('/v1/profiles/p/distributions/preview', json={'source_id': 'labs', 'profile': 'scout'}).status_code == 200
+
+
+def test_preview_reports_the_real_source_existing_state_and_risks(tmp_path, monkeypatch):
+    c, root, repo = setup(tmp_path, monkeypatch)
+    (repo / 'config.yaml').write_text('mcp_servers:\n  x: {}\nhooks:\n  a: b\n')
+    (repo / 'plugins').mkdir()
+    (repo / 'plugins' / 'p.py').write_text('print(1)')
+    (root / 'scout').mkdir()
+    body = preview(c).json()['preview']
+    assert body['source'] == URL and body['existing'] is True and body['existing_is_distribution'] is False
+    assert body['risky_config'] == ['mcp_servers', 'hooks'] and body['extra_top_level'] == ['plugins']
+
+
+def test_the_digest_covers_the_execute_bit_and_empty_directories(tmp_path, monkeypatch):
+    import os
+    c, root, repo = setup(tmp_path, monkeypatch)
+    (repo / 'run.sh').write_text('echo hi')
+    first = preview(c).json()['preview']['digest']
+    os.chmod(repo / 'run.sh', 0o755)
+    second = preview(c).json()['preview']['digest']
+    (repo / 'skills').mkdir()
+    third = preview(c).json()['preview']['digest']
+    assert len({first, second, third}) == 3
+
+
+def test_too_large_sources_are_refused_and_parallel_changes_are_serialised(tmp_path, monkeypatch):
+    from hostd import distributions
+    c, root, repo = setup(tmp_path, monkeypatch)
+    monkeypatch.setattr(distributions, 'MAX_FILES', 2)
+    assert preview(c).status_code == 409
+    monkeypatch.undo()
+    c, root, repo = setup(tmp_path, monkeypatch)
+    lock = distributions.TARGET_LOCKS.setdefault('scout', __import__('threading').Lock())
+    with lock:
+        assert preview(c).status_code == 409

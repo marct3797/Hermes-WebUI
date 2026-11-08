@@ -43,6 +43,10 @@ describe("Distributionen", () => {
     fireEvent.change(p.getByLabelText("Name des neuen Profils"), { target: { value: "scout" } });
     fireEvent.click(p.getByRole("button", { name: "Vorschau laden" }));
     await p.findByText(/Enthält mcp.json/);
+    expect(p.getByText(/Die config.yaml setzt: hooks/)).toBeTruthy();
+    expect(p.getByText(/Bringt weitere Ordner mit: plugins/)).toBeTruthy();
+    expect(p.getByText(/Quelle: https:\/\/git.example.org/)).toBeTruthy();
+    expect(p.getByText(/Dieses Profil ist keine Distribution/)).toBeTruthy();
     fireEvent.change(p.getByLabelText("Zum Bestätigen den Profilnamen eintippen"), { target: { value: "scout" } });
     expect(p.getByRole("button", { name: "Installieren" })).toBeDisabled();
     fireEvent.click(p.getByLabelText(/Vorhandenes Profil überschreiben/));

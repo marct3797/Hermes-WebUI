@@ -2668,5 +2668,10 @@
  "Vorhandenes Profil aktualisieren": "既存のプロファイルを更新",
  "Vorhandenes Profil überschreiben (Nutzerdaten bleiben)": "既存のプロファイルを上書き（ユーザーデータは残ります）",
  "Vorschau laden": "プレビューを読み込む",
- "Zum Bestätigen den Profilnamen eintippen": "確認のためプロファイル名を入力してください"
+ "Zum Bestätigen den Profilnamen eintippen": "確認のためプロファイル名を入力してください",
+ "Bringt weitere Ordner mit: {names}": "他のフォルダも含まれます：{names}",
+ "Die config.yaml setzt: {keys}. Das kann Befehle starten.": "config.yamlが設定する項目：{keys}。コマンドが起動される可能性があります。",
+ "Dieses Profil ist keine Distribution. Überschreiben ersetzt SOUL.md, mcp.json, config.yaml und gleichnamige Skills.": "このプロファイルはディストリビューションではありません。上書きすると SOUL.md、mcp.json、config.yaml と同名のスキルが置き換わります。",
+ "Quelle: {source}": "ソース：{source}",
+ "Überschreibt config.yaml und die Dateien der Distribution.": "config.yamlとディストリビューションのファイルを上書きします。"
 }
