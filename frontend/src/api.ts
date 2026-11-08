@@ -1,6 +1,6 @@
 import { invalidate } from "./dataCache";
 import { getPreferences } from "./preferences";
-import type { AutomationResp, AcCreated, AcHooks, AcPairing, SaPreview, SaStats, SaTimeline, EpDelegation, RelayStatus, RelayLink, DlgRoute, DlgProfileRoute, DlgRouteIn, EpList, EpLocal, EpValidate, LcCreated, LcList, MdAuxiliary, MdInfo, MdMoa, MdOptions, MdRecommended, MdSetResult, HmField, HmFile, HmFileList, HmFileName, HmFileSaved, HmOverview, GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, WhatsAppPairing, ComputerUse, ShellHooks, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProviderRouting, ProviderRoutingResp, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import type { AutomationResp, VaultList, VaultIn, VaultItem, SecretsView, SecretsProvider, AcCreated, AcHooks, AcPairing, SaPreview, SaStats, SaTimeline, EpDelegation, RelayStatus, RelayLink, DlgRoute, DlgProfileRoute, DlgRouteIn, EpList, EpLocal, EpValidate, LcCreated, LcList, MdAuxiliary, MdInfo, MdMoa, MdOptions, MdRecommended, MdSetResult, HmField, HmFile, HmFileList, HmFileName, HmFileSaved, HmOverview, GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, WhatsAppPairing, ComputerUse, ShellHooks, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProviderRouting, ProviderRoutingResp, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 import { t, tm } from "./i18n";
 
 export class ApiError extends Error {
@@ -249,6 +249,12 @@ export const api = {
   epBackend: (a: AgentRef, backend: string) => call<{ ok: boolean; backend: string }>("PUT", `${base(a)}/hermes-delegation/backend`, { backend }),
   dlgModelMap: (a: AgentRef, body: { options: DlgRouteIn[]; default: string; confirm: string }) => call<{ ok: boolean; options: DlgRoute[]; default: string | null }>("PUT", `${base(a)}/hermes-delegation/model-map`, body),
   dlgProfileRoutes: (a: AgentRef, body: { profiles: DlgProfileRoute[]; default: string; confirm: string }) => call<{ ok: boolean; profiles: DlgProfileRoute[]; default: string | null }>("PUT", `${base(a)}/hermes-delegation/profile-routes`, body),
+  vaultList: (a: AgentRef) => call<VaultList>("GET", `${base(a)}/vault`),
+  vaultAdd: (a: AgentRef, body: VaultIn) => call<{ ok: boolean; item: VaultItem }>("POST", `${base(a)}/vault`, body),
+  vaultRemove: (a: AgentRef, item: string, confirm: string) => call<{ ok: boolean }>("DELETE", `${base(a)}/vault/${encodeURIComponent(item)}?confirm=${encodeURIComponent(confirm)}`),
+  secretsStatus: (a: AgentRef, p: SecretsProvider) => call<SecretsView>("POST", `${base(a)}/secrets/${p}/status`),
+  secretsSync: (a: AgentRef, p: SecretsProvider) => call<SecretsView>("POST", `${base(a)}/secrets/${p}/sync`),
+  secretsChange: (a: AgentRef, p: SecretsProvider, body: { action: "disable" | "set" | "remove"; env_var?: string; reference?: string; confirm?: string }) => call<SecretsView>("POST", `${base(a)}/secrets/${p}/change`, body),
   relayStatus: (a: AgentRef) => call<RelayStatus>("GET", `${base(a)}/messaging-relay`),
   relayLink: (a: AgentRef, platform: string) => call<RelayLink>("POST", `${base(a)}/messaging-relay/${platform}/link`),
   relayState: (a: AgentRef, code: string) => call<{ state: string; reason: string | null }>("GET", `${base(a)}/messaging-relay/link/${encodeURIComponent(code)}`),

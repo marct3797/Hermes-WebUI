@@ -276,3 +276,9 @@ export type RelayAccount = { id: string; label: string; linked_at: string };
 export type RelayPlatform = { platform: string; bot_url: string | null; accounts: RelayAccount[] };
 export type RelayStatus = { managed_by: string; portal_url: string | null; platforms: RelayPlatform[] };
 export type RelayLink = { platform: string; code: string; command: string; expires_at: string | number | null; bot_url: string | null };
+
+export type VaultItem = { id: string; kind: "login" | "payment" | "address"; label: string; origin?: string | null; identifier?: string | null; identifier_type?: string | null; has_otp?: boolean; created_at?: string };
+export type VaultList = { items: VaultItem[]; key_storage: "file" | "keychain" | null };
+export type VaultIn = { kind: VaultItem["kind"]; label: string; origin: string; identifier_type?: string; identifier?: string; password?: string; otp_secret?: string; fields?: Record<string, string> };
+export type SecretsView = { ok: boolean; output: string; truncated: boolean; enabled?: boolean | null };
+export type SecretsProvider = "bitwarden" | "onepassword";

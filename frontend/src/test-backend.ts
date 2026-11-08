@@ -183,6 +183,7 @@ export type DashState = {
   history: Array<{ id: string; at: string; reason: string; chars: number }>; versions: Record<string, string>; stepUp: boolean;
   routing: { sort: string | null; only: string[]; ignore: string[]; order: string[]; require_parameters: boolean; data_collection: string | null }; routingModels: string[];
   auto: Array<Record<string, unknown>>; autoOld: boolean;
+  vault: { off: boolean; items: Array<Record<string, unknown>>; enabled: Record<string, boolean>; refs: Record<string, string>; added: unknown[] }; // Tresor und Secrets-Anbieter
   keys: Record<string, string>; // gesetzte Anbieter-Keys (Variable → Wert); der Wert verlässt die Attrappe nie
   loggedIn: Set<string>; // Anbieter mit Anmeldung (Codex ist von Anfang an angemeldet)
   polls: number; // wie oft die laufende Geräte-Anmeldung abgefragt wurde; ab der zweiten Abfrage ist sie bestätigt
@@ -393,6 +394,30 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
   }
   if (rest === "/profile/description" && method === "PUT") { dash.description = String(body?.description).trim(); return json({ ok: true, description: dash.description }); }
   if (rest === "/profile/model" && method === "PUT") { dash.model = { provider: String(body?.provider), model: String(body?.model) }; return json({ ok: true, ...dash.model }); }
+  if (path === "/vault" || path.startsWith("/vault/") || path.startsWith("/secrets/")) {
+    const v = dash.vault;
+    if (v.off) return json({ detail: "Für dieses Profil nicht freigeschaltet. Setze allow_vault bzw. allow_secrets in der hostd-Konfiguration." }, 403);
+    if (path === "/vault" && method === "GET") return json({ items: v.items, key_storage: "file" });
+    if (path === "/vault" && method === "POST") {
+      v.added.push(body);
+      const item = { id: `vault_${v.items.length + 1}x`, kind: body?.kind, label: body?.label, origin: body?.origin ?? "", identifier: body?.identifier ?? null };
+      v.items.push(item);
+      return json({ ok: true, item });
+    }
+    const del = /^\/vault\/([^?]+)/.exec(path);
+    if (del && method === "DELETE") { v.items = v.items.filter((i) => i.id !== del[1]); return json({ ok: true }); }
+    const sec = /^\/secrets\/(bitwarden|onepassword)\/(status|sync|change)$/.exec(path);
+    if (sec) {
+      const provider = sec[1];
+      if (sec[2] === "change") {
+        if (body?.action === "disable") v.enabled[provider] = false;
+        if (body?.action === "set") v.refs[String(body.env_var)] = String(body.reference);
+        if (body?.action === "remove") delete v.refs[String(body.env_var)];
+      }
+      const output = `Enabled  ${v.enabled[provider] ? "yes" : "no"}\n${Object.entries(v.refs).map(([k, r]) => `${k} ${r}`).join("\n")}`;
+      return json({ ok: true, output: sec[2] === "sync" ? "OPENAI_API_KEY  would export" : output, truncated: false, enabled: v.enabled[provider] });
+    }
+  }
   if (path.startsWith("/messaging-relay")) {
     const rl = dash.msg.relay;
     if (!rl) return json({ detail: "Diese Hermes-Version kennt /api/messaging/relay nicht." }, 501);
@@ -871,6 +896,7 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
     available: true, reason: null, soul: "Du bist Gamma.\nDu antwortest knapp.\n", description: "", model: { provider: "mock", model: "mock-large" },
     history: [], versions: {}, stepUp: false, routing: { sort: null, only: [], ignore: [], order: [], require_parameters: false, data_collection: null }, routingModels: ["anthropic/x"],
     autoOld: false,
+    vault: { off: false, items: [{ id: "vault_aaa", kind: "login", label: "GitHub", origin: "https://github.com", identifier: "a@b.de", identifier_type: "email" }], enabled: { bitwarden: true, onepassword: true }, refs: {}, added: [] },
     auto: [
       { kind: "goal", session_id: "s1", title: "Release prüfen", text: "Alle Tests grün", status: "active", turns_used: 3, max_turns: 20, gates: 1, subgoals: ["ruff sauber"], last_reason: "noch 2 rot", last_turn_at: Date.now() / 1000 - 120 },
       { kind: "heartbeat", session_id: "s1", title: "Release prüfen", text: "CI prüfen", status: "paused", interval_seconds: 600, fire_count: 4 },

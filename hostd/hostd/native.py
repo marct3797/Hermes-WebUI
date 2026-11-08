@@ -39,7 +39,7 @@ def redact(text):
         else line for line in text.splitlines())
 
 
-def run(argv, *, cwd, env=None, timeout=8, limit=LIMIT):
+def run(argv, *, cwd, env=None, timeout=8, limit=LIMIT, stdin_data=None):
     """Drain one merged pipe with hard byte/time bounds; never expose stderr."""
     environment = dict(os.environ if env is None else env)
     environment.update(PYTHONDONTWRITEBYTECODE='1', GIT_TERMINAL_PROMPT='0', GIT_OPTIONAL_LOCKS='0',
@@ -49,8 +49,15 @@ def run(argv, *, cwd, env=None, timeout=8, limit=LIMIT):
         if key.startswith('GIT_') and key not in {'GIT_TERMINAL_PROMPT', 'GIT_OPTIONAL_LOCKS',
                                                   'GIT_CONFIG_NOSYSTEM', 'GIT_CONFIG_GLOBAL'}:
             del environment[key]
-    process = subprocess.Popen(argv, cwd=cwd, env=environment, stdin=subprocess.DEVNULL,
+    process = subprocess.Popen(argv, cwd=cwd, env=environment, stdin=subprocess.DEVNULL if stdin_data is None else subprocess.PIPE,
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, start_new_session=True)
+    if stdin_data is not None:
+        # Geheimnisse gehen nur über stdin an den Kindprozess, nie als Argument (sichtbar in `ps`) oder Umgebungsvariable.
+        try:
+            process.stdin.write(stdin_data)
+            process.stdin.close()
+        except (BrokenPipeError, OSError):
+            pass
     output = bytearray()
     selector = selectors.DefaultSelector()
     selector.register(process.stdout, selectors.EVENT_READ)
@@ -198,6 +205,10 @@ def native_env(profile):
     # Do not let an active parent profile/board silently override the configured target.
     for key in ('HERMES_PROFILE', 'HERMES_KANBAN_DB', 'HERMES_KANBAN_BOARD', 'HERMES_ACCEPT_HOOKS'):
         environment.pop(key, None)
+    # Das Bearer-Token des Dienstes gehört keinem Kindprozess (Plugins, Secret-Quellen, Hilfsskripte).
+    for key in list(environment):
+        if key.startswith('HERMES_HOSTD_'):
+            del environment[key]
     return environment
 
 

@@ -5,6 +5,7 @@ import { CapabilitiesPage } from "./CapabilitiesPage";
 import { ConfigPage } from "./ConfigPage";
 import { MessagingPage } from "./MessagingPage";
 import { AutomationPage } from "./AutomationPage";
+import VaultPage from "./VaultPage";
 import { HermesMemoryPage } from "./HermesMemoryPage";
 import { LifecyclePage } from "./LifecyclePage";
 import ModelsPage from "./ModelsPage";
@@ -32,6 +33,7 @@ export function AgentPage({ page }: { page: Extract<Page, { name: "agent" }> }) 
   if (page.module === "profil") return <ProfilePage key={agentKey(page.ref)} agent={agent} label={resolved.label} hostLabel={resolved.host.label} runtimeLabel={resolved.runtimeLabel} />;
   if (page.module === "modelle") return <ModelsPage key={agentKey(page.ref)} agent={agent} />;
   if (page.module === "endpunkte") return <EndpointsPage key={agentKey(page.ref)} agent={agent} />;
+  if (page.module === "tresor") return <VaultPage key={agentKey(page.ref)} agent={agent} />;
   if (page.module === "zugang") return <AccessPage key={agentKey(page.ref)} agent={agent} />;
   if (page.module === "sprache") return <VoicePage key={agentKey(page.ref)} agent={agent} />;
   if (page.module === "lerngraph") return <LearningPage key={agentKey(page.ref)} agent={agent} />;

@@ -34,6 +34,8 @@ Example **operator-managed** configuration fragment (not a usable deployment):
       "kanban_db": "/srv/hermes/shared/kanban/boards/existing/kanban.db",
       "allow_management": false,
       "allow_automation": false,
+      "allow_vault": false,
+      "allow_secrets": false,
       "allowed_plugins": []
     }
   },
@@ -61,6 +63,20 @@ changes them and is off unless the profile sets `allow_automation: true`. hostd 
 gateway stays the single writer. hostd never starts a gateway (503 if none is running). `goal set` and `goal resume` also submit the kick-off prompt
 (`prompt.submit`, queued) like the terminal client does; the response says `started`. Needs a running (or startable) Hermes gateway for the profile and a Hermes that has `session.automation`
 (checked against Hermes main of 2026-11-07, not against a running instance). Loops cannot be created (`/loop` stays in Hermes).
+
+### Vault and secrets providers (CLI-only in Hermes)
+
+Both are off unless the profile sets `allow_vault` / `allow_secrets` to `true`.
+- `GET|POST /v1/profiles/{profile}/vault`, `DELETE /v1/profiles/{profile}/vault/{id}`: runs a fixed helper with `native_python` (isolated mode `-I`, working directory = `native_source`, which is **required**; the profile folder is never on the import path) that uses Hermes' own
+  `agent.vault_store` (the CLI `hermes vault add` is interactive only). The request, including any password or card data, goes through **stdin**, never argv or the
+  environment. Only the local vault is listed (metadata, never values; the key location is reduced to `file`/`keychain`). External managers are not touched because
+  unlocking them needs a user prompt. Fields are whitelisted; Hermes validates the rest (`422` on refusal, `426` if `agent.vault_store` is missing).
+- `POST /v1/profiles/{profile}/secrets` (`{provider: bitwarden|onepassword, action: status|sync|disable|set|remove, env_var?, reference?}`): runs
+  `hermes secrets <provider> <action>` with a fixed argv. `sync` is always the dry run (no `--apply`). `set`/`remove` exist for 1Password only; the variable
+  must match `[A-Z][A-Z0-9_]*` and the reference `op://…` without shell characters. Output is stripped of colour codes, URL credentials and long key-like strings.
+  `sync` is a dry run but still fetches the values into the Hermes process (and Bitwarden may download `bws`), so the BFF asks for a fresh login. Profiles whose folder is not
+  below `profiles/` are refused (409) while an `active_profile` file names another profile, because Hermes would act on that one. The daemon's own bearer token (`token_env`, `HERMES_HOSTD_*`) is removed from the child environment.
+  Tokens are not set here (an `--access-token` argument would show up in `ps`); use the Hermes keys page.
 
 ## HTTP contract
 
