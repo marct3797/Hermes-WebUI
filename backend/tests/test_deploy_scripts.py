@@ -9,6 +9,9 @@ from types import SimpleNamespace
 
 import pytest
 
+# install-hostd.sh verweigert root absichtlich; unter root (Container, CI-Varianten) kann es diese Prüfungen nicht durchlaufen.
+not_root = pytest.mark.skipif(os.geteuid() == 0, reason="install-hostd.sh verweigert root")
+
 DEPLOY = Path(__file__).resolve().parents[2] / "deploy"
 
 
@@ -153,12 +156,14 @@ def test_add_host_dashboard_port_on_a_remote_address_warns_that_hermes_refuses_i
     ("kaputt", "Invalid --workspace"),
     ("ws=relativ/pfad", "Invalid --workspace"),
 ])
+@not_root
 def test_install_hostd_rejects_bad_workspaces_before_installing(box, spec, expect):
     r = run(box, "install-hostd.sh", "--no-start", "--workspace", spec)
     assert r.returncode == 2 and expect in r.stderr, (r.stdout, r.stderr)
     assert not (box.tmp / ".local").exists()  # nichts installiert
 
 
+@not_root
 def test_install_hostd_refuses_the_home_directory_also_through_a_symlink(box):
     link = box.tmp.parent / (box.tmp.name + "-link")
     link.symlink_to(box.tmp)
@@ -167,6 +172,7 @@ def test_install_hostd_refuses_the_home_directory_also_through_a_symlink(box):
         assert r.returncode == 2 and "Refusing" in r.stderr, (target, r.stderr)
 
 
+@not_root
 def test_install_hostd_accepts_a_real_directory_through_a_symlink(box):
     real = box.tmp / "projekt"; real.mkdir()
     link = box.tmp / "kurz"; link.symlink_to(real)
