@@ -2,7 +2,7 @@
 """Probe für Ziele/Heartbeats: führt denselben Helfer wie hostd aus (`SCRIPT` aus hostd/automation_write.py), ohne hostd und ohne Abhängigkeiten.
 
 Standard ist nur LESEN (`goal state`): prüft, dass der Gateway läuft, das Ticket klappt und Hermes `session.automation` kennt.
-`--set TEXT` setzt ein Ziel und stößt den ersten Lauf an (ändert die Sitzung!).
+`--set TEXT` setzt ein Ziel und stößt den ersten Lauf an (ändert die Sitzung!). `--clear` löscht das Ziel der Sitzung wieder.
 
   python3 probe_automation.py --python /pfad/zum/hermes/venv/bin/python --home ~/.hermes --session SITZUNGS_ID [--source /pfad/zum/hermes-agent] [--set "Test-Ziel"]
 """
@@ -32,8 +32,11 @@ def main():
     ap.add_argument('--session', required=True)
     ap.add_argument('--source', default='')
     ap.add_argument('--set', dest='text')
+    ap.add_argument('--clear', action='store_true')
     args = ap.parse_args()
-    if args.text:
+    if args.clear:
+        req = {'session_id': args.session, 'kind': 'goal', 'call': 'clear', 'args': [], 'kwargs': {}, 'kick': None}
+    elif args.text:
         req = {'session_id': args.session, 'kind': 'goal', 'call': 'set', 'args': [args.text], 'kwargs': {}, 'kick': 'goal'}
     else:
         req = {'session_id': args.session, 'kind': 'goal', 'call': 'state', 'args': [], 'kwargs': {}, 'kick': None}
