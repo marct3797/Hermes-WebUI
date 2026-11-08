@@ -59,8 +59,8 @@ Funktionen der Hermes-Dokumentation (`user-guide/features`), die in der Liste ob
 
 | Funktion (Doku) | Stand in der WebUI |
 |---|---|
-| Persistente Ziele (`goals`, `/goal`, `/subgoal`) | **Nur lesend**: Seite „Ziele und Schleifen“ liest `state.db` über hostd. Setzen/Ändern nur im Terminal, Hermes bietet dafür keine HTTP-Schnittstelle |
-| Session-Heartbeats (`heartbeat`, `/heartbeat`) | **Nur lesend** auf derselben Seite (ebenso Schleifen `/loop`) |
+| Persistente Ziele (`goals`, `/goal`, `/subgoal`) | Seite „Ziele und Schleifen“: lesen aus `state.db`, setzen/pausieren/fortsetzen/löschen über den Hermes-Gateway-Client in hostd (`allow_automation`). Unterziele und Prüfschritte nur lesend |
+| Session-Heartbeats (`heartbeat`, `/heartbeat`) | gleiche Seite: setzen (Text, Intervall), pausieren, fortsetzen, löschen. Schleifen (`/loop`): pausieren, fortsetzen, löschen; Anlegen nur in Hermes |
 | Wiederkehrende Schleifen (`loops`, `/loop`) | Slash. Keine Übersicht aktiver Schleifen |
 | Fallback-Anbieter (`fallback-providers`) | Maske unter „Modelle“: Reihenfolge, Modell, Mindest-Wartezeit, über die Profil-Einstellungen gespeichert |
 | Anbieter-Routing für OpenRouter (`provider-routing`) | Maske unter „Modelle“ (Sortierung, nur/nie/Reihenfolge, Parameter, Datenspeicherung). Schreibt alle Schlüssel, weil die Tiefenmischung von Hermes fehlende nicht löscht; Ausnahmen je Modell bleiben unberührt |

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ApiError, api } from "../api";
 import { Icon } from "../components/Icon";
 import { PageHead } from "../components/PageHead";
+import { RowActions, SetForm } from "../components/automation/Controls";
 import { fmtAgo, fmtDuration, loc } from "../format";
 import { N_, t } from "../i18n";
 import type { AgentRef, AutomationItem, AutomationResp } from "../types";
@@ -41,7 +42,7 @@ function Detail({ i }: { i: AutomationItem }) {
   );
 }
 
-/** Ziele, Heartbeats und Schleifen der Sitzungen eines Profils. Nur Ansicht: Hermes führt /goal, /heartbeat und /loop nur in Terminal, Desktop und Messaging aus. */
+/** Ziele, Heartbeats und Schleifen der Sitzungen eines Profils: lesen über hostd, ändern über den Hermes-Client (Gateway ist der einzige Schreiber). */
 export function AutomationPage({ agent, label }: { agent: AgentRef; label: string }) {
   const [data, setData] = useState<AutomationResp>();
   const [error, setError] = useState<string>();
@@ -53,7 +54,7 @@ export function AutomationPage({ agent, label }: { agent: AgentRef; label: strin
   return (
     <main className="page">
       <PageHead title={t("Ziele und Schleifen")} sub={label} />
-      <p className="banner"><Icon name="info" /><span>{t("Nur Ansicht. Hermes führt /goal, /heartbeat und /loop nur in Terminal, Desktop oder Messaging aus. Setzen, pausieren und löschen geht dort.")}</span></p>
+      <p className="banner"><Icon name="info" /><span>{t("Ziele und Heartbeats lassen sich hier setzen, Schleifen nur pausieren, fortsetzen und löschen. Neue Schleifen legst du in Hermes mit /loop an. Änderungen laufen über den Gateway von Hermes und brauchen eine frische Anmeldung.")}</span></p>
       {error && <p className="banner" role="alert"><Icon name="alert" />{error}</p>}
       {!data && !error && <p className="muted">{t("Lade…")}</p>}
       {data && !data.available && <p className="banner" role="status"><Icon name="alert" />{t("Die Sitzungsdatenbank dieses Profils ist nicht lesbar.")}</p>}
@@ -69,6 +70,7 @@ export function AutomationPage({ agent, label }: { agent: AgentRef; label: strin
                     <div><span className={`ext-pill ${tone(i.status)}`}>{STATUS[i.status ?? ""] ? t(STATUS[i.status ?? ""]) : i.status}</span> <b>{i.text}</b></div>
                     <p className="muted small">{t("Sitzung: {title}", { title: i.title || i.session_id })}</p>
                     <Detail i={i} />
+                    <RowActions agent={agent} item={i} onDone={() => void load()} />
                   </li>
                 ))}
               </ul>
@@ -76,6 +78,7 @@ export function AutomationPage({ agent, label }: { agent: AgentRef; label: strin
           </section>
         );
       })}
+      {data && data.available && <SetForm agent={agent} items={data.items} onDone={() => void load()} />}
       {data?.truncated && <p className="muted small">{t("Die Liste ist gekürzt.")}</p>}
     </main>
   );

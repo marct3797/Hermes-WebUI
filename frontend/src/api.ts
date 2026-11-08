@@ -180,6 +180,7 @@ export const api = {
   deleteHook: (a: AgentRef, body: { event: string; command: string; confirm: string }) => call<{ ok: boolean }>("DELETE", `${base(a)}/hermes-hooks`, body),
   deleteEnv: (a: AgentRef, key: string) => call<{ ok: boolean; key: string }>("DELETE", `${base(a)}/env/${encodeURIComponent(key)}`, { key, confirm: key }),
   hmSetup: (a: AgentRef, name: string) => call<{ ok: boolean; provider: string }>("POST", `${base(a)}/hermes-memory/providers/${encodeURIComponent(name)}/setup`, { confirm: "einrichten" }),
+  changeAutomation: (a: AgentRef, change: Record<string, unknown>) => call<{ ok: boolean; status: string | null }>("POST", `${base(a)}/automation`, change),
   automation: (a: AgentRef) => call<AutomationResp>("GET", `${base(a)}/automation`),
   hmOverview: (a: AgentRef) => call<HmOverview>("GET", `${base(a)}/hermes-memory`),
   hmSetProvider: (a: AgentRef, provider: string) => call<{ ok: boolean; active: string }>("PUT", `${base(a)}/hermes-memory/provider`, { provider }),

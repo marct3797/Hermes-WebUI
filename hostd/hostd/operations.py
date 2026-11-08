@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from . import workspace as files
 from . import memory_files as memfiles
-from . import automation, native, sessions
+from . import automation, automation_write, native, sessions
 
 router = APIRouter(prefix='/v1')
 
@@ -151,6 +151,24 @@ class MemoryWrite(BaseModel):
 @router.get('/profiles/{profile}/automation')
 def automation_list(profile: str, request: Request):
     return automation.read(memfiles.profile_root(request.app.state.settings, profile))
+
+
+class AutomationAct(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    session_id: str = Field(pattern=r'^[A-Za-z0-9_.:-]{1,128}$')
+    kind: Literal['goal', 'heartbeat', 'loop']
+    action: Literal['set', 'pause', 'resume', 'clear']
+    text: str | None = Field(default=None, max_length=2000)
+    max_turns: int | None = Field(default=None, ge=1, le=1000)
+    interval_seconds: int | None = Field(default=None, ge=1, le=604800)
+
+
+@router.post('/profiles/{profile}/automation')
+def automation_change(profile: str, body: AutomationAct, request: Request):
+    settings = request.app.state.settings
+    memfiles.profile_root(settings, profile)
+    entry = selected(settings, 'profiles', profile)
+    return automation_write.apply(settings, entry, body.session_id, body.kind, body.action, body.text, body.max_turns, body.interval_seconds)
 
 
 @router.get('/profiles/{profile}/memory-files')
