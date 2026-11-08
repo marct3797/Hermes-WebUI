@@ -5,7 +5,7 @@ import { fmtAgo } from "../../format";
 import type { Card, Column } from "../../kanbanApi";
 import { t } from "../../i18n";
 
-const LABEL: Record<string, string> = { triage: "Einordnung", todo: "Offen", scheduled: "Geplant", ready: "Bereit", running: "Läuft", blocked: "Blockiert", review: "Prüfung", done: "Erledigt", archived: "Archiviert" };
+const LABEL: Record<string, string> = { triage: "Einordnung", todo: "Offen", scheduled: "Geplant", ready: "Bereit", running: "Läuft", blocked: "Blockiert", review: "Prüfung", done: "Erledigt", archived: "Archiviert", open: "Offen", closed: "Geschlossen" };
 export const columnLabel = (name: string) => LABEL[name] ?? name;
 /** Laufend setzt nur der Dispatcher; dorthin lässt sich nichts ziehen. */
 export const droppable = (name: string) => name !== "running" && name !== "archived";

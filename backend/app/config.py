@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     memory_file: Path | None = None
     # Wissens-Anbieter (selbst gehostetes RAG), siehe knowledge.example.json. Fehlt die Datei, ist die Seite Wissen aus der Seitenleiste ausgeblendet.
     knowledge_file: Path | None = None
+    # Forgejo-Issues als Board im Kanban-Modul, siehe forgejo.example.json. Der Token kommt aus der dort benannten Umgebungsvariable.
+    forgejo_file: Path | None = None
     # So lange gilt die Quellen- und Dokumentübersicht (ein Scan der Chroma-Datenbank), bevor sie neu gelesen wird.
     knowledge_cache_s: int = 300
     # Gruppenchats (Räume): SQLite-Datei mit Raumliste, Nachrichten und der Session je Mitglied.

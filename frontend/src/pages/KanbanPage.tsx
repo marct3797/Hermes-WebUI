@@ -1,3 +1,5 @@
+import { ForgejoBoard } from "../components/kanban/ForgejoBoard";
+import { forgejoApi, type FjInstance } from "../forgejoApi";
 import { KanbanAdminPanel } from "../components/KanbanAdminPanel";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PageHead } from "../components/PageHead";
@@ -19,9 +21,20 @@ export function KanbanPage({ host }: { host?: string }) {
   const registry = useHosts();
   const [chosen, setChosen] = useState<string>();
   const selected = chosen ?? host ?? registry.hosts?.[0]?.id;
+  const [fj, setFj] = useState<{ instances: FjInstance[]; error: string | null }>();
+  const [tab, setTab] = useState<"hermes" | "forgejo">("hermes");
+  useEffect(() => { forgejoApi.instances().then((r) => setFj({ instances: r.instances ?? [], error: r.config_error ?? null })).catch(() => setFj({ instances: [], error: null })); }, []);
+  const hasForgejo = !!fj && (fj.instances.length > 0 || !!fj.error);
+  if (tab === "forgejo" && hasForgejo) return (
+    <main className="page kb-page">
+      <PageHead title={tr("Kanban")} sub={tr("Forgejo-Issues, getrennt vom Hermes-Board")}><Tabs tab={tab} onTab={setTab} /></PageHead>
+      <ForgejoBoard instances={fj.instances} configError={fj.error} />
+    </main>
+  );
   return (
     <main className="page kb-page">
       <PageHead title={tr("Kanban")} sub={tr("Aufgaben der Agents, Boards gelten für alle Profile")}>
+        {hasForgejo && <Tabs tab={tab} onTab={setTab} />}
         {registry.hosts && registry.hosts.length > 0 && <label className="row" style={{ gap: 6 }}>{tr("Host")}
           <select className="field field-line" aria-label={tr("Host")} value={selected} onChange={(e) => setChosen(e.target.value)}>{registry.hosts.map((h) => <option key={h.id} value={h.id}>{h.label}</option>)}</select></label>}
       </PageHead>
@@ -30,6 +43,15 @@ export function KanbanPage({ host }: { host?: string }) {
       {registry.hosts && registry.hosts.length === 0 && <p className="panel-empty">{tr("Keine Hosts konfiguriert. Trage einen Host mit Dashboard in der Host-Konfiguration ein.")}</p>}
       {selected && <HostKanban key={selected} host={selected} />}
     </main>
+  );
+}
+
+function Tabs({ tab, onTab }: { tab: "hermes" | "forgejo"; onTab: (t: "hermes" | "forgejo") => void }) {
+  return (
+    <div className="chips row" role="group" aria-label={tr("Board-Quelle")} style={{ gap: 6 }}>
+      <button type="button" className={`chip${tab === "hermes" ? " on" : ""}`} aria-pressed={tab === "hermes"} onClick={() => onTab("hermes")}>{tr("Hermes-Board")}</button>
+      <button type="button" className={`chip${tab === "forgejo" ? " on" : ""}`} aria-pressed={tab === "forgejo"} onClick={() => onTab("forgejo")}>{tr("Forgejo-Issues")}</button>
+    </div>
   );
 }
 

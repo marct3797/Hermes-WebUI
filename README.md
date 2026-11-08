@@ -92,6 +92,15 @@ Die Seite **Gedächtnis** liest, was ein Gedächtnis-Anbieter über die Agents w
 eine Klasse mit denselben Methoden. Die Seite schreibt nichts. Die Antwortformen sind nach Hindsights OpenAPI normalisiert, noch nicht gegen die
 laufende Instanz geprüft: **Verbindung prüfen** auf der Seite zeigt Abweichungen. `reflect` ruft beim Anbieter ein Sprachmodell auf, ist darum begrenzt und im Audit.
 
+### Forgejo-Issues im Kanban (`forgejo.json`)
+
+Auf der Seite **Kanban** erscheint der Reiter **Forgejo-Issues**, sobald `HERMES_WEBUI_FORGEJO_FILE` auf eine Datei zeigt (Vorlage `backend/forgejo.example.json`). Es ist ein eigenes Board, getrennt vom Hermes-Kanban: Hermes-Aufgaben und Issues werden nie vermischt.
+
+- Je Instanz: `base_url`, `token_env` (der **Name** der Umgebungsvariable mit dem API-Token, z. B. in `webui.env`; der Token steht nie in der Datei, nie im Browser und nie in Antworten), `repos` (Freigabeliste `owner/name`, andere Repos werden abgelehnt) und optional `progress_labels` (Zwischenspalten).
+- Spalten: `Offen`, je ein Fortschritts-Label, `Geschlossen`. Verschieben setzt am Issue Status und Label (Fremd-Labels bleiben). Pull-Requests werden nicht gezeigt.
+- Lesen für Angemeldete; Anlegen, Ändern, Verschieben und Kommentieren verlangt eine frische Anmeldung und steht im Audit (`forgejo.issue.*`, ohne Textinhalt). Löschen gibt es nicht.
+- Der Token braucht das Recht „Issue: Lesen und Schreiben“ für die freigegebenen Repos. Fehlt er, sagt die Seite es und das BFF fragt Forgejo nicht an.
+
 ### Wissen (`knowledge.json`)
 
 Die Seite **Wissen** (`/knowledge`) zeigt und pflegt ein selbst gehostetes RAG-System: Statistik, Suche mit Quellenfilter und Links ins Repo, Quellen- und
