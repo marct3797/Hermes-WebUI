@@ -523,3 +523,15 @@ def test_mcp_replace_needs_typed_confirmation_and_reads_back(ext):
     assert {x["name"] for x in c.get(f"{E}/mcp").json()["servers"]} == {"neu"}
     audit = audit_text(tmp)
     assert "ext.mcp.replace" in audit and '"servers":1' in audit and "stdio" not in audit
+
+
+def test_skill_lock_is_read_back_and_visible_in_the_list(ext):
+    c, s, _reg, _tmp = ext
+    assert next(k for k in c.get(f"{E}/skill-list").json()["skills"] if k["name"] == "alpha")["locked"] is False
+    r = c.put(f"{E}/skills/alpha/lock", json={"locked": True})
+    assert r.status_code == 200 and r.json() == {"ok": True, "name": "alpha", "locked": True}
+    assert next(k for k in c.get(f"{E}/skill-list").json()["skills"] if k["name"] == "alpha")["locked"] is True
+    assert c.put(f"{E}/skills/alpha/lock", json={"locked": "ja"}).status_code == 422
+    assert c.put(f"{E}/skills/gibt-es-nicht/lock", json={"locked": True}).status_code == 404
+    s.drop_lock = True  # das Dashboard antwortet ok, übernimmt aber nichts
+    assert c.put(f"{E}/skills/alpha/lock", json={"locked": False}).status_code == 502

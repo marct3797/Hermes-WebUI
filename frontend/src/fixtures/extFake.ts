@@ -69,6 +69,7 @@ export class FakeBff {
   private ext(m: string, rest: string, b: Record<string, any> | undefined): unknown {
     let x: RegExpMatchArray | null;
     if (rest === "skill-list") return { skills: this.skills };
+    if ((x = rest.match(/^skills\/([^/]+)\/lock$/))) { this.skills.find((s) => s.name === x![1])!.locked = b!.locked; return { ok: true, locked: b!.locked }; }
     if ((x = rest.match(/^skills\/([^/]+)\/enabled$/))) { this.skills.find((s) => s.name === x![1])!.enabled = b!.enabled; return { ok: true }; }
     if ((x = rest.match(/^skills\/([^/]+)$/))) {
       if (m === "GET") return { name: x[1], content: this.contents[x[1]] };

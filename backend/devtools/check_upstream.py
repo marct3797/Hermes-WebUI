@@ -23,7 +23,7 @@ USED: dict[str, list[str]] = {
         "/api/profiles", "/api/profiles/{}/soul", "/api/profiles/{}/description", "/api/profiles/{}/model", "/api/config", "/api/config/schema",
         "/api/env", "/api/providers/oauth", "/api/providers/validate", "/api/providers/oauth/{}/start", "/api/providers/oauth/{}/poll/{}",
         "/api/providers/oauth/{}/submit", "/api/providers/oauth/sessions/{}", "/api/analytics/models", "/api/model/options", "/api/sessions/search", "/api/logs",
-        "/api/skills", "/api/skills/toggle", "/api/skills/content", "/api/skills/hub/search", "/api/skills/hub/sources", "/api/skills/hub/official",
+        "/api/skills", "/api/skills/toggle", "/api/skills/lock", "/api/skills/content", "/api/skills/hub/search", "/api/skills/hub/sources", "/api/skills/hub/official",
         "/api/skills/hub/preview", "/api/skills/hub/scan", "/api/skills/hub/install", "/api/skills/hub/update", "/api/skills/hub/uninstall",
         "/api/tools/toolsets", "/api/tools/toolsets/{}", "/api/tools/toolsets/{}/config", "/api/tools/toolsets/{}/provider",
         "/api/tools/toolsets/{}/env", "/api/tools/toolsets/{}/models", "/api/tools/toolsets/{}/model", "/api/tools/toolsets/{}/post-setup", "/api/tools/terminal/backends",

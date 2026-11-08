@@ -75,6 +75,16 @@ def create_mock(verdict: str = "safe") -> FastAPI:
         next(k for k in s.skills if k["name"] == b["name"])["enabled"] = b["enabled"]
         return {"ok": True, "name": b["name"], "enabled": b["enabled"]}
 
+    @app.put("/api/skills/lock")
+    async def lock(request: Request):
+        b = body_of(request)
+        row = next((k for k in s.skills if k["name"] == b["name"]), None)
+        if row is None:
+            raise HTTPException(404, f"Skill '{b['name']}' not found.")
+        if not getattr(s, "drop_lock", False):
+            row["locked"] = bool(b["locked"])
+        return {"ok": True, "name": b["name"], "locked": bool(b["locked"])}
+
     @app.get("/api/skills/content")
     async def content(name: str):
         if name not in s.contents:

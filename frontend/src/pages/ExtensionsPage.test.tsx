@@ -21,6 +21,16 @@ describe("Erweiterungen: Skills", () => {
     expect(bff.find("PUT", "/skills/gamma/enabled")[0].body).toEqual({ enabled: true });
   });
 
+  it("sperrt einen Skill gegen den Agenten und hebt die Sperre wieder auf", async () => {
+    render(<ExtensionsPage host="server" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Skill claude-code öffnen" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Gegen den Agenten sperren" }));
+    await screen.findByText("Gegen den Agenten gesperrt");
+    expect(bff.find("PUT", "/skills/claude-code/lock")[0].body).toEqual({ locked: true });
+    fireEvent.click(screen.getByRole("button", { name: "Sperre aufheben" }));
+    await waitFor(() => expect(screen.queryByText("Gegen den Agenten gesperrt")).toBeNull());
+  });
+
   it("öffnet den Editor, speichert und verwirft Änderungen", async () => {
     render(<ExtensionsPage host="server" />);
     fireEvent.click(await screen.findByRole("button", { name: "Skill claude-code öffnen" }));

@@ -14,7 +14,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Depends, HTTPException, Path, Request
 
 from ..auth import User, current_user, fresh_user
-from ..extensions import (MCP_NAME_RE, PLUGIN_NAME_RE, SKILL_OLD_RE, CatalogInstall, McpNew, PluginInstall, PluginUpdate, SkillNew, SkillSave,
+from ..extensions import (Lock, MCP_NAME_RE, PLUGIN_NAME_RE, SKILL_OLD_RE, CatalogInstall, McpNew, PluginInstall, PluginUpdate, SkillNew, SkillSave,
                           Toggle, check_skill_content, mcp_catalog_view, mcp_test_view, mcp_view, plugin_catalog_view, plugin_view, skill_view)
 from ._dash import dash
 from .operations import HostId, ProfileId
@@ -93,6 +93,22 @@ async def skill_toggle(request: Request, host: HostId, profile: ProfileId, name:
     await dash(request, host, "PUT", "/api/skills/toggle", params=scope(profile), body={"name": name, "enabled": body.enabled})
     rec(request, user, "ext.skill.enable" if body.enabled else "ext.skill.disable", host, profile=profile, skill=name)
     return {"ok": True, "name": name, "enabled": body.enabled}
+
+
+@router.put(P + "/skills/{name}/lock")
+async def skill_lock(request: Request, host: HostId, profile: ProfileId, name: SkillName, body: Lock, user: User = Depends(fresh_user)):
+    """Gegen Änderungen des Agents sperren (wie `hermes curator lock`). Eigene Änderungen bleiben erlaubt."""
+    no_dots(name, "Skill")
+    request.app.state.limiter.check(f"{user.id}:ext-skill-lock")
+    skill = next((s for s in await skills_of(request, host, profile) if s["name"] == name), None)
+    if skill is None:
+        raise HTTPException(404, "Skill nicht gefunden")
+    await dash(request, host, "PUT", "/api/skills/lock", params=scope(profile), body={"name": name, "locked": body.locked})
+    now = next((s for s in await skills_of(request, host, profile) if s["name"] == name), None)
+    if now is None or now["locked"] != body.locked:
+        raise HTTPException(502, "Das Dashboard hat die Sperre nicht übernommen")
+    rec(request, user, "ext.skill.lock" if body.locked else "ext.skill.unlock", host, profile=profile, skill=name)
+    return {"ok": True, "name": name, "locked": body.locked}
 
 
 @router.post(P + "/skills/{name}/update")
