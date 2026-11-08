@@ -2398,5 +2398,22 @@
  "Modell {n}": "Modello {n}",
  "Nach oben: {n}": "Sposta su: {n}",
  "Nach unten: {n}": "Sposta giù: {n}",
- "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "Non passare se il limite termina entro questi secondi (0 = passa sempre)"
+ "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "Non passare se il limite termina entro questi secondi (0 = passa sempre)",
+ "Anbieter ausschließen, die Daten speichern": "Escludi i provider che memorizzano dati",
+ "Anbieter-Kennungen: nur Kleinbuchstaben, Ziffern, Punkt, Bindestrich und Schrägstrich, ohne Doppelte, getrennt durch Komma.": "ID provider: solo minuscole, cifre, punto, trattino e barra, senza duplicati, separati da virgole.",
+ "Anbieter-Routing": "Instradamento provider",
+ "Ausnahmen je Modell in der Konfiguration bleiben unverändert: {list}": "Le eccezioni per modello nella configurazione restano invariate: {list}",
+ "Datenspeicherung": "Conservazione dei dati",
+ "Diese Anbieter nie nutzen": "Non usare mai questi provider",
+ "Durchsatz (schnellster zuerst)": "Throughput (prima il più veloce)",
+ "Erlauben": "Consenti",
+ "Feste Reihenfolge": "Ordine fisso",
+ "Latenz (kürzeste Wartezeit zuerst)": "Latenza (prima l’attesa più breve)",
+ "Nicht festgelegt": "Non impostato",
+ "Nur Anbieter, die alle Parameter unterstützen": "Solo provider che supportano tutti i parametri",
+ "Nur diese Anbieter": "Solo questi provider",
+ "Preis (günstigster zuerst)": "Prezzo (prima il più economico)",
+ "Routing speichern": "Salva instradamento",
+ "Sortierung": "Ordina per",
+ "Steuert, welche Anbieter hinter OpenRouter deine Anfragen bearbeiten. Wirkt nur bei OpenRouter, nicht bei direkten Anbieter-Verbindungen.": "Controlla quali provider dietro OpenRouter gestiscono le richieste. Vale solo per OpenRouter, non per le connessioni dirette."
 }

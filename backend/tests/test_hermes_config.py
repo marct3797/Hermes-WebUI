@@ -133,3 +133,76 @@ def test_env_delete_needs_the_typed_key_and_reports_missing(env):
     r = env.request("DELETE", f"{BASE}/env/ANTHROPIC_API_KEY", json={"key": "ANTHROPIC_API_KEY", "confirm": "ANTHROPIC_API_KEY"})
     assert r.status_code == 200 and r.json() == {"ok": True, "key": "ANTHROPIC_API_KEY"}
     assert "ANTHROPIC_API_KEY" in open(env.audit_file).read()
+
+
+# --- Provider-Routing -------------------------------------------------------------------------------------------------------------
+RT = f"{BASE}/provider-routing"
+FULL = {"sort": "throughput", "only": ["anthropic"], "ignore": ["deepinfra"], "order": ["anthropic", "google-vertex"], "require_parameters": True, "data_collection": "deny"}
+
+
+def test_routing_defaults_when_nothing_is_configured(env):
+    body = env.get(RT).json()
+    assert body["routing"] == {"sort": "price", "only": [], "ignore": [], "order": [], "require_parameters": False, "data_collection": None}
+    assert body["per_model"] == []
+
+
+def test_routing_is_written_in_full_and_read_back(env):
+    r = env.put(RT, json=FULL)
+    assert r.status_code == 200 and r.json()["routing"] == FULL
+    assert env.dash.state.profiles["default"]["config"]["provider_routing"] == FULL
+    assert env.get(RT).json()["routing"] == FULL
+
+
+def test_routing_reset_removes_old_values_despite_deep_merge(env):
+    env.put(RT, json=FULL)
+    cleared = {"sort": "price", "only": [], "ignore": [], "order": [], "require_parameters": False, "data_collection": None}
+    assert env.put(RT, json=cleared).json()["routing"] == cleared
+    assert env.get(RT).json()["routing"] == cleared
+
+
+def test_routing_keeps_per_model_overrides_and_lists_them(env):
+    env.dash.state.profiles["default"]["config"]["provider_routing"] = {"sort": "latency", "models": {"anthropic/x": {"only": ["anthropic"]}}}
+    assert env.get(RT).json()["per_model"] == ["anthropic/x"]
+    env.put(RT, json=FULL)
+    assert env.dash.state.profiles["default"]["config"]["provider_routing"]["models"] == {"anthropic/x": {"only": ["anthropic"]}}
+
+
+def test_routing_null_removes_data_collection_like_hermes_merge(env):
+    """Die Tiefenmischung von Hermes ignoriert `None` nur über einem Abschnitt, über einem Wert überschreibt es: `data_collection` lässt sich leeren."""
+    env.put(RT, json=FULL)
+    assert env.put(RT, json={**FULL, "data_collection": None}).json()["routing"]["data_collection"] is None
+
+
+def test_mock_merge_matches_hermes_deep_merge():
+    """Gegen den echten Merge-Pfad: `_deep_merge` aus dem Hermes-Quelltext (Umgebungsvariable HERMES_AGENT_SRC), sonst übersprungen."""
+    import ast, os, pathlib
+    src = os.environ.get("HERMES_AGENT_SRC")
+    if not src or not (pathlib.Path(src) / "hermes_cli" / "config.py").exists():
+        pytest.skip("HERMES_AGENT_SRC nicht gesetzt")
+    text = (pathlib.Path(src) / "hermes_cli" / "config.py").read_text()
+    node = next(n for n in ast.parse(text).body if isinstance(n, ast.FunctionDef) and n.name == "_deep_merge")
+    ns: dict = {}
+    exec(compile(ast.Module([node], []), "config.py", "exec"), ns)
+    import copy
+    from devtools.mock_dashboard import deep_merge
+    base = {"provider_routing": {"sort": "latency", "only": ["a"], "data_collection": "deny", "models": {"m": {"only": ["x"]}}}, "terminal": {"cwd": "/"}}
+    for extra in (
+        {"provider_routing": FULL},
+        {"provider_routing": {**FULL, "data_collection": None, "only": []}},
+        {"terminal": None},
+        {"provider_routing": None},
+        {"provider_routing": {"sort": "price"}},
+    ):
+        assert deep_merge(copy.deepcopy(base), copy.deepcopy(extra)) == ns["_deep_merge"](copy.deepcopy(base), copy.deepcopy(extra))
+
+
+@pytest.mark.parametrize("bad", [{"sort": "cheap"}, {"only": ["Anthropic"]}, {"order": ["a", "a"]}, {"extra": 1}, {"data_collection": "maybe"}, {"only": ["x y"]}])
+def test_routing_rejects_invalid_input(env, bad):
+    assert env.put(RT, json=bad).status_code == 422
+
+
+def test_routing_needs_a_fresh_login_and_is_audited_without_values(env):
+    env.put(RT, json=FULL)
+    assert "profile.provider_routing" in env.audit_file.read_text() and "deepinfra" not in env.audit_file.read_text()
+    env.app.state.sessions.get(env.cookies.get(SESSION_COOKIE)).auth_time = 0
+    assert env.put(RT, json=FULL).status_code == 401

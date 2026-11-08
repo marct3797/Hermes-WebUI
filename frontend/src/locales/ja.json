@@ -2398,5 +2398,22 @@
  "Modell {n}": "モデル {n}",
  "Nach oben: {n}": "上へ: {n}",
  "Nach unten: {n}": "下へ: {n}",
- "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "上限がこの秒数より短く終わる場合は切り替えない(0 = 常に切り替える)"
+ "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "上限がこの秒数より短く終わる場合は切り替えない(0 = 常に切り替える)",
+ "Anbieter ausschließen, die Daten speichern": "データを保存するプロバイダーを除外",
+ "Anbieter-Kennungen: nur Kleinbuchstaben, Ziffern, Punkt, Bindestrich und Schrägstrich, ohne Doppelte, getrennt durch Komma.": "プロバイダーID: 小文字、数字、ピリオド、ハイフン、スラッシュのみ。重複なし、カンマ区切り。",
+ "Anbieter-Routing": "プロバイダーのルーティング",
+ "Ausnahmen je Modell in der Konfiguration bleiben unverändert: {list}": "設定内のモデル別の例外は変更されません: {list}",
+ "Datenspeicherung": "データ収集",
+ "Diese Anbieter nie nutzen": "これらのプロバイダーは使わない",
+ "Durchsatz (schnellster zuerst)": "スループット(速い順)",
+ "Erlauben": "許可",
+ "Feste Reihenfolge": "固定の順序",
+ "Latenz (kürzeste Wartezeit zuerst)": "レイテンシ(待ち時間が短い順)",
+ "Nicht festgelegt": "未設定",
+ "Nur Anbieter, die alle Parameter unterstützen": "すべてのパラメーターに対応するプロバイダーのみ",
+ "Nur diese Anbieter": "これらのプロバイダーのみ",
+ "Preis (günstigster zuerst)": "価格(安い順)",
+ "Routing speichern": "ルーティングを保存",
+ "Sortierung": "並び順",
+ "Steuert, welche Anbieter hinter OpenRouter deine Anfragen bearbeiten. Wirkt nur bei OpenRouter, nicht bei direkten Anbieter-Verbindungen.": "OpenRouter の背後でどのプロバイダーがリクエストを処理するかを制御します。OpenRouter にのみ適用され、直接接続には適用されません。"
 }

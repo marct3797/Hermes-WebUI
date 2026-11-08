@@ -2398,5 +2398,22 @@
  "Modell {n}": "模型 {n}",
  "Nach oben: {n}": "上移:{n}",
  "Nach unten: {n}": "下移:{n}",
- "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "如果限额在少于这么多秒后结束则不切换(0 = 始终切换)"
+ "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "如果限额在少于这么多秒后结束则不切换(0 = 始终切换)",
+ "Anbieter ausschließen, die Daten speichern": "排除会存储数据的提供商",
+ "Anbieter-Kennungen: nur Kleinbuchstaben, Ziffern, Punkt, Bindestrich und Schrägstrich, ohne Doppelte, getrennt durch Komma.": "提供商标识:仅限小写字母、数字、点、连字符和斜杠,不可重复,以逗号分隔。",
+ "Anbieter-Routing": "提供商路由",
+ "Ausnahmen je Modell in der Konfiguration bleiben unverändert: {list}": "配置中按模型设置的例外保持不变:{list}",
+ "Datenspeicherung": "数据收集",
+ "Diese Anbieter nie nutzen": "永不使用这些提供商",
+ "Durchsatz (schnellster zuerst)": "吞吐量(最快优先)",
+ "Erlauben": "允许",
+ "Feste Reihenfolge": "固定顺序",
+ "Latenz (kürzeste Wartezeit zuerst)": "延迟(等待最短优先)",
+ "Nicht festgelegt": "未设置",
+ "Nur Anbieter, die alle Parameter unterstützen": "仅支持全部参数的提供商",
+ "Nur diese Anbieter": "仅限这些提供商",
+ "Preis (günstigster zuerst)": "价格(最便宜优先)",
+ "Routing speichern": "保存路由",
+ "Sortierung": "排序方式",
+ "Steuert, welche Anbieter hinter OpenRouter deine Anfragen bearbeiten. Wirkt nur bei OpenRouter, nicht bei direkten Anbieter-Verbindungen.": "控制 OpenRouter 背后由哪些提供商处理你的请求。仅适用于 OpenRouter,不适用于直连。"
 }

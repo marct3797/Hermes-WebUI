@@ -2398,5 +2398,22 @@
  "Modell {n}": "Model {n}",
  "Nach oben: {n}": "Yukarı taşı: {n}",
  "Nach unten: {n}": "Aşağı taşı: {n}",
- "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "Limit bu kadar saniyeden kısa sürede bitiyorsa geçiş yapma (0 = her zaman geç)"
+ "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "Limit bu kadar saniyeden kısa sürede bitiyorsa geçiş yapma (0 = her zaman geç)",
+ "Anbieter ausschließen, die Daten speichern": "Veri saklayan sağlayıcıları hariç tut",
+ "Anbieter-Kennungen: nur Kleinbuchstaben, Ziffern, Punkt, Bindestrich und Schrägstrich, ohne Doppelte, getrennt durch Komma.": "Sağlayıcı kimlikleri: yalnızca küçük harf, rakam, nokta, tire ve eğik çizgi; tekrar yok, virgülle ayrılmış.",
+ "Anbieter-Routing": "Sağlayıcı yönlendirme",
+ "Ausnahmen je Modell in der Konfiguration bleiben unverändert: {list}": "Yapılandırmadaki modele özel istisnalar değişmez: {list}",
+ "Datenspeicherung": "Veri saklama",
+ "Diese Anbieter nie nutzen": "Bu sağlayıcıları asla kullanma",
+ "Durchsatz (schnellster zuerst)": "Aktarım hızı (en hızlı önce)",
+ "Erlauben": "İzin ver",
+ "Feste Reihenfolge": "Sabit sıra",
+ "Latenz (kürzeste Wartezeit zuerst)": "Gecikme (en kısa bekleme önce)",
+ "Nicht festgelegt": "Belirlenmedi",
+ "Nur Anbieter, die alle Parameter unterstützen": "Yalnızca tüm parametreleri destekleyen sağlayıcılar",
+ "Nur diese Anbieter": "Yalnızca bu sağlayıcılar",
+ "Preis (günstigster zuerst)": "Fiyat (en ucuz önce)",
+ "Routing speichern": "Yönlendirmeyi kaydet",
+ "Sortierung": "Sıralama",
+ "Steuert, welche Anbieter hinter OpenRouter deine Anfragen bearbeiten. Wirkt nur bei OpenRouter, nicht bei direkten Anbieter-Verbindungen.": "OpenRouter arkasındaki hangi sağlayıcıların isteklerini işleyeceğini belirler. Yalnızca OpenRouter için geçerlidir, doğrudan bağlantılar için değil."
 }

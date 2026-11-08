@@ -2398,5 +2398,22 @@
  "Modell {n}": "Modelo {n}",
  "Nach oben: {n}": "Subir: {n}",
  "Nach unten: {n}": "Descer: {n}",
- "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "Não trocar se o limite terminar em menos desses segundos (0 = sempre trocar)"
+ "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "Não trocar se o limite terminar em menos desses segundos (0 = sempre trocar)",
+ "Anbieter ausschließen, die Daten speichern": "Excluir provedores que armazenam dados",
+ "Anbieter-Kennungen: nur Kleinbuchstaben, Ziffern, Punkt, Bindestrich und Schrägstrich, ohne Doppelte, getrennt durch Komma.": "IDs de provedor: apenas minúsculas, dígitos, ponto, hífen e barra, sem duplicados, separados por vírgulas.",
+ "Anbieter-Routing": "Roteamento de provedores",
+ "Ausnahmen je Modell in der Konfiguration bleiben unverändert: {list}": "As exceções por modelo na configuração permanecem inalteradas: {list}",
+ "Datenspeicherung": "Armazenamento de dados",
+ "Diese Anbieter nie nutzen": "Nunca usar estes provedores",
+ "Durchsatz (schnellster zuerst)": "Taxa de transferência (mais rápido primeiro)",
+ "Erlauben": "Permitir",
+ "Feste Reihenfolge": "Ordem fixa",
+ "Latenz (kürzeste Wartezeit zuerst)": "Latência (menor espera primeiro)",
+ "Nicht festgelegt": "Não definido",
+ "Nur Anbieter, die alle Parameter unterstützen": "Apenas provedores que suportam todos os parâmetros",
+ "Nur diese Anbieter": "Apenas estes provedores",
+ "Preis (günstigster zuerst)": "Preço (mais barato primeiro)",
+ "Routing speichern": "Salvar roteamento",
+ "Sortierung": "Ordenar por",
+ "Steuert, welche Anbieter hinter OpenRouter deine Anfragen bearbeiten. Wirkt nur bei OpenRouter, nicht bei direkten Anbieter-Verbindungen.": "Controla quais provedores por trás do OpenRouter atendem suas solicitações. Aplica-se apenas ao OpenRouter, não a conexões diretas."
 }

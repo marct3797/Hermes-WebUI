@@ -1,6 +1,6 @@
 import { invalidate } from "./dataCache";
 import { getPreferences } from "./preferences";
-import type { AutomationResp, AcCreated, AcHooks, AcPairing, SaPreview, SaStats, SaTimeline, EpDelegation, EpList, EpLocal, EpValidate, LcCreated, LcList, MdAuxiliary, MdInfo, MdMoa, MdOptions, MdRecommended, MdSetResult, HmField, HmFile, HmFileList, HmFileName, HmFileSaved, HmOverview, GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, WhatsAppPairing, ComputerUse, ShellHooks, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import type { AutomationResp, AcCreated, AcHooks, AcPairing, SaPreview, SaStats, SaTimeline, EpDelegation, EpList, EpLocal, EpValidate, LcCreated, LcList, MdAuxiliary, MdInfo, MdMoa, MdOptions, MdRecommended, MdSetResult, HmField, HmFile, HmFileList, HmFileName, HmFileSaved, HmOverview, GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, WhatsAppPairing, ComputerUse, ShellHooks, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProviderRouting, ProviderRoutingResp, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 import { t, tm } from "./i18n";
 
 export class ApiError extends Error {
@@ -189,6 +189,8 @@ export const api = {
   hmFiles: (a: AgentRef) => call<HmFileList>("GET", `${base(a)}/hermes-memory/files`),
   hmFile: (a: AgentRef, name: HmFileName) => call<HmFile>("GET", `${base(a)}/hermes-memory/files/${encodeURIComponent(name)}`),
   hmSaveFile: (a: AgentRef, name: HmFileName, content: string, expected_sha256: string) => call<HmFileSaved>("PUT", `${base(a)}/hermes-memory/files/${encodeURIComponent(name)}`, { content, expected_sha256 }),
+  providerRouting: (a: AgentRef) => call<ProviderRoutingResp>("GET", `${base(a)}/provider-routing`),
+  saveProviderRouting: (a: AgentRef, routing: ProviderRouting) => call<{ ok: boolean } & ProviderRoutingResp>("PUT", `${base(a)}/provider-routing`, routing),
   saveHermesConfig: (a: AgentRef, changes: Record<string, unknown>) => call<{ ok: boolean; changed: string[] }>("PUT", `${base(a)}/config`, { changes }),
   soulVersion: (a: AgentRef, vid: string) => call<SoulVersion>("GET", `${base(a)}/soul/history/${id(vid)}`),
   restoreSoul: (a: AgentRef, vid: string) => call<SoulSaved & { content: string }>("POST", `${base(a)}/soul/restore`, { id: vid }),

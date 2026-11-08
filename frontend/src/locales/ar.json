@@ -2398,5 +2398,22 @@
  "Modell {n}": "النموذج {n}",
  "Nach oben: {n}": "تحريك لأعلى: {n}",
  "Nach unten: {n}": "تحريك لأسفل: {n}",
- "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "لا تنتقل إذا انتهى الحد خلال ثوانٍ أقل من هذا العدد (0 = انتقل دائمًا)"
+ "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "لا تنتقل إذا انتهى الحد خلال ثوانٍ أقل من هذا العدد (0 = انتقل دائمًا)",
+ "Anbieter ausschließen, die Daten speichern": "استبعاد المزوّدين الذين يخزّنون البيانات",
+ "Anbieter-Kennungen: nur Kleinbuchstaben, Ziffern, Punkt, Bindestrich und Schrägstrich, ohne Doppelte, getrennt durch Komma.": "معرّفات المزوّدين: أحرف صغيرة وأرقام ونقطة وشرطة وخط مائل فقط، بلا تكرار، مفصولة بفواصل.",
+ "Anbieter-Routing": "توجيه المزوّدين",
+ "Ausnahmen je Modell in der Konfiguration bleiben unverändert: {list}": "الاستثناءات الخاصة بكل نموذج في الإعدادات تبقى كما هي: {list}",
+ "Datenspeicherung": "جمع البيانات",
+ "Diese Anbieter nie nutzen": "عدم استخدام هؤلاء المزوّدين أبدًا",
+ "Durchsatz (schnellster zuerst)": "معدل النقل (الأسرع أولًا)",
+ "Erlauben": "السماح",
+ "Feste Reihenfolge": "ترتيب ثابت",
+ "Latenz (kürzeste Wartezeit zuerst)": "زمن الاستجابة (الأقصر انتظارًا أولًا)",
+ "Nicht festgelegt": "غير محدد",
+ "Nur Anbieter, die alle Parameter unterstützen": "المزوّدون الذين يدعمون كل المعاملات فقط",
+ "Nur diese Anbieter": "هؤلاء المزوّدون فقط",
+ "Preis (günstigster zuerst)": "السعر (الأرخص أولًا)",
+ "Routing speichern": "حفظ التوجيه",
+ "Sortierung": "الترتيب حسب",
+ "Steuert, welche Anbieter hinter OpenRouter deine Anfragen bearbeiten. Wirkt nur bei OpenRouter, nicht bei direkten Anbieter-Verbindungen.": "يتحكم في المزوّدين خلف OpenRouter الذين يعالجون طلباتك. ينطبق على OpenRouter فقط وليس على الاتصالات المباشرة."
 }

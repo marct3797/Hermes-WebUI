@@ -2398,5 +2398,22 @@
  "Modell {n}": "Model {n}",
  "Nach oben: {n}": "Move up: {n}",
  "Nach unten: {n}": "Move down: {n}",
- "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "Do not switch if the limit ends in fewer than this many seconds (0 = always switch)"
+ "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "Do not switch if the limit ends in fewer than this many seconds (0 = always switch)",
+ "Anbieter ausschließen, die Daten speichern": "Exclude providers that store data",
+ "Anbieter-Kennungen: nur Kleinbuchstaben, Ziffern, Punkt, Bindestrich und Schrägstrich, ohne Doppelte, getrennt durch Komma.": "Provider IDs: lowercase letters, digits, dot, hyphen and slash only, no duplicates, separated by commas.",
+ "Anbieter-Routing": "Provider routing",
+ "Ausnahmen je Modell in der Konfiguration bleiben unverändert: {list}": "Per-model exceptions in the configuration stay unchanged: {list}",
+ "Datenspeicherung": "Data collection",
+ "Diese Anbieter nie nutzen": "Never use these providers",
+ "Durchsatz (schnellster zuerst)": "Throughput (fastest first)",
+ "Erlauben": "Allow",
+ "Feste Reihenfolge": "Fixed order",
+ "Latenz (kürzeste Wartezeit zuerst)": "Latency (shortest wait first)",
+ "Nicht festgelegt": "Not set",
+ "Nur Anbieter, die alle Parameter unterstützen": "Only providers that support all parameters",
+ "Nur diese Anbieter": "Only these providers",
+ "Preis (günstigster zuerst)": "Price (cheapest first)",
+ "Routing speichern": "Save routing",
+ "Sortierung": "Sort by",
+ "Steuert, welche Anbieter hinter OpenRouter deine Anfragen bearbeiten. Wirkt nur bei OpenRouter, nicht bei direkten Anbieter-Verbindungen.": "Controls which providers behind OpenRouter handle your requests. Only applies to OpenRouter, not to direct provider connections."
 }

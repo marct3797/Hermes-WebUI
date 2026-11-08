@@ -181,6 +181,7 @@ function knowledgeRoute(url: string, method: string, kn: KnowledgeState, provide
 export type DashState = {
   available: boolean; reason: string | null; soul: string; description: string; model: { provider: string; model: string };
   history: Array<{ id: string; at: string; reason: string; chars: number }>; versions: Record<string, string>; stepUp: boolean;
+  routing: { sort: string; only: string[]; ignore: string[]; order: string[]; require_parameters: boolean; data_collection: string | null }; routingModels: string[];
   keys: Record<string, string>; // gesetzte Anbieter-Keys (Variable → Wert); der Wert verlässt die Attrappe nie
   loggedIn: Set<string>; // Anbieter mit Anmeldung (Codex ist von Anfang an angemeldet)
   polls: number; // wie oft die laufende Geräte-Anmeldung abgefragt wurde; ab der zweiten Abfrage ist sie bestätigt
@@ -339,6 +340,12 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
     dash.versions[id] = dash.soul;
     dash.history = [{ id, at: "2026-10-23T17:00:00Z", reason, chars: dash.soul.length }, ...dash.history];
   };
+  if (rest === "/provider-routing" && method === "GET") return json({ routing: dash.routing, per_model: dash.routingModels });
+  if (rest === "/provider-routing" && method === "PUT") {
+    if (dash.stepUp) return json({ detail: { code: "step_up_required", message: "Bitte erneut anmelden" } }, 401);
+    dash.routing = { ...(body as typeof dash.routing) };
+    return json({ ok: true, routing: dash.routing, per_model: dash.routingModels });
+  }
   if (rest === "/config" && method === "GET") {
     const fields = [
       { key: "model", type: "string", description: "Default model", category: "general" },
@@ -808,7 +815,7 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
   const quota: { mode: QuotaMode } = { mode: "ok" };
   const dash: DashState = {
     available: true, reason: null, soul: "Du bist Gamma.\nDu antwortest knapp.\n", description: "", model: { provider: "mock", model: "mock-large" },
-    history: [], versions: {}, stepUp: false, keys: { ANTHROPIC_API_KEY: "sk-ant-geheim-1234" },
+    history: [], versions: {}, stepUp: false, routing: { sort: "price", only: [], ignore: [], order: [], require_parameters: false, data_collection: null }, routingModels: ["anthropic/x"], keys: { ANTHROPIC_API_KEY: "sk-ant-geheim-1234" },
     loggedIn: new Set(["openai-codex"]), polls: 0, loginError: null,
     config: { model: "claude-test", "agent.service_tier": "normal", "agent.max_turns": 90, "display.streaming": true, fallback_providers: [], "fallback.min_switch_reset_seconds": 0, "web.api_key": null },
     msg: { available: true, enabled: {}, env: {}, gateway: { running: false, busy: false, sessions: 0 }, polls: 0, applied: [], waPolls: 0, waDone: false },

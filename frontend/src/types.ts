@@ -264,3 +264,6 @@ export type AcPairing = { pending: AcPending[]; approved: AcApproved[] };
 export type AcHook = { name: string; description: string; events: string[]; deliver: string; url: string; secret_set: boolean; enabled: boolean };
 export type AcHooks = { enabled: boolean; base_url: string; subscriptions: AcHook[] };
 export type AcCreated = { ok: boolean; name: string; url: string; secret: string };
+
+export type ProviderRouting = { sort: "price" | "throughput" | "latency"; only: string[]; ignore: string[]; order: string[]; require_parameters: boolean; data_collection: "allow" | "deny" | null };
+export type ProviderRoutingResp = { routing: ProviderRouting; per_model: string[] };

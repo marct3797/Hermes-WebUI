@@ -9,10 +9,10 @@ from __future__ import annotations
 import json
 import math
 import re
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from ..auth import User, current_user, fresh_user
 from .agents import Tgt, upstream
@@ -131,3 +131,62 @@ async def delete_env(request: Request, key: str, target: Tgt, dash: Dash, req: E
         raise HTTPException(502, "Das Dashboard liefert die Antwort in einer unbekannten Form")
     audit(request, user, "profile.env_delete", target, keys=[key])
     return {"ok": True, "key": key}
+
+
+# Provider-Routing (OpenRouter): `provider_routing` steht nicht im Schema des Dashboards (kein Eintrag in DEFAULT_CONFIG), die
+# Einstellungen-Maske kann es also nicht schreiben. Dashboard-PUT /api/config mischt aber beliebige Schlüssel per Tiefenmischung
+# ein: ein fehlender Schlüssel würde einen alten Wert NICHT löschen. Darum gehen immer alle sechs Schlüssel mit ihrem neutralen
+# Wert (leere Listen, `price`, `false`, `null`) raus; `models` (Einträge je Modell) bleibt unberührt.
+SLUG_RE = r"^[a-z0-9][a-z0-9._/-]{0,63}$"
+ROUTING_DEFAULT: dict[str, Any] = {"sort": "price", "only": [], "ignore": [], "order": [], "require_parameters": False, "data_collection": None}
+Slugs = list[str]
+
+
+class RoutingIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    sort: Literal["price", "throughput", "latency"] = "price"
+    only: Slugs = Field(default_factory=list, max_length=50)
+    ignore: Slugs = Field(default_factory=list, max_length=50)
+    order: Slugs = Field(default_factory=list, max_length=50)
+    require_parameters: bool = False
+    data_collection: Literal["allow", "deny"] | None = None
+
+
+def _routing_view(config: dict[str, Any]) -> dict[str, Any]:
+    raw = config.get("provider_routing")
+    raw = raw if isinstance(raw, dict) else {}
+    out = dict(ROUTING_DEFAULT)
+    if raw.get("sort") in ("price", "throughput", "latency"):
+        out["sort"] = raw["sort"]
+    for key in ("only", "ignore", "order"):
+        value = raw.get(key)
+        out[key] = [x for x in value if isinstance(x, str)] if isinstance(value, list) else []
+    out["require_parameters"] = raw.get("require_parameters") is True
+    out["data_collection"] = raw["data_collection"] if raw.get("data_collection") in ("allow", "deny") else None
+    models = raw.get("models")
+    return {"routing": out, "per_model": sorted(str(k) for k in models) if isinstance(models, dict) else []}
+
+
+@router.get("/provider-routing")
+async def read_routing(target: Tgt, dash: Dash):
+    config = await upstream(dash.request("GET", "/api/config", params={"profile": target.agent.id}))
+    if not isinstance(config, dict):
+        raise HTTPException(502, "Das Dashboard liefert die Einstellungen in einer unbekannten Form")
+    return _routing_view(config)
+
+
+@router.put("/provider-routing")
+async def write_routing(request: Request, target: Tgt, dash: Dash, req: RoutingIn, user: User = Depends(fresh_user)):
+    import re
+    request.app.state.limiter.check(f"{user.id}:dashboard")
+    for key in ("only", "ignore", "order"):
+        values = getattr(req, key)
+        if any(not re.match(SLUG_RE, v) for v in values) or len(set(values)) != len(values):
+            raise HTTPException(422, f"{key}: nur kleingeschriebene Anbieter-Kennungen, ohne Doppelte")
+    wanted = req.model_dump()
+    await upstream(dash.request("PUT", "/api/config", body={"config": {"provider_routing": wanted}, "profile": target.agent.id}, params={"profile": target.agent.id}))
+    after = await upstream(dash.request("GET", "/api/config", params={"profile": target.agent.id}))
+    if not isinstance(after, dict) or _routing_view(after)["routing"] != wanted:
+        raise HTTPException(502, "Das Dashboard hat das Routing nicht übernommen")
+    audit(request, user, "profile.provider_routing", target, keys=sorted(wanted))
+    return {"ok": True, **_routing_view(after)}

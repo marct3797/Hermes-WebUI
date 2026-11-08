@@ -96,4 +96,21 @@ describe("Modelle", () => {
     const body = sent("PUT", "/config")[0].body as { changes: Record<string, any> };
     expect(body.changes.fallback_providers).toEqual([{ provider: "custom", model: "m2", base_url: "http://x/v1", api_key_env: "X_KEY", reasoning_echo: true }]);
   });
+
+  it("saves provider routing in full, validates slugs and mentions per-model exceptions", async () => {
+    await open();
+    await screen.findByRole("region", { name: "Anbieter-Routing" });
+    const save = await screen.findByRole("button", { name: "Routing speichern" });
+    expect(save).toBeDisabled();
+    expect(await screen.findByText(/anthropic\/x/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Nur diese Anbieter"), { target: { value: "Anthropic" } });
+    expect(screen.getByText(/Anbieter-Kennungen/)).toBeInTheDocument();
+    expect(save).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Nur diese Anbieter"), { target: { value: "anthropic, google-vertex" } });
+    fireEvent.change(screen.getByLabelText("Sortierung"), { target: { value: "throughput" } });
+    fireEvent.change(screen.getByLabelText("Datenspeicherung"), { target: { value: "deny" } });
+    fireEvent.click(save);
+    await waitFor(() => expect(sent("PUT", "/provider-routing")).toHaveLength(1));
+    expect(sent("PUT", "/provider-routing")[0].body).toEqual({ sort: "throughput", only: ["anthropic", "google-vertex"], ignore: [], order: [], require_parameters: false, data_collection: "deny" });
+  });
 });

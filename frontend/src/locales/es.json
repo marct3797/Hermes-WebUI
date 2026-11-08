@@ -2398,5 +2398,22 @@
  "Modell {n}": "Modelo {n}",
  "Nach oben: {n}": "Subir: {n}",
  "Nach unten: {n}": "Bajar: {n}",
- "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "No cambiar si el límite termina en menos de estos segundos (0 = cambiar siempre)"
+ "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "No cambiar si el límite termina en menos de estos segundos (0 = cambiar siempre)",
+ "Anbieter ausschließen, die Daten speichern": "Excluir proveedores que almacenan datos",
+ "Anbieter-Kennungen: nur Kleinbuchstaben, Ziffern, Punkt, Bindestrich und Schrägstrich, ohne Doppelte, getrennt durch Komma.": "Identificadores de proveedor: solo minúsculas, dígitos, punto, guion y barra, sin duplicados, separados por comas.",
+ "Anbieter-Routing": "Enrutamiento de proveedores",
+ "Ausnahmen je Modell in der Konfiguration bleiben unverändert: {list}": "Las excepciones por modelo en la configuración no cambian: {list}",
+ "Datenspeicherung": "Almacenamiento de datos",
+ "Diese Anbieter nie nutzen": "No usar nunca estos proveedores",
+ "Durchsatz (schnellster zuerst)": "Rendimiento (el más rápido primero)",
+ "Erlauben": "Permitir",
+ "Feste Reihenfolge": "Orden fijo",
+ "Latenz (kürzeste Wartezeit zuerst)": "Latencia (menor espera primero)",
+ "Nicht festgelegt": "Sin definir",
+ "Nur Anbieter, die alle Parameter unterstützen": "Solo proveedores que admitan todos los parámetros",
+ "Nur diese Anbieter": "Solo estos proveedores",
+ "Preis (günstigster zuerst)": "Precio (el más barato primero)",
+ "Routing speichern": "Guardar enrutamiento",
+ "Sortierung": "Ordenar por",
+ "Steuert, welche Anbieter hinter OpenRouter deine Anfragen bearbeiten. Wirkt nur bei OpenRouter, nicht bei direkten Anbieter-Verbindungen.": "Controla qué proveedores detrás de OpenRouter atienden tus solicitudes. Solo se aplica a OpenRouter, no a conexiones directas."
 }

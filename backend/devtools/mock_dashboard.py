@@ -115,8 +115,13 @@ def default_config() -> dict[str, Any]:
 
 
 def deep_merge(base: dict[str, Any], extra: dict[str, Any]) -> dict[str, Any]:
+    # wie hermes_cli.config._deep_merge: dict über dict mischt rekursiv, `None` über einem Abschnitt wird ignoriert
     for k, v in extra.items():
-        base[k] = deep_merge(base[k], v) if isinstance(v, dict) and isinstance(base.get(k), dict) else v
+        over_dict = isinstance(base.get(k), dict)
+        if over_dict and isinstance(v, dict):
+            base[k] = deep_merge(base[k], v)
+        elif not (over_dict and v is None):
+            base[k] = v
     return base
 
 

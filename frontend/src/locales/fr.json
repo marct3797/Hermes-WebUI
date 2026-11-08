@@ -2398,5 +2398,22 @@
  "Modell {n}": "Modèle {n}",
  "Nach oben: {n}": "Monter : {n}",
  "Nach unten: {n}": "Descendre : {n}",
- "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "Ne pas basculer si la limite se termine en moins de ce nombre de secondes (0 = toujours basculer)"
+ "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "Ne pas basculer si la limite se termine en moins de ce nombre de secondes (0 = toujours basculer)",
+ "Anbieter ausschließen, die Daten speichern": "Exclure les fournisseurs qui conservent les données",
+ "Anbieter-Kennungen: nur Kleinbuchstaben, Ziffern, Punkt, Bindestrich und Schrägstrich, ohne Doppelte, getrennt durch Komma.": "Identifiants de fournisseur : minuscules, chiffres, point, tiret et barre oblique uniquement, sans doublons, séparés par des virgules.",
+ "Anbieter-Routing": "Routage des fournisseurs",
+ "Ausnahmen je Modell in der Konfiguration bleiben unverändert: {list}": "Les exceptions par modèle dans la configuration restent inchangées : {list}",
+ "Datenspeicherung": "Conservation des données",
+ "Diese Anbieter nie nutzen": "Ne jamais utiliser ces fournisseurs",
+ "Durchsatz (schnellster zuerst)": "Débit (le plus rapide d’abord)",
+ "Erlauben": "Autoriser",
+ "Feste Reihenfolge": "Ordre fixe",
+ "Latenz (kürzeste Wartezeit zuerst)": "Latence (attente la plus courte d’abord)",
+ "Nicht festgelegt": "Non défini",
+ "Nur Anbieter, die alle Parameter unterstützen": "Uniquement les fournisseurs qui prennent en charge tous les paramètres",
+ "Nur diese Anbieter": "Uniquement ces fournisseurs",
+ "Preis (günstigster zuerst)": "Prix (le moins cher d’abord)",
+ "Routing speichern": "Enregistrer le routage",
+ "Sortierung": "Tri",
+ "Steuert, welche Anbieter hinter OpenRouter deine Anfragen bearbeiten. Wirkt nur bei OpenRouter, nicht bei direkten Anbieter-Verbindungen.": "Détermine quels fournisseurs derrière OpenRouter traitent vos requêtes. Ne s’applique qu’à OpenRouter, pas aux connexions directes."
 }
