@@ -269,7 +269,6 @@
  "alle {minutes} Minuten": "every {minutes} minutes",
  "alle {v} {v2}": "every {v} {v2}",
  "Alle 5 Schritte sind erledigt. Weiter geht es im Cockpit, in den Einstellungen oder in den Anleitungen.": "All 5 steps are done. Continue in the cockpit, the settings, or the guides.",
- "Alle Agents": "All agents",
  "Alle Änderungen": "All changes",
  "Alle Anmeldearten": "All sign-in types",
  "Alle Erinnerungen dieser Art, je {unit}": "All memories of this kind, per {unit}",
@@ -1160,7 +1159,6 @@
  "Helligkeit und Sättigung sind fest, nur der Farbton ist frei. Die Farbe hat auf allen dunklen Flächen einen Kontrast von über 8:1.": "Brightness and saturation are fixed; only the hue is free. The color has a contrast of over 8:1 on all dark surfaces.",
  "Herkunft": "Origin",
  "Hermes": "Hermes",
- "HERMES": "HERMES",
  "Hermes {hermes_version} auf {system} ({arch}), Python {python_version}": "Hermes {hermes_version} on {system} ({arch}), Python {python_version}",
  "Hermes aktualisieren": "Update Hermes",
  "Hermes antwortet nicht rechtzeitig ({where})": "Hermes is not responding in time ({where})",
@@ -1799,7 +1797,6 @@
  "Profil bearbeiten": "Edit profile",
  "Profil bearbeiten · {hostLabel} / {runtimeLabel}": "Edit profile · {hostLabel} / {runtimeLabel}",
  "Profil im Dashboard": "Profile in the dashboard",
- "Profil-Cockpit": "Profile cockpit",
  "Profil(e) installiert:": "Profile(s) installed:",
  "Profile": "Profiles",
  "Profile & Betrieb": "Profiles and operations",
@@ -2435,5 +2432,10 @@
  "Gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "Saved, but the run could not be started. It will start with the next message in the session.",
  "Heartbeat gesetzt.": "Heartbeat set.",
  "Ziel gesetzt. Hermes arbeitet jetzt daran.": "Goal set. Hermes is working on it now.",
- "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "Goal saved, but the run could not be started. It will start with the next message in the session."
+ "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "Goal saved, but the run could not be started. It will start with the next message in the session.",
+ "Eine Sache braucht dich.": "One thing needs you.",
+ "{n} Dinge brauchen dich.": "{n} things need you.",
+ "Nichts braucht dich.": "Nothing needs you.",
+ "jetzt": "now",
+ "Letzte 24 Stunden": "Last 24 hours"
 }

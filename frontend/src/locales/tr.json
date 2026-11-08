@@ -269,7 +269,6 @@
  "alle {minutes} Minuten": "{minutes} dakikada bir",
  "alle {v} {v2}": "{v} {v2} saatte bir",
  "Alle 5 Schritte sind erledigt. Weiter geht es im Cockpit, in den Einstellungen oder in den Anleitungen.": "5 adımın tamamı bitti. Kokpitte, ayarlardan veya kılavuzlardan devam et.",
- "Alle Agents": "Tüm agentler",
  "Alle Änderungen": "Tüm değişiklikler",
  "Alle Anmeldearten": "Tüm giriş türleri",
  "Alle Erinnerungen dieser Art, je {unit}": "Bu türün tüm anıları, {unit} başına",
@@ -1160,7 +1159,6 @@
  "Helligkeit und Sättigung sind fest, nur der Farbton ist frei. Die Farbe hat auf allen dunklen Flächen einen Kontrast von über 8:1.": "Parlaklık ve doygunluk sabit, yalnız renk tonu serbest. Renk tüm koyu yüzeylerde 8:1 üstü karşıtlığa sahip.",
  "Herkunft": "Köken",
  "Hermes": "Hermes",
- "HERMES": "HERMES",
  "Hermes {hermes_version} auf {system} ({arch}), Python {python_version}": "{system} ({arch}) üzerinde Hermes {hermes_version}, Python {python_version}",
  "Hermes aktualisieren": "Hermes'i güncelle",
  "Hermes antwortet nicht rechtzeitig ({where})": "Hermes zamanında yanıt vermiyor ({where})",
@@ -1799,7 +1797,6 @@
  "Profil bearbeiten": "Profili düzenle",
  "Profil bearbeiten · {hostLabel} / {runtimeLabel}": "Profili düzenle · {hostLabel} / {runtimeLabel}",
  "Profil im Dashboard": "Dashboarddaki profil",
- "Profil-Cockpit": "Profil kokpiti",
  "Profil(e) installiert:": "Profil(ler) kuruldu:",
  "Profile": "Profiller",
  "Profile & Betrieb": "Profiller ve çalıştırma",
@@ -2435,5 +2432,10 @@
  "Gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "Kaydedildi, ancak çalışma başlatılamadı. Oturumdaki bir sonraki iletiyle başlayacak.",
  "Heartbeat gesetzt.": "Heartbeat ayarlandı.",
  "Ziel gesetzt. Hermes arbeitet jetzt daran.": "Hedef ayarlandı. Hermes şimdi üzerinde çalışıyor.",
- "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "Hedef kaydedildi, ancak çalışma başlatılamadı. Oturumdaki bir sonraki iletiyle başlayacak."
+ "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "Hedef kaydedildi, ancak çalışma başlatılamadı. Oturumdaki bir sonraki iletiyle başlayacak.",
+ "Eine Sache braucht dich.": "Bir şey sana ihtiyaç duyuyor.",
+ "{n} Dinge brauchen dich.": "{n} şey sana ihtiyaç duyuyor.",
+ "Nichts braucht dich.": "Hiçbir şey sana ihtiyaç duymuyor.",
+ "jetzt": "şimdi",
+ "Letzte 24 Stunden": "Son 24 saat"
 }

@@ -53,7 +53,7 @@ describe("Cockpit", () => {
   it("shows every agent with its state and last chat, and marks the unreachable host", async () => {
     history.pushState(null, "", "/");
     render(<App />);
-    expect(await screen.findByRole("heading", { name: "Alle Agents" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Nichts braucht dich." })).toBeInTheDocument();
     await waitFor(() => expect(within(card("gamma")).getByText("Alter Chat von gamma")).toBeInTheDocument());
     expect(within(card("gamma")).getByText("BEREIT")).toBeInTheDocument();
     expect(within(card("gamma")).getByText(/letzter Chat vor 2 Std/)).toBeInTheDocument();
@@ -68,7 +68,7 @@ describe("Cockpit", () => {
   it("filters by host, running and needs-you", async () => {
     history.pushState(null, "", "/");
     render(<App />);
-    await screen.findByRole("heading", { name: "Alle Agents" });
+    await screen.findByRole("heading", { name: "Nichts braucht dich." });
     fireEvent.click(screen.getByRole("button", { name: /^Laptop/ }));
     const main = within(screen.getByRole("main"));
     expect(main.queryByRole("link", { name: /^gamma/ })).toBeNull();
@@ -85,7 +85,7 @@ describe("Cockpit", () => {
     await runIn("eta", "lies die Doku");
     toCockpit();
 
-    await screen.findByRole("heading", { name: "Alle Agents" });
+    await screen.findByRole("heading", { name: "Eine Sache braucht dich." });
     expect(within(card("gamma")).getByText("WARTET")).toBeInTheDocument();
     expect(within(card("gamma")).getByText(/wartet auf Freigabe/)).toBeInTheDocument();
     expect(within(card("eta")).getByText("LÄUFT")).toBeInTheDocument();
@@ -111,7 +111,7 @@ describe("Cockpit", () => {
     render(<App />);
     await runIn("gamma", "lang");
     toCockpit();
-    await screen.findByRole("heading", { name: "Alle Agents" });
+    await screen.findByRole("heading", { name: "Nichts braucht dich." });
     expect(FakeEventSource.all[0].closed).toBe(false);
     expect(posted("/stop")).toHaveLength(0);
     // zurück in den Chat: derselbe laufende Run, kein neuer Abruf des Verlaufs

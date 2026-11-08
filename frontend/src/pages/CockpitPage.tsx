@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { QuotaKpi } from "../components/cockpit/QuotaKpi";
 import { AgentCard } from "../components/cockpit/AgentCard";
+import { Gleisplan } from "../components/cockpit/Gleisplan";
 import { UsagePanel } from "../components/cockpit/UsagePanel";
 import { NeedsPanel, RunningPanel, SystemPanel } from "../components/cockpit/Panels";
 import { Icon } from "../components/Icon";
@@ -71,22 +72,21 @@ export function CockpitPage() {
   return (
     <main className="page">
       <header className="ph">
-        <div className="col" style={{ gap: 6 }}>
-          <span className="lbl">{t("Profil-Cockpit")}</span>
-          <h1>{t("Alle Agents")}</h1>
-        </div>
-        <span className="ph-sub" style={{ marginBottom: 5 }}>
-          {t("{now} · {now2} · {v} {v2} · {v3} Agents", { now: fmtDate(now), now2: fmtTime(now), v: hosts.length, v2: hosts.length === 1 ? t("Host") : t("Hosts"), v3: all.length })}</span>
-        <div className="row filters" role="group" aria-label={t("Filter")}>
-          {chips.map((c) => (
-            <button key={c.id} type="button" className={`chip${filter === c.id ? " on" : ""}`} aria-pressed={filter === c.id} onClick={() => setFilter(c.id)}>
-              {c.label}<span className="n">{c.n}</span>
-            </button>
-          ))}
+        <div className="col" style={{ gap: 8 }}>
+          <h1>{open === 0 ? t("Nichts braucht dich.") : open === 1 ? t("Eine Sache braucht dich.") : t("{n} Dinge brauchen dich.", { n: open })}</h1>
+          <span className="ph-sub">
+            {t("{now} · {now2} · {v} {v2} · {v3} Agents", { now: fmtDate(now), now2: fmtTime(now), v: hosts.length, v2: hosts.length === 1 ? t("Host") : t("Hosts"), v3: all.length })}</span>
         </div>
       </header>
 
       {error && <p className="banner" role="alert"><Icon name="alert" />{t("Hosts nicht ladbar: {error}", { error })}</p>}
+
+      <NeedsPanel needs={needs} roomNeeds={roomNeeds} log={log} sigils={sigils} now={now} />
+
+      <section className="gp-sec" aria-label={t("Verlauf")}>
+        <h2 className="sec-h">{t("Verlauf")}<span className="lbl">{t("Letzte 24 Stunden")}</span></h2>
+        <Gleisplan rows={all.filter((x) => x.r.status === "online").map((x) => ({ ref: x.ref, label: x.a.label }))} chats={chats} live={live} needs={needs} sigils={sigils} now={now} />
+      </section>
 
       <div className="kpis" role="group" aria-label={t("Kennzahlen")}>
         <div className="kpi">
@@ -118,6 +118,13 @@ export function CockpitPage() {
 
       <div className="two">
         <div className="l">
+          <div className="row filters" role="group" aria-label={t("Filter")}>
+            {chips.map((c) => (
+              <button key={c.id} type="button" className={`chip${filter === c.id ? " on" : ""}`} aria-pressed={filter === c.id} onClick={() => setFilter(c.id)}>
+                {c.label}<span className="n">{c.n}</span>
+              </button>
+            ))}
+          </div>
           {shown.length === 0 && <p className="muted">{all.length === 0 ? t("Keine Agents konfiguriert. Hosts und Agents stehen in der hosts.json des BFF.") : t("Kein Agent passt zu diesem Filter.")}</p>}
           {hosts.map((h) => {
             const cards = shown.filter((x) => x.h.id === h.id);
@@ -143,7 +150,6 @@ export function CockpitPage() {
           })}
         </div>
         <div className="r aside">
-          <NeedsPanel needs={needs} roomNeeds={roomNeeds} log={log} sigils={sigils} now={now} />
           <RunningPanel live={live} sigils={sigils} now={now} />
           <SystemPanel hosts={hosts} configError={configError} />
         </div>

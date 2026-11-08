@@ -269,7 +269,6 @@
  "alle {minutes} Minuten": "كل {minutes} دقائق",
  "alle {v} {v2}": "كل {v} {v2}",
  "Alle 5 Schritte sind erledigt. Weiter geht es im Cockpit, in den Einstellungen oder in den Anleitungen.": "اكتملت الخطوات الخمس. تابع في قمرة القيادة أو الإعدادات أو الأدلة.",
- "Alle Agents": "جميع الوكلاء",
  "Alle Änderungen": "جميع التغييرات",
  "Alle Anmeldearten": "جميع أنواع تسجيل الدخول",
  "Alle Erinnerungen dieser Art, je {unit}": "جميع ذكريات هذا النوع، لكل {unit}",
@@ -1160,7 +1159,6 @@
  "Helligkeit und Sättigung sind fest, nur der Farbton ist frei. Die Farbe hat auf allen dunklen Flächen einen Kontrast von über 8:1.": "السطوع والتشبع ثابتان ودرجة اللون حرة. تباين اللون على جميع الأسطح الداكنة فوق 8:1.",
  "Herkunft": "المصدر",
  "Hermes": "Hermes",
- "HERMES": "HERMES",
  "Hermes {hermes_version} auf {system} ({arch}), Python {python_version}": "Hermes {hermes_version} على {system} ({arch})، Python {python_version}",
  "Hermes aktualisieren": "حدّث Hermes",
  "Hermes antwortet nicht rechtzeitig ({where})": "لا يستجيب Hermes في الوقت المناسب ({where})",
@@ -1799,7 +1797,6 @@
  "Profil bearbeiten": "تحرير الملف التعريفي",
  "Profil bearbeiten · {hostLabel} / {runtimeLabel}": "تحرير الملف التعريفي · {hostLabel} / {runtimeLabel}",
  "Profil im Dashboard": "الملف التعريفي في لوحة التحكم",
- "Profil-Cockpit": "قمرة الملف التعريفي",
  "Profil(e) installiert:": "ملف (ملفات) تعريفية مثبتة:",
  "Profile": "الملفات التعريفية",
  "Profile & Betrieb": "الملفات التعريفية والتشغيل",
@@ -2435,5 +2432,10 @@
  "Gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "تم الحفظ، لكن تعذّر بدء التشغيل. سيبدأ مع الرسالة التالية في الجلسة.",
  "Heartbeat gesetzt.": "تم تعيين النبض.",
  "Ziel gesetzt. Hermes arbeitet jetzt daran.": "تم تعيين الهدف. يعمل Hermes عليه الآن.",
- "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "تم حفظ الهدف، لكن تعذّر بدء التشغيل. سيبدأ مع الرسالة التالية في الجلسة."
+ "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "تم حفظ الهدف، لكن تعذّر بدء التشغيل. سيبدأ مع الرسالة التالية في الجلسة.",
+ "Eine Sache braucht dich.": "هناك أمر واحد يحتاج إليك.",
+ "{n} Dinge brauchen dich.": "هناك {n} أمور تحتاج إليك.",
+ "Nichts braucht dich.": "لا شيء يحتاج إليك.",
+ "jetzt": "الآن",
+ "Letzte 24 Stunden": "آخر 24 ساعة"
 }

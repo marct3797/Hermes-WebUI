@@ -3,8 +3,8 @@
 .jobs-grid.has-side{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)}
 @media (max-width:900px){.jobs-grid.has-side{grid-template-columns:minmax(0,1fr)}}
 .jobs-row{display:flex;flex-direction:column;gap:3px;width:100%;text-align:left;padding:10px 12px;cursor:pointer;color:inherit}
-.jobs-row.on{box-shadow:inset 2px 0 0 var(--crim)}
-.jobs-row:focus-visible{outline:2px solid var(--crim);outline-offset:2px}
+.jobs-row.on{box-shadow:inset 2px 0 0 var(--t1)}
+.jobs-row:focus-visible{outline:2px solid var(--t1);outline-offset:2px}
 .jobs-panel{padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
 .jobs-fields{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;min-width:0}
 .jobs-skills{display:flex;flex-direction:column;gap:4px;max-height:160px;overflow:auto;border:1px solid var(--line);border-radius:6px;padding:6px 10px;margin:0}
@@ -21,7 +21,7 @@
 
 .kn-doc-text{margin:0;white-space:pre-wrap;word-break:break-word;font:400 13px/20px var(--sans);max-height:60dvh;overflow:auto;padding:12px 14px}
 .kn-part{padding:10px 12px;display:flex;flex-direction:column;gap:4px}
-.kn-part.focus{box-shadow:inset 2px 0 0 var(--crim)}
+.kn-part.focus{box-shadow:inset 2px 0 0 var(--t1)}
 .kn-part pre{margin:0;white-space:pre-wrap;word-break:break-word;font:400 12.5px/18px var(--sans);color:var(--t2)}
 .kn-click{cursor:pointer}.kn-click:hover td{background:var(--s1)}
 .kn-meta{display:flex;flex-direction:column;gap:2px;margin:8px 0}

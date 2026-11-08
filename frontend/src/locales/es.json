@@ -269,7 +269,6 @@
  "alle {minutes} Minuten": "cada {minutes} minutos",
  "alle {v} {v2}": "cada {v} {v2}",
  "Alle 5 Schritte sind erledigt. Weiter geht es im Cockpit, in den Einstellungen oder in den Anleitungen.": "Los 5 pasos están hechos. Continúa en el Cockpit, en los ajustes o en las guías.",
- "Alle Agents": "Todos los agentes",
  "Alle Änderungen": "Todos los cambios",
  "Alle Anmeldearten": "Todos los métodos de inicio de sesión",
  "Alle Erinnerungen dieser Art, je {unit}": "Todos los recuerdos de este tipo, por {unit}",
@@ -1160,7 +1159,6 @@
  "Helligkeit und Sättigung sind fest, nur der Farbton ist frei. Die Farbe hat auf allen dunklen Flächen einen Kontrast von über 8:1.": "El brillo y la saturación son fijos, solo el tono es libre. El color tiene un contraste superior a 8:1 sobre todas las superficies oscuras.",
  "Herkunft": "Origen",
  "Hermes": "Hermes",
- "HERMES": "HERMES",
  "Hermes {hermes_version} auf {system} ({arch}), Python {python_version}": "Hermes {hermes_version} en {system} ({arch}), Python {python_version}",
  "Hermes aktualisieren": "Actualizar Hermes",
  "Hermes antwortet nicht rechtzeitig ({where})": "Hermes no responde a tiempo ({where})",
@@ -1799,7 +1797,6 @@
  "Profil bearbeiten": "Editar perfil",
  "Profil bearbeiten · {hostLabel} / {runtimeLabel}": "Editar perfil · {hostLabel} / {runtimeLabel}",
  "Profil im Dashboard": "Perfil en el dashboard",
- "Profil-Cockpit": "Cockpit del perfil",
  "Profil(e) installiert:": "Perfil(es) instalado(s):",
  "Profile": "Perfiles",
  "Profile & Betrieb": "Perfiles y operaciones",
@@ -2435,5 +2432,10 @@
  "Gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "Guardado, pero no se pudo iniciar la ejecución. Empezará con el siguiente mensaje de la sesión.",
  "Heartbeat gesetzt.": "Heartbeat definido.",
  "Ziel gesetzt. Hermes arbeitet jetzt daran.": "Objetivo definido. Hermes está trabajando en ello.",
- "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "Objetivo guardado, pero no se pudo iniciar la ejecución. Empezará con el siguiente mensaje de la sesión."
+ "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "Objetivo guardado, pero no se pudo iniciar la ejecución. Empezará con el siguiente mensaje de la sesión.",
+ "Eine Sache braucht dich.": "Una cosa te necesita.",
+ "{n} Dinge brauchen dich.": "{n} cosas te necesitan.",
+ "Nichts braucht dich.": "Nada te necesita.",
+ "jetzt": "ahora",
+ "Letzte 24 Stunden": "Últimas 24 horas"
 }

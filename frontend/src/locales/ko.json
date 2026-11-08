@@ -269,7 +269,6 @@
  "alle {minutes} Minuten": "{minutes}분마다",
  "alle {v} {v2}": "{v} {v2}마다",
  "Alle 5 Schritte sind erledigt. Weiter geht es im Cockpit, in den Einstellungen oder in den Anleitungen.": "5단계를 모두 완료했습니다. 콕피트, 설정 또는 안내에서 계속하십시오.",
- "Alle Agents": "모든 에이전트",
  "Alle Änderungen": "모든 변경",
  "Alle Anmeldearten": "모든 로그인 유형",
  "Alle Erinnerungen dieser Art, je {unit}": "이 유형의 모든 기억, {unit}당",
@@ -1160,7 +1159,6 @@
  "Helligkeit und Sättigung sind fest, nur der Farbton ist frei. Die Farbe hat auf allen dunklen Flächen einen Kontrast von über 8:1.": "밝기와 채도는 고정되며 색조만 자유롭습니다. 모든 어두운 표면의 색상 대비가 8:1을 넘습니다.",
  "Herkunft": "출처",
  "Hermes": "Hermes",
- "HERMES": "HERMES",
  "Hermes {hermes_version} auf {system} ({arch}), Python {python_version}": "{system}({arch})의 Hermes {hermes_version}, Python {python_version}",
  "Hermes aktualisieren": "Hermes 업데이트",
  "Hermes antwortet nicht rechtzeitig ({where})": "Hermes가 제때 응답하지 않습니다({where})",
@@ -1799,7 +1797,6 @@
  "Profil bearbeiten": "프로필 편집",
  "Profil bearbeiten · {hostLabel} / {runtimeLabel}": "프로필 편집 · {hostLabel} / {runtimeLabel}",
  "Profil im Dashboard": "대시보드의 프로필",
- "Profil-Cockpit": "프로필 콕피트",
  "Profil(e) installiert:": "프로필 설치됨:",
  "Profile": "프로필",
  "Profile & Betrieb": "프로필 및 운영",
@@ -2435,5 +2432,10 @@
  "Gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "저장했지만 실행을 시작하지 못했습니다. 세션의 다음 메시지와 함께 시작됩니다.",
  "Heartbeat gesetzt.": "하트비트를 설정했습니다.",
  "Ziel gesetzt. Hermes arbeitet jetzt daran.": "목표를 설정했습니다. Hermes가 작업을 시작합니다.",
- "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "목표를 저장했지만 실행을 시작하지 못했습니다. 세션의 다음 메시지와 함께 시작됩니다."
+ "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "목표를 저장했지만 실행을 시작하지 못했습니다. 세션의 다음 메시지와 함께 시작됩니다.",
+ "Eine Sache braucht dich.": "1건이 당신을 기다립니다.",
+ "{n} Dinge brauchen dich.": "{n}건이 당신을 기다립니다.",
+ "Nichts braucht dich.": "기다리는 항목이 없습니다.",
+ "jetzt": "지금",
+ "Letzte 24 Stunden": "최근 24시간"
 }

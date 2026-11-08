@@ -1,16 +1,17 @@
-/* Look A "Obsidian Crimson": alle Farben, Schriften und Radien der App stehen nur hier.
-   Quelle: Design-Entwurf v2 (hermes.css). Die Stylesheets in styles/ nutzen nur diese Tokens.
-   Kein Glas-Blur, keine CDN-Dateien. Crimson heißt Aktion oder Aufmerksamkeit, nie Dekoration. */
+/* Look "Leitstand": alle Farben, Schriften und Radien der App stehen nur hier.
+   Quelle: Design-Entwurf v3 (entwurf-v3-leitstand). Graphit mit warmem Weiß, kein Blur, kein Glühen, keine Verläufe.
+   Rot heißt "wartet auf dich" (Signal Halt), Gelb heißt Fehler. Alles andere ist Tinte auf Graphit. */
 :root{
   /* Flächen */
-  --void:#09090b; --s0:#0c0c0f; --s1:#111114; --s2:#18181b; --s3:#202024;
-  --line:#27272a; --line2:#3a3a41;
-  /* Text (t3 gegenüber DESIGN.md #52525b angehoben, damit 11px-Labels 4.5:1 halten) */
-  --t1:#f4f4f5; --t2:#a1a1aa; --t3:#868690; --t4:#52525b;
-  /* Akzent: Crimson als einziger Aktionsakzent */
-  --crim:#e11d48; --crim-hi:#fb7185; --crim-lo:#991b1b; --ruby:#ef4444; --ruby-t:#f87171;
-  --crim-tint:rgba(225,29,72,.10); --crim-line:rgba(225,29,72,.46);
-  --glow:0 0 0 1px #e11d48,0 8px 24px -4px rgba(225,29,72,.18);
-  --sans:"Inter Variable",Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
-  --mono:"JetBrains Mono Variable","JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --void:#151619; --s0:#151619; --s1:#1b1c20; --s2:#222328; --s3:#2c2d32;
+  --line:#2c2d32; --line2:#42434a;
+  /* Text (alle Stufen außer t4 halten 4,5:1 auf --void) */
+  --t1:#ebe9e3; --t2:#b0aea6; --t3:#8c8a83; --t4:#5a5953;
+  /* Signale: Halt = wartet auf dich, Warn = Fehler. Die alten Namen bleiben, damit Komponenten unverändert bleiben. */
+  --crim:#ee3b46; --crim-hi:#ff7b84; --crim-lo:#8f1f27; --ruby:#e3a53c; --ruby-t:#ecb862;
+  --crim-tint:rgba(238,59,70,.10); --crim-line:#ee3b46;
+  --glow:0 0 0 2px #ebe9e3;
+  --sans:"Sofia Sans Variable","Sofia Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --disp:"Sofia Sans Condensed Variable","Sofia Sans Condensed","Arial Narrow",sans-serif;
+  --mono:"Spline Sans Mono Variable","Spline Sans Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }

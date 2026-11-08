@@ -269,7 +269,6 @@
  "alle {minutes} Minuten": "ogni {minutes} minuti",
  "alle {v} {v2}": "ogni {v} {v2}",
  "Alle 5 Schritte sind erledigt. Weiter geht es im Cockpit, in den Einstellungen oder in den Anleitungen.": "Tutti e 5 i passi sono completati. Continua nel cockpit, nelle impostazioni o nelle guide.",
- "Alle Agents": "Tutti gli agent",
  "Alle Änderungen": "Tutte le modifiche",
  "Alle Anmeldearten": "Tutti i tipi di connessione",
  "Alle Erinnerungen dieser Art, je {unit}": "Tutti i ricordi di questo tipo, per {unit}",
@@ -1160,7 +1159,6 @@
  "Helligkeit und Sättigung sind fest, nur der Farbton ist frei. Die Farbe hat auf allen dunklen Flächen einen Kontrast von über 8:1.": "Luminosità e saturazione sono fisse, solo la tonalità è libera. Il colore su tutte le superfici scure ha un contrasto oltre 8:1.",
  "Herkunft": "Provenienza",
  "Hermes": "Hermes",
- "HERMES": "HERMES",
  "Hermes {hermes_version} auf {system} ({arch}), Python {python_version}": "Hermes {hermes_version} su {system} ({arch}), Python {python_version}",
  "Hermes aktualisieren": "Aggiorna Hermes",
  "Hermes antwortet nicht rechtzeitig ({where})": "Hermes non risponde in tempo ({where})",
@@ -1799,7 +1797,6 @@
  "Profil bearbeiten": "Modifica profilo",
  "Profil bearbeiten · {hostLabel} / {runtimeLabel}": "Modifica profilo · {hostLabel} / {runtimeLabel}",
  "Profil im Dashboard": "Profilo nella dashboard",
- "Profil-Cockpit": "Cockpit del profilo",
  "Profil(e) installiert:": "Profilo/i installato/i:",
  "Profile": "Profili",
  "Profile & Betrieb": "Profili ed esercizio",
@@ -2435,5 +2432,10 @@
  "Gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "Salvato, ma non è stato possibile avviare l’esecuzione. Partirà con il prossimo messaggio della sessione.",
  "Heartbeat gesetzt.": "Heartbeat impostato.",
  "Ziel gesetzt. Hermes arbeitet jetzt daran.": "Obiettivo impostato. Hermes ci sta lavorando.",
- "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "Obiettivo salvato, ma non è stato possibile avviare l’esecuzione. Partirà con il prossimo messaggio della sessione."
+ "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "Obiettivo salvato, ma non è stato possibile avviare l’esecuzione. Partirà con il prossimo messaggio della sessione.",
+ "Eine Sache braucht dich.": "Una cosa ha bisogno di te.",
+ "{n} Dinge brauchen dich.": "{n} cose hanno bisogno di te.",
+ "Nichts braucht dich.": "Niente ha bisogno di te.",
+ "jetzt": "ora",
+ "Letzte 24 Stunden": "Ultime 24 ore"
 }

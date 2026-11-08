@@ -16,7 +16,7 @@
 
 /* ── Buttons, Tags, Chips ────────────────────────────── */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:32px;padding:0 12px;border-radius:4px;border:1px solid var(--line);background:transparent;color:var(--t1);font:500 13px var(--sans);white-space:nowrap;transition:border-color .12s,background .12s,box-shadow .12s}
-.btn:hover{border-color:var(--crim);background:var(--s1)}
+.btn:hover{border-color:var(--t1);background:var(--s1)}
 .btn:focus-visible{outline:none;box-shadow:var(--glow)}
 .btn-p{background:var(--crim);border-color:var(--crim);color:#fff}
 .btn-p:hover{background:#f43f5e;border-color:#f43f5e}
@@ -42,7 +42,7 @@
 .chip:hover{border-color:var(--line2);color:var(--t1)}
 .chip.on{background:var(--s2);border-color:var(--t4);color:var(--t1)}
 .chip .n{font:600 10px var(--mono);color:var(--t3)}
-.chip.on .n{color:var(--crim-hi)}
+.chip.on .n{color:var(--t1)}
 
 .card{position:relative;background:var(--s1);border:1px solid var(--line);border-radius:4px}
 .card.live::before,.stream::before{content:"";position:absolute;left:-1px;top:-1px;bottom:-1px;width:2px;border-radius:2px 0 0 2px;background:linear-gradient(180deg,var(--crim-lo) 0%,#fb7185 45%,var(--crim-lo) 100%);background-size:100% 260%;animation:scan 2.2s linear infinite}
@@ -55,7 +55,7 @@
 .bars i{flex:1;min-width:2px;background:var(--t4);border-radius:1px 1px 0 0;min-height:2px}
 .bars i.h{background:var(--crim)}
 .bars.on i{background:#6b6b75}
-.bars.on i.h{background:var(--crim)}
+.bars.on i.h{background:var(--t1)}
 .gauge{height:4px;border-radius:2px;background:var(--s3);overflow:hidden}
 .gauge b{display:block;height:100%;background:var(--t2);border-radius:2px}
 .gauge.hot b{background:var(--crim)}

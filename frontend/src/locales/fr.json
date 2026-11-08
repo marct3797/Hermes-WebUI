@@ -269,7 +269,6 @@
  "alle {minutes} Minuten": "toutes les {minutes} minutes",
  "alle {v} {v2}": "tous les {v} {v2}",
  "Alle 5 Schritte sind erledigt. Weiter geht es im Cockpit, in den Einstellungen oder in den Anleitungen.": "Les 5 étapes sont terminées. Continuez dans le Cockpit, dans les réglages ou dans les guides.",
- "Alle Agents": "Tous les agents",
  "Alle Änderungen": "Toutes les modifications",
  "Alle Anmeldearten": "Tous les modes de connexion",
  "Alle Erinnerungen dieser Art, je {unit}": "Tous les souvenirs de ce type, par {unit}",
@@ -1160,7 +1159,6 @@
  "Helligkeit und Sättigung sind fest, nur der Farbton ist frei. Die Farbe hat auf allen dunklen Flächen einen Kontrast von über 8:1.": "La luminosité et la saturation sont fixes, seule la teinte est libre. La couleur offre un contraste supérieur à 8:1 sur toutes les surfaces sombres.",
  "Herkunft": "Origine",
  "Hermes": "Hermes",
- "HERMES": "HERMES",
  "Hermes {hermes_version} auf {system} ({arch}), Python {python_version}": "Hermes {hermes_version} sur {system} ({arch}), Python {python_version}",
  "Hermes aktualisieren": "Mettre à jour Hermes",
  "Hermes antwortet nicht rechtzeitig ({where})": "Hermes ne répond pas à temps ({where})",
@@ -1799,7 +1797,6 @@
  "Profil bearbeiten": "Modifier le profil",
  "Profil bearbeiten · {hostLabel} / {runtimeLabel}": "Modifier le profil · {hostLabel} / {runtimeLabel}",
  "Profil im Dashboard": "Profil dans le dashboard",
- "Profil-Cockpit": "Cockpit du profil",
  "Profil(e) installiert:": "Profil(s) installé(s) :",
  "Profile": "Profils",
  "Profile & Betrieb": "Profils et exploitation",
@@ -2435,5 +2432,10 @@
  "Gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "Enregistré, mais l’exécution n’a pas pu être lancée. Elle démarrera avec le prochain message de la session.",
  "Heartbeat gesetzt.": "Heartbeat défini.",
  "Ziel gesetzt. Hermes arbeitet jetzt daran.": "Objectif défini. Hermes y travaille maintenant.",
- "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "Objectif enregistré, mais l’exécution n’a pas pu être lancée. Elle démarrera avec le prochain message de la session."
+ "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "Objectif enregistré, mais l’exécution n’a pas pu être lancée. Elle démarrera avec le prochain message de la session.",
+ "Eine Sache braucht dich.": "Une chose a besoin de vous.",
+ "{n} Dinge brauchen dich.": "{n} choses ont besoin de vous.",
+ "Nichts braucht dich.": "Rien n'a besoin de vous.",
+ "jetzt": "maintenant",
+ "Letzte 24 Stunden": "24 dernières heures"
 }

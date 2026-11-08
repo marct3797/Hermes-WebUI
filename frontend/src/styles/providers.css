@@ -13,7 +13,7 @@
 .hub-err{display:block;color:var(--ruby-t)}
 .hub-cell{display:flex;align-items:center;gap:6px;min-width:0;max-width:100%;padding:4px 8px;border:1px solid transparent;border-radius:4px;background:none;color:var(--t1);text-align:left}
 .hub-cell:hover:not(:disabled){border-color:var(--line2);background:var(--s2)}
-.hub-cell.on{border-color:var(--crim);box-shadow:var(--glow)}
+.hub-cell.on{border-color:var(--t1);box-shadow:var(--glow)}
 .hub-cell:disabled{opacity:.55;cursor:default}
 .hub-cell.off{color:var(--t3)}
 .hub-detail{max-width:110px}

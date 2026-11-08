@@ -269,7 +269,6 @@
  "alle {minutes} Minuten": "每 {minutes} 分鐘",
  "alle {v} {v2}": "每 {v} {v2}",
  "Alle 5 Schritte sind erledigt. Weiter geht es im Cockpit, in den Einstellungen oder in den Anleitungen.": "5 個步驟已全部完成。接下來請前往駕駛艙、設定或指南。",
- "Alle Agents": "所有 Agent",
  "Alle Änderungen": "所有變更",
  "Alle Anmeldearten": "所有登入方式",
  "Alle Erinnerungen dieser Art, je {unit}": "此類型的所有記憶，每 {unit}",
@@ -1160,7 +1159,6 @@
  "Helligkeit und Sättigung sind fest, nur der Farbton ist frei. Die Farbe hat auf allen dunklen Flächen einen Kontrast von über 8:1.": "亮度與飽和度固定，僅色調可調，顏色於所有深色面皆有 8:1 以上對比。",
  "Herkunft": "來源",
  "Hermes": "Hermes",
- "HERMES": "HERMES",
  "Hermes {hermes_version} auf {system} ({arch}), Python {python_version}": "{system}（{arch}）上的 Hermes {hermes_version}，Python {python_version}",
  "Hermes aktualisieren": "更新 Hermes",
  "Hermes antwortet nicht rechtzeitig ({where})": "Hermes 未及時回應（{where}）",
@@ -1799,7 +1797,6 @@
  "Profil bearbeiten": "編輯配置檔",
  "Profil bearbeiten · {hostLabel} / {runtimeLabel}": "編輯配置檔 · {hostLabel}／{runtimeLabel}",
  "Profil im Dashboard": "Dashboard 中的配置檔",
- "Profil-Cockpit": "配置檔駕駛艙",
  "Profil(e) installiert:": "已安裝配置檔：",
  "Profile": "配置檔",
  "Profile & Betrieb": "配置檔與營運",
@@ -2435,5 +2432,10 @@
  "Gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "已儲存,但未能啟動執行。將在工作階段的下一則訊息時開始。",
  "Heartbeat gesetzt.": "心跳已設定。",
  "Ziel gesetzt. Hermes arbeitet jetzt daran.": "目標已設定。Hermes 正在處理。",
- "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "目標已儲存,但未能啟動執行。將在工作階段的下一則訊息時開始。"
+ "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "目標已儲存,但未能啟動執行。將在工作階段的下一則訊息時開始。",
+ "Eine Sache braucht dich.": "有一件事需要你處理。",
+ "{n} Dinge brauchen dich.": "有 {n} 件事需要你處理。",
+ "Nichts braucht dich.": "沒有需要你處理的事。",
+ "jetzt": "現在",
+ "Letzte 24 Stunden": "最近 24 小時"
 }
