@@ -346,6 +346,7 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
       { key: "agent.max_turns", type: "number", description: "Max turns", category: "agent" },
       { key: "display.streaming", type: "boolean", description: "Streaming", category: "display" },
       { key: "fallback_providers", type: "list", description: "Fallback providers", category: "general" },
+      { key: "fallback.min_switch_reset_seconds", type: "number", description: "Min reset", category: "general" },
     ].map((x) => ({ ...x, value: dash.config[x.key] }));
     return json({ fields: [...fields, { key: "web.api_key", type: "string", description: "Search key", category: "tools", secret: true, set: true, value: null }], category_order: ["general", "agent", "display", "tools"] });
   }
@@ -809,7 +810,7 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
     available: true, reason: null, soul: "Du bist Gamma.\nDu antwortest knapp.\n", description: "", model: { provider: "mock", model: "mock-large" },
     history: [], versions: {}, stepUp: false, keys: { ANTHROPIC_API_KEY: "sk-ant-geheim-1234" },
     loggedIn: new Set(["openai-codex"]), polls: 0, loginError: null,
-    config: { model: "claude-test", "agent.service_tier": "normal", "agent.max_turns": 90, "display.streaming": true, fallback_providers: [], "web.api_key": null },
+    config: { model: "claude-test", "agent.service_tier": "normal", "agent.max_turns": 90, "display.streaming": true, fallback_providers: [], "fallback.min_switch_reset_seconds": 0, "web.api_key": null },
     msg: { available: true, enabled: {}, env: {}, gateway: { running: false, busy: false, sessions: 0 }, polls: 0, applied: [], waPolls: 0, waDone: false },
     tmBackend: null,
     hm: { available: true, active: "", files: { memory: 120, user: 45 }, keySet: false, project: "", mode: "fast", memfiles: { content: { "MEMORY.md": "Eintrag eins\n§\nEintrag zwei\n", "USER.md": "" }, sha: {}, conflict: false, oldHostd: false } },

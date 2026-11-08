@@ -59,10 +59,10 @@ Funktionen der Hermes-Dokumentation (`user-guide/features`), die in der Liste ob
 
 | Funktion (Doku) | Stand in der WebUI |
 |---|---|
-| Persistente Ziele (`goals`, `/goal`, `/subgoal`) | Slash. Keine Ansicht des aktuellen Ziels |
-| Session-Heartbeats (`heartbeat`, `/heartbeat`) | Slash. Keine Übersicht aktiver Heartbeats |
+| Persistente Ziele (`goals`, `/goal`, `/subgoal`) | **Nur lesend**: Seite „Ziele und Schleifen“ liest `state.db` über hostd. Setzen/Ändern nur im Terminal, Hermes bietet dafür keine HTTP-Schnittstelle |
+| Session-Heartbeats (`heartbeat`, `/heartbeat`) | **Nur lesend** auf derselben Seite (ebenso Schleifen `/loop`) |
 | Wiederkehrende Schleifen (`loops`, `/loop`) | Slash. Keine Übersicht aktiver Schleifen |
-| Fallback-Anbieter (`fallback-providers`) | nur als Config-Feld im Einstellungs-Editor, keine eigene Maske |
+| Fallback-Anbieter (`fallback-providers`) | Maske unter „Modelle“: Reihenfolge, Modell, Mindest-Wartezeit, über die Profil-Einstellungen gespeichert |
 | Anbieter-Routing für OpenRouter (`provider-routing`) | nur als Config-Feld |
 | Bot-Bildschirm (`bot-screen`, `/api/display/ws`) | nicht abgebildet (display.py: 1 Route, 0 genutzt) |
 | Credential-Vault (`credential-vault`, `hermes vault`) | nicht abgebildet (nur CLI) |

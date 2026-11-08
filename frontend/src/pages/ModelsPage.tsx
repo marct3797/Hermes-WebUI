@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "../api";
 import { PageHead } from "../components/PageHead";
 import { useAction } from "../components/useAction";
+import { FallbackEditor } from "../components/models/FallbackEditor";
 import type { AgentRef, MdAuxiliary, MdInfo, MdMoa, MdOptions } from "../types";
 import { t as tr } from "../i18n";
 import { loc } from "../format";
@@ -58,6 +59,10 @@ export default function ModelsPage({ agent }: { agent: AgentRef }) {
       <section aria-label={tr("Auswahl")}>
         <h2>{tr("Auswahl")}</h2>
         <ul>{(opts?.providers ?? []).map((p) => <li key={p.slug}>{p.name}: {p.models.join(", ")}</li>)}</ul>
+      </section>
+      <section aria-label={tr("Ersatz-Anbieter")}>
+        <h2>{tr("Ersatz-Anbieter")}</h2>
+        <FallbackEditor agent={agent} opts={opts} />
       </section>
       <section aria-label={tr("Hilfsmodelle")}>
         <h2>{tr("Hilfsmodelle")}</h2>

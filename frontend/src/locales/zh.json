@@ -2384,5 +2384,19 @@
  "Sitzung: {title}": "会话：{title}",
  "Ziele": "目标",
  "Ziele und Schleifen": "目标与循环",
- "zuletzt {ago}": "上次 {ago}"
+ "zuletzt {ago}": "上次 {ago}",
+ "Anbieter {n}": "提供商 {n}",
+ "Derselbe Anbieter mit demselben Modell steht doppelt in der Liste.": "列表中同一提供商和同一模型出现了两次。",
+ "Dieses Hermes kennt keine Ersatz-Anbieter.": "此 Hermes 不支持备用提供商。",
+ "Entfernen: {n}": "移除:{n}",
+ "Ersatz-Anbieter": "备用提供商",
+ "Ersatz-Anbieter hinzufügen": "添加备用提供商",
+ "Fällt der Hauptanbieter aus (Limit, Überlast, Anmeldung), wechselt Hermes nacheinander zu diesen Anbietern. Reihenfolge von oben nach unten.": "主提供商不可用时(限额、过载、登录),Hermes 会按从上到下的顺序依次切换到这些提供商。",
+ "Für diesen Anbieter ist noch kein Zugang eingerichtet.": "此提供商尚未设置访问权限。",
+ "Keine Ersatz-Anbieter eingetragen.": "尚未添加备用提供商。",
+ "Mindest-Wartezeit in Sekunden": "最短等待秒数",
+ "Modell {n}": "模型 {n}",
+ "Nach oben: {n}": "上移:{n}",
+ "Nach unten: {n}": "下移:{n}",
+ "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "如果限额在少于这么多秒后结束则不切换(0 = 始终切换)"
 }

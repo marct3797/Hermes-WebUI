@@ -2384,5 +2384,19 @@
  "Sitzung: {title}": "工作階段：{title}",
  "Ziele": "目標",
  "Ziele und Schleifen": "目標與循環",
- "zuletzt {ago}": "上次 {ago}"
+ "zuletzt {ago}": "上次 {ago}",
+ "Anbieter {n}": "供應商 {n}",
+ "Derselbe Anbieter mit demselben Modell steht doppelt in der Liste.": "清單中同一供應商與同一模型出現了兩次。",
+ "Dieses Hermes kennt keine Ersatz-Anbieter.": "此 Hermes 不支援備用供應商。",
+ "Entfernen: {n}": "移除:{n}",
+ "Ersatz-Anbieter": "備用供應商",
+ "Ersatz-Anbieter hinzufügen": "新增備用供應商",
+ "Fällt der Hauptanbieter aus (Limit, Überlast, Anmeldung), wechselt Hermes nacheinander zu diesen Anbietern. Reihenfolge von oben nach unten.": "主要供應商無法使用時(額度、過載、登入),Hermes 會依由上到下的順序切換到這些供應商。",
+ "Für diesen Anbieter ist noch kein Zugang eingerichtet.": "此供應商尚未設定存取權限。",
+ "Keine Ersatz-Anbieter eingetragen.": "尚未新增備用供應商。",
+ "Mindest-Wartezeit in Sekunden": "最短等待秒數",
+ "Modell {n}": "模型 {n}",
+ "Nach oben: {n}": "上移:{n}",
+ "Nach unten: {n}": "下移:{n}",
+ "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "若額度在少於這麼多秒後結束則不切換(0 = 一律切換)"
 }

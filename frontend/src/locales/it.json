@@ -2384,5 +2384,19 @@
  "Sitzung: {title}": "Sessione: {title}",
  "Ziele": "Obiettivi",
  "Ziele und Schleifen": "Obiettivi e cicli",
- "zuletzt {ago}": "ultimo {ago}"
+ "zuletzt {ago}": "ultimo {ago}",
+ "Anbieter {n}": "Provider {n}",
+ "Derselbe Anbieter mit demselben Modell steht doppelt in der Liste.": "Lo stesso provider con lo stesso modello compare due volte nell’elenco.",
+ "Dieses Hermes kennt keine Ersatz-Anbieter.": "Questo Hermes non supporta provider di riserva.",
+ "Entfernen: {n}": "Rimuovi: {n}",
+ "Ersatz-Anbieter": "Provider di riserva",
+ "Ersatz-Anbieter hinzufügen": "Aggiungi provider di riserva",
+ "Fällt der Hauptanbieter aus (Limit, Überlast, Anmeldung), wechselt Hermes nacheinander zu diesen Anbietern. Reihenfolge von oben nach unten.": "Se il provider principale non funziona (limite, sovraccarico, accesso), Hermes passa a questi provider in sequenza, dall’alto verso il basso.",
+ "Für diesen Anbieter ist noch kein Zugang eingerichtet.": "Per questo provider non è ancora stato configurato alcun accesso.",
+ "Keine Ersatz-Anbieter eingetragen.": "Nessun provider di riserva aggiunto.",
+ "Mindest-Wartezeit in Sekunden": "Attesa minima in secondi",
+ "Modell {n}": "Modello {n}",
+ "Nach oben: {n}": "Sposta su: {n}",
+ "Nach unten: {n}": "Sposta giù: {n}",
+ "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "Non passare se il limite termina entro questi secondi (0 = passa sempre)"
 }

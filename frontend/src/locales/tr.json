@@ -2384,5 +2384,19 @@
  "Sitzung: {title}": "Oturum: {title}",
  "Ziele": "Hedefler",
  "Ziele und Schleifen": "Hedefler ve döngüler",
- "zuletzt {ago}": "son {ago}"
+ "zuletzt {ago}": "son {ago}",
+ "Anbieter {n}": "Sağlayıcı {n}",
+ "Derselbe Anbieter mit demselben Modell steht doppelt in der Liste.": "Aynı sağlayıcı aynı modelle listede iki kez yer alıyor.",
+ "Dieses Hermes kennt keine Ersatz-Anbieter.": "Bu Hermes yedek sağlayıcıları desteklemiyor.",
+ "Entfernen: {n}": "Kaldır: {n}",
+ "Ersatz-Anbieter": "Yedek sağlayıcılar",
+ "Ersatz-Anbieter hinzufügen": "Yedek sağlayıcı ekle",
+ "Fällt der Hauptanbieter aus (Limit, Überlast, Anmeldung), wechselt Hermes nacheinander zu diesen Anbietern. Reihenfolge von oben nach unten.": "Ana sağlayıcı arızalanırsa (limit, aşırı yük, oturum), Hermes bu sağlayıcılara yukarıdan aşağıya sırayla geçer.",
+ "Für diesen Anbieter ist noch kein Zugang eingerichtet.": "Bu sağlayıcı için henüz erişim ayarlanmadı.",
+ "Keine Ersatz-Anbieter eingetragen.": "Yedek sağlayıcı eklenmedi.",
+ "Mindest-Wartezeit in Sekunden": "Saniye cinsinden en kısa bekleme",
+ "Modell {n}": "Model {n}",
+ "Nach oben: {n}": "Yukarı taşı: {n}",
+ "Nach unten: {n}": "Aşağı taşı: {n}",
+ "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "Limit bu kadar saniyeden kısa sürede bitiyorsa geçiş yapma (0 = her zaman geç)"
 }

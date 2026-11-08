@@ -63,4 +63,25 @@ describe("Modelle", () => {
     render(<App />);
     expect((await screen.findByRole("alert")).textContent).toContain("unbekannter Form");
   });
+
+  it("edits the ordered fallback providers and saves them via the config", async () => {
+    await open();
+    const region = await screen.findByRole("region", { name: "Ersatz-Anbieter" });
+    const save = await screen.findByRole("button", { name: "Speichern" });
+    expect(save).toBeDisabled();
+    fireEvent.click(await screen.findByRole("button", { name: "Ersatz-Anbieter hinzufügen" }));
+    fireEvent.change(screen.getByLabelText("Modell 1"), { target: { value: "claude-small" } });
+    fireEvent.change(screen.getByLabelText("Mindest-Wartezeit in Sekunden"), { target: { value: "30" } });
+    expect(region.textContent).not.toMatch(/doppelt/);
+    fireEvent.click(screen.getByRole("button", { name: "Ersatz-Anbieter hinzufügen" }));
+    fireEvent.change(screen.getByLabelText("Modell 2"), { target: { value: "claude-small" } });
+    expect(await screen.findByText(/doppelt/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Entfernen: 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(sent("PUT", "/config")).toHaveLength(1));
+    const body = sent("PUT", "/config")[0].body as { changes: Record<string, any> };
+    expect(body.changes["fallback.min_switch_reset_seconds"]).toBe(30);
+    expect(body.changes.fallback_providers).toHaveLength(1);
+    expect(body.changes.fallback_providers[0].model).toBe("claude-small");
+  });
 });

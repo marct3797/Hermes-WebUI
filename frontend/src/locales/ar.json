@@ -2384,5 +2384,19 @@
  "Sitzung: {title}": "الجلسة: {title}",
  "Ziele": "الأهداف",
  "Ziele und Schleifen": "الأهداف والحلقات",
- "zuletzt {ago}": "آخر {ago}"
+ "zuletzt {ago}": "آخر {ago}",
+ "Anbieter {n}": "المزوّد {n}",
+ "Derselbe Anbieter mit demselben Modell steht doppelt in der Liste.": "المزوّد نفسه مع النموذج نفسه مذكور مرتين في القائمة.",
+ "Dieses Hermes kennt keine Ersatz-Anbieter.": "هذا الإصدار من Hermes لا يدعم المزوّدين الاحتياطيين.",
+ "Entfernen: {n}": "إزالة: {n}",
+ "Ersatz-Anbieter": "المزوّدون الاحتياطيون",
+ "Ersatz-Anbieter hinzufügen": "إضافة مزوّد احتياطي",
+ "Fällt der Hauptanbieter aus (Limit, Überlast, Anmeldung), wechselt Hermes nacheinander zu diesen Anbietern. Reihenfolge von oben nach unten.": "إذا تعطّل المزوّد الرئيسي (حد، حمل زائد، تسجيل الدخول)، ينتقل Hermes إلى هؤلاء المزوّدين بالترتيب من الأعلى إلى الأسفل.",
+ "Für diesen Anbieter ist noch kein Zugang eingerichtet.": "لم يتم إعداد وصول لهذا المزوّد بعد.",
+ "Keine Ersatz-Anbieter eingetragen.": "لم تتم إضافة مزوّدين احتياطيين.",
+ "Mindest-Wartezeit in Sekunden": "الحد الأدنى للانتظار بالثواني",
+ "Modell {n}": "النموذج {n}",
+ "Nach oben: {n}": "تحريك لأعلى: {n}",
+ "Nach unten: {n}": "تحريك لأسفل: {n}",
+ "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "لا تنتقل إذا انتهى الحد خلال ثوانٍ أقل من هذا العدد (0 = انتقل دائمًا)"
 }

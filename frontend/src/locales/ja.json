@@ -2384,5 +2384,19 @@
  "Sitzung: {title}": "セッション: {title}",
  "Ziele": "目標",
  "Ziele und Schleifen": "目標とループ",
- "zuletzt {ago}": "前回 {ago}"
+ "zuletzt {ago}": "前回 {ago}",
+ "Anbieter {n}": "プロバイダー {n}",
+ "Derselbe Anbieter mit demselben Modell steht doppelt in der Liste.": "同じプロバイダーと同じモデルが一覧に2回あります。",
+ "Dieses Hermes kennt keine Ersatz-Anbieter.": "この Hermes はフォールバックプロバイダーに対応していません。",
+ "Entfernen: {n}": "削除: {n}",
+ "Ersatz-Anbieter": "フォールバックプロバイダー",
+ "Ersatz-Anbieter hinzufügen": "フォールバックプロバイダーを追加",
+ "Fällt der Hauptanbieter aus (Limit, Überlast, Anmeldung), wechselt Hermes nacheinander zu diesen Anbietern. Reihenfolge von oben nach unten.": "メインのプロバイダーが使えない場合(上限、過負荷、サインイン)、Hermes は上から順にこれらのプロバイダーへ切り替えます。",
+ "Für diesen Anbieter ist noch kein Zugang eingerichtet.": "このプロバイダーのアクセスはまだ設定されていません。",
+ "Keine Ersatz-Anbieter eingetragen.": "フォールバックプロバイダーは追加されていません。",
+ "Mindest-Wartezeit in Sekunden": "最小待機時間(秒)",
+ "Modell {n}": "モデル {n}",
+ "Nach oben: {n}": "上へ: {n}",
+ "Nach unten: {n}": "下へ: {n}",
+ "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "上限がこの秒数より短く終わる場合は切り替えない(0 = 常に切り替える)"
 }

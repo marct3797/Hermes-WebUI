@@ -2384,5 +2384,19 @@
  "Sitzung: {title}": "Sesión: {title}",
  "Ziele": "Objetivos",
  "Ziele und Schleifen": "Objetivos y bucles",
- "zuletzt {ago}": "última {ago}"
+ "zuletzt {ago}": "última {ago}",
+ "Anbieter {n}": "Proveedor {n}",
+ "Derselbe Anbieter mit demselben Modell steht doppelt in der Liste.": "El mismo proveedor con el mismo modelo aparece dos veces en la lista.",
+ "Dieses Hermes kennt keine Ersatz-Anbieter.": "Este Hermes no admite proveedores de respaldo.",
+ "Entfernen: {n}": "Quitar: {n}",
+ "Ersatz-Anbieter": "Proveedores de respaldo",
+ "Ersatz-Anbieter hinzufügen": "Añadir proveedor de respaldo",
+ "Fällt der Hauptanbieter aus (Limit, Überlast, Anmeldung), wechselt Hermes nacheinander zu diesen Anbietern. Reihenfolge von oben nach unten.": "Si falla el proveedor principal (límite, sobrecarga, inicio de sesión), Hermes cambia a estos proveedores en orden, de arriba abajo.",
+ "Für diesen Anbieter ist noch kein Zugang eingerichtet.": "Todavía no se ha configurado el acceso para este proveedor.",
+ "Keine Ersatz-Anbieter eingetragen.": "No se han añadido proveedores de respaldo.",
+ "Mindest-Wartezeit in Sekunden": "Espera mínima en segundos",
+ "Modell {n}": "Modelo {n}",
+ "Nach oben: {n}": "Subir: {n}",
+ "Nach unten: {n}": "Bajar: {n}",
+ "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "No cambiar si el límite termina en menos de estos segundos (0 = cambiar siempre)"
 }

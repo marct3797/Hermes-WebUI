@@ -2384,5 +2384,19 @@
  "Sitzung: {title}": "세션: {title}",
  "Ziele": "목표",
  "Ziele und Schleifen": "목표와 루프",
- "zuletzt {ago}": "마지막 {ago}"
+ "zuletzt {ago}": "마지막 {ago}",
+ "Anbieter {n}": "제공자 {n}",
+ "Derselbe Anbieter mit demselben Modell steht doppelt in der Liste.": "같은 제공자와 같은 모델이 목록에 두 번 있습니다.",
+ "Dieses Hermes kennt keine Ersatz-Anbieter.": "이 Hermes는 대체 제공자를 지원하지 않습니다.",
+ "Entfernen: {n}": "삭제: {n}",
+ "Ersatz-Anbieter": "대체 제공자",
+ "Ersatz-Anbieter hinzufügen": "대체 제공자 추가",
+ "Fällt der Hauptanbieter aus (Limit, Überlast, Anmeldung), wechselt Hermes nacheinander zu diesen Anbietern. Reihenfolge von oben nach unten.": "주 제공자에 문제가 생기면(한도, 과부하, 로그인) Hermes가 위에서 아래 순서로 이 제공자들로 전환합니다.",
+ "Für diesen Anbieter ist noch kein Zugang eingerichtet.": "이 제공자의 접근 설정이 아직 없습니다.",
+ "Keine Ersatz-Anbieter eingetragen.": "추가된 대체 제공자가 없습니다.",
+ "Mindest-Wartezeit in Sekunden": "최소 대기 시간(초)",
+ "Modell {n}": "모델 {n}",
+ "Nach oben: {n}": "위로: {n}",
+ "Nach unten: {n}": "아래로: {n}",
+ "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "한도가 이 초 수보다 짧게 끝나면 전환하지 않음(0 = 항상 전환)"
 }

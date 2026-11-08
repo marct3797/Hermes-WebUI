@@ -2384,5 +2384,19 @@
  "Sitzung: {title}": "Session: {title}",
  "Ziele": "Goals",
  "Ziele und Schleifen": "Goals and loops",
- "zuletzt {ago}": "last {ago}"
+ "zuletzt {ago}": "last {ago}",
+ "Anbieter {n}": "Provider {n}",
+ "Derselbe Anbieter mit demselben Modell steht doppelt in der Liste.": "The same provider with the same model is listed twice.",
+ "Dieses Hermes kennt keine Ersatz-Anbieter.": "This Hermes does not support fallback providers.",
+ "Entfernen: {n}": "Remove: {n}",
+ "Ersatz-Anbieter": "Fallback providers",
+ "Ersatz-Anbieter hinzufügen": "Add fallback provider",
+ "Fällt der Hauptanbieter aus (Limit, Überlast, Anmeldung), wechselt Hermes nacheinander zu diesen Anbietern. Reihenfolge von oben nach unten.": "If the main provider fails (limit, overload, sign-in), Hermes switches to these providers in turn, from top to bottom.",
+ "Für diesen Anbieter ist noch kein Zugang eingerichtet.": "No access has been set up for this provider yet.",
+ "Keine Ersatz-Anbieter eingetragen.": "No fallback providers added.",
+ "Mindest-Wartezeit in Sekunden": "Minimum wait in seconds",
+ "Modell {n}": "Model {n}",
+ "Nach oben: {n}": "Move up: {n}",
+ "Nach unten: {n}": "Move down: {n}",
+ "Nicht wechseln, wenn das Limit in weniger als so vielen Sekunden endet (0 = immer wechseln)": "Do not switch if the limit ends in fewer than this many seconds (0 = always switch)"
 }
