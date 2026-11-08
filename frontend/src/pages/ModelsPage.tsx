@@ -4,6 +4,7 @@ import { PageHead } from "../components/PageHead";
 import { useAction } from "../components/useAction";
 import type { AgentRef, MdAuxiliary, MdInfo, MdMoa, MdOptions } from "../types";
 import { t as tr } from "../i18n";
+import { loc } from "../format";
 
 export default function ModelsPage({ agent }: { agent: AgentRef }) {
   const [info, setInfo] = useState<MdInfo | null>(null);
@@ -45,7 +46,7 @@ export default function ModelsPage({ agent }: { agent: AgentRef }) {
       <section aria-label={tr("Hauptmodell")}>
         <h2>{tr("Hauptmodell")}</h2>
         {info && (info.configured
-          ? <p>{tr("Aktiv:")} <strong>{info.provider} / {info.model}</strong> {tr("(Kontext:")} {info.context_window.toLocaleString("de-DE")})</p>
+          ? <p>{tr("Aktiv:")} <strong>{info.provider} / {info.model}</strong> {tr("(Kontext:")} {info.context_window.toLocaleString(loc())})</p>
           : <p>{tr("Noch kein Hauptmodell eingestellt.")}</p>)}
         <label>{tr("Anbieter")} <input aria-label={tr("Anbieter")} value={provider} onChange={(e) => setProvider(e.target.value)} /></label>
         <label>{tr("Modell")} <input aria-label={tr("Modell")} value={model} onChange={(e) => setModel(e.target.value)} list="md-models" /></label>

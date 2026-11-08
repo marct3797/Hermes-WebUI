@@ -2358,5 +2358,10 @@
  "Programm fehlt": "缺少程序",
  "vor {n} Min": "{n} 分钟前",
  "vor {n} Std": "{n} 小时前",
- "vor {n} T": "{n} 天前"
+ "vor {n} T": "{n} 天前",
+ "{n} je Session": "每个会话 {n}",
+ "{n} Zeilen": "{n} 行",
+ "{n} Zeilen heruntergeladen.": "已下载 {n} 行。",
+ "{n} Zeilen kopiert.": "已复制 {n} 行。",
+ "Reset am {date}": "{date} 重置"
 }

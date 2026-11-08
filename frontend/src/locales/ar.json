@@ -2358,5 +2358,10 @@
  "Programm fehlt": "البرنامج مفقود",
  "vor {n} Min": "قبل {n} دقيقة",
  "vor {n} Std": "قبل {n} ساعة",
- "vor {n} T": "قبل {n} يوم"
+ "vor {n} T": "قبل {n} يوم",
+ "{n} je Session": "{n} لكل جلسة",
+ "{n} Zeilen": "{n} سطر",
+ "{n} Zeilen heruntergeladen.": "تم تنزيل {n} سطر.",
+ "{n} Zeilen kopiert.": "تم نسخ {n} سطر.",
+ "Reset am {date}": "يُعاد الضبط في {date}"
 }

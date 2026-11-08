@@ -5,6 +5,7 @@ import { PageHead } from "../components/PageHead";
 import { StepUpNote } from "../components/providers/StepUpNote";
 import type { AgentRef, HmField, HmFileName, HmOverview, HmProvider } from "../types";
 import { N_, t } from "../i18n";
+import { loc } from "../format";
 
 const STATUS: Record<string, string> = { ready: N_("bereit"), needs_config: N_("Key fehlt"), unavailable: N_("Programm fehlt"), missing: N_("nicht gefunden") };
 const FILES = [["memory", "MEMORY.md"], ["user", "USER.md"]] as const;
@@ -128,13 +129,13 @@ function MemCard({ agent, name }: { agent: AgentRef; name: HmFileName }) {
     <div className="pf-fld" role="region" aria-label={name}>
       <div className="row" style={{ gap: 8 }}>
         <b>{name}</b>
-        {saved && <span className="muted small">{t("{n} Zeichen gespeichert", { n: saved.size.toLocaleString("de-DE") })}</span>}
+        {saved && <span className="muted small">{t("{n} Zeichen gespeichert", { n: saved.size.toLocaleString(loc()) })}</span>}
         <span className="grow" />
         {conflict && <button type="button" className="btn btn-s btn-g" onClick={() => void load()}>{t("Neu laden")}</button>}
       </div>
       <textarea id={`hm-file-${name}`} className="pf-in mono" rows={8} value={draft} spellCheck={false} aria-label={t("Inhalt von {name}", { name })} onChange={(e) => setDraft(e.target.value)} />
       <div className="row" style={{ gap: 8 }}>
-        <span className="hint">{t("{n} von {max} Zeichen", { n: draft.length.toLocaleString("de-DE"), max: MEM_LIMIT.toLocaleString("de-DE") })}</span>
+        <span className="hint">{t("{n} von {max} Zeichen", { n: draft.length.toLocaleString(loc()), max: MEM_LIMIT.toLocaleString(loc()) })}</span>
         <span className="grow" />
         <button type="button" className="btn btn-s btn-p" disabled={busy || !dirty || tooLong} onClick={() => void save()}>{t("Speichern")}</button>
       </div>

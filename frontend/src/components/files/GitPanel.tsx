@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { diffFor, type Git, type GitCommit } from "../../filesApi";
 import { t } from "../../i18n";
+import { loc } from "../../format";
 
 const LIMIT = 65536;
 const STATE: Record<string, string> = { M: "geändert", A: "neu", D: "gelöscht", R: "umbenannt", get "??"() { return t("nicht verfolgt"); }, MM: "geändert", get AM() { return t("neu, geändert"); } };
@@ -45,7 +46,7 @@ export function GitPanel({ git, error, onRefresh, onOpenFile }: { git?: Git; err
           <span className="git-state mono">{c.hash.slice(0, 7)}</span><span>{c.subject}</span></button></li>)}
       </ul>
       <div className="git-diff">{commit ? <dl aria-label={t("Commit-Details")}><dt>{t("Titel")}</dt><dd>{commit.subject}</dd><dt>{t("Autor")}</dt><dd>{commit.author}</dd>
-        <dt>{t("Datum")}</dt><dd>{new Date(commit.date).toLocaleString("de-DE")}</dd><dt>{t("Hash")}</dt><dd className="mono">{commit.hash}</dd></dl> : <p className="muted">{t("Commit auswählen.")}</p>}</div>
+        <dt>{t("Datum")}</dt><dd>{new Date(commit.date).toLocaleString(loc())}</dd><dt>{t("Hash")}</dt><dd className="mono">{commit.hash}</dd></dl> : <p className="muted">{t("Commit auswählen.")}</p>}</div>
     </div>}
     {view === "branches" && <ul aria-label={t("Branches")}>{git.branches?.map((b) => <li key={b.name}>{b.name}{b.current && <span className="muted"> {t("· aktuell")}</span>}</li>)}
       {!git.branches?.length && <li className="muted">{t("Keine Branches.")}</li>}</ul>}

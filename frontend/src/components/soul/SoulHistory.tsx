@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { api } from "../../api";
 import type { AgentRef, SoulEntry, SoulVersion } from "../../types";
-import { fmtAgo } from "../../format";
+import { fmtAgo, loc } from "../../format";
 import { Icon } from "../Icon";
 import { DiffView } from "./DiffView";
 import { t } from "../../i18n";
@@ -15,7 +15,7 @@ type Props = {
   onRestore: (id: string) => Promise<void>;
 };
 
-const when = (at: string) => new Date(at).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+const when = (at: string) => new Date(at).toLocaleString(loc(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
 /** Frühere Fassungen von SOUL.md: ansehen, mit dem aktuellen Stand vergleichen, wiederherstellen. Der aktuelle Stand bleibt dabei im Verlauf. */
 export function SoulHistory({ agent, entries, current, locked, onRestore }: Props) {

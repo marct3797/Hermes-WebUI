@@ -2358,5 +2358,10 @@
  "Programm fehlt": "Program eksik",
  "vor {n} Min": "{n} dk önce",
  "vor {n} Std": "{n} sa önce",
- "vor {n} T": "{n} gün önce"
+ "vor {n} T": "{n} gün önce",
+ "{n} je Session": "oturum başına {n}",
+ "{n} Zeilen": "{n} satır",
+ "{n} Zeilen heruntergeladen.": "{n} satır indirildi.",
+ "{n} Zeilen kopiert.": "{n} satır kopyalandı.",
+ "Reset am {date}": "{date} tarihinde sıfırlanır"
 }

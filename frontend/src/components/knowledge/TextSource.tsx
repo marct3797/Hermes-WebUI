@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { INGEST_MAX } from "../../opsApi";
 import { t as tr } from "../../i18n";
+import { loc } from "../../format";
 
-const de = (n: number) => n.toLocaleString("de-DE");
+const de = (n: number) => n.toLocaleString(loc());
 export const TEXT_FILE = /\.(md|txt)$/i;
 
 /** Textdatei (.md/.txt, bis 1 MiB) als Text lesen; wirft eine verständliche Meldung. */

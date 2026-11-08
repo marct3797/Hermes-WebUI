@@ -7,9 +7,10 @@ import { IngestForm } from "../components/knowledge/IngestForm";
 import type { KnowledgeDoc, KnowledgeHit, KnowledgeProvider, KnowledgeStats } from "../types";
 import { useAsync, type Async } from "../useAsync";
 import { N_, t } from "../i18n";
+import { loc } from "../format";
 
-const de = (n: number) => n.toLocaleString("de-DE");
-const score = (n: number) => n.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const de = (n: number) => n.toLocaleString(loc());
+const score = (n: number) => n.toLocaleString(loc(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const REMOVE_HINT = N_("Der Sync fügt dieses Dokument erst wieder hinzu, wenn sich die Datei im Repository ändert.");
 
 function Chips({ s }: { s: Async<KnowledgeStats> }) {

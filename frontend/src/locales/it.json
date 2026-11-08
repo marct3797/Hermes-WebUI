@@ -2358,5 +2358,10 @@
  "Programm fehlt": "Programma mancante",
  "vor {n} Min": "{n} min fa",
  "vor {n} Std": "{n} h fa",
- "vor {n} T": "{n} g fa"
+ "vor {n} T": "{n} g fa",
+ "{n} je Session": "{n} per sessione",
+ "{n} Zeilen": "{n} righe",
+ "{n} Zeilen heruntergeladen.": "{n} righe scaricate.",
+ "{n} Zeilen kopiert.": "{n} righe copiate.",
+ "Reset am {date}": "Si azzera il {date}"
 }

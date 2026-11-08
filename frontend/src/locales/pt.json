@@ -2358,5 +2358,10 @@
  "Programm fehlt": "Falta o programa",
  "vor {n} Min": "há {n} min",
  "vor {n} Std": "há {n} h",
- "vor {n} T": "há {n} d"
+ "vor {n} T": "há {n} d",
+ "{n} je Session": "{n} por sessão",
+ "{n} Zeilen": "{n} linhas",
+ "{n} Zeilen heruntergeladen.": "{n} linhas baixadas.",
+ "{n} Zeilen kopiert.": "{n} linhas copiadas.",
+ "Reset am {date}": "Reinicia em {date}"
 }

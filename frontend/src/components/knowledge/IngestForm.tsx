@@ -4,8 +4,9 @@ import { estimateChunks, INGEST_MAX } from "../../opsApi";
 import { Icon } from "../Icon";
 import { FileLoad } from "./TextSource";
 import { t as tr } from "../../i18n";
+import { loc } from "../../format";
 
-const de = (n: number) => n.toLocaleString("de-DE");
+const de = (n: number) => n.toLocaleString(loc());
 const NEW = "\u0000neu";
 
 export function ChunkEstimate({ chars, size, overlap }: { chars: number; size?: number | null; overlap?: number | null }) {

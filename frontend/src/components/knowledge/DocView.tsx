@@ -6,8 +6,9 @@ import { Icon } from "../Icon";
 import { ChunkEstimate } from "./IngestForm";
 import { FileLoad } from "./TextSource";
 import { t as tr } from "../../i18n";
+import { loc } from "../../format";
 
-const de = (n: number) => n.toLocaleString("de-DE");
+const de = (n: number) => n.toLocaleString(loc());
 
 /** Fundstelle: der Chunk, dessen Text mit dem Anfang des Treffers übereinstimmt. */
 export function focusIndex(parts: { text: string }[], focus?: string): number {

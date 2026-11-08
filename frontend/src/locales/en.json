@@ -2358,5 +2358,10 @@
  "Programm fehlt": "Program missing",
  "vor {n} Min": "{n} min ago",
  "vor {n} Std": "{n} h ago",
- "vor {n} T": "{n} d ago"
+ "vor {n} T": "{n} d ago",
+ "{n} je Session": "{n} per session",
+ "{n} Zeilen": "{n} lines",
+ "{n} Zeilen heruntergeladen.": "{n} lines downloaded.",
+ "{n} Zeilen kopiert.": "{n} lines copied.",
+ "Reset am {date}": "Resets on {date}"
 }

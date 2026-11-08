@@ -5,6 +5,7 @@ import { useHosts } from "../hosts";
 import { levels, mergeLines } from "../logLines";
 import { LOG_COMPONENTS, LOG_FILES, LOG_LEVELS, logsApi, type LogQuery } from "../opsApi";
 import { t } from "../i18n";
+import { loc } from "../format";
 
 const LIVE_MS = 3000;
 const LINES = [100, 200, 500];
@@ -62,12 +63,12 @@ export function LogsPage({ host }: { host?: string }) {
   const apply = (e: FormEvent) => { e.preventDefault(); setQ({ ...q, search: draft.trim() }); };
   const set = (patch: Partial<typeof q>) => setQ({ ...q, ...patch });
   const text = lines.join("\n");
-  const copy = async () => { try { await navigator.clipboard.writeText(text); setNote(`${lines.length.toLocaleString("de-DE")} Zeilen kopiert.`); } catch { setNote(t("Kopieren nicht möglich.")); } };
+  const copy = async () => { try { await navigator.clipboard.writeText(text); setNote(t("{n} Zeilen kopiert.", { n: lines.length.toLocaleString(loc()) })); } catch { setNote(t("Kopieren nicht möglich.")); } };
   const download = () => {
     const url = URL.createObjectURL(new Blob([text + "\n"], { type: "text/plain" }));
     const a = Object.assign(document.createElement("a"), { href: url, download: `${q.file}.log` });
     a.click(); URL.revokeObjectURL(url);
-    setNote(`${lines.length.toLocaleString("de-DE")} Zeilen heruntergeladen.`);
+    setNote(t("{n} Zeilen heruntergeladen.", { n: lines.length.toLocaleString(loc()) }));
   };
   const sel = (label: string, value: string | number, opts: readonly (string | number)[], on: (v: string) => void) => (
     <label className="col"><span className="lbl">{label}</span>
@@ -106,7 +107,7 @@ export function LogsPage({ host }: { host?: string }) {
             <button type="button" className="btn btn-s" disabled={lines.length === 0} onClick={download}>{t("Herunterladen")}</button>
           </div>
           <p className="hint" role="status" style={{ margin: "0 0 8px" }}>
-            {state.loading && !state.loaded ? t("Lade…") : `${lines.length.toLocaleString("de-DE")} Zeilen`}{live && <span className="logs-live"> {t("· Live: alle 3 Sekunden aktualisiert")}</span>}
+            {state.loading && !state.loaded ? t("Lade…") : t("{n} Zeilen", { n: lines.length.toLocaleString(loc()) })}{live && <span className="logs-live"> {t("· Live: alle 3 Sekunden aktualisiert")}</span>}
             {t("{truncated} · Geheimnisse sind serverseitig geschwärzt{note}", { truncated: state.truncated && t(" · gekürzt auf die neuesten Zeilen"), note: note ? ` · ${note}` : "" })}</p>
           {state.error && <p className="banner" role="alert"><Icon name="alert" /><span>{t("Logs nicht ladbar: {error}", { error: state.error })}</span></p>}
           {state.loaded && lines.length === 0 && !state.error && <p className="panel-empty">{t("Keine Zeilen für diese Auswahl. Filter lockern oder eine andere Datei wählen.")}</p>}

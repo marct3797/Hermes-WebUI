@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { dec } from "../../format";
+import { dec, loc } from "../../format";
 import type { Quota, QuotaProvider, QuotaWindow } from "../../types";
 import { Icon } from "../Icon";
 import { N_, t, tm } from "../../i18n";
@@ -31,7 +31,7 @@ function resetTitle(w: QuotaWindow): string | undefined {
   if (!w.reset_at) return undefined;
   const ms = Date.parse(w.reset_at);
   if (Number.isNaN(ms)) return w.reset_at;
-  return /^\d{4}-\d{2}-\d{2}$/.test(w.reset_at) ? `Reset am ${new Date(ms).toLocaleDateString("de-DE", { timeZone: "UTC", day: "2-digit", month: "2-digit", year: "numeric" })}` : `Reset am ${new Date(ms).toLocaleString("de-DE")}`;
+  return /^\d{4}-\d{2}-\d{2}$/.test(w.reset_at) ? t("Reset am {date}", { date: new Date(ms).toLocaleDateString(loc(), { timeZone: "UTC", day: "2-digit", month: "2-digit", year: "numeric" }) }) : t("Reset am {date}", { date: new Date(ms).toLocaleString(loc()) });
 }
 
 function Window({ w }: { w: QuotaWindow }) {

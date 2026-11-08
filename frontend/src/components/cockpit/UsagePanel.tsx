@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { fmtDay } from "../../format";
+import { fmtDay, loc } from "../../format";
 import { aggregate, fmtTokens, fmtUsd, tokensOf, type SessionStat } from "../../stats";
 import { USAGE_PAGE, type AgentUsage } from "../../useUsage";
 import { t } from "../../i18n";
@@ -38,7 +38,7 @@ export function UsagePanel({ stats, byAgent, loading, now }: Props) {
           <div className="kpis usage-kpis" role="group" aria-label={`Kennzahlen, letzte ${range} Tage`}>
             <div className="kpi"><span className="lbl">{t("Sessions")}</span><span className="v">{u.totals.sessions}</span><span className="kpi-note">{t("{messages} Nachrichten", { messages: u.totals.messages })}</span></div>
             <div className="kpi"><span className="lbl">{t("Tokens")}</span><span className="v">{fmtTokens(tokensOf(u.totals))}</span><span className="kpi-note">{t("{input} ein · {output} aus", { input: fmtTokens(u.totals.input), output: fmtTokens(u.totals.output) })}</span></div>
-            <div className="kpi"><span className="lbl">{t("Tool-Aufrufe")}</span><span className="v">{fmtTokens(u.totals.toolCalls)}</span><span className="kpi-note">{u.totals.sessions ? `${(u.totals.toolCalls / u.totals.sessions).toLocaleString("de-DE", { maximumFractionDigits: 1 })} je Session` : "–"}</span></div>
+            <div className="kpi"><span className="lbl">{t("Tool-Aufrufe")}</span><span className="v">{fmtTokens(u.totals.toolCalls)}</span><span className="kpi-note">{u.totals.sessions ? t("{n} je Session", { n: (u.totals.toolCalls / u.totals.sessions).toLocaleString(loc(), { maximumFractionDigits: 1 }) }) : "–"}</span></div>
             <div className="kpi"><span className="lbl">{t("Cache-Anteil")}</span><span className="v">{u.cacheShare === undefined ? "–" : `${Math.round(u.cacheShare * 100)} %`}</span><span className="kpi-note">{u.cacheShare === undefined ? t("nichts aus dem Cache gelesen") : `${fmtTokens(u.totals.cacheRead)} Tokens gelesen`}</span></div>
             {u.totals.cost > 0 && <div className="kpi"><span className="lbl">{t("Kosten")}</span><span className="v">{fmtUsd(u.totals.cost)}</span><span className="kpi-note">{t("laut Hermes")}</span></div>}
           </div>

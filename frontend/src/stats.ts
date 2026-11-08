@@ -1,4 +1,4 @@
-import { toMs } from "./format";
+import { toMs, loc } from "./format";
 import { t as tr } from "./i18n";
 
 /** Auswertung aus den Sessions, die Hermes ohnehin liefert (`/api/sessions`): Tokens, Tool-Aufrufe, Kosten, Modelle. */
@@ -103,9 +103,9 @@ export function aggregate(stats: SessionStat[], days: number, now = Date.now()):
 
 /** 1.234 · 12,3 k · 4,56 M */
 export function fmtTokens(n: number): string {
-  if (n < 10_000) return n.toLocaleString("de-DE");
-  if (n < 1_000_000) return `${(n / 1000).toLocaleString("de-DE", { maximumFractionDigits: 1 })} k`;
-  return `${(n / 1_000_000).toLocaleString("de-DE", { maximumFractionDigits: 2 })} M`;
+  if (n < 10_000) return n.toLocaleString(loc());
+  if (n < 1_000_000) return `${(n / 1000).toLocaleString(loc(), { maximumFractionDigits: 1 })} k`;
+  return `${(n / 1_000_000).toLocaleString(loc(), { maximumFractionDigits: 2 })} M`;
 }
 
-export const fmtUsd = (n: number) => `${n.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
+export const fmtUsd = (n: number) => `${n.toLocaleString(loc(), { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;

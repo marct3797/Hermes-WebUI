@@ -6,7 +6,7 @@ import { getLanguage, t as tr } from "./i18n";
 const LOCALES: Record<string, string> = { en: "en-GB", "zh-hant": "zh-Hant" };
 export const loc = (): string => LOCALES[getLanguage()] ?? getLanguage();
 
-export const dec = (n: number, digits = 1) => n.toFixed(digits).replace(".", ",");
+export const dec = (n: number, digits = 1) => n.toLocaleString(loc(), { minimumFractionDigits: digits, maximumFractionDigits: digits });
 
 /** 3,2 s · 0,04 s · 1:05 min */
 export function fmtDuration(ms: number): string {

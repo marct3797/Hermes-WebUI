@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { api } from "../../api";
-import { fmtCount } from "../../format";
+import { fmtCount, loc } from "../../format";
 import { COLOR_MODES, colorNodes, LINK_NAMES, linkColor, recencyColor, type ColorMode } from "../../graphColor";
 import { analyze } from "../../graphCluster";
 import { useAsync } from "../../useAsync";
@@ -188,7 +188,7 @@ export function GraphView({ provider, initial = {} }: { provider: string; initia
                 {sel ? (
                   <div className="wrow">
                     <p className="mem-text">{sel.text ?? sel.label}</p>
-                    <p className="muted small mono">{[sel.date ? new Date(sel.date).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" }) : null, sel.context].filter(Boolean).join(" · ") || tr("Ohne Datum und Kontext")}</p>
+                    <p className="muted small mono">{[sel.date ? new Date(sel.date).toLocaleString(loc(), { dateStyle: "medium", timeStyle: "short" }) : null, sel.context].filter(Boolean).join(" · ") || tr("Ohne Datum und Kontext")}</p>
                     {sel.entities.length > 0 && <div className="row mem-meta" aria-label={tr("Entitäten")}>{sel.entities.map((e) => <span key={e} className="tag">{e}</span>)}</div>}
                     <p className="lbl">{tr("Verbindungen ({v})", { v: connections.byType.reduce((s, [, n]) => s + n, 0) })}</p>
                     {connections.byType.length === 0 ? <p className="muted small">{tr("Keine Verbindungen in diesem Ausschnitt.")}</p> : (

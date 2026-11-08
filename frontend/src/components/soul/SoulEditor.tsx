@@ -6,6 +6,7 @@ import { Icon } from "../Icon";
 import { DiffView } from "./DiffView";
 import { SoulHistory } from "./SoulHistory";
 import { t } from "../../i18n";
+import { loc } from "../../format";
 
 type Conflict = { current: string; hash: string };
 
@@ -65,7 +66,7 @@ export function SoulEditor({ agent, label, initial }: { agent: AgentRef; label: 
       <section className="card soul-ed" aria-label="SOUL.md">
         <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
           <span className="lbl grow">{t("SOUL.md von {label}", { label })}</span>
-          <span className={`mono small ${tooLong ? "error" : "t3"}`}>{t("{toLocaleString} / {toLocaleString2} Zeichen", { toLocaleString: draft.length.toLocaleString("de-DE"), toLocaleString2: saved.max_chars.toLocaleString("de-DE") })}</span>
+          <span className={`mono small ${tooLong ? "error" : "t3"}`}>{t("{toLocaleString} / {toLocaleString2} Zeichen", { toLocaleString: draft.length.toLocaleString(loc()), toLocaleString2: saved.max_chars.toLocaleString(loc()) })}</span>
         </div>
         {!saved.exists && <p className="hint">{t("Dieses Profil hat noch keine SOUL.md. Mit dem ersten Speichern wird sie angelegt.")}</p>}
         <textarea className="soul-ta" value={draft} spellCheck={false} aria-label={t("Inhalt von SOUL.md")} rows={18}

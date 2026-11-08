@@ -2358,5 +2358,10 @@
  "Programm fehlt": "프로그램 없음",
  "vor {n} Min": "{n}분 전",
  "vor {n} Std": "{n}시간 전",
- "vor {n} T": "{n}일 전"
+ "vor {n} T": "{n}일 전",
+ "{n} je Session": "세션당 {n}",
+ "{n} Zeilen": "{n}줄",
+ "{n} Zeilen heruntergeladen.": "{n}줄을 다운로드했습니다.",
+ "{n} Zeilen kopiert.": "{n}줄을 복사했습니다.",
+ "Reset am {date}": "{date}에 초기화"
 }

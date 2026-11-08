@@ -5,6 +5,7 @@ import { Icon } from "../Icon";
 import { Markdown } from "../Markdown";
 import { Confirm, Loading, Modal, Pill, Problem, SearchBox, Switch, Tabs, type Scope } from "./common";
 import { t as tr } from "../../i18n";
+import { loc } from "../../format";
 
 export const PROVENANCE: Record<string, string> = { bundled: "Mitgeliefert", hub: "Marktplatz", external: "Extern", agent: "Eigener Skill" };
 const MAX_BYTES = 200 * 1024;
@@ -91,7 +92,7 @@ function Editor({ scope, skill, onClose, onChanged, onDirty }: { scope: Scope; s
           ? <textarea className="field ext-code" rows={18} value={text} onChange={(e) => { setText(e.target.value); setNote(undefined); }} aria-label={tr("Inhalt von SKILL.md")} spellCheck={false} />
           : <div className="ext-md" aria-label={tr("Vorschau")}><Markdown text={body(text)} /></div>}
         <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-          <span className={`mono small ${size > MAX_BYTES ? "ext-bad" : "t3"}`} aria-live="polite">{tr("{toLocaleString} von {toLocaleString2} Bytes", { toLocaleString: size.toLocaleString("de-DE"), toLocaleString2: MAX_BYTES.toLocaleString("de-DE") })}</span>
+          <span className={`mono small ${size > MAX_BYTES ? "ext-bad" : "t3"}`} aria-live="polite">{tr("{toLocaleString} von {toLocaleString2} Bytes", { toLocaleString: size.toLocaleString(loc()), toLocaleString2: MAX_BYTES.toLocaleString(loc()) })}</span>
           {dirty && <span className="small ext-warn" role="status">{tr("Ungespeicherte Änderungen")}</span>}
           {note && !dirty && <span className="small t3" role="status">{note}</span>}
           <span className="grow" />

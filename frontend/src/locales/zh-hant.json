@@ -2358,5 +2358,10 @@
  "Programm fehlt": "缺少程式",
  "vor {n} Min": "{n} 分鐘前",
  "vor {n} Std": "{n} 小時前",
- "vor {n} T": "{n} 天前"
+ "vor {n} T": "{n} 天前",
+ "{n} je Session": "每個工作階段 {n}",
+ "{n} Zeilen": "{n} 行",
+ "{n} Zeilen heruntergeladen.": "已下載 {n} 行。",
+ "{n} Zeilen kopiert.": "已複製 {n} 行。",
+ "Reset am {date}": "{date} 重設"
 }

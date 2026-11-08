@@ -2358,5 +2358,10 @@
  "Programm fehlt": "プログラムが見つかりません",
  "vor {n} Min": "{n} 分前",
  "vor {n} Std": "{n} 時間前",
- "vor {n} T": "{n} 日前"
+ "vor {n} T": "{n} 日前",
+ "{n} je Session": "セッションあたり {n}",
+ "{n} Zeilen": "{n} 行",
+ "{n} Zeilen heruntergeladen.": "{n} 行をダウンロードしました。",
+ "{n} Zeilen kopiert.": "{n} 行をコピーしました。",
+ "Reset am {date}": "{date} にリセット"
 }

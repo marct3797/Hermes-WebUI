@@ -2358,5 +2358,10 @@
  "Programm fehlt": "Programme manquant",
  "vor {n} Min": "il y a {n} min",
  "vor {n} Std": "il y a {n} h",
- "vor {n} T": "il y a {n} j"
+ "vor {n} T": "il y a {n} j",
+ "{n} je Session": "{n} par session",
+ "{n} Zeilen": "{n} lignes",
+ "{n} Zeilen heruntergeladen.": "{n} lignes téléchargées.",
+ "{n} Zeilen kopiert.": "{n} lignes copiées.",
+ "Reset am {date}": "Réinitialisation le {date}"
 }

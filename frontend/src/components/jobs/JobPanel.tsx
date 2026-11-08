@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { cronApi, type Job, type JobInput, type Run, type Target } from "../../opsApi";
-import { fmtDuration } from "../../format";
+import { fmtDuration, loc } from "../../format";
 import { Icon } from "../Icon";
 import { useAsync } from "../../useAsync";
 import { Confirm } from "./Confirm";
@@ -17,7 +17,7 @@ export function statusOf(j: Job): { key: "active" | "paused" | "error" | "done";
 
 function Runs({ host, profile, id, revision }: { host: string; profile: string; id: string; revision: number }) {
   const runs = useAsync(() => cronApi.runs(host, profile, id), [host, profile, id, revision]);
-  const at = (s: number | null) => (s == null ? "–" : new Date(s * 1000).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+  const at = (s: number | null) => (s == null ? "–" : new Date(s * 1000).toLocaleString(loc(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }));
   return (
     <section className="kn-sec" aria-label={t("Laufverlauf")}>
       <h2>{t("Laufverlauf")}</h2>
