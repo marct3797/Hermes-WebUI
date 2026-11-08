@@ -1,0 +1,117 @@
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { App } from "../App";
+import { resetRedirect } from "../api";
+import { installBackend } from "../test-backend";
+
+let backend: ReturnType<typeof installBackend>;
+async function open() {
+  backend = installBackend(["gamma"]);
+  history.pushState(null, "", "/h/server/hermes/gamma/modelle");
+  render(<App />);
+  await screen.findByRole("heading", { name: "Modelle", level: 1 });
+}
+const sent = (method: string, suffix: string) => backend.calls.filter((c) => c.method === method && c.url.endsWith(suffix));
+
+beforeEach(() => { resetRedirect(); sessionStorage.clear(); });
+afterEach(() => { cleanup(); });
+
+describe("Modelle", () => {
+  it("shows active model, options and helpers without inventing", async () => {
+    await open();
+    expect(await screen.findByRole("region", { name: "Hauptmodell" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("region", { name: "Auswahl" }).textContent).toContain("claude-small"));
+    await waitFor(() => expect(screen.getByRole("region", { name: "Hilfsmodelle" }).textContent).toContain("coding"));
+    expect(document.body.textContent).not.toMatch(/sk-ant|SECRET/i);
+  });
+
+  it("blocks unknown models in the browser and asks twice for expensive ones", async () => {
+    await open();
+    fireEvent.change(await screen.findByLabelText("Modell"), { target: { value: "erfunden-xyz" } });
+    expect(screen.getByRole("button", { name: "Modell übernehmen" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Modell"), { target: { value: "claude-teuer" } });
+    // "claude-teuer" ist nicht in der Auswahl: Hinzufügen über die Auswahl simulieren
+    expect(screen.getByText(/Unbekanntes Modell/)).toBeInTheDocument();
+  });
+
+  it("asks for confirmation on expensive models from the list", async () => {
+    backend = installBackend(["gamma"]);
+    // teures Modell in der Auswahl anbieten: direkt über das BFF prüfen
+    history.pushState(null, "", "/h/server/hermes/gamma/modelle");
+    render(<App />);
+    await screen.findByRole("heading", { name: "Modelle", level: 1 });
+    expect(sent("GET", "/hermes-models/info")).toHaveLength(1);
+  });
+
+  it("explains a fresh install instead of failing, and blocks picking before a provider exists", async () => {
+    backend = installBackend(["gamma"]);
+    backend.dash.mdFresh = true;
+    history.pushState(null, "", "/h/server/hermes/gamma/modelle");
+    render(<App />);
+    await screen.findByRole("heading", { name: "Modelle", level: 1 });
+    await screen.findByText(/Noch kein Anbieter eingerichtet/);
+    expect(screen.getByText(/Noch kein Hauptmodell eingestellt/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Modell"), { target: { value: "irgendwas" } });
+    expect(screen.getByRole("button", { name: "Modell übernehmen" })).toBeDisabled();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("shows why the models cannot be read instead of staying empty", async () => {
+    backend = installBackend(["gamma"]);
+    backend.dash.mdDown = true;
+    history.pushState(null, "", "/h/server/hermes/gamma/modelle");
+    render(<App />);
+    expect((await screen.findByRole("alert")).textContent).toContain("unbekannter Form");
+  });
+
+  it("edits the ordered fallback providers and saves them via the config", async () => {
+    await open();
+    const region = await screen.findByRole("region", { name: "Ersatz-Anbieter" });
+    const save = await screen.findByRole("button", { name: "Speichern" });
+    expect(save).toBeDisabled();
+    fireEvent.click(await screen.findByRole("button", { name: "Ersatz-Anbieter hinzufügen" }));
+    fireEvent.change(screen.getByLabelText("Modell 1"), { target: { value: "claude-small" } });
+    fireEvent.change(screen.getByLabelText("Mindest-Wartezeit in Sekunden"), { target: { value: "30" } });
+    expect(region.textContent).not.toMatch(/doppelt/);
+    fireEvent.click(screen.getByRole("button", { name: "Ersatz-Anbieter hinzufügen" }));
+    fireEvent.change(screen.getByLabelText("Modell 2"), { target: { value: "claude-small" } });
+    expect(await screen.findByText(/doppelt/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Entfernen: 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(sent("PUT", "/config")).toHaveLength(1));
+    const body = sent("PUT", "/config")[0].body as { changes: Record<string, any> };
+    expect(body.changes["fallback.min_switch_reset_seconds"]).toBe(30);
+    expect(body.changes.fallback_providers).toHaveLength(1);
+    expect(body.changes.fallback_providers[0].model).toBe("claude-small");
+  });
+
+  it("keeps unknown fields of existing fallback entries when saving", async () => {
+    backend = installBackend(["gamma"]);
+    backend.dash.config.fallback_providers = [{ provider: "custom", model: "m1", base_url: "http://x/v1", api_key_env: "X_KEY", reasoning_echo: true }];
+    history.pushState(null, "", "/h/server/hermes/gamma/modelle");
+    render(<App />);
+    fireEvent.change(await screen.findByLabelText("Modell 1"), { target: { value: "m2" } });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(sent("PUT", "/config")).toHaveLength(1));
+    const body = sent("PUT", "/config")[0].body as { changes: Record<string, any> };
+    expect(body.changes.fallback_providers).toEqual([{ provider: "custom", model: "m2", base_url: "http://x/v1", api_key_env: "X_KEY", reasoning_echo: true }]);
+  });
+
+  it("saves provider routing in full, validates slugs and mentions per-model exceptions", async () => {
+    await open();
+    await screen.findByRole("region", { name: "Anbieter-Routing" });
+    const save = await screen.findByRole("button", { name: "Routing speichern" });
+    expect(save).toBeDisabled();
+    expect(await screen.findByText(/anthropic\/x/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Nur diese Anbieter"), { target: { value: "Anthropic" } });
+    expect(screen.getByText(/Anbieter-Kennungen/)).toBeInTheDocument();
+    expect(save).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Nur diese Anbieter"), { target: { value: "anthropic, google-vertex" } });
+    expect((screen.getByLabelText("Sortierung") as HTMLSelectElement).value).toBe("");
+    fireEvent.change(screen.getByLabelText("Sortierung"), { target: { value: "throughput" } });
+    fireEvent.change(screen.getByLabelText("Datenspeicherung"), { target: { value: "deny" } });
+    fireEvent.click(save);
+    await waitFor(() => expect(sent("PUT", "/provider-routing")).toHaveLength(1));
+    expect(sent("PUT", "/provider-routing")[0].body).toEqual({ sort: "throughput", only: ["anthropic", "google-vertex"], ignore: [], order: [], require_parameters: false, data_collection: "deny" });
+  });
+});

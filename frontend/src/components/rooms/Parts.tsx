@@ -9,6 +9,7 @@ import { Icon } from "../Icon";
 import { Link } from "../Link";
 import { Markdown } from "../Markdown";
 import { Sigil } from "../Sigil";
+import { t } from "../../i18n";
 
 export function MemberSigil({ member, size = "s" }: { member: RoomMember; size?: "xs" | "s" | "m" }) {
   const { sigils } = useUi();
@@ -28,7 +29,7 @@ export function MessageRow({ message, members }: RowProps) {
   const mine = message.author === "user";
   return (
     <article className={`rmsg${mine ? " mine" : ""}`} aria-label={`${mine ? "Du" : member?.label ?? message.author} um ${fmtTime(message.at * 1000)}`}>
-      {member ? <MemberSigil member={member} /> : <span className="avatar" aria-hidden>Du</span>}
+      {member ? <MemberSigil member={member} /> : <span className="avatar" aria-hidden>{t("Du")}</span>}
       <div className="rbody">
         <header><b>{mine ? "Du" : member?.label ?? message.author}</b><span className="mono t3 small">{fmtTime(message.at * 1000)}</span></header>
         {mine ? <p className="rplain">{message.text}</p> : <Markdown text={message.text} />}
@@ -37,7 +38,7 @@ export function MessageRow({ message, members }: RowProps) {
   );
 }
 
-const CHOICE: Record<Decision, string> = { once: "Einmal erlauben", session: "Für Session", always: "Immer erlauben", deny: "Ablehnen" };
+const CHOICE: Record<Decision, string> = { once: "Einmal erlauben", get session() { return t("Für Session"); }, always: "Immer erlauben", deny: "Ablehnen" };
 
 /** Freigabe oder Rückfrage eines Mitglieds: wird über den Run dieses Mitglieds beantwortet, nicht über den Raum. */
 export function AskCard({ ask, member, room }: { ask: MemberAsk; member: RoomMember; room?: { id: string; name: string } }) {
@@ -56,9 +57,9 @@ export function AskCard({ ask, member, room }: { ask: MemberAsk; member: RoomMem
   };
   return (
     <section className="card need ask" role="group" aria-label={`${member.label} braucht dich`}>
-      <header className="card-h"><MemberSigil member={member} size="xs" /><h2>{member.label} {ask.kind === "approval" ? "braucht eine Freigabe" : "hat eine Rückfrage"}</h2></header>
+      <header className="card-h"><MemberSigil member={member} size="xs" /><h2>{member.label} {ask.kind === "approval" ? t("braucht eine Freigabe") : t("hat eine Rückfrage")}</h2></header>
       <div className="wrow">
-        {room && <p className="small muted">im Raum <Link to={`/rooms/${room.id}`} className="inline-link">{room.name}</Link></p>}
+        {room && <p className="small muted">{t("im Raum")} <Link to={`/rooms/${room.id}`} className="inline-link">{room.name}</Link></p>}
         {ask.kind === "approval" ? (
           <>
             <code className="askcmd">{ask.command}</code>
@@ -76,8 +77,8 @@ export function AskCard({ ask, member, room }: { ask: MemberAsk; member: RoomMem
               {ask.choices.map((c) => <button key={c} type="button" className="btn btn-s" disabled={busy} onClick={() => void run(() => api.clarify(member, ask.runId, c, ask.clarifyId))}>{c}</button>)}
             </div>
             <form className="row" style={{ gap: 6 }} onSubmit={(e) => { e.preventDefault(); if (text.trim()) void run(() => api.clarify(member, ask.runId, text.trim(), ask.clarifyId)); }}>
-              <input className="field field-line" value={text} onChange={(e) => setText(e.target.value)} aria-label="Antwort" placeholder="Antwort eintippen" />
-              <button type="submit" className="btn btn-s btn-p" disabled={busy || !text.trim()}><Icon name="send" size={14} />Senden</button>
+              <input className="field field-line" value={text} onChange={(e) => setText(e.target.value)} aria-label={t("Antwort")} placeholder={t("Antwort eintippen")} />
+              <button type="submit" className="btn btn-s btn-p" disabled={busy || !text.trim()}><Icon name="send" size={14} />{t("Senden")}</button>
             </form>
           </>
         )}

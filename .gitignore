@@ -18,3 +18,5 @@ node_modules
 
 hostd/build/
 hostd/*.egg-info/
+build/
+*.egg-info/

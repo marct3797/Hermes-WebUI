@@ -10,7 +10,6 @@ import time
 from datetime import date, datetime, timezone
 from typing import Any
 
-from .providers import HIDDEN_PROVIDERS
 
 LOW_PERCENT = 10.0
 PLUGIN_MISSING = "Plugin ai-usage-tracker auf diesem Host nicht installiert"
@@ -81,7 +80,7 @@ def _provider(p: dict[str, Any], now: float | None) -> dict[str, Any]:
             "worst_remaining_percent": worst, "windows": windows, "reason": reason if state in ("unavailable", "auth_failed") else None}
 
 
-def normalize(body: Any, now: float | None = None) -> dict[str, Any]:
+def normalize(body: Any, now: float | None = None, hidden: frozenset[str] = frozenset()) -> dict[str, Any]:
     """Antwort von `/api/plugins/ai-usage-tracker/usage` -> {state, reason, generated_at, cached, providers}."""
     now_s = time.time() if now is None else now
     stamp = datetime.fromtimestamp(now_s, timezone.utc).isoformat()
@@ -89,7 +88,7 @@ def normalize(body: Any, now: float | None = None) -> dict[str, Any]:
         return {"state": "error", "reason": "Das Plugin liefert keine Anbieterliste", "generated_at": stamp, "cached": False, "providers": []}
     body = strip_secrets(body)
     return {"state": "ok", "reason": None, "generated_at": body.get("generated_at") if isinstance(body.get("generated_at"), str) else stamp,
-            "cached": bool(body.get("cached")), "providers": [_provider(p, now_s) for p in body["providers"] if isinstance(p, dict) and p.get("id") not in HIDDEN_PROVIDERS]}
+            "cached": bool(body.get("cached")), "providers": [_provider(p, now_s) for p in body["providers"] if isinstance(p, dict) and p.get("id") not in hidden]}
 
 
 def failure(state: str, reason: str) -> dict[str, Any]:

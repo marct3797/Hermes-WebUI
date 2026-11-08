@@ -1,6 +1,7 @@
 import { api } from "../../api";
 import { useQuota } from "../../useQuota";
 import { fmtIn } from "../providers/QuotaBars";
+import { t } from "../../i18n";
 
 /** Kleine Karte „Kontingent“: das knappste Fenster aller Profile; rot, wenn eines erschöpft oder ein Zugang abgelaufen ist. */
 export function QuotaKpi() {
@@ -13,17 +14,17 @@ export function QuotaKpi() {
   const problem = data?.runtimes.find((r) => r.state !== "ok");
   const hot = worst?.state === "exhausted" || expired.length > 0;
   const rest = worst?.remaining_percent;
-  const parts = error ? [`nicht ladbar: ${error}`]
+  const parts = error ? [t("nicht ladbar: {error}", { error })]
     : [
       worst && `${worst.label} · ${worst.window} · ${worst.profile}${worst.reset_in_s !== null ? ` · Reset ${fmtIn(worst.reset_in_s)}` : ""}`,
-      exhausted > 1 && `${exhausted} erschöpft`,
-      expired.length > 0 && `${expired.length} ${expired.length === 1 ? "Zugang" : "Zugänge"} abgelaufen (${expired.map((i) => `${i.label}, ${i.profile}`).join("; ")})`,
-      !worst && !expired.length && (problem ? `${problem.host}: ${problem.reason ?? "nicht abfragbar"}` : "keine Anbieter mit Kontingent"),
+      exhausted > 1 && t("{exhausted} erschöpft", { exhausted }),
+      expired.length > 0 && `${expired.length} ${expired.length === 1 ? t("Zugang") : t("Zugänge")} abgelaufen (${expired.map((i) => `${i.label}, ${i.profile}`).join("; ")})`,
+      !worst && !expired.length && (problem ? `${problem.host}: ${problem.reason ?? t("nicht abfragbar")}` : t("keine Anbieter mit Kontingent")),
     ].filter(Boolean);
   return (
-    <div className={`kpi${hot ? " hot" : ""}`} aria-label="Kontingent">
-      <span className={`lbl${hot ? " crimt" : ""}`}>Kontingent</span>
-      <span className="v">{rest == null ? "—" : <>{Number.isInteger(rest) ? rest : rest.toFixed(1).replace(".", ",")}<small>% Rest</small></>}</span>
+    <div className={`kpi${hot ? " hot" : ""}`} aria-label={t("Kontingent")}>
+      <span className={`lbl${hot ? " crimt" : ""}`}>{t("Kontingent")}</span>
+      <span className="v">{rest == null ? "—" : <>{Number.isInteger(rest) ? rest : rest.toFixed(1).replace(".", ",")}<small>{t("% Rest")}</small></>}</span>
       <span className="kpi-note">{parts.join(" · ")}</span>
     </div>
   );

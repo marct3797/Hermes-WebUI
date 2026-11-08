@@ -50,3 +50,15 @@
 .prov-keys li{display:flex;justify-content:space-between;gap:10px}
 .prov-oauth code{word-break:break-all}
 .prov-form{display:flex;flex-direction:column;gap:10px;padding-top:4px}
+
+/* Hermes-Einstellungen */
+.cfg-bar{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.cfg-bar .pf-in{max-width:420px}
+.cfg-list{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:2px}
+.cfg-row{display:grid;grid-template-columns:minmax(180px,1fr) minmax(200px,1.2fr) minmax(160px,.8fr);gap:12px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line)}
+.cfg-row.dirty{background:var(--crim-bg,rgba(220,60,80,.06));border-left:2px solid var(--crim)}
+.cfg-name{color:var(--t1);font:500 13px var(--sans)}
+.cfg-key{color:var(--t3);font:500 11px var(--mono);overflow-wrap:anywhere}
+.cfg-json{height:auto;padding:8px 10px;font:500 12px/18px var(--mono);resize:vertical}
+.cfg-err{color:var(--crim-hi);font-size:12px}
+@media (max-width:760px){.cfg-row{grid-template-columns:1fr}}

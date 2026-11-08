@@ -1,5 +1,6 @@
 import type { AgentRef, ProfileInput, SigilConfig, SigilInput } from "../../types";
 import { NEUTRAL_GLYPHS } from "../Sigil";
+import { t } from "../../i18n";
 
 /** Arbeitsstand der Profil-Seite. Er entsteht aus dem gespeicherten Eintrag, Änderungen liegen darüber. */
 export type Draft = {
@@ -69,11 +70,11 @@ const MAX_SVG = 20 * 1024;
 
 /** Erste Prüfung im Browser; maßgeblich bleibt die Bereinigung auf dem Server. */
 export function checkSvg(text: string, bytes: number): string | undefined {
-  if (bytes > MAX_SVG) return "Die Datei ist größer als 20 KB.";
+  if (bytes > MAX_SVG) return t("Die Datei ist größer als 20 KB.");
   const doc = new DOMParser().parseFromString(text, "image/svg+xml");
   const root = doc.documentElement;
-  if (doc.querySelector("parsererror") || root.localName !== "svg") return "Das ist kein gültiges SVG.";
-  if (!root.getAttribute("viewBox")) return "Dem SVG fehlt das viewBox-Attribut.";
+  if (doc.querySelector("parsererror") || root.localName !== "svg") return t("Das ist kein gültiges SVG.");
+  if (!root.getAttribute("viewBox")) return t("Dem SVG fehlt das viewBox-Attribut.");
   return undefined;
 }
 

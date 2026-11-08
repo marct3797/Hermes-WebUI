@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import { t } from "../../i18n";
 
 /** Bestätigungsdialog (nativer <dialog>, Escape schließt). */
 export function Confirm({ title, children, label, busy, onConfirm, onClose }: { title: string; children: ReactNode; label: string; busy?: boolean; onConfirm: () => void; onClose: () => void }) {
@@ -14,8 +15,8 @@ export function Confirm({ title, children, label, busy, onConfirm, onClose }: { 
         <h2>{title}</h2>
         {children}
         <div className="row" style={{ gap: 8, justifyContent: "flex-end" }}>
-          <button type="button" className="btn btn-s" disabled={busy} onClick={onClose}>Abbrechen</button>
-          <button type="button" className="btn btn-s btn-p" disabled={busy} onClick={onConfirm}>{busy ? "Bitte warten…" : label}</button>
+          <button type="button" className="btn btn-s" disabled={busy} onClick={onClose}>{t("Abbrechen")}</button>
+          <button type="button" className="btn btn-s btn-p" disabled={busy} onClick={onConfirm}>{busy ? t("Bitte warten…") : label}</button>
         </div>
       </div>
     </dialog>

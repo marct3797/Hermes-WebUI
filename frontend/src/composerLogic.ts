@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 /** Reine Logik der Chat-Eingabe: Aufwand, Auslöser für Menüs, Anhänge und die Darstellung angehängter Kontexte. */
 
 export type Effort = "minimal" | "low" | "medium" | "high" | "xhigh" | "max" | "ultra";
@@ -5,13 +6,13 @@ export type Effort = "minimal" | "low" | "medium" | "high" | "xhigh" | "max" | "
 export type Reasoning = { thinking: boolean; effort?: Effort };
 
 export const EFFORTS: { value: Effort; label: string }[] = [
-  { value: "minimal", label: "Minimal" }, { value: "low", label: "Niedrig" }, { value: "medium", label: "Mittel" },
-  { value: "high", label: "Hoch" }, { value: "xhigh", label: "Extra hoch" }, { value: "max", label: "Max" }, { value: "ultra", label: "Ultra" },
+  { value: "minimal", get label() { return t("Minimal"); } }, { value: "low", get label() { return t("Niedrig"); } }, { value: "medium", get label() { return t("Mittel"); } },
+  { value: "high", get label() { return t("Hoch"); } }, { value: "xhigh", get label() { return t("Extra hoch"); } }, { value: "max", get label() { return t("Max"); } }, { value: "ultra", get label() { return t("Ultra"); } },
 ];
 
 export function reasoningLabel(r?: Reasoning): string {
-  if (!r) return "Standard";
-  if (!r.thinking) return "Aus";
+  if (!r) return t("Standard");
+  if (!r.thinking) return t("Aus");
   return r.effort ? EFFORTS.find((e) => e.value === r.effort)!.label : "An";
 }
 

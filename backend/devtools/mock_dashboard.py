@@ -8,6 +8,9 @@ Start: uvicorn devtools.mock_dashboard:app --port 9122
 """
 from __future__ import annotations
 
+import hashlib
+import time
+
 import os
 from typing import Any
 
@@ -31,6 +34,47 @@ ENV_CATALOG = {
     "FIRECRAWL_API_KEY": {"provider": "", "provider_label": "", "category": "tool", "description": "Web scraping", "url": None},
     "TELEGRAM_BOT_TOKEN": {"provider": "", "provider_label": "", "category": "messaging", "description": "Telegram", "url": None, "channel_managed": True},
 }
+# Werkzeug-Gruppen in der Form von GET /api/tools/toolsets und .../config (aus Hermes 0.22.5 gemessen, gekürzt).
+TOOLSETS: dict[str, dict[str, Any]] = {
+    "terminal": {"label": "Terminal", "description": "Befehle ausführen.", "tools": ["terminal", "process"]},
+    "web": {"label": "Web", "description": "Suchen.", "tools": ["web_search"], "providers": [
+        {"name": "Brave Search (Free)", "badge": "free", "tag": "Brave Search API", "web_backend": "brave", "capabilities": ["search"],
+         "env_vars": [{"key": "BRAVE_SEARCH_API_KEY", "prompt": "Brave Search API key", "url": "https://brave.com/search/api/", "default": None}]},
+        {"name": "Firecrawl Cloud", "badge": "paid", "tag": "Suche und Extraktion", "web_backend": "firecrawl", "capabilities": ["search", "extract"],
+         "env_vars": [{"key": "FIRECRAWL_API_KEY", "prompt": "Firecrawl API key", "url": "https://firecrawl.dev/", "default": None}]}]},
+    "image_gen": {"label": "Bilder", "description": "Bilder erzeugen.", "tools": ["image_generate"],
+                  "providers": [{"name": "FAL.ai", "badge": "paid", "tag": "FLUX und mehr", "env_vars": [{"key": "FAL_KEY", "prompt": "FAL API key", "url": "https://fal.ai/dashboard/keys", "default": None}]}],
+                  "models": [{"id": "flux-2-pro", "display": "FLUX 2 Pro", "speed": "~10s", "strengths": "Qualität", "price": "$0.05"},
+                             {"id": "flux-2-klein", "display": "FLUX 2 Klein", "speed": "~3s", "strengths": "Tempo", "price": "$0.01"}]},
+    "computer_use": {"label": "Computer Use", "description": "Bildschirm und Eingaben steuern.", "tools": ["computer_use"], "providers": [
+        {"name": "Cua Driver", "badge": "local", "tag": "macOS", "post_setup": "cua_driver", "env_vars": []}]},
+}
+
+# Messaging-Plattformen in der Form von GET /api/messaging/platforms (aus Hermes 0.22.5 gemessen, gekürzt auf drei).
+MESSAGING: dict[str, dict[str, Any]] = {
+    "telegram": {"name": "Telegram", "description": "Hermes über Telegram nutzen.", "docs_url": "https://core.telegram.org/bots/features#botfather", "env": [
+        {"key": "TELEGRAM_BOT_TOKEN", "required": True, "is_password": True, "prompt": "Bot token", "url": "https://t.me/BotFather"},
+        {"key": "TELEGRAM_ALLOWED_USERS", "required": False, "is_password": False, "is_list": True, "prompt": "Allowed user IDs"}]},
+    "discord": {"name": "Discord", "description": "Hermes über Discord nutzen.", "docs_url": "https://discord.com/developers", "env": [
+        {"key": "DISCORD_BOT_TOKEN", "required": True, "is_password": True, "prompt": "Bot token"}]},
+    "whatsapp": {"name": "WhatsApp", "description": "Hermes über WhatsApp nutzen.", "docs_url": "https://example.invalid/wa", "env": [
+        {"key": "WHATSAPP_ALLOWED_USERS", "required": False, "is_password": False, "is_list": True, "prompt": "Allowed numbers"}]},
+}
+
+# Gedächtnis-Anbieter in der Form von GET /api/memory (aus Hermes 0.22.5 gemessen): einer braucht nur einen Key, einer ein fehlendes Programm.
+# Arten/Attribute wie plugins/memory/config_schema.py: text/select/secret/bool/number/json, info/inline/group, options[].description, Anbieter-label/docs_url.
+MEMORY_PROVIDERS: dict[str, dict[str, Any]] = {
+    "retaindb": {"description": "RetainDB, Cloud-Gedächtnis.", "label": "RetainDB", "docs_url": "https://retaindb.com/docs", "env": {"api_key": "RETAINDB_API_KEY"}, "deps": [], "fields": [
+        {"key": "api_key", "label": "Api Key", "kind": "secret", "description": "RetainDB API key", "info": "Key aus dem RetainDB-Konto; nur geschrieben, nie gelesen.", "inline": True, "group": "Zugang", "required": True, "options": []},
+        {"key": "project", "label": "Project", "kind": "text", "description": "Projekt", "info": "", "inline": True, "group": "Zugang", "required": False, "options": [], "default": ""},
+        {"key": "mode", "label": "Mode", "kind": "select", "description": "Modus", "info": "", "inline": False, "group": "Suche", "required": False, "options": [{"value": "fast", "label": "fast", "description": "Schnelle Treffer"}, {"value": "deep", "label": "deep", "description": "Gründliche Suche"}], "default": "fast"},
+        {"key": "cache", "label": "Cache", "kind": "bool", "description": "Zwischenspeicher", "info": "Treffer zwischenspeichern.", "inline": False, "group": "Suche", "required": False, "options": [], "default": "true"},
+        {"key": "budget", "label": "Budget", "kind": "number", "description": "Abruf-Budget", "info": "Höchstens so viele Treffer je Abfrage.", "inline": False, "group": "Suche", "required": False, "options": [], "default": "10"},
+        {"key": "mapping", "label": "Mapping", "kind": "json", "description": "Feldzuordnung", "info": "Als JSON-Objekt, z. B. {\"titel\": \"name\"}.", "inline": False, "group": "Suche", "required": False, "options": [], "default": ""}]},
+    "byterover": {"description": "ByteRover, Wissensbaum.", "label": "ByteRover", "docs_url": "https://byterover.dev/docs", "env": {}, "deps": [{"name": "brv", "install": "curl -fsSL https://byterover.dev/install.sh | sh", "check": "brv --version"}], "fields": [
+        {"key": "auto_extract", "label": "Auto Extract", "kind": "bool", "description": "Automatisch", "info": "Abgeschlossene Schritte automatisch einsortieren.", "inline": True, "group": "Verhalten", "required": False, "options": [], "default": "true"}]},
+}
+
 OAUTH = [
     {"id": "anthropic", "name": "Anthropic", "flow": "pkce", "cli_command": "hermes auth add anthropic", "docs_url": None,
      "status": {"logged_in": False, "source": None, "source_label": None, "expires_at": None}},
@@ -53,8 +97,41 @@ USAGE = [
 ]
 
 
+# `GET /api/config/schema` (Auszug): flache Schlüssel mit Punkt-Pfad, wie Hermes 0.22 sie liefert.
+CONFIG_SCHEMA = {
+    "model": {"type": "string", "description": "Default model", "category": "general"},
+    "agent.service_tier": {"type": "select", "description": "Fast mode", "category": "agent", "options": ["", "normal", "fast"]},
+    "agent.max_turns": {"type": "number", "description": "Max turns", "category": "agent"},
+    "display.streaming": {"type": "boolean", "description": "Streaming", "category": "display"},
+    "fallback_providers": {"type": "list", "description": "Fallback providers", "category": "general"},
+    "web.api_key": {"type": "string", "description": "Search key", "category": "tools"},
+}
+CONFIG_ORDER = ["general", "agent", "display", "tools"]
+
+
+def default_config() -> dict[str, Any]:
+    return {"model": "claude-test", "agent": {"service_tier": "normal", "max_turns": 90}, "display": {"streaming": True},
+            "fallback_providers": [], "web": {"api_key": "geheim-aus-der-config"}, "custom_providers": [{"name": "x"}]}
+
+
+def deep_merge(base: dict[str, Any], extra: dict[str, Any]) -> dict[str, Any]:
+    # wie hermes_cli.config._deep_merge: dict über dict mischt rekursiv, `None` über einem Abschnitt wird ignoriert
+    for k, v in extra.items():
+        over_dict = isinstance(base.get(k), dict)
+        if over_dict and isinstance(v, dict):
+            base[k] = deep_merge(base[k], v)
+        elif not (over_dict and v is None):
+            base[k] = v
+    return base
+
+
 class SoulBody(BaseModel):
     content: str
+
+
+class ConfigBody(BaseModel):
+    config: dict[str, Any]
+    profile: str | None = None
 
 
 class DescriptionBody(BaseModel):
@@ -70,13 +147,82 @@ class ModelBody(BaseModel):
     provider: str
     model: str
 
+class ProfileCreateBody(BaseModel):
+    name: str
+    description: Any = None
+    clone_from: Any = None
+    clone_channels: bool = False
 
-def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default", "beta", "eta"), drop_writes: bool = False, quota: dict[str, Any] | None = None, env_put_error: dict[str, Any] | None = None) -> FastAPI:
+class ProfileRenameBody(BaseModel):
+    new_name: str
+
+class ConfirmBody(BaseModel):
+    confirm: str = ""
+
+class ActiveBody(BaseModel):
+    name: str
+
+
+class ToolToggleBody(BaseModel):
+    enabled: bool
+    profile: str | None = None
+
+
+class ToolProviderBody(BaseModel):
+    provider: str
+    capability: str | None = None
+    profile: str | None = None
+
+
+class ToolEnvBody(BaseModel):
+    env: dict[str, str]
+    profile: str | None = None
+
+
+class ToolModelBody(BaseModel):
+    model: str
+    provider: str | None = None
+    profile: str | None = None
+
+
+class MsgPlatformBody(BaseModel):
+    enabled: bool | None = None
+    env: dict[str, str] = {}
+    clear_env: list[str] = []
+    profile: str | None = None
+
+
+class TelegramApplyBody(BaseModel):
+    allowed_user_ids: list[str]
+    profile: str | None = None
+
+
+class MemProviderBody(BaseModel):
+    provider: str
+
+
+class MemResetBody(BaseModel):
+    target: str = "all"
+
+
+class MemConfigBody(BaseModel):
+    values: dict[str, Any] = {}
+
+
+def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default", "beta", "eta"), drop_writes: bool = False, shared_fs: bool = True, quota: dict[str, Any] | None = None, env_put_error: dict[str, Any] | None = None) -> FastAPI:
     app = FastAPI()
+    app.state.hidden = set()  # Pfade, die eine ältere Hermes-Version nicht kennt: Antwort wie Hermes (404 „No such API endpoint“)
+    app.state.shared_fs = shared_fs  # False: getrenntes Dateisystem (BFF und Dashboard teilen kein Dateisystem)
+
+    @app.middleware("http")
+    async def old_hermes(request, call_next):
+        if request.url.path in app.state.hidden:
+            return JSONResponse({"detail": f"No such API endpoint: {request.url.path}"}, status_code=404)
+        return await call_next(request)
     app.state.env_put_error = env_put_error  # {"var": ..., "status": 500, "detail": "..."}: PUT /api/env scheitert für diese Variable
     state: dict[str, dict[str, Any]] = {
         name: {"soul": SOULS.get(name), "description": "", "description_auto": False, "provider": "anthropic", "model": "claude-test",
-              "env": {"ANTHROPIC_API_KEY": "sk-ant-geheim-1234"} if name == "default" else {}}
+              "env": {"ANTHROPIC_API_KEY": "sk-ant-geheim-1234"} if name == "default" else {}, "config": default_config()}
         for name in profiles
     }
     app.state.profiles = state  # Tests lesen und ändern den Stand direkt
@@ -105,14 +251,111 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
         return {**quota, "profile": profile}
 
     @app.get("/api/profiles")
-    async def list_profiles():
+    async def list_profiles(request: Request):
+        hidden = getattr(app.state, "drop_readback", [])  # Tests: das Dashboard meldet Erfolg, listet das Profil aber nicht
         return {"profiles": [
             {"name": n, "path": f"/opt/data/profiles/{n}", "is_default": n == "default", "model": p["model"], "provider": p["provider"],
              "has_env": True, "skill_count": 12, "gateway_running": False, "description": p["description"],
              "description_auto": p["description_auto"], "distribution_name": None, "distribution_version": None,
              "distribution_source": None, "has_alias": False}
-            for n, p in state.items()
+            for n, p in state.items() if n not in hidden
         ]}
+
+    app.state.profiles.setdefault("beta", {"soul": "# Beta\n", "provider": "nous", "model": "claude-test", "description": "", "description_auto": True, "env": {}, "memory": {"active": "", "files": {"memory": 10, "user": 0}, "cfg": {}, "installed": set()}, "channels": False, "gateway_running": False})
+    app.state.profile_calls = []  # (Methode, Pfad, Name); Import per Pfad darf nie darin vorkommen
+    app.state.action_logs = {}
+
+    @app.get("/api/profiles/active")
+    async def profiles_active():
+        return {"active": "default", "current": "default"}
+
+    @app.post("/api/profiles/active")
+    async def profiles_active_set(body: ActiveBody):
+        profile(body.name)
+        return {"ok": True, "active": body.name}
+
+    @app.post("/api/profiles")
+    async def profiles_create(body: ProfileCreateBody):
+        if body.name in state:
+            raise HTTPException(400, "exists")
+        if str(body.clone_from or "") and str(body.clone_from) not in state:
+            raise HTTPException(404, "Quelle fehlt")
+        src = state.get(str(body.clone_from)) if body.clone_from else None
+        created = {("POST-mit-clone_channels_wahr" if body.clone_channels else "plain"): True}
+        app.state.profile_calls.append((("POST-mit-clone_channels_wahr") if body.clone_channels else "POST", "/api/profiles", body.name))
+        state[body.name] = {"soul": (src or {}).get("soul"), "provider": "nous", "model": "claude-test", "description": "", "description_auto": True, "env": {}, "memory": {"active": "", "files": {"memory": 0, "user": 0}, "cfg": {}, "installed": set()}, "created": created}
+        if src is not None and bool(body.clone_channels):
+            state[body.name]["channels"] = True
+        return {"ok": True, "name": body.name}
+
+    @app.patch("/api/profiles/{name}")
+    async def profiles_rename(name: str, body: ProfileRenameBody):
+        p = profile(name)
+        state[body.new_name] = p
+        del state[name]
+        return {"ok": True, "name": body.new_name}
+
+    @app.delete("/api/profiles/{name}")
+    async def profiles_delete(name: str, body: ConfirmBody | None = None):
+        p = profile(name)
+        stopped = bool(p.get("gateway_running"))
+        del state[name]
+        return {"ok": True, "gateway_stopped": stopped}
+
+    @app.post("/api/profiles/{name}/export")
+    async def profiles_export(name: str):
+        profile(name)
+        return {"ok": True, "archive": f"/opt/data/exports/{name}-20261024.tar.gz"}
+
+    @app.post("/api/profiles/import")
+    async def profiles_import(request: Request):
+        ctype = request.headers.get("content-type") or ""
+        if ctype.startswith("multipart/form-data"):
+            form = await request.form()
+            up = form.get("archive")
+            data = await up.read() if up is not None and not isinstance(up, str) else b""
+            if not data[:2] == b"PK":
+                raise HTTPException(422, "Nur Profil-Archive (.tar.gz/.zip)")
+            name = str(form.get("name") or "rueck")
+            state[name] = {"soul": None, "provider": "nous", "model": "claude-test", "description": "", "description_auto": True, "env": {}, "memory": {"active": "", "files": {"memory": 0, "user": 0}, "cfg": {}, "installed": set()}}
+            return {"ok": True, "name": name}
+        body = await request.json()
+        arch = body.get("archive")
+        if not isinstance(arch, str) or not arch.strip():
+            raise HTTPException(400, "archive fehlt")
+        import tempfile as _tf
+        if not arch.startswith(_tf.gettempdir() + "/"):
+            raise HTTPException(422, "Nur Uploads ueber das BFF (temp-Datei), keine freien Pfade")
+        name = str(body.get("name") or "rueck")
+        if not request.app.state.shared_fs:
+            raise HTTPException(404, "file not found")  # getrenntes Dateisystem: das Dashboard sieht die temp-Datei des BFF nicht
+        state[name] = {"soul": None, "provider": "nous", "model": "claude-test", "description": "", "description_auto": True, "env": {}, "memory": {"active": "", "files": {"memory": 0, "user": 0}, "cfg": {}, "installed": set()}}
+        return {"ok": True, "name": name}  # BFF meldet temp-Pfade; profile_calls bleibt leer als Beleg dafuer
+
+    @app.get("/api/profiles/{name}/setup-command")
+    async def profiles_setup(name: str):
+        profile(name)
+        return {"command": "hermes setup"}
+
+    @app.post("/api/ops/doctor")
+    async def ops_doctor():
+        from datetime import datetime, timezone
+        app.state.action_logs.setdefault("doctor", f"fertig {datetime.now(timezone.utc).isoformat()}")
+        return {"ok": True, "action": "doctor"}
+
+    # 1. Fassung (Lifecycle): /api/actions/{name}/status mit Schwärzung, weil Hermes dort Binär- und Geheimnismüll liefern kann.
+
+    @app.post("/api/ops/backup")
+    async def ops_backup():
+        return {"ok": True, "archive": "/opt/data/exports/backup-beta-test.zip"}
+
+    @app.get("/api/health")
+    async def dash_health():
+        return {"ok": True, "uptime_s": 42}
+
+    @app.get("/api/hermes/update/check")
+    async def update_check():
+        return {"install_method": "git", "current_version": "mock-1", "behind": 0, "update_available": False, "can_apply": True, "update_command": "hermes update", "message": None}
 
     @app.get("/api/profiles/{name}/soul")
     async def get_soul(name: str):
@@ -130,6 +373,7 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
     async def put_description(name: str, body: DescriptionBody):
         p = profile(name)
         p["description"], p["description_auto"] = body.description.strip(), False
+        app.state.profile_calls.append(("PUT", f"/api/profiles/{name}/description", body.description.strip()))
         return {"ok": True, "description": p["description"], "description_auto": False}
 
     @app.put("/api/profiles/{name}/model")
@@ -142,6 +386,22 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
 
     def redact(value: str) -> str:
         return f"{value[:4]}…{value[-4:]}" if len(value) > 8 else "…"
+
+    @app.get("/api/config/schema")
+    async def config_schema(profile: str | None = None):
+        profile_or_default(profile)
+        return {"fields": CONFIG_SCHEMA, "category_order": CONFIG_ORDER}
+
+    @app.get("/api/config")
+    async def get_config(profile: str | None = None):
+        return profile_or_default(profile)["config"]
+
+    @app.put("/api/config")
+    async def put_config(body: ConfigBody, profile: str | None = None):
+        p = profile_or_default(body.profile or profile)
+        if not drop_writes:
+            deep_merge(p["config"], body.config)
+        return {"ok": True}
 
     @app.get("/api/env")
     async def get_env(profile: str | None = None):
@@ -161,6 +421,15 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
         profile_or_default(profile)["env"][body.key] = body.value
         return {"ok": True, "key": body.key}
 
+    @app.delete("/api/env")
+    async def delete_env(body: dict[str, Any], profile: str | None = None):
+        key = body.get("key")
+        prof = profile_or_default(profile)
+        if not isinstance(key, str) or key not in prof["env"]:
+            raise HTTPException(404, f"{key} not found in .env")
+        del prof["env"][key]
+        return {"ok": True, "key": key, "found": True}
+
     @app.get("/api/providers/oauth")
     async def oauth(profile: str | None = None):
         profile_or_default(profile)
@@ -169,7 +438,138 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
     @app.get("/api/model/options")
     async def model_options(profile: str | None = None):
         cur = profile_or_default(profile)
-        return {"providers": [{**p, "is_current": p["slug"] == cur["provider"], "is_user_defined": False, "total_models": len(p["models"]), "source": "hermes"} for p in MODEL_PROVIDERS]}
+        if cur.get("malformed"):
+            return {"foo": 1}
+        if cur.get("no_providers"):  # frische Installation (Hermes 0.22.5): gueltige, aber leere Antwort
+            return {"providers": [], "current": {"provider": cur["provider"], "model": cur["model"]}}
+        return {"providers": [{**p, "is_current": p["slug"] == cur["provider"], "is_user_defined": False, "total_models": len(p["models"]), "source": "hermes"} for p in MODEL_PROVIDERS],
+                "current": {"provider": cur["provider"], "model": cur["model"]}}
+
+    @app.get("/api/model/info")
+    async def model_info(profile: str | None = None):
+        cur = profile_or_default(profile)
+        if cur.get("malformed"):
+            return {"foo": 1}
+        return {"provider": cur["provider"], "model": cur["model"], "auto_context_length": 200000 if cur["model"] else 0,
+                "config_context_length": 0, "effective_context_length": 200000,
+                "capabilities": {"supports_tools": True, "supports_vision": False, "supports_reasoning": False,
+                                 "context_window": 200000, "max_output_tokens": 8192}}
+
+    @app.get("/api/model/recommended-default")
+    async def model_recommended(profile: str | None = None):
+        cur = profile_or_default(profile)
+        if cur.get("malformed"):
+            return {"foo": 1}
+        if cur.get("no_providers"):
+            return {"provider": "", "model": "", "free_tier": None}
+        return {"provider": "anthropic", "model": "claude-test"}
+
+    @app.get("/api/model/auxiliary")
+    async def model_auxiliary(profile: str | None = None):
+        cur = profile_or_default(profile)
+        if cur.get("malformed"):
+            return {"foo": 1}
+        return {"main": {"provider": cur["provider"], "model": cur["model"]},
+                "tasks": [{"task": "coding", "provider": "auto", "model": "", "base_url": "", "reasoning_effort": None},
+                          {"task": "vision", "provider": "auto", "model": "", "base_url": "", "reasoning_effort": None}]}
+
+    @app.get("/api/model/moa")
+    async def moa_get(profile: str | None = None):
+        return profile_or_default(profile).setdefault("moa", {"default_preset": "d", "active_preset": "d",
+                "presets": {"d": {"reference_models": [{"provider": "anthropic", "model": "claude-test"}], "aggregator": {"provider": "anthropic", "model": "claude-test"}}}})
+
+    @app.put("/api/model/moa")
+    async def moa_put(body: dict[str, Any], profile: str | None = None):
+        prof = profile_or_default(profile)
+        presets = body.get("presets")
+        if not isinstance(presets, dict) or not presets:
+            raise HTTPException(422, "presets fehlt")
+        if not drop_writes:
+            prof["moa"] = {"default_preset": body.get("default_preset", ""), "active_preset": body.get("active_preset", ""), "presets": presets}
+        return {"ok": True}
+
+    @app.post("/api/model/set")
+    async def model_set(body: dict[str, Any], profile: str | None = None):
+        prof = profile_or_default(profile)
+        scope, provider, model = str(body.get("scope", "")), str(body.get("provider", "")).strip(), str(body.get("model", "")).strip()
+        if scope not in ("main", "auxiliary") or not provider or not model:
+            raise HTTPException(400, "scope/provider/model fehlt oder ungültig")
+        if not body.get("confirm_expensive_model") and any(t in model.lower() for t in ("opus", "o1", "o3", "gpt-5", "claude-teuer")):
+            return {"ok": False, "confirm_required": True}
+        if not drop_writes:
+            prof["provider"], prof["model"] = provider, model
+        return {"ok": True, "provider": provider, "model": model}
+
+    # Punkt 8b: Delegation, eigene Endpunkte, lokale Modelle (Form wie Hermes 0.22.5, Schlüssel nie im Klartext)
+    @app.get("/api/delegation/routing")
+    async def delegation_routing(profile: str | None = None):
+        prof = profile_or_default(profile)
+        return {"configured": prof.setdefault("delegation", "default"), "blocked_reason": None,
+                "backends": [{"name": "default", "builtin": True, "description": "Eingebaut"}, {"name": "docker", "builtin": False, "description": "Container"}],
+                "model_map": {"options": [{"name": "schnell", "model": "m1", "api_key": "sk-…cdef"}], "default": None},
+                "profile_routes": {"profiles": [], "default": None}, "profiles": list(state)}
+
+    @app.put("/api/delegation/backend")
+    async def delegation_backend(body: dict[str, Any], profile: str | None = None):
+        prof = profile_or_default(profile)
+        name = str(body.get("backend", "")).strip().lower() or "default"
+        if name not in ("default", "docker"):
+            raise HTTPException(400, f"unknown backend {name}")
+        if not drop_writes:
+            prof["delegation"] = name
+        return {"ok": True, "backend": name}
+
+    def endpoints_of(prof: dict[str, Any]) -> dict[str, dict[str, Any]]:
+        return prof.setdefault("endpoints", {})
+
+    def endpoint_listing(prof: dict[str, Any]) -> dict[str, Any]:
+        rows = [{"id": i, "name": e["name"], "base_url": e["base_url"], "model": e["model"], "models": [e["model"]], "api_mode": "",
+                 "context_length": None, "discover_models": True, "has_api_key": bool(e.get("api_key")),
+                 "api_key_preview": "sk-…" + e["api_key"][-4:] if e.get("api_key") else "", "is_current": prof.get("endpoint") == i, "source": "providers"}
+                for i, e in endpoints_of(prof).items()]
+        return {"endpoints": rows}
+
+    @app.get("/api/providers/custom-endpoints")
+    async def custom_endpoints(profile: str | None = None):
+        return endpoint_listing(profile_or_default(profile))
+
+    @app.post("/api/providers/custom-endpoints/validate")
+    async def custom_endpoint_validate(body: dict[str, Any]):
+        return {"ok": True, "reachable": True, "message": "ok", "models": ["llama3"]}
+
+    @app.post("/api/providers/custom-endpoints")
+    async def custom_endpoint_upsert(body: dict[str, Any], profile: str | None = None):
+        prof = profile_or_default(profile)
+        eid = str(body.get("id") or body.get("name") or "").strip().lower().replace(" ", "-")
+        if not eid or not body.get("base_url") or not body.get("model"):
+            raise HTTPException(422, "name/base_url/model fehlt")
+        if not drop_writes:
+            endpoints_of(prof)[eid] = {k: body.get(k) for k in ("name", "base_url", "model", "api_key")}
+        return {**endpoint_listing(prof), "ok": True, "id": eid}
+
+    @app.post("/api/providers/custom-endpoints/{endpoint_id}/activate")
+    async def custom_endpoint_activate(endpoint_id: str, profile: str | None = None):
+        prof = profile_or_default(profile)
+        if endpoint_id not in endpoints_of(prof):
+            raise HTTPException(404, "custom endpoint not found")
+        if not drop_writes:
+            prof["endpoint"] = endpoint_id
+            prof["provider"], prof["model"] = endpoint_id, endpoints_of(prof)[endpoint_id]["model"]
+        return {"ok": True, "provider": endpoint_id, "model": prof["model"]}
+
+    @app.delete("/api/providers/custom-endpoints/{endpoint_id}")
+    async def custom_endpoint_delete(endpoint_id: str, profile: str | None = None):
+        prof = profile_or_default(profile)
+        if endpoint_id not in endpoints_of(prof):
+            raise HTTPException(404, "custom endpoint not found")
+        if not drop_writes:
+            endpoints_of(prof).pop(endpoint_id)
+        return {**endpoint_listing(prof), "ok": True}
+
+    @app.get("/api/local-models/status")
+    async def local_models_status():
+        return {"enabled": False, "tag": None, "runtime_installed": False, "server_running": False, "active_model_id": None,
+                "loaded_models": {}, "models": [{"id": "gguf-1", "name": "llama3.gguf", "size_bytes": 1024}], "models_dir": "/opt/data/models"}
 
     sessions: dict[str, dict[str, Any]] = {}
     app.state.oauth_sessions = sessions
@@ -215,15 +615,440 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
             {"name": "mein-skill", "description": "Selbst geschrieben.", "category": None, "enabled": True, "usage": 0, "provenance": "agent"},
         ]
 
+    app.state.tool_calls = []  # (Methode, Pfad) jeder Werkzeug-Route; Tests belegen damit, was das BFF nie aufruft
+    app.state.post_setups = []
+    app.state.installed: set[str] = set()  # post_setup-Schlüssel, deren Installation als erledigt gilt
+
+    def tools_of(prof: dict[str, Any]) -> dict[str, Any]:
+        return prof.setdefault("tools", {"enabled": {n: n in ("terminal", "image_gen") for n in TOOLSETS}, "provider": {}, "model": {}, "backend": "local"})
+
+    def toolset(name: str) -> dict[str, Any]:
+        if name not in TOOLSETS:
+            raise HTTPException(400, f"Unknown toolset: {name}")
+        return TOOLSETS[name]
+
+    def has_keys(prof: dict[str, Any], name: str) -> bool:
+        provs = TOOLSETS[name].get("providers", [])
+        return not provs or any(all(v["key"] in prof["env"] for v in pr["env_vars"]) for pr in provs)
+
     @app.get("/api/tools/toolsets")
     async def toolsets(profile: str | None = None):
+        prof = profile_or_default(profile)
+        st = tools_of(prof)
+        return [{"name": n, "label": t["label"], "description": t["description"], "platform": "cli", "platform_label": "CLI", "enabled": st["enabled"][n],
+                 "available": st["enabled"][n], "configured": has_keys(prof, n), "tools": t["tools"]} for n, t in TOOLSETS.items()]
+
+    @app.get("/api/tools/toolsets/{name}/config")
+    async def toolset_config(name: str, profile: str | None = None):
+        prof = profile_or_default(profile)
+        app.state.tool_calls.append(("GET", f"/api/tools/toolsets/{name}/config"))
+        t = toolset(name)
+        if not t.get("providers"):
+            return {"name": name, "has_category": False, "providers": [], "active_provider": None}
+        active = tools_of(prof)["provider"].get(name)
+        rows = [{"name": pr["name"], "badge": pr["badge"], "tag": pr["tag"], "post_setup": pr.get("post_setup"), "requires_nous_auth": False, "managed_nous_feature": None,
+                 "is_active": pr["name"] == active, "status": ("ready" if pr["post_setup"] in app.state.installed else "needs_setup") if pr.get("post_setup") else "ready" if all(v["key"] in prof["env"] for v in pr["env_vars"]) else "needs_keys",
+                 "env_vars": [{"key": v["key"], "prompt": v["prompt"], "url": v.get("url"), "default": v.get("default"), "is_set": v["key"] in prof["env"]} for v in pr["env_vars"]],
+                 **({"web_backend": pr["web_backend"], "capabilities": pr["capabilities"]} if "web_backend" in pr else {})} for pr in t["providers"]]
+        return {"name": name, "has_category": True, "providers": rows, "active_provider": active}
+
+    @app.put("/api/tools/toolsets/{name}")
+    async def toolset_toggle(name: str, body: ToolToggleBody, profile: str | None = None):
+        prof = profile_or_default(body.profile or profile)
+        app.state.tool_calls.append(("PUT", f"/api/tools/toolsets/{name}"))
+        t = toolset(name)
+        if not drop_writes:
+            tools_of(prof)["enabled"][name] = body.enabled
+        started = None
+        if body.enabled:
+            started = next((pr["post_setup"] for pr in t.get("providers", []) if pr.get("post_setup") and pr["post_setup"] not in app.state.installed), None)
+            if started:
+                app.state.post_setups.append((body.profile or profile or "default", started))
+        return {"ok": True, "name": name, "platform": "cli", "enabled": body.enabled, "post_setup_started": started}
+
+    @app.put("/api/tools/toolsets/{name}/provider")
+    async def toolset_provider(name: str, body: ToolProviderBody, profile: str | None = None):
+        prof = profile_or_default(body.profile or profile)
+        app.state.tool_calls.append(("PUT", f"/api/tools/toolsets/{name}/provider"))
+        t = toolset(name)
+        if body.provider not in [pr["name"] for pr in t.get("providers", [])]:
+            raise HTTPException(400, f"Unknown provider: {body.provider}")
+        if body.capability and name != "web":
+            raise HTTPException(400, "capability is only valid for the web toolset")
+        if not drop_writes:
+            tools_of(prof)["provider"][name] = body.provider
+        return {"ok": True, "name": name, "provider": body.provider, **({"capability": body.capability} if body.capability else {})}
+
+    @app.put("/api/tools/toolsets/{name}/env")
+    async def toolset_env(name: str, body: ToolEnvBody, profile: str | None = None):
+        prof = profile_or_default(body.profile or profile)
+        app.state.tool_calls.append(("PUT", f"/api/tools/toolsets/{name}/env"))
+        t = toolset(name)
+        allowed = {v["key"] for pr in t.get("providers", []) for v in pr["env_vars"]}
+        unknown = sorted(set(body.env) - allowed)
+        if unknown:
+            raise HTTPException(400, f"Unknown env var(s) for toolset {name}: {', '.join(unknown)}")
+        saved, skipped = [], []
+        for key, value in body.env.items():
+            if value.strip():
+                if not drop_writes:
+                    prof["env"][key] = value.strip()
+                saved.append(key)
+            else:
+                skipped.append(key)
+        return {"ok": True, "name": name, "saved": saved, "skipped": skipped, "is_set": {k: k in prof["env"] for k in allowed}}
+
+    @app.get("/api/tools/toolsets/{name}/models")
+    async def toolset_models(name: str, provider: str | None = None, profile: str | None = None):
+        prof = profile_or_default(profile)
+        app.state.tool_calls.append(("GET", f"/api/tools/toolsets/{name}/models"))
+        cat = TOOLSETS.get(name, {}).get("models")
+        if not cat:
+            return {"name": name, "has_models": False, "models": [], "current": None, "default": None}
+        return {"name": name, "has_models": True, "provider": "FAL.ai", "plugin": "fal", "models": cat, "current": tools_of(prof)["model"].get(name, cat[0]["id"]), "default": cat[0]["id"]}
+
+    @app.put("/api/tools/toolsets/{name}/model")
+    async def toolset_model(name: str, body: ToolModelBody, profile: str | None = None):
+        prof = profile_or_default(body.profile or profile)
+        app.state.tool_calls.append(("PUT", f"/api/tools/toolsets/{name}/model"))
+        cat = TOOLSETS.get(name, {}).get("models")
+        if not cat:
+            raise HTTPException(400, f"{name} has no model catalog")
+        if body.model not in [m["id"] for m in cat]:
+            raise HTTPException(400, f"Unknown model: {body.model}")
+        if not drop_writes:
+            tools_of(prof)["model"][name] = body.model
+        return {"ok": True, "name": name, "model": body.model, "plugin": "fal"}
+
+    @app.get("/api/tools/terminal/backends")
+    async def terminal_backends(profile: str | None = None):
+        prof = profile_or_default(profile)
+        app.state.tool_calls.append(("GET", "/api/tools/terminal/backends"))
+        active = tools_of(prof)["backend"]
+        return {"active": active, "backends": [
+            {"name": "local", "label": "Local", "description": "Run commands directly on this machine. No isolation.", "active": active == "local", "status": "ready", "detail": ""},
+            {"name": "docker", "label": "Docker / Podman", "description": "Run commands in an isolated container.", "active": active == "docker", "status": "needs_setup", "detail": "Docker CLI not found"}]}
+
+    # Routen, die das BFF bewusst NICHT durchreicht. Das Mock führt sie aus, damit ein Test beweisen kann, dass sie nie ankommen.
+    @app.put("/api/tools/terminal/backend")
+    async def terminal_backend_set(body: dict[str, Any], profile: str | None = None):
+        app.state.tool_calls.append(("PUT", "/api/tools/terminal/backend"))
+        tools_of(profile_or_default(profile))["backend"] = body.get("backend", "local")
+        return {"ok": True, "backend": body.get("backend")}
+
+    @app.post("/api/tools/toolsets/{name}/post-setup")
+    async def toolset_post_setup(name: str, body: dict[str, Any]):
+        app.state.tool_calls.append(("POST", f"/api/tools/toolsets/{name}/post-setup"))
+        return {"ok": True, "pid": 1, "name": "tools-post-setup", "key": body.get("key")}
+
+    @app.post("/api/tools/computer-use/permissions/grant")
+    async def computer_use_grant():
+        app.state.tool_calls.append(("POST", "/api/tools/computer-use/permissions/grant"))
+        return {"ok": True, "pid": 1, "name": "computer-use-grant"}
+
+    app.state.gateway = {"running": False, "busy": False, "active_sessions": 0, "state": None}
+    app.state.gateway_calls = []  # (Pfad, Query) jedes Gateway-Aufrufs
+    app.state.msg_enabled = {}  # (Profil, Plattform) -> bool
+    app.state.env_locked = False  # wie eine gesperrte .env: Hermes antwortet ok, schreibt aber nichts
+    app.state.pairings = {}
+    app.state.action_lines = ["gateway start ok", "Authorization: Bearer abc.def.ghi", "token=sk-secret-1234567890"]
+
+    def platform_row(prof_name: str, prof: dict[str, Any], pid: str) -> dict[str, Any]:
+        spec = MESSAGING[pid]
+        enabled = app.state.msg_enabled.get((prof_name, pid), False)
+        configured = all(v["key"] in prof["env"] for v in spec["env"] if v["required"])
+        gw = app.state.gateway
+        state = "disabled" if not enabled else "not_configured" if not configured else "gateway_stopped" if not gw["running"] else "connected"
+        rows = []
+        for v in spec["env"]:
+            val = prof["env"].get(v["key"])
+            rows.append({"key": v["key"], "required": v["required"], "is_set": val is not None, "redacted_value": "«redacted:" + val[:4] + "...»" if val and v["is_password"] else None,
+                         "value": None if v["is_password"] else val or "", "description": v["prompt"], "prompt": v["prompt"], "help": "", "url": v.get("url"),
+                         "is_password": v["is_password"], "is_list": v.get("is_list", False), "advanced": False})
+        return {"id": pid, "name": spec["name"], "description": spec["description"], "docs_url": spec["docs_url"], "enabled": enabled, "configured": configured,
+                "gateway_running": gw["running"], "state": state, "error_code": None, "error_message": "Zugang: password=hunter2 abgelehnt" if pid == "discord" and enabled else None,
+                "updated_at": None, "home_channel": None, "ingress_url": None, "env_vars": rows, **({"whatsapp_setup": {"mode": "", "allowed_users_set": False, "home_channel_set": False}} if pid == "whatsapp" else {})}
+
+    @app.get("/api/status")
+    async def hermes_status(profile: str | None = None):
+        gw = app.state.gateway
+        return {"version": "0.22.5", "profile": "default", "ok": True, "gateway_running": gw["running"], "gateway_state": gw["state"], "gateway_platforms": {}, "active_agents": gw["active_sessions"],
+                "gateway_busy": gw["busy"], "gateway_drainable": gw["busy"], "restart_drain_timeout": 0.0, "active_sessions": gw["active_sessions"], "install_id": "geheim-install-id",
+                "components": {"gateway": {"status": "ok" if gw["running"] else "degraded", "state": "running" if gw["running"] else "stopped"}}}
+
+    @app.get("/api/messaging/platforms")
+    async def messaging_platforms(profile: str | None = None):
+        prof = profile_or_default(profile)
+        return {"env_path": "/home/user/.hermes/.env", "gateway_start_command": "hermes gateway start", "platforms": [platform_row(profile or "default", prof, p) for p in MESSAGING]}
+
+    @app.put("/api/messaging/platforms/{pid}")
+    async def messaging_put(pid: str, body: MsgPlatformBody, profile: str | None = None):
+        name = body.profile or profile or "default"
+        prof = profile_or_default(name)
+        if pid not in MESSAGING:
+            raise HTTPException(404, "Unknown messaging platform")
+        allowed = {v["key"] for v in MESSAGING[pid]["env"]}
+        for value in body.env.values():
+            if value.startswith("echo:"):  # manche Plugin-Regeln nennen den abgelehnten Wert im Fehlertext
+                raise HTTPException(400, f"Invalid value {value}")
+        for key, value in {**body.env, **{k: "" for k in body.clear_env}}.items():
+            if key not in allowed:
+                raise HTTPException(400, f"{key} is not configurable for {MESSAGING[pid]['name']}")
+            if value.startswith("«redacted") or value == "***":
+                raise HTTPException(400, "Refusing to save a redacted credential preview")
+        if not app.state.env_locked:
+            for key, value in body.env.items():
+                if value.strip():
+                    prof["env"][key] = value.strip()
+            for key in body.clear_env:
+                prof["env"].pop(key, None)
+            if body.enabled is not None and not drop_writes:
+                app.state.msg_enabled[(name, pid)] = body.enabled
+        return {"ok": True, "platform": pid, "hot_served": False}
+
+    @app.post("/api/messaging/platforms/{pid}/test")
+    async def messaging_test(pid: str, profile: str | None = None):
+        row = platform_row(profile or "default", profile_or_default(profile), pid)
+        return {"ok": row["state"] == "connected", "state": row["state"], "message": f"Zustand: {row['state']}"}
+
+    def spawn(name: str, profile: str | None, **extra: Any) -> dict[str, Any]:
         profile_or_default(profile)
-        return [
-            {"name": "terminal", "label": "Terminal", "description": "Befehle ausführen.", "platform": "cli", "platform_label": "CLI", "enabled": True,
-             "available": True, "configured": True, "tools": ["terminal", "process"]},
-            {"name": "web", "label": "Web", "description": "Suchen.", "platform": "cli", "platform_label": "CLI", "enabled": False,
-             "available": False, "configured": False, "tools": ["web_search"]},
-        ]
+        app.state.gateway_calls.append((name, {"profile": profile, **extra}))
+        return {"ok": True, "pid": 4242, "name": name}
+
+    @app.post("/api/gateway/start")
+    async def gateway_start(profile: str | None = None):
+        app.state.gateway.update(running=True, state="running")
+        return spawn("gateway-start", profile)
+
+    @app.post("/api/gateway/stop")
+    async def gateway_stop(profile: str | None = None, interrupt: bool = False):
+        gw = app.state.gateway
+        if gw["active_sessions"] and not interrupt:
+            raise HTTPException(409, f"Refusing to stop the gateway: {gw['active_sessions']} live session(s) would be interrupted")
+        gw.update(running=False, state=None, active_sessions=0, busy=False)
+        return spawn("gateway-stop", profile, interrupt=interrupt)
+
+    @app.post("/api/gateway/restart")
+    async def gateway_restart(profile: str | None = None):
+        app.state.gateway.update(running=True, state="running", active_sessions=0, busy=False)
+        return spawn("gateway-restart", profile)
+
+    @app.get("/api/gateway/migrate/plan")
+    async def migrate_plan():
+        return {"blocked": [], "profiles": ["default", "beta"], "target": "host"}
+
+    @app.post("/api/gateway/migrate")
+    async def migrate_run():
+        app.state.gateway_calls.append(("gateway-migrate", {}))
+        return {"ok": True, "pid": 43, "name": "gateway-migrate"}
+
+    @app.post("/api/hermes/update")
+    async def hermes_update():
+        return {"ok": True, "pid": 42, "name": "hermes-update", "already_running": False}
+
+    @app.get("/api/ops/hooks")
+    async def ops_hooks_list():
+        static = [{"event": "before_tool", "matcher": "", "command": "echo hallo", "timeout": 30, "allowed": True, "approved_at": "2026-01-01", "executable": True}]
+        extra = [{"event": h.get("event"), "matcher": h.get("matcher", ""), "command": h.get("command"), "timeout": h.get("timeout"),
+                  "allowed": bool(h.get("approve")), "approved_at": "2026-10-25" if h.get("approve") else None, "executable": True} for h in app.state.shell_hooks]
+        return {"hooks": static + extra, "valid_events": ["before_tool", "after_tool"]}
+
+    @app.post("/api/ops/hooks")
+    async def ops_hooks_create(body: dict[str, Any]):
+        if body.get("event") not in ("before_tool", "after_tool"):
+            raise HTTPException(400, "Unknown event")
+        app.state.shell_hooks.append(body)
+        return {"ok": True, "event": body.get("event"), "command": body.get("command"), "approved": bool(body.get("approve"))}
+
+    @app.delete("/api/ops/hooks")
+    async def ops_hooks_delete(body: dict[str, Any]):
+        app.state.shell_hooks = [h for h in app.state.shell_hooks if not (h.get("event") == body.get("event") and h.get("command") == body.get("command"))]
+        return {"ok": True}
+
+    app.state.shell_hooks = []
+
+    @app.get("/api/actions/{name}/status")
+    async def action_status(name: str, lines: int = 200):
+        if name not in ("gateway-start", "gateway-stop", "gateway-restart", "gateway-migrate", "tools-post-setup", "hermes-update", "doctor", "curator-run"):
+            raise HTTPException(404, "Unknown action")
+        if name == "curator-run":
+            return {"name": name, "running": False, "exit_code": 0, "pid": 4711, "lines": ["Curator fertig", "Authorization: Bearer sk-LEAK-curator"]}
+        if name == "doctor":
+            return {"name": name, "running": False, "exit_code": 0, "log": app.state.action_logs.get(name, "")}
+        return {"name": name, "running": False, "exit_code": 0, "pid": 4242, "lines": app.state.action_lines[-lines:]}
+
+    @app.post("/api/messaging/telegram/onboarding/start")
+    async def tg_start(body: dict[str, Any]):
+        pid = "pair_abc123"
+        app.state.pairings[pid] = {"polls": 0, "bot_token": "123456:SECRET-BOT-TOKEN-FROM-TELEGRAM"}
+        return {"pairing_id": pid, "suggested_username": "hermes_test_bot", "deep_link": app.state.deep_link, "qr_payload": app.state.deep_link, "expires_at": "2026-10-24T18:00:00Z"}
+
+    app.state.deep_link = "https://t.me/newbot/hermes/hermes_test_bot"
+
+    @app.get("/api/messaging/telegram/onboarding/{pairing_id}")
+    async def tg_poll(pairing_id: str):
+        rec = app.state.pairings.get(pairing_id)
+        if rec is None:
+            raise HTTPException(404, "Telegram setup session was not found. Start a new setup.")
+        rec["polls"] += 1
+        if rec["polls"] < 2:
+            return {"status": "waiting", "expires_at": "2026-10-24T18:00:00Z"}
+        return {"status": "ready", "bot_username": "hermes_test_bot", "owner_user_id": "424242", "expires_at": "2026-10-24T18:00:00Z"}
+
+    @app.post("/api/messaging/telegram/onboarding/{pairing_id}/apply")
+    async def tg_apply(pairing_id: str, body: TelegramApplyBody, profile: str | None = None):
+        rec = app.state.pairings.get(pairing_id)
+        name = body.profile or profile or "default"
+        prof = profile_or_default(name)
+        if rec is None:
+            raise HTTPException(404, "Telegram setup session was not found. Start a new setup.")
+        if rec["polls"] < 2:
+            raise HTTPException(409, "Telegram setup is not ready yet.")
+        if not body.allowed_user_ids or not all(i.isdigit() for i in body.allowed_user_ids):
+            raise HTTPException(400, "Allowed Telegram user IDs must be numeric.")
+        prof["env"]["TELEGRAM_BOT_TOKEN"] = rec["bot_token"]
+        prof["env"]["TELEGRAM_ALLOWED_USERS"] = ",".join(body.allowed_user_ids)
+        app.state.msg_enabled[(name, "telegram")] = True
+        del app.state.pairings[pairing_id]
+        app.state.gateway_calls.append(("telegram-apply", {"profile": name}))
+        return {"ok": True, "platform": "telegram", "bot_username": "hermes_test_bot", "needs_restart": True, "restart_started": False, "restart_error": "Live sessions"}
+
+    @app.delete("/api/messaging/telegram/onboarding/{pairing_id}")
+    async def tg_cancel(pairing_id: str):
+        app.state.pairings.pop(pairing_id, None)
+        return {"ok": True}
+
+    @app.post("/api/messaging/whatsapp/onboarding/start")
+    async def wa_start(body: dict[str, Any]):
+        pid = "wa_pair_1"
+        app.state.wa_pairings[pid] = {"polls": 0}
+        if app.state.wa_forged is not None:
+            return {"pairing_id": pid, **app.state.wa_forged}
+        return {"pairing_id": pid, "status": "waiting", "qr_payload": "WA-QR-1", "expires_at": "2026-10-24T18:00:00Z",
+                "mode": body.get("mode", "qr"), "account_id": None, "account_name": None, "account_phone": None, "error": None}
+
+    @app.get("/api/messaging/whatsapp/onboarding/{pairing_id}")
+    async def wa_poll(pairing_id: str):
+        rec = app.state.wa_pairings.get(pairing_id)
+        if rec is None:
+            raise HTTPException(404, "WhatsApp setup session was not found. Start a new setup.")
+        rec["polls"] += 1
+        if rec["polls"] < 2:
+            return {"pairing_id": pairing_id, "status": "waiting", "qr_payload": "WA-QR-1", "expires_at": "2026-10-24T18:00:00Z",
+                    "mode": "qr", "account_id": None, "account_name": None, "account_phone": None, "error": None}
+        return {"pairing_id": pairing_id, "status": "connected", "qr_payload": None, "expires_at": "2026-10-24T18:00:00Z",
+                "mode": "qr", "account_id": "491701234567", "account_name": "Testhandy", "account_phone": "491701234567", "error": None}
+
+    @app.post("/api/messaging/whatsapp/onboarding/{pairing_id}/apply")
+    async def wa_apply(pairing_id: str, body: dict[str, Any]):
+        rec = app.state.wa_pairings.get(pairing_id)
+        if rec is None:
+            raise HTTPException(404, "WhatsApp setup session was not found. Start a new setup.")
+        if rec["polls"] < 2:
+            raise HTTPException(409, "WhatsApp setup is not connected yet.")
+        del app.state.wa_pairings[pairing_id]
+        return {"ok": True, "platform": "whatsapp"}
+
+    @app.delete("/api/messaging/whatsapp/onboarding/{pairing_id}")
+    async def wa_cancel(pairing_id: str):
+        app.state.wa_pairings.pop(pairing_id, None)
+        return {"ok": True}
+
+    app.state.wa_pairings = {}
+    app.state.wa_forged = None
+
+    app.state.memory_calls = []  # (Methode, Pfad); `setup` darf nie darin vorkommen
+
+    def mem(prof: dict[str, Any]) -> dict[str, Any]:
+        return prof.setdefault("memory", {"active": "", "files": {"memory": 120, "user": 45}, "cfg": {}, "installed": set()})
+
+    def mem_status(prof: dict[str, Any], name: str) -> str:
+        spec = MEMORY_PROVIDERS[name]
+        if spec["deps"] and name not in mem(prof)["installed"]:
+            return "unavailable"
+        return "ready" if all(v in prof["env"] for v in spec["env"].values()) else "needs_config"
+
+    @app.get("/api/memory")
+    async def memory_overview(profile: str | None = None):
+        prof = profile_or_default(profile)
+        st = mem(prof)
+        return {"active": st["active"], "builtin_files": dict(st["files"]), "providers": [
+            {"name": n, "label": s.get("label", n), "docs_url": s.get("docs_url", ""), "description": s["description"], "available": mem_status(prof, n) != "unavailable", "configured": mem_status(prof, n) == "ready", "status": mem_status(prof, n),
+             "setup": {"pip_dependencies": [], "python_dependencies_declared": False, "external_dependencies": s["deps"], "required_env": list(s["env"].values()), "dependencies_installed": not s["deps"] or n in st["installed"]}}
+            for n, s in MEMORY_PROVIDERS.items()]}
+
+    @app.put("/api/memory/provider")
+    async def memory_provider(body: MemProviderBody, profile: str | None = None):
+        prof = profile_or_default(profile)
+        if body.provider and body.provider not in MEMORY_PROVIDERS:
+            raise HTTPException(400, f"Unknown memory provider '{body.provider}'")
+        if body.provider and mem_status(prof, body.provider) != "ready":
+            raise HTTPException(400, f"Memory provider '{body.provider}' is not ready ({mem_status(prof, body.provider)}). Configure it in the dashboard first.")
+        if not drop_writes:
+            mem(prof)["active"] = body.provider
+        return {"ok": True, "active": body.provider}
+
+    @app.post("/api/memory/reset")
+    async def memory_reset(body: MemResetBody, profile: str | None = None):
+        prof = profile_or_default(profile)
+        app.state.memory_calls.append(("POST", "/api/memory/reset"))
+        if body.target not in ("all", "memory", "user"):
+            raise HTTPException(400, "target must be all, memory, or user")
+        files = mem(prof)["files"]
+        gone = [{"memory": "MEMORY.md", "user": "USER.md"}[k] for k in files if body.target in ("all", k) and files[k]]
+        for k in files:
+            if body.target in ("all", k) and not drop_writes:
+                files[k] = 0
+        return {"ok": True, "deleted": gone}
+
+    @app.get("/api/memory/providers/{name}/config")
+    async def memory_cfg(name: str, profile: str | None = None):
+        prof = profile_or_default(profile)
+        if name not in MEMORY_PROVIDERS:
+            raise HTTPException(404, "Unknown memory provider")
+        spec, cfg = MEMORY_PROVIDERS[name], mem(prof)["cfg"].setdefault(name, {})
+        rows = []
+        for f in spec["fields"]:
+            forgery = app.state._state.get("forged", {}).get((name, f["key"]), {})
+            kind = forgery.get("kind", f["kind"])
+            options, secret = forgery.get("options", f.get("options", [])), kind == "secret"
+            is_set = (spec["env"].get(f["key"]) in prof["env"]) if secret else f["key"] in cfg or bool(f.get("default"))
+            val = cfg.get(f["key"], f.get("default", ""))
+            if kind == "bool":
+                val = "true" if str(val).lower() in ("1", "true", "yes", "on") else "false"
+            rows.append({**{k: f.get(k, "") for k in ("key", "label", "description", "info", "inline", "group", "placeholder", "required")}, "kind": kind, "options": list(options),
+                         "value": "" if secret else val, "is_set": is_set})
+        return {"name": name, "label": spec.get("label", name), "docs_url": spec.get("docs_url", ""), "fields": rows, "setup": {"pip_dependencies": [], "external_dependencies": spec["deps"], "dependencies_installed": not spec["deps"] or name in mem(prof)["installed"]}}
+
+    @app.put("/api/memory/providers/{name}/config")
+    async def memory_cfg_put(name: str, body: MemConfigBody, profile: str | None = None):
+        prof = profile_or_default(profile)
+        if name not in MEMORY_PROVIDERS:
+            raise HTTPException(404, "Unknown memory provider")
+        spec = MEMORY_PROVIDERS[name]
+        if any(str(v).startswith("echo:") for v in body.values.values()):
+            raise HTTPException(400, "Invalid value " + str(next(v for v in body.values.values() if str(v).startswith("echo:"))))
+        app.state._state.setdefault("forged", {}).setdefault("put", []).append(dict(body.values))
+        for key, value in body.values.items():
+            field = next((f for f in spec["fields"] if f["key"] == key), None)
+            if field is None:
+                raise HTTPException(400, f"Unknown field {key}")
+            if field["kind"] == "secret":
+                if str(value).strip() and not drop_writes:
+                    prof["env"][spec["env"][key]] = str(value).strip()
+            elif not drop_writes:
+                mem(prof)["cfg"].setdefault(name, {})[key] = str(value)
+        if mem_status(prof, name) != "ready":
+            raise HTTPException(400, f"Memory provider '{name}' is not ready ({mem_status(prof, name)}). Configure it in the dashboard first.")
+        if not drop_writes:
+            mem(prof)["active"] = name
+        return {"ok": True, "active": name}
+
+    @app.post("/api/memory/providers/{name}/setup")
+    async def memory_setup(name: str):
+        app.state.memory_calls.append(("POST", f"/api/memory/providers/{name}/setup"))
+        return {"ok": True, "provider": name, "results": [], "status": "no_declared_steps"}
 
     @app.get("/api/plugins/kanban/board")
     async def kanban_board(profile: str | None = None):
@@ -241,13 +1066,377 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
     @app.get("/api/mcp/servers")
     async def mcp_servers(profile: str | None = None):
         profile_or_default(profile)
+        stored = profile_or_default(profile).get("mcp_replaced")
+        if stored is not None:
+            return {"servers": [{"name": n, "transport": "stdio", "command": "x", "args": [], "env": {}, "enabled": True, "source": "config", "plugin": None} for n in stored]}
         return {"servers": [{"name": "rag", "transport": "stdio", "url": "https://x.test/?key=geheim", "command": "rag-mcp", "args": ["--key", "geheim"],
                              "env": {"RAG_API_KEY": "geheim"}, "enabled": True, "source": "config", "plugin": None}]}
+
+    @app.put("/api/mcp/servers")
+    async def mcp_replace(body: dict[str, Any], profile: str | None = None):
+        servers = body.get("servers")
+        if not isinstance(servers, dict) or not servers:
+            raise HTTPException(400, "servers fehlt")
+        profile_or_default(profile)["mcp_replaced"] = sorted(servers)
+        return {"ok": True}
 
     @app.get("/api/dashboard/plugins/hub")
     async def plugin_hub(profile: str | None = None):
         profile_or_default(profile)
         return {"plugins": [{"name": "disk-cleanup", "version": "1.0", "description": "Räumt auf.", "runtime_status": "enabled", "path": "/geheim/pfad"}]}
+
+    # P3: System, Curator, Lerngraph, Darstellung, Datenschutz, Achievements (Form wie Hermes 0.22.5)
+    @app.get("/api/system/stats")
+    async def system_stats():
+        return {"system": "Linux", "release": "7.0", "arch": "x86_64", "hostname": "box", "python_version": "3.14", "python_impl": "CPython", "hermes_version": "0.22.5",
+                "cpu_count": 8, "cpu_percent": 5.0, "memory": {"total": 100, "used": 40}, "disk": {"total": 1000, "used": 500}, "uptime_seconds": 1234,
+                "env": {"OPENROUTER_API_KEY": "sk-LEAK-env"}, "home": "/home/someone/.hermes"}
+
+    @app.get("/api/tools/computer-use/status")
+    async def computer_use(profile: str | None = None):
+        bad = profile_or_default(profile).get("cu_bad")
+        if bad == "checks":
+            return {"platform": "linux", "installed": True, "checks": "kaputt"}
+        if bad:
+            return {"unexpected": True}
+        return {"platform": "linux", "platform_supported": True, "installed": True, "version": "cua 1.0 sk-LEAK-version", "ready": True, "can_grant": False, "source": "/home/someone/bin/cua",
+                "checks": [{"name": "driver", "ok": True, "detail": "läuft /home/someone/bin"}], "error": None, "accessibility": None, "screen_recording": None}
+
+    @app.get("/api/curator")
+    async def curator_get(profile: str | None = None):
+        c = profile_or_default(profile).setdefault("curator", {"paused": False})
+        return {"enabled": True, "paused": c["paused"], "interval_hours": 168, "last_run_at": None, "min_idle_hours": 2, "stale_after_days": 30, "archive_after_days": 90}
+
+    @app.put("/api/curator/paused")
+    async def curator_paused(body: dict[str, Any], profile: str | None = None):
+        c = profile_or_default(profile).setdefault("curator", {"paused": False})
+        if not drop_writes:
+            c["paused"] = bool(body.get("paused"))
+        return {"ok": True, "paused": bool(body.get("paused"))}
+
+    @app.post("/api/curator/run")
+    async def curator_run(profile: str | None = None):
+        profile_or_default(profile)["curator_ran"] = True
+        return {"ok": True, "pid": 4711, "name": "curator-run"}
+
+    def graph_of(prof: dict[str, Any]) -> dict[str, Any]:
+        n = prof.get("graph_n")
+        if n:
+            return {"nodes": [{"id": f"s{i}", "label": f"s{i}", "kind": "skill"} for i in range(n)], "edges": [], "clusters": {}}
+        nodes = prof.setdefault("nodes", {"skill-a": "# Skill A\nText", "memory:memory:0:aaaaaaaaaaaa": "Merke dir das"})
+        return {"nodes": [{"id": k, "label": k, "kind": "memory" if k.startswith("memory:") else "skill", "path": "/home/x/skills/" + k} for k in nodes],
+                "edges": [{"source": "skill-a", "target": k} for k in nodes if k.startswith("memory:")][:1], "clusters": {"general": 1}}
+
+    @app.get("/api/learning/graph")
+    async def learning_graph(profile: str | None = None):
+        return graph_of(profile_or_default(profile))
+
+    @app.get("/api/learning/node")
+    async def learning_node(id: str, profile: str | None = None):
+        nodes = profile_or_default(profile).setdefault("nodes", {"skill-a": "# Skill A\nText", "memory:memory:0:aaaaaaaaaaaa": "Merke dir das"})
+        if id not in nodes:
+            raise HTTPException(404, f"skill '{id}' not found")
+        return {"ok": True, "kind": "memory" if id.startswith("memory:") else "skill", "id": id, "label": id, "content": nodes[id]}
+
+    @app.put("/api/learning/node")
+    async def learning_edit(body: dict[str, Any], profile: str | None = None):
+        nodes = profile_or_default(profile).setdefault("nodes", {"skill-a": "# Skill A\nText", "memory:memory:0:aaaaaaaaaaaa": "Merke dir das"})
+        if body.get("id") not in nodes:
+            raise HTTPException(404, "not found")
+        if not drop_writes:
+            nid, text = body["id"], body.get("content", "")
+            if nid.startswith("memory:"):  # wie Hermes: die ID trägt den Fingerabdruck des Inhalts, der Eintrag behält seinen Platz
+                new = ":".join(nid.split(":")[:3]) + ":" + hashlib.sha1(text.encode()).hexdigest()[:12]
+                items = [(new if k == nid else k, text if k == nid else v) for k, v in nodes.items() if not (k == nid and profile_or_default(profile).get("vanish"))]
+                nodes.clear(); nodes.update(items)
+            else:
+                nodes[nid] = text
+        return {"ok": True}
+
+    @app.delete("/api/learning/node")
+    async def learning_delete(body: dict[str, Any], profile: str | None = None):
+        nodes = profile_or_default(profile).setdefault("nodes", {"skill-a": "# Skill A\nText", "memory:memory:0:aaaaaaaaaaaa": "Merke dir das"})
+        if body.get("id") not in nodes:
+            raise HTTPException(404, "not found")
+        if not drop_writes:
+            nodes.pop(body["id"])
+        return {"ok": True}
+
+    @app.get("/api/dashboard/themes")
+    async def themes(profile: str | None = None):
+        return {"themes": [{"name": "default", "label": "Default", "description": "x"}, {"name": "midnight", "label": "Midnight", "description": "y"}],
+                "active": profile_or_default(profile).get("theme", "default")}
+
+    @app.put("/api/dashboard/theme")
+    async def theme_set(body: dict[str, Any], profile: str | None = None):
+        if not drop_writes:
+            profile_or_default(profile)["theme"] = body.get("name")
+        return {"ok": True, "theme": body.get("name")}
+
+    @app.get("/api/dashboard/font")
+    async def font_get(profile: str | None = None):
+        return {"font": profile_or_default(profile).get("font", "theme")}
+
+    @app.put("/api/dashboard/font")
+    async def font_set(body: dict[str, Any], profile: str | None = None):
+        if not drop_writes:
+            profile_or_default(profile)["font"] = body.get("font")
+        return {"ok": True, "font": body.get("font")}
+
+    @app.get("/api/egress/status")
+    async def egress(profile: str | None = None):
+        profile_or_default(profile)
+        return {"text": "Egress-Proxy: aus (kein proxy-Block in config.yaml)"}
+
+    @app.get("/api/shared-metrics/consent")
+    async def metrics_get(profile: str | None = None):
+        p = profile_or_default(profile)
+        c = p.setdefault("metrics", {"enabled": False, "send": False, "decided": False})
+        return {**c, "managed": bool(p.get("managed"))}
+
+    @app.put("/api/shared-metrics/consent")
+    async def metrics_put(body: dict[str, Any], profile: str | None = None):
+        p = profile_or_default(profile)
+        if not drop_writes:
+            p["metrics"] = {"enabled": bool(body.get("enabled")), "send": bool(body.get("send")), "decided": True}
+        return {**p.setdefault("metrics", {"enabled": False, "send": False, "decided": False}), "managed": bool(p.get("managed"))}
+
+    ach = {"unlocked": ["let_him_cook"]}
+    app.state.ach = ach
+
+    def ach_snapshot() -> dict[str, Any]:
+        items = [{"id": "let_him_cook", "name": "Let Him Cook", "description": "Viele Werkzeugaufrufe", "category": "Agent Autonomy", "icon": "flame", "state": "unlocked", "unlocked": True,
+                  "tier": "Bronze", "progress": 250, "next_threshold": 500, "progress_pct": 50, "unlocked_at": 1_790_000_000, "evidence": {"session_id": "s1", "title": "sk-LEAK-title"}},
+                 {"id": "tinkerer", "name": "Tinkerer", "description": "Mehrere Werkzeuge", "category": "Tools", "icon": "wrench", "state": "discovered", "unlocked": False, "tier": None, "progress": 3, "next_threshold": 10, "progress_pct": 30},
+                 {"id": "sec", "name": "Echter Geheimname" if getattr(app.state, "ach_leaky", False) else "???", "description": "Kriterium: 100 Fehler" if getattr(app.state, "ach_leaky", False) else "Secret achievement", "criteria": "geheim", "category": "Secret", "icon": "secret", "state": "secret", "unlocked": False, "progress": 0}]
+        for it in items:
+            if it["id"] not in ach["unlocked"] and it["state"] == "unlocked":
+                it.update(state="discovered", unlocked=False, tier=None)
+        return {"achievements": items, "unlocked_count": sum(1 for i in items if i["unlocked"]), "discovered_count": 1, "secret_count": 1, "total_count": 3, "error": None, "generated_at": 1_790_000_100,
+                "is_stale": False, "scan_meta": {"status": {"state": "idle"}}, "sessions": [{"session_id": "s1", "title": "sk-LEAK-title"}]}
+
+    @app.get("/api/plugins/hermes-achievements/achievements")
+    async def ach_list():
+        return ach_snapshot()
+
+    @app.post("/api/plugins/hermes-achievements/rescan")
+    async def ach_rescan():
+        return {"ok": True, **ach_snapshot()}
+
+    @app.post("/api/plugins/hermes-achievements/reset-state")
+    async def ach_reset():
+        if not drop_writes:
+            ach["unlocked"] = []
+        return {"ok": True}
+
+    # Punkt 8: Schlüssel-Pools; Punkt 10: Sprache (Form wie Hermes 0.22.5 ops.py / audio.py)
+    def pool_of(prof: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+        return prof.setdefault("pool", {})
+
+    @app.get("/api/credentials/pool")
+    async def pool_list(profile: str | None = None):
+        return {"providers": [{"provider": p, "entries": e} for p, e in pool_of(profile_or_default(profile)).items() if e]}
+
+    @app.post("/api/credentials/pool")
+    async def pool_add(body: dict[str, Any], profile: str | None = None):
+        pool = pool_of(profile_or_default(profile)).setdefault(str(body.get("provider")), [])
+        if not drop_writes:
+            n = len(pool) + 1
+            pool.append({"index": n, "id": f"id{n}", "label": body.get("label") or f"key #{n}", "auth_type": "api_key", "source": "manual", "priority": 0,
+                         "last_status": None, "request_count": 0, "token_preview": "sk-p…" + str(body.get("api_key"))[-4:], "has_refresh": False})
+        return {"ok": True, "provider": body.get("provider"), "count": len(pool)}
+
+    @app.delete("/api/credentials/pool/{provider}/{index}")
+    async def pool_remove(provider: str, index: int, profile: str | None = None):
+        pool = pool_of(profile_or_default(profile)).get(provider, [])
+        if not 1 <= index <= len(pool):
+            raise HTTPException(404, "No pool entry at that index")
+        if not drop_writes:
+            pool.pop(index - 1)
+            for i, e in enumerate(pool, start=1):
+                e["index"] = i
+        return {"ok": True, "provider": provider, "count": len(pool), "cleaned": [], "hints": []}
+
+    @app.get("/api/audio/voice-live/status")
+    async def voice_status(profile: str | None = None):
+        profile_or_default(profile)
+        return {"ok": True, "mode": "chained", "available": True, "reason": "", "secret_field": "sk-LEAK-voice"}
+
+    @app.post("/api/audio/speak")
+    async def voice_speak(body: dict[str, Any], profile: str | None = None):
+        bad = profile_or_default(profile).get("voice_bad")
+        if bad == "html":
+            return {"ok": True, "data_url": "data:text/html;base64,PHNjcmlwdD4=", "mime_type": "text/html", "provider": "edge"}
+        if bad == "huge":
+            return {"ok": True, "data_url": "data:audio/mpeg;base64," + "A" * (14 * 1024 * 1024), "mime_type": "audio/mpeg", "provider": "edge"}
+        return {"ok": True, "data_url": "data:audio/mpeg;base64,AAAA", "mime_type": "audio/mpeg", "provider": "edge"}
+
+    @app.post("/api/audio/transcribe")
+    async def voice_transcribe(body: dict[str, Any], profile: str | None = None):
+        if profile_or_default(profile).get("voice_bad") == "shape":
+            return {"ok": True}
+        return {"ok": True, "transcript": "Hallo Welt", "provider": "whisper"}
+
+    # Punkt 10: Pairing und Webhooks (Form wie Hermes 0.22.5 ops.py; Codes und Secrets nie in Listen)
+    def pairing_of(prof: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+        return prof.setdefault("pairing", {"pending": [], "approved": []})
+
+    def hooks_of(prof: dict[str, Any]) -> dict[str, Any]:
+        return prof.setdefault("webhooks", {"enabled": False, "subs": {}})
+
+    @app.get("/api/pairing")
+    async def pairing_list(profile: str | None = None):
+        return pairing_of(profile_or_default(profile))
+
+    @app.post("/api/pairing/approve")
+    async def pairing_approve(body: dict[str, Any]):
+        pr = pairing_of(profile_or_default(body.get("profile")))
+        hit = next((p for p in pr["pending"] if p["request_id"] == body.get("request_id") and p["platform"] == body.get("platform")), None)
+        if hit is None:
+            raise HTTPException(404, "Pairing request or code not found or expired")
+        if not drop_writes:
+            pr["pending"].remove(hit)
+            pr["approved"].append({"platform": hit["platform"], "user_id": hit["user_id"], "user_name": hit["user_name"], "approved_at": time.time()})
+        return {"ok": True, "user": {"user_id": hit["user_id"]}}
+
+    @app.post("/api/pairing/revoke")
+    async def pairing_revoke(body: dict[str, Any]):
+        pr = pairing_of(profile_or_default(body.get("profile")))
+        hit = next((a for a in pr["approved"] if a["user_id"] == body.get("user_id") and a["platform"] == body.get("platform")), None)
+        if hit is None:
+            raise HTTPException(404, "User not found in approved list")
+        if not drop_writes:
+            pr["approved"].remove(hit)
+        return {"ok": True}
+
+    def hook_summary(name: str, r: dict[str, Any]) -> dict[str, Any]:
+        return {"name": name, "description": r["description"], "events": r["events"], "deliver": r["deliver"], "deliver_only": r.get("deliver_only", False),
+                "prompt": r["prompt"], "script": "", "skills": r["skills"], "created_at": "2026-10-25T00:00:00Z", "url": f"http://gw.test:8644/webhooks/{name}",
+                "secret_set": True, "enabled": r.get("enabled", True), **({"secret": r["secret"]} if getattr(app.state, "leaky", False) else {})}
+
+    @app.get("/api/webhooks")
+    async def webhooks_list(profile: str | None = None):
+        h = hooks_of(profile_or_default(profile))
+        return {"enabled": h["enabled"], "base_url": "http://gw.test:8644", "subscriptions": [hook_summary(n, r) for n, r in h["subs"].items()]}
+
+    @app.post("/api/webhooks/enable")
+    async def webhooks_enable(profile: str | None = None):
+        if not drop_writes:
+            hooks_of(profile_or_default(profile))["enabled"] = True
+        return {"ok": True, "platform": "webhook", "enabled": True, "needs_restart": False, "restart_started": True}
+
+    @app.post("/api/webhooks")
+    async def webhooks_create(body: dict[str, Any], profile: str | None = None):
+        h = hooks_of(profile_or_default(profile))
+        if not h["enabled"]:
+            raise HTTPException(400, "Webhook platform is not enabled")
+        name = str(body.get("name", "")).strip().lower().replace(" ", "-")
+        route = {"description": body.get("description") or "", "events": body.get("events") or [], "prompt": body.get("prompt") or "", "skills": body.get("skills") or [], "deliver": body.get("deliver") or "log", "secret": "whsec-GEHEIM-" + name}
+        if not drop_writes:
+            h["subs"][name] = route
+        return {**hook_summary(name, route), "secret": route["secret"]}
+
+    @app.delete("/api/webhooks/{name}")
+    async def webhooks_delete(name: str, profile: str | None = None):
+        h = hooks_of(profile_or_default(profile))
+        if name not in h["subs"]:
+            raise HTTPException(404, f"No subscription named '{name}'")
+        if not drop_writes:
+            del h["subs"][name]
+        return {"ok": True}
+
+    @app.put("/api/webhooks/{name}/enabled")
+    async def webhooks_toggle(name: str, body: dict[str, Any], profile: str | None = None):
+        h = hooks_of(profile_or_default(profile))
+        if name not in h["subs"]:
+            raise HTTPException(404, f"No subscription named '{name}'")
+        if not drop_writes:
+            h["subs"][name]["enabled"] = bool(body.get("enabled"))
+        return {"ok": True, "name": name, "enabled": bool(body.get("enabled"))}
+
+    # Punkt 9: Sitzungsverwaltung (Form wie Hermes 0.22.5 sessions.py)
+    def sess_of(prof: dict[str, Any]) -> list[dict[str, Any]]:
+        return prof.setdefault("sessions", [])
+
+    def prune_matches(prof: dict[str, Any], body: dict[str, Any]) -> tuple[list[dict[str, Any]], int]:
+        cutoff = time.time() - float(body.get("older_than_days", 90)) * 86400
+        old = [x for x in sess_of(prof) if x["last_active"] < cutoff]
+        return [x for x in old if not x.get("active")], sum(1 for x in old if x.get("active"))
+
+    @app.get("/api/sessions/stats")
+    async def sessions_stats(profile: str | None = None):
+        rows = sess_of(profile_or_default(profile))
+        by: dict[str, int] = {}
+        for x in rows:
+            by[x["source"]] = by.get(x["source"], 0) + 1
+        return {"total": len(rows), "active_store": len(rows), "archived": 0, "messages": sum(x["messages"] for x in rows), "by_source": by}
+
+    @app.get("/api/sessions/empty/count")
+    async def sessions_empty_count(profile: str | None = None):
+        return {"count": sum(1 for x in sess_of(profile_or_default(profile)) if x["messages"] == 0 and not x.get("active"))}
+
+    @app.delete("/api/sessions/empty")
+    async def sessions_empty_delete(profile: str | None = None):
+        prof = profile_or_default(profile)
+        gone = [x for x in sess_of(prof) if x["messages"] == 0 and not x.get("active")]
+        if not drop_writes:
+            prof["sessions"] = [x for x in sess_of(prof) if x not in gone]
+        return {"ok": True, "deleted": len(gone)}
+
+    @app.post("/api/sessions/prune")
+    async def sessions_prune(body: dict[str, Any]):
+        prof = profile_or_default(body.get("profile"))
+        hit, skipped = prune_matches(prof, body)
+        if body.get("dry_run"):
+            return {"ok": True, "removed": 0, "matched": len(hit), "skipped_open": skipped, "sessions": [{"id": x["id"], "title": x["title"]} for x in hit]}
+        if not drop_writes:
+            prof["sessions"] = [x for x in sess_of(prof) if x not in hit]
+        return {"ok": True, "removed": len(hit), "skipped_open": skipped}
+
+    @app.post("/api/sessions/bulk-delete")
+    async def sessions_bulk_delete(body: dict[str, Any]):
+        ids = body.get("ids", [])
+        if len(ids) > 500:
+            raise HTTPException(400, "ids must contain at most 500 entries")
+        prof = profile_or_default(body.get("profile"))
+        known = {x["id"]: x for x in sess_of(prof)}
+        skipped = [i for i in ids if i in known and known[i].get("active")]
+        gone = [i for i in ids if i in known and i not in skipped]
+        if not drop_writes:
+            prof["sessions"] = [x for x in sess_of(prof) if x["id"] not in gone]
+        return {"ok": True, "deleted": len(gone), "skipped_active": skipped}
+
+    @app.get("/api/sessions/{session_id}/export")
+    async def sessions_export(session_id: str, profile: str | None = None):
+        found = next((x for x in sess_of(profile_or_default(profile)) if x["id"] == session_id), None)
+        if found is None:
+            raise HTTPException(404, "Session not found")
+        return {"id": found["id"], "title": found["title"], "messages": [{"id": n, "role": "user", "content": f"m{n}"} for n in range(found["messages"])]}
+
+    @app.get("/api/sessions/{session_id}/timeline")
+    async def sessions_timeline(session_id: str, profile: str | None = None, limit: int = 500, after_row_id: int = 0):
+        found = next((x for x in sess_of(profile_or_default(profile)) if x["id"] == session_id), None)
+        if found is None:
+            raise HTTPException(404, "Session not found")
+        return {"session_id": session_id, "profile": profile_or_default(profile).get("name", profile),
+                "events": [{"row_id": n + 1, "type": "user_message", "summary": found["title"]} for n in range(min(found["messages"], limit))],
+                "after_row_id": after_row_id}
+
+    @app.post("/api/sessions/import")
+    async def sessions_import(body: dict[str, Any]):
+        sessions = body.get("sessions")
+        if not isinstance(sessions, list) or not sessions:
+            raise HTTPException(400, "Invalid session import payload")
+        prof = profile_or_default(body.get("profile"))
+        for s in sessions:
+            if isinstance(s, dict) and isinstance(s.get("id"), str):
+                prof["sessions"].append({"id": s["id"], "title": str(s.get("title") or ""), "last_active": time.time(),
+                                         "messages": len(s.get("messages", [])), "source": "import", "active": False})
+        return {"ok": True, "imported": len(sessions), "profile": body.get("profile")}
+
+    @app.post("/api/sessions/owner-backfill")
+    async def sessions_backfill(body: dict[str, Any]):
+        return {"ok": True, "stamped": 3, "profile": body.get("profile")}
 
     @app.get("/api/sessions/search")
     async def sessions_search(q: str):
@@ -261,6 +1450,8 @@ def create_mock(token: str | None = None, profiles: tuple[str, ...] = ("default"
             return {"ok": False, "reachable": False, "message": "Could not reach the provider to verify the key."}
         return {"ok": True, "reachable": True, "message": ""}
 
+    app.state._state["forged"] = {}
+    app.state._state["forge_fields"] = lambda name, key, patch: app.state._state["forged"].update({(name, key): patch})
     return app
 
 

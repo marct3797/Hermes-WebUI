@@ -83,14 +83,28 @@ def test_create_is_always_paused_and_audited_without_content(env):
 def test_create_validation(env):
     ok = {"schedule": "30m", "prompt": "x"}
     for bad in ({**ok, "schedule": ""}, {**ok, "schedule": "x" * 201}, {**ok, "prompt": ""}, {**ok, "prompt": "x" * 20001}, {**ok, "name": "n" * 201}, {**ok, "repeat": 0},
-                {**ok, "repeat": 1_000_001}, {**ok, "skills": ["a"] * 31}, {**ok, "skills": ["../x"]}, {**ok, "script": "x.sh"}, {**ok, "no_agent": True}, {**ok, "paused": False},
-                {**ok, "schedule": "a\nb"}):
+                {**ok, "repeat": 1_000_001}, {**ok, "skills": ["a"] * 31}, {**ok, "skills": ["../x"]}, {**ok, "paused": False},
+                {**ok, "schedule": "a\nb"}, {**ok, "script": "x" * 20001}, {**ok, "script": "a\0b"}):
         assert env.post(f"{CRON}/schedules", json=bad).status_code == 422, bad
     assert not writes(env.dash)
     assert env.post(f"{CRON}/schedules", json={**ok, "deliver": "gibts-nicht"}).status_code == 422  # nicht in den Zustellzielen
     assert not writes(env.dash)
     bad = env.post(f"{CRON}/schedules", json={**ok, "schedule": "irgendwann"})
     assert bad.status_code == 502 and "Invalid schedule" in bad.json()["detail"]  # Dashboard-Grund wird durchgereicht
+
+
+def test_create_script_job_needs_explicit_confirmation(env):
+    base = {"schedule": "30m", "prompt": "x", "script": "echo hi", "no_agent": True}
+    n = len(writes(env.dash))
+    assert env.post(f"{CRON}/schedules", json=base).status_code == 409  # ohne Bestätigung kein Skript-Job
+    assert len(writes(env.dash)) == n
+    r = env.post(f"{CRON}/schedules", json={**base, "confirm_system": True})
+    assert r.status_code == 200, r.text
+    job = r.json()
+    assert job["system"] is True and job["state"] == "paused" and job["script"] == "echo hi" and job["no_agent"] is True
+    sent = writes(env.dash)[-1][3]
+    assert sent["script"] == "echo hi" and sent["no_agent"] is True and "confirm_system" not in sent and sent["paused"] is True
+    assert env.post(f"{CRON}/schedules", json={"schedule": "30m", "prompt": "x", "no_agent": True, "confirm_system": True}).status_code == 422  # ohne Skript sinnlos
 
 
 def test_update_sends_only_changes_and_checks_target(env):
@@ -145,7 +159,12 @@ def test_blueprint_instantiate_ends_paused(env):
     assert env.post(f"{CRON}/blueprints", json={"blueprint": "gibts-nicht", "values": {}}).status_code == 404
     env.dash.state.fail = {"pause": 500}
     r = env.post(f"{CRON}/blueprints", json={"blueprint": "morning-brief", "values": {}})
-    assert r.status_code == 502 and "aktiv" in r.json()["detail"]
+    # Pausieren scheitert: der eben angelegte Job wird wieder entfernt, es bleibt nichts Aktives zurück
+    assert r.status_code == 502 and "entfernt" in r.json()["detail"] and "aktiv" not in r.json()["detail"]
+    assert writes(env.dash)[-1][:2] == ("DELETE", f"/api/cron/jobs/{[c for c in writes(env.dash) if c[1].endswith('/pause')][-1][1].split('/')[-2]}")
+    env.dash.state.fail = {"pause": 500, "delete": 500}
+    r = env.post(f"{CRON}/blueprints", json={"blueprint": "morning-brief", "values": {}})
+    assert r.status_code == 502 and "aktiv" in r.json()["detail"]  # auch das Entfernen scheitert: der Job wird mit Kennung gemeldet
     assert env.post(f"{CRON}/blueprints", json={"blueprint": "../x", "values": {}}).status_code == 422
 
 
@@ -193,3 +212,12 @@ def test_log_view_truncates_to_the_byte_limit_and_keeps_the_newest():
     assert log_view({"lines": []})["lines"] == []
     with pytest.raises(ValueError):
         log_view({"lines": "kein array"})
+
+
+def test_unregistered_profile_is_refused_before_any_dashboard_call(env):
+    before = len(env.dash.state.calls)
+    assert env.get("/bff/h/ct/_cron/ghost/schedules").status_code == 404
+    assert env.post("/bff/h/ct/_cron/ghost/schedules", json={"schedule": "30m", "prompt": "x"}).status_code == 404
+    assert env.get("/bff/h/ct/_cron/ghost/skill-names").status_code == 404
+    assert len(env.dash.state.calls) == before  # nichts erreichte das Dashboard
+    assert env.get(f"{CRON}/schedules").status_code == 200  # registriertes Profil bleibt nutzbar

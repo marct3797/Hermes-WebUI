@@ -3,6 +3,7 @@
 #     bash deploy/deploy.sh [Zielordner]          (Standard: ~/hermes-webui)
 # Idempotent. Löscht nichts, überschreibt keine vorhandene Config und gibt keine Geheimnisse aus.
 # Zielordner: config/ (hosts.json, ui.json, Sigils), data/ (Audit-Log), webui.env (chmod 600).
+umask 077   # Verzeichnisse und Dateien mit Geheimnissen nie für andere lesbar, auch nicht kurzzeitig
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 home="${1:-$HOME/hermes-webui}"
 envf="$home/webui.env"
@@ -38,6 +39,15 @@ for host in data.get("hosts", []):
             print(rt["api_key_env"])
 PY
 }
+agent_vars() { python3 - "$home/config/hosts.json" <<'PY'
+import json, sys
+for host in json.load(open(sys.argv[1])).get("hosts", []):
+    for rt in host.get("runtimes", []):
+        for a in rt.get("agents", []):
+            if isinstance(a, dict) and a.get("api_key_env"):
+                print(a["api_key_env"])
+PY
+}
 container="$(get HERMES_CONTAINER)"
 if [ -n "$container" ]; then
   for v in $(runtime_vars multiplex); do
@@ -53,6 +63,9 @@ need_any HERMES_WEBUI_OIDC_CLIENT_ID FORGEJO_OIDC_CLIENT_ID
 need_any HERMES_WEBUI_OIDC_CLIENT_SECRET FORGEJO_OIDC_CLIENT_SECRET
 need_any HERMES_WEBUI_OIDC_ALLOWED_SUB OIDC_ALLOWED_SUB
 for v in $(runtime_vars all); do [ -n "$(get "$v")" ] || missing="$missing $v"; done
+for v in $(agent_vars); do
+  [ -n "$(get "$v")" ] || echo "HINWEIS: $v fehlt in $envf; für dieses Profil gilt dann der Key der Runtime (bash deploy/profile-keys.sh trägt ihn ein)."
+done
 if [ -n "$missing" ]; then
   echo "FEHLT in $envf:$missing"
   echo "Eintragen (ohne Ausgabe der Werte), dann dieses Skript erneut starten."

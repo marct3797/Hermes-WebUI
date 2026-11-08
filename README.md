@@ -1,5 +1,7 @@
 # Hermes-WebUI
 
+*English: see [README.en.md](README.en.md).*
+
 Eigene WebUI für Agents: erst Hermes, später weitere Agent-Systeme (OpenCode, Claude Code, Antigravity)
 auf mehreren Rechnern. Aufbau: React/Vite-Frontend (`frontend/`) und ein schlankes FastAPI-Backend
 (`backend/`, „BFF“). Der Browser spricht nur mit dem BFF; Keys bleiben serverseitig.
@@ -161,13 +163,16 @@ das Dashboard und seinen Token nie. Eingetragen wird es je Runtime in der `hosts
 - **Token:** Das Dashboard verlangt für jede `/api/`-Route den Header `X-Hermes-Session-Token`. Ohne festen Wert würfelt es bei jedem Start einen neuen; darum startet `deploy/dashboard.sh` es mit `HERMES_DASHBOARD_SESSION_TOKEN` und legt denselben Wert als `HERMES_DASHBOARD_TOKEN` in `webui.env` ab.
 - **Start im Docker-Betrieb:** `HERMES_CONTAINER` (Name des Hermes-Containers) in `webui.env` setzen, dann `bash deploy/dashboard.sh` und `bash deploy/deploy.sh`. Das Skript startet das Dashboard im Container auf `127.0.0.1:9122` (9119 gehört dem Host-Dashboard), ergänzt den Eintrag in der `hosts.json` und gibt nie einen Wert aus. Das Dashboard endet mit dem Container, dann das Skript erneut starten.
 - **Lesende Ersatzquelle für Host-Daten:** Kanban, Logs, MCP, Plugins, Skills und die Inhaltssuche liest der Host-Dienst aus dem Dateisystem. Läuft Hermes im Container oder ist der Host-Dienst veraltet, sieht er die Profile nicht. Dann liest das BFF dieselben Daten über das Dashboard (`app/dashboard_ops.py`): nur lesend, Texte und Logs geschwärzt, bei MCP nie Env, Argumente oder URLs, je Spalte höchstens 50 Kanban-Aufgaben. Die Oberfläche nennt die Quelle. Schreibende Aktionen (Plugins aktivieren, installieren) bleiben beim Host-Dienst.
-- **Step-up abschalten:** Standardmäßig verlangen Terminal, SOUL, Schlüssel und andere riskante Aktionen eine Anmeldung, die höchstens 10 Minuten alt ist. `HERMES_WEBUI_STEP_UP=off` schaltet das ab; dann zählt nur die normale Anmeldung (für Installationen, die nur in einem privaten Netz erreichbar sind).
+- **Step-up abschalten:** Standardmäßig verlangen Terminal, SOUL, Schlüssel und andere riskante Aktionen eine Anmeldung, die höchstens 10 Minuten alt ist. `HERMES_WEBUI_STEP_UP=off` schaltet das ab; dann zählt nur die normale Anmeldung (nur für Installationen, die ausschließlich in einem privaten Netz erreichbar sind; sonst an lassen). Die Seite **System** zeigt, ob der Anbieter die Frische der Anmeldung belegen kann (siehe SECURITY.md).
+- **Dashboard auf einem anderen Rechner:** Hermes (ab 0.22) prüft den Rechnernamen im `Host`-Header und verlangt bei jeder anderen Bindung als Loopback eine eigene Anmeldung. Darum das Dashboard dort auf `127.0.0.1` lassen und von dem Rechner der WebUI aus tunneln: `ssh -N -L 127.0.0.1:19119:127.0.0.1:9119 <benutzer>@<host>`, in der `hosts.json` `"dashboard": { "base_url": "http://127.0.0.1:19119", … }` (oder `bash deploy/add-host.sh … --dashboard-url http://127.0.0.1:19119`). Eine Adresse wie `http://100.64.3.4:9119` funktioniert mit Hermes 0.22 nicht; die WebUI sagt das mit diesem Ausweg. Der Tunnel muss dauerhaft laufen (systemd-Dienst oder `autossh`).
 - **Ohne Dashboard** zeigt die Seite „SOUL & Profil“ einen Hinweis mit dem Eintrag; alles andere in der WebUI läuft unverändert.
 - **SOUL.md ändern** verlangt eine frische Anmeldung (Step-up, wie „immer erlauben“). Vor jedem Speichern legt das BFF den bisherigen Text unter `HERMES_WEBUI_SOUL_DIR` ab (je Agent ein Ordner, im Container `/data/soul-history`), der Verlauf wird nie gekürzt. Das Speichern prüft den Fingerabdruck des geladenen Texts (409, falls sich die Datei inzwischen geändert hat), liest zur Kontrolle zurück und schreibt ins Audit-Log nur Längen, nie Text.
 - **Anbieter (Hauptseite `/providers`)**: Je Host mit einer Hermes-Runtime eine Tabelle Profil × Anbieter/Modell × Zugang. `GET /bff/h/<host>/<runtime>/_provider-matrix` fragt je Profil das Dashboard der Maschine (`/api/profiles`, `/api/env`, `/api/providers/oauth`). Die Zugänge, die auf dem Host selbst laufen, stehen in `app/providers.py` (`ACCOUNTS`: OpenAI Codex per Gerätecode, Claude per Anthropic-Seite und Code oder Key, OpenCode Go per Key); weitere sind ein Eintrag dort. Ein Klick auf Anbieter/Modell öffnet die Auswahl (Liste aus `/api/model/options`, gespeichert über `PUT /api/profiles/<profil>/model`), ein Klick auf einen Zugang die Anmeldung. Die Anmeldung läuft im Dashboard (`/api/providers/oauth/<anbieter>/start`, `poll`, `submit`): die WebUI zeigt Code oder Link und fragt nach; sie verlangt Step-up und schreibt nur Anbieter und Profil ins Audit-Log. Fehlt das Dashboard oder ist es nicht erreichbar, bleiben die Profile aus der Config sichtbar und der Grund steht daneben. Die Coding-CLIs (`codex`, `claude`, `opencode`, `antigravity`) laufen über den Host-Dienst `hostd` (siehe `hostd/README.md`); ohne ihn zeigt die Seite „Host-Dienst nicht eingerichtet“.
 - **Keys & Nutzung** (`/h/<host>/<runtime>/<agent>/providers`): Aus `/api/env`, `/api/providers/oauth` und `/api/analytics/models` baut `app/providers.py` je Profil eine Übersicht (eingerichtet per Key oder Anmeldung, Sessions, Tokens und Kosten der letzten 7/30/90 Tage). Nicht eingerichtete Anbieter sind eingeklappt und lassen sich per Knopf hinzufügen. Keys gehen nur Browser → BFF → Dashboard, werden vorher beim Anbieter geprüft (`/api/providers/validate`), verlangen Step-up und stehen weder in Antworten noch im Audit-Log (nur der Variablenname). Schreiben ist auf Variablen beschränkt, die das Dashboard einem Anbieter zuordnet. Fehlermeldungen wiederholen die abgelehnte Eingabe nie. Entfernen von Keys gibt es nicht. Restkontingente der Konten liefert das Dashboard-Plugin `ai-usage-tracker` (fehlt es, zeigt die Seite den Grund statt erfundener Zahlen). Die Coding-CLIs stehen auf der Hauptseite als eigener Abschnitt mit ihrem Anmeldestatus (`/bff/h/<host>/_cli-auth`).
 
 ### hosts.json
+
+Zwei Vorlagen: `deploy/hosts.example.json` (Standard bei einer frischen Installation: ein Rechner, ein Agent `default`, Hermes-API auf `127.0.0.1:8642`, Key in `HERMES_KEY_LOCAL`) und `deploy/hosts.multiplex.example.json` (ein Gateway mit mehreren Profilen, eigener Key je Profil, Dashboard). Die Vorlage wird nie überschrieben, wenn `config/hosts.json` schon existiert.
 
 ```json
 { "hosts": [
@@ -216,13 +221,19 @@ die zuerst nur für das Gerät gelten (Browser-Speicher) und dort als Vorgabe f�
 - Es ändert sich nur der Teil, den die Seite bearbeitet: unbekannte Schlüssel und andere Profile bleiben, der Stand davor liegt als `ui.json.bak` daneben, geschrieben wird atomar. Eine Datei, die kein gültiges JSON ist, wird nie überschrieben (409).
 - Neue SVG-Dateien gehen als Text an das BFF, werden wie beim Laden bereinigt und landen als `sigils/<profil>-<kurzhash>.svg`; bei einem Fehler wird nichts geändert. Jede Änderung steht im Audit-Log (`ui.profile`, `ui.shader`), ohne Namen oder Inhalte.
 
+### Hermes-Einstellungen eines Profils
+
+Die Seite „Hermes-Einstellungen“ (unter dem Agent) zeigt alle Felder, die das Dashboard der Installation beschreibt, nach Bereichen
+und mit Suche. Sie braucht ein angebundenes Dashboard und eine frische Anmeldung zum Speichern. Geheimnisse (Keys, Tokens,
+Passwörter) verwaltest du weiter unter „Keys & Nutzung“. Details und Grenzen: [docs/compatibility.md](docs/compatibility.md).
+
 ### Persönliche Einstellungen
 
 `/settings` enthält Chat-Verhalten (Enter-Senden, am Verlaufende bleiben, Freigaben bestätigen), kompakte Listen, 12-/24-Stunden-Zeit und reduzierte Bewegung. Denkaufwand und Standard-Arbeitsordner werden je konfiguriertem Host gewählt. Diese Vorgaben liegen nur im Browser (`hermes.preferences`), nicht in der Server- oder Agent-Konfiguration. Die bestehende Aufwandwahl je Agent bleibt vorrangig; die Arbeitsordnerauswahl nutzt nur vom Host-Dienst freigegebene Ordner.
 
 Desktop-Hinweis und Ton bei wartenden Freigaben sind getrennte Opt-ins. Erst der Klick in den Einstellungen fragt nach der Browser-Erlaubnis. Die Meldungen gelten nur für von dieser geöffneten WebUI erkannte Freigaben (inklusive Räume), nicht für unsichtbare CLI-Läufe. Der Testton zeigt Browser-Sperren; nach einem Neuladen kann vor dem ersten Klick noch kein Ton laufen. Eine Bestätigung auszuschalten ersetzt nie eine Freigabe oder die serverseitigen Sicherheitsprüfungen.
 
-Nous Portal und OpenCode Zen gehören nicht zum angezeigten Anbieterangebot. Der zentrale Normalisierer entfernt ihre echten Dashboard-/Plugin-Einträge aus Kontingenten und Anbieterübersichten; OpenCode Go bleibt erhalten. Zugangsdaten dieser Produkte werden weder gelöscht noch umgeschrieben.
+**Anbieter ausblenden:** Standardmäßig zeigt die WebUI alle Anbieter, die das Dashboard meldet. Wer bestimmte Produkte nicht sehen will, trägt ihre Kennungen in `HERMES_WEBUI_HIDDEN_PROVIDERS` ein (kommagetrennt, z. B. `nous,opencode-zen`). Der Filter gilt für Anbieterübersicht, Modellauswahl und Kontingente; Zugangsdaten werden weder gelöscht noch umgeschrieben.
 
 ## Betrieb (hinter einem Reverse-Proxy)
 
@@ -242,6 +253,7 @@ Der Reverse-Proxy (Caddy, nginx, Traefik …) terminiert TLS und leitet an den B
 | `HERMES_WEBUI_AUDIT_FILE` | Audit-Log (Standard `audit.log`, Modus 0600) |
 | `HERMES_WEBUI_OIDC_ISSUER` | Adresse des OIDC-Anbieters (getestet mit Forgejo; Authorization Code mit PKCE ist Voraussetzung), z. B. `https://auth.example.com` |
 | `HERMES_WEBUI_OIDC_CLIENT_ID`, `HERMES_WEBUI_OIDC_CLIENT_SECRET` | OAuth2-Anwendung beim Anbieter (vertraulicher Client, Redirect `<PUBLIC_URL>/auth/callback`, Scopes `openid profile`) |
+| `HERMES_WEBUI_HIDDEN_PROVIDERS` | Anbieter-Kennungen, die diese Installation nicht zeigt (kommagetrennt); Standard: keine |
 | `HERMES_WEBUI_OIDC_ALLOWED_SUB` | Erlaubte Kennungen (`sub` des ID-Tokens), kommagetrennt |
 
 Ältere Namen gelten weiter als Alias: `FORGEJO_ISSUER`, `FORGEJO_OIDC_CLIENT_ID`, `FORGEJO_OIDC_CLIENT_SECRET`, `OIDC_ALLOWED_SUB`.
@@ -255,12 +267,36 @@ Secrets nie in Repo, Chat oder Frontend: Umgebung oder Datei mit Modus 0600.
 Ein Container mit `network_mode: host`, BFF und Frontend in einem Image, davor ein Reverse-Proxy.
 
 ```bash
-git clone https://github.com/marct3797/Hermes-WebUI && cd Hermes-WebUI
+git clone <URL-dieses-Repositorys> hermes-webui && cd hermes-webui
+python3 deploy/setup.py        # Einrichtungsassistent: fragt Gateway, Anmeldung und Optionen, prüft die Verbindungen, schreibt hosts.json und webui.env (Geheimnisse unsichtbar, nie ausgegeben)
 bash deploy/deploy.sh          # legt ~/hermes-webui/{config,data,webui.env} an (Vorlagen: deploy/hosts.example.json, deploy/webui.env.example), startet den Container, wartet auf /healthz
 ```
 
+- `deploy/setup.py` ersetzt das Ausfüllen der Vorlagen von Hand: Es erkennt Vorhandenes (eine bestehende `hosts.json` bleibt unverändert, die `webui.env` wird ergänzt, die alte Fassung liegt als `webui.env.bak` daneben), verlangt `https` für die öffentliche URL und den Anbieter (so prüft es auch der Server beim Start), fragt, ob die WebUI nur in einem privaten Netz erreichbar ist (dann schlägt es vor, die neue Anmeldung vor riskanten Aktionen abzuschalten) und prüft Gateway, Dashboard und Anmeldeanbieter, auch ob dieser `auth_time` meldet. Ohne Assistent geht es wie bisher von Hand.
 - `deploy/deploy.sh` ist idempotent, löscht nichts und überschreibt keine vorhandene Config. Pflicht in `webui.env` (`chmod 600`): die OIDC-Werte und alle `api_key_env` der Runtimes aus der `hosts.json`; fehlt etwas, nennt das Skript die Namen und endet vor dem Start. Steht `HERMES_CONTAINER` in `webui.env`, holt es den Key eines Multiplex-Gateways aus dem Container, ohne ihn auszugeben. `WEBUI_EXTRA_HOST=name:ip` hilft, wenn der Container den OIDC-Anbieter nicht auflösen kann. Ein Beispiel-Theme legt `WITH_EXAMPLE_THEME=1 bash deploy/deploy.sh` an.
 - OAuth-App beim Anbieter: Redirect-URI `https://webui.example.com/auth/callback`; `HERMES_WEBUI_OIDC_ALLOWED_SUB` ist das `sub` des Benutzers (bei Forgejo die numerische Benutzer-ID).
 - Reverse-Proxy: Beispiel in `deploy/Caddyfile.snippet` (SSE ohne Pufferung, bei nginx `proxy_buffering off`).
 - Rauchtest durch das BFF ohne Login: ein Wegwerf-Container mit `HERMES_WEBUI_ENV=dev`, `AUTH_MODE=none` auf `127.0.0.1:8421`, dann `python backend/devtools/smoke_bff.py --agent delta`.
 - Aktualisieren: Branch holen, `bash deploy/deploy.sh` erneut.
+
+## Kompatibilität
+
+Mindestversion: Hermes 0.21.6. Kennt ein Dashboard eine Route nicht (ältere Version), antwortet das BFF 501 mit Hinweis (statt 404 oder 502), siehe [docs/compatibility.md](docs/compatibility.md). Was von Hermes nativ abgebildet ist, was fehlt und welche Risiken bleiben: [docs/coverage.md](docs/coverage.md).
+
+## Einrichtung
+
+Erst das Terminal-Skript (`python3 deploy/setup.py`: fragt Gateway, Anmeldung, Optionen, prüft die Verbindungen, schreibt `hosts.json` und `webui.env`), danach die Seite `/assistant` (5 Schritte mit Live-Prüfung, schreibt nichts). Bewusst nicht in der WebUI: 10 Funktionen unter `/guide` mit Befehl zum Kopieren und Prüfung über Lese-Routen (`guide.ts`, `GuidePage.tsx`).
+
+## Sprachen
+
+Zwölf Sprachen: de, en, es, fr, pt, zh, zh-hant, ja, ko, ar, it, tr (2293 Schlüssel je Sprache, `frontend/src/locales/_keys.json`; Arabisch rechts-nach-links). Übersetzung maschinell, ohne Muttersprachler-Prüfung; kein Russisch.
+
+## CI
+
+Backend auf Ubuntu und macOS, `hostd` und Installation nur auf Ubuntu (`.github/workflows/ci.yml`).
+
+## Lizenz
+
+GNU Affero General Public License v3.0 (`AGPL-3.0-only`), Text in [LICENSE](LICENSE). Wer eine veränderte Fassung als Netzwerkdienst anbietet, muss den Nutzern deren Quelltext anbieten (Abschnitt 13 der Lizenz).
+
+Abhängigkeiten und Schriften mit Lizenz und Version stehen in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) (erzeugt mit `backend/devtools/third_party_notices.py`; das Image enthält die Datei). Die Laufzeit-Abhängigkeiten sind MIT, BSD, ISC, Apache-2.0, PSF-2.0, `certifi` unter MPL-2.0 und zwei Schriften unter OFL-1.1, deren Lizenztext dort mitgeliefert wird. Das ist die Auswertung der Paketmetadaten, kein Rechtsrat.

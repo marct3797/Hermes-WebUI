@@ -86,6 +86,9 @@ All HTTP and WebSocket requests require `Authorization: Bearer …`.
 - `GET /v1/info`: executable availability. `authenticated` comes from the `/v1/auth`
   cache (`null` until checked or when unclear); it never runs a probe itself.
 - `GET /v1/auth[?refresh=1]`: `{clis:[{id,state:signed_in|signed_out|unknown,method,checked_at,reason}]}`.
+  Without `refresh` it only returns cached results (`state: unknown`, `checked_at: null`, `reason: "Noch nicht geprüft"`
+  until a refresh ran) and never starts a process, because a status command can make the OS ask to unlock the
+  keyring. Only `refresh=1` runs the status commands (at most once per CLI every 10 s).
   Fixed status commands per CLI id (`codex login status`, `claude auth status`,
   `opencode auth list`, `agy models`), never taken from the config, 15 s timeout, no
   model run, output never logged or returned. Cached 60 s; `refresh=1` is limited to

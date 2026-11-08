@@ -34,7 +34,7 @@ def client(tmp_path, monkeypatch, overrides, ids=None):
     return TestClient(create_app(settings))
 
 
-def states(c, query=''):
+def states(c, query='?refresh=1'):
     return {e['id']: e for e in c.get('/v1/auth' + query, headers=HEAD).json()['clis']}
 
 
@@ -76,15 +76,29 @@ def test_timeout_missing_and_unknown_cli(tmp_path, monkeypatch):
     assert s['claude']['state'] == 'unknown'  # sys.executable hat kein "auth status": nie raten
 
 
+def test_get_without_refresh_never_starts_a_probe(tmp_path, monkeypatch):
+    """Seitenaufrufe lesen nur den Cache: ein Statusbefehl kann sonst den Schluesselbund-Dialog des Betriebssystems ausloesen."""
+    counter = tmp_path / 'n'
+    ov = {i: fake(tmp_path, i, f'echo x >> {counter}; ' + v[0]) for i, v in FORMATS.items()}
+    with client(tmp_path, monkeypatch, ov) as c:
+        s = states(c, '')
+        assert not counter.exists()
+    assert {i: e['state'] for i, e in s.items()} == dict.fromkeys(FORMATS, 'unknown')
+    assert all(e['reason'] == 'Noch nicht geprüft' and e['checked_at'] is None and e['method'] is None for e in s.values())
+
+
 def test_cache_refresh_rate_limit_and_info(tmp_path, monkeypatch):
     import hostd.auth as auth
     counter = tmp_path / 'n'
     ov = {'codex': fake(tmp_path, 'c', f'echo x >> {counter}; echo "Logged in using ChatGPT"')}
-    lines = lambda: len(counter.read_text().splitlines())
+    lines = lambda: len(counter.read_text().splitlines()) if counter.exists() else 0
     with client(tmp_path, monkeypatch, ov) as c:
         assert c.get('/v1/info', headers=HEAD).json()['clis'][0]['authenticated'] is None
-        states(c); states(c)
-        assert lines() == 1  # Cache
+        states(c, ''); states(c, '')
+        assert lines() == 0  # einfaches GET prueft nie
+        states(c, '?refresh=1')
+        assert lines() == 1
+        assert states(c, '')['codex']['state'] == 'signed_in' and lines() == 1  # GET liefert den Cache, auch ohne TTL
         states(c, '?refresh=1')
         assert lines() == 1  # Rate-Limit 10 s
         monkeypatch.setattr(auth, 'MIN_REFRESH', 0)

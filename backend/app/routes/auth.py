@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi.responses import RedirectResponse
 
 from ..auth import LOGIN_COOKIE, SESSION_COOKIE, User, session_of
-from ..oidc import OidcClient, OidcError, authentication_time, pkce_pair
+from ..oidc import OidcClient, OidcError, authentication_time, pkce_pair, step_up_proof
 from ..security import client_ip
 
 router = APIRouter(prefix="/auth")
@@ -124,9 +124,8 @@ async def callback(
         if auth_time is None:
             try:
                 meta = await oidc.metadata()
-                supported = meta.get("claims_supported")
                 now = sessions.now()
-                if isinstance(supported, list) and "auth_time" not in supported and 0 <= now - pending.requested_at <= settings.step_up_s:
+                if step_up_proof(meta) == "prompt_login_only" and 0 <= now - pending.requested_at <= settings.step_up_s:
                     auth_time = now
                     fallback_ok = True
             except OidcError:

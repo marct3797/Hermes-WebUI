@@ -75,6 +75,37 @@ describe("Kanban Board", () => {
     expect(screen.getByLabelText("Kurzstatistik")).toHaveTextContent("4 Aufgaben · 1 blockiert");
   });
 
+  const LABELS = ["Einordnung", "Offen", "Geplant", "Bereit", "Läuft", "Blockiert", "Prüfung", "Erledigt"];
+  const columnLabels = () => screen.getAllByRole("region", { name: /^Spalte / }).map((el) => el.getAttribute("aria-label")!.replace("Spalte ", ""));
+
+  it("zeigt alle Statusspalten in fester Reihenfolge in einer einzigen Reihe, leere inklusive", async () => {
+    await board();
+    expect(columnLabels()).toEqual(LABELS);
+    const parents = new Set(screen.getAllByRole("region", { name: /^Spalte / }).map((el) => el.parentElement));
+    expect(parents.size).toBe(1); // ein gemeinsamer Container: kein Umbruch in eine zweite Gruppe
+    expect(col("Erledigt").parentElement).toBe(col("Einordnung").parentElement);
+    expect(document.querySelector(".kb-empty-columns")).toBeNull();
+  });
+
+  it("behält Reihenfolge und leere Spalten bei Filter und Verschieben", async () => {
+    await board();
+    fireEvent.click(screen.getByRole("button", { name: /^gamma/ }));
+    expect(columnLabels()).toEqual(LABELS);
+    fireEvent.click(screen.getByRole("button", { name: /^Alle/ }));
+    const el = screen.getByText("Bericht schreiben").closest("li")!;
+    fireEvent.dragStart(el);
+    fireEvent.drop(col("Erledigt"));
+    await waitFor(() => expect(within(col("Erledigt")).getByText("Bericht schreiben")).toBeInTheDocument());
+    expect(columnLabels()).toEqual(LABELS);
+  });
+
+  it("zeigt auch ein leeres Board mit allen Spalten", async () => {
+    await board();
+    fireEvent.change(screen.getByRole("combobox", { name: "Board" }), { target: { value: "alpha" } });
+    expect(await screen.findByText("Keine Aufgaben, lege die erste an.")).toBeInTheDocument();
+    expect(columnLabels()).toEqual(LABELS);
+  });
+
   it("wechselt das Board und zeigt das leere Board ehrlich", async () => {
     await board();
     fireEvent.change(screen.getByRole("combobox", { name: "Board" }), { target: { value: "alpha" } });

@@ -3,13 +3,14 @@ import { fmtDuration, fmtTimeSec, toolIcon } from "../../format";
 import type { Item } from "../../types";
 import { Icon } from "../Icon";
 import { SubagentCard } from "./Convo";
+import { t as tr } from "../../i18n";
 
 type Tool = Extract<Item, { kind: "tool" }>;
 type Subagent = Extract<Item, { kind: "subagent" }>;
 
 type Props = { tools: Tool[]; subagents: Subagent[]; selected?: string; onSelect: (id: string) => void };
 
-const TAG: Record<Tool["status"], string> = { running: "LÄUFT", ok: "FERTIG", error: "FEHLER" };
+const TAG: Record<Tool["status"], string> = { running: "LÄUFT", get ok() { return tr("FERTIG"); }, get error() { return tr("FEHLER"); } };
 
 /** Preview als Schlüssel-Wert-Zeilen, wenn sie JSON ist; sonst als Text. */
 function previewLines(preview: string): Array<[string, string] | string> {
@@ -29,15 +30,15 @@ export function Inspector({ tools, subagents, selected, onSelect }: Props) {
   };
 
   return (
-    <aside className="insp" aria-label="Inspector">
+    <aside className="insp" aria-label={tr("Inspector")}>
       <div className="tabs" role="tablist">
-        <button type="button" role="tab" aria-selected={tab === "tool"} className={`tab${tab === "tool" ? " on" : ""}`} onClick={() => setTab("tool")}>Tool<span className="n">{tools.length}</span></button>
-        <button type="button" role="tab" aria-selected={tab === "worker"} className={`tab${tab === "worker" ? " on" : ""}`} onClick={() => setTab("worker")}>Worker<span className="n">{subagents.length}</span></button>
+        <button type="button" role="tab" aria-selected={tab === "tool"} className={`tab${tab === "tool" ? " on" : ""}`} onClick={() => setTab("tool")}>{tr("Tool")}<span className="n">{tools.length}</span></button>
+        <button type="button" role="tab" aria-selected={tab === "worker"} className={`tab${tab === "worker" ? " on" : ""}`} onClick={() => setTab("worker")}>{tr("Worker")}<span className="n">{subagents.length}</span></button>
       </div>
 
       {tab === "tool" && (
-        <div className="ip" role="tabpanel" aria-label="Tool">
-          {!tool && <p className="muted small">Noch keine Tool-Aufrufe in diesem Chat.</p>}
+        <div className="ip" role="tabpanel" aria-label={tr("Tool")}>
+          {!tool && <p className="muted small">{tr("Noch keine Tool-Aufrufe in diesem Chat.")}</p>}
           {tool && (
             <>
               <div className="col" style={{ gap: 6 }}>
@@ -52,7 +53,7 @@ export function Inspector({ tools, subagents, selected, onSelect }: Props) {
               </div>
               {(tool.args ?? tool.preview) && (
                 <div className="col" style={{ gap: 8 }}>
-                  <span className="lbl">{tool.args ? "Argumente" : "Vorschau"}</span>
+                  <span className="lbl">{tool.args ? tr("Argumente") : tr("Vorschau")}</span>
                   <div className="codeb"><div className="pre insp-pre">
                     {previewLines((tool.args ?? tool.preview)!).map((l, i) => (
                       <div className="cl" key={i}>{typeof l === "string" ? l : <><span className="t3">{l[0]}</span>: <span className="str">{l[1]}</span></>}</div>
@@ -61,17 +62,17 @@ export function Inspector({ tools, subagents, selected, onSelect }: Props) {
                 </div>
               )}
               <div className="col" style={{ gap: 8 }}>
-                <span className="lbl">Ausgabe</span>
+                <span className="lbl">{tr("Ausgabe")}</span>
                 <div className="codeb">
-                  <div className="hd">ausgabe
+                  <div className="hd">{tr("ausgabe")}
                     {tool.output && <span className="row" style={{ marginLeft: "auto" }}>
-                      <button type="button" className="btn btn-s btn-g codeb-copy" aria-label="Ausgabe kopieren" onClick={() => void copy(tool.output!)}><Icon name="copy" size={12} />{copied ? "Kopiert" : ""}</button>
+                      <button type="button" className="btn btn-s btn-g codeb-copy" aria-label={tr("Ausgabe kopieren")} onClick={() => void copy(tool.output!)}><Icon name="copy" size={12} />{copied ? tr("Kopiert") : ""}</button>
                     </span>}
                   </div>
                   <div className="pre nw insp-pre">
                     {tool.output
                       ? tool.output.split("\n").map((l, i) => <div className="cl" key={i}>{l || " "}</div>)
-                      : <div className="cl t3">{tool.status === "running" ? "läuft …" : "(keine Ausgabe)"}</div>}
+                      : <div className="cl t3">{tool.status === "running" ? tr("läuft …") : tr("(keine Ausgabe)")}</div>}
                   </div>
                 </div>
               </div>
@@ -79,7 +80,7 @@ export function Inspector({ tools, subagents, selected, onSelect }: Props) {
           )}
           {tools.length > 0 && (
             <div className="col" style={{ gap: 8 }}>
-              <div className="row"><span className="lbl">Alle Tool-Aufrufe</span><span className="mono t3" style={{ marginLeft: "auto", fontSize: 10.5 }}>{tools.length}</span></div>
+              <div className="row"><span className="lbl">{tr("Alle Tool-Aufrufe")}</span><span className="mono t3" style={{ marginLeft: "auto", fontSize: 10.5 }}>{tools.length}</span></div>
               <div className="tl">
                 {tools.map((t) => (
                   <button key={t.id} type="button" className={`st${t.id === tool?.id ? " sel" : ""}`} onClick={() => onSelect(t.id)}>
@@ -95,13 +96,12 @@ export function Inspector({ tools, subagents, selected, onSelect }: Props) {
       )}
 
       {tab === "worker" && (
-        <div className="ip" role="tabpanel" aria-label="Worker">
-          <div className="row"><span className="lbl">Subagents</span>
+        <div className="ip" role="tabpanel" aria-label={tr("Worker")}>
+          <div className="row"><span className="lbl">{tr("Subagents")}</span>
             <span className="mono t3" style={{ marginLeft: "auto", fontSize: 11 }}>
-              {subagents.filter((s) => s.status === "running").length} läuft · {subagents.filter((s) => s.status !== "running").length} fertig
-            </span>
+              {tr("{v} läuft · {v2} fertig", { v: subagents.filter((s) => s.status === "running").length, v2: subagents.filter((s) => s.status !== "running").length })}</span>
           </div>
-          {subagents.length === 0 && <p className="muted small">In diesem Chat wurden noch keine Subagents gestartet.</p>}
+          {subagents.length === 0 && <p className="muted small">{tr("In diesem Chat wurden noch keine Subagents gestartet.")}</p>}
           {subagents.map((s) => <SubagentCard key={s.id} s={s} />)}
         </div>
       )}

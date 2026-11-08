@@ -9,6 +9,7 @@ import { useHosts } from "../hosts";
 import { navigate } from "../router";
 import type { AgentRef, Room } from "../types";
 import { useAsync } from "../useAsync";
+import { t } from "../i18n";
 
 const MAX = 6;
 const keyOf = (a: AgentRef) => `${a.host}/${a.runtime}/${a.agent}`;
@@ -31,16 +32,16 @@ function NewRoom({ onDone, onCancel }: { onDone: (r: Room) => void; onCancel: ()
   };
 
   return (
-    <form className="card newroom" onSubmit={(e) => { e.preventDefault(); if (ok) void create(); }} aria-label="Neuer Raum">
-      <header className="card-h"><h2>Neuer Raum</h2></header>
+    <form className="card newroom" onSubmit={(e) => { e.preventDefault(); if (ok) void create(); }} aria-label={t("Neuer Raum")}>
+      <header className="card-h"><h2>{t("Neuer Raum")}</h2></header>
       <div className="wrow">
         <label className="col" style={{ gap: 4 }}>
-          <span className="lbl">Name</span>
-          <input className="field field-line" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="z. B. Planungsrunde" />
+          <span className="lbl">{t("Name")}</span>
+          <input className="field field-line" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder={t("z. B. Planungsrunde")} />
         </label>
         <fieldset className="pick">
-          <legend className="lbl">Mitglieder ({picked.length} von 2 bis {MAX})</legend>
-          {options.length === 0 && <p className="muted small">Keine erreichbaren Agents.</p>}
+          <legend className="lbl">{t("Mitglieder ({v} von 2 bis {MAX})", { v: picked.length, MAX })}</legend>
+          {options.length === 0 && <p className="muted small">{t("Keine erreichbaren Agents.")}</p>}
           {options.map((o) => {
             const on = picked.some((p) => keyOf(p) === keyOf(o.ref));
             return (
@@ -53,8 +54,8 @@ function NewRoom({ onDone, onCancel }: { onDone: (r: Room) => void; onCancel: ()
         </fieldset>
         {error && <p className="error small" role="alert">{error}</p>}
         <div className="row" style={{ gap: 8 }}>
-          <button type="submit" className="btn btn-p" disabled={!ok || busy}>{busy ? "Lege an…" : "Raum anlegen"}</button>
-          <button type="button" className="btn btn-g" onClick={onCancel}>Abbrechen</button>
+          <button type="submit" className="btn btn-p" disabled={!ok || busy}>{busy ? t("Lege an…") : t("Raum anlegen")}</button>
+          <button type="button" className="btn btn-g" onClick={onCancel}>{t("Abbrechen")}</button>
         </div>
       </div>
     </form>
@@ -71,17 +72,17 @@ export function RoomsPage() {
 
   return (
     <main className="page">
-      <PageHead title="Räume" sub={list.data ? `${rooms.length} ${archived ? "archiviert" : "aktiv"}${waiting ? ` · ${waiting} brauchen dich` : ""}` : undefined}>
-        <button type="button" className="btn btn-s btn-g" aria-pressed={archived} onClick={() => setArchived(!archived)}>{archived ? "Aktive zeigen" : "Archiv"}</button>
-        <button type="button" className="btn btn-s btn-p" onClick={() => setCreating(true)} disabled={creating}><Icon name="plus" size={14} />Neuer Raum</button>
+      <PageHead title={t("Räume")} sub={list.data ? `${rooms.length} ${archived ? "archiviert" : t("aktiv")}${waiting ? ` · ${waiting} brauchen dich` : ""}` : undefined}>
+        <button type="button" className="btn btn-s btn-g" aria-pressed={archived} onClick={() => setArchived(!archived)}>{archived ? t("Aktive zeigen") : t("Archiv")}</button>
+        <button type="button" className="btn btn-s btn-p" onClick={() => setCreating(true)} disabled={creating}><Icon name="plus" size={14} />{t("Neuer Raum")}</button>
       </PageHead>
       {creating && <NewRoom onCancel={() => setCreating(false)} onDone={(r) => navigate(`/rooms/${r.id}`)} />}
-      {list.error && <p className="banner" role="alert"><Icon name="alert" />Räume nicht ladbar: {list.error}</p>}
-      {list.loading && <p className="muted">Lade…</p>}
+      {list.error && <p className="banner" role="alert"><Icon name="alert" />{t("Räume nicht ladbar: {error}", { error: list.error })}</p>}
+      {list.loading && <p className="muted">{t("Lade…")}</p>}
       {list.data && rooms.length === 0 && !creating && (
         <div className="empty">
-          <h2>{archived ? "Nichts archiviert" : "Noch kein Raum"}</h2>
-          {!archived && <p className="muted">Ein Raum bringt 2 bis {MAX} Agents in ein Gespräch. Mit @Name sprichst du einen an, @all alle.</p>}
+          <h2>{archived ? t("Nichts archiviert") : t("Noch kein Raum")}</h2>
+          {!archived && <p className="muted">{t("Ein Raum bringt 2 bis {MAX} Agents in ein Gespräch. Mit @Name sprichst du einen an, @all alle.", { MAX })}</p>}
         </div>
       )}
       <ul className="roomlist">
@@ -93,11 +94,11 @@ export function RoomsPage() {
               <Link to={`/rooms/${r.id}`} className={`card roomrow${r.needs_user ? " need" : ""}`}>
                 <div className="row" style={{ gap: 10 }}>
                   <b className="grow trunc">{r.name}</b>
-                  {r.needs_user && <span className="tag tag-s">BRAUCHT DICH</span>}
-                  {r.running && <span className="tag tag-act">LÄUFT</span>}
+                  {r.needs_user && <span className="tag tag-s">{t("BRAUCHT DICH")}</span>}
+                  {r.running && <span className="tag tag-act">{t("LÄUFT")}</span>}
                 </div>
                 <MemberStack members={r.members} />
-                <p className="muted small trunc">{last ? `${who}: ${plainPreview(last.text)}` : "Noch keine Nachricht"}</p>
+                <p className="muted small trunc">{last ? `${who}: ${plainPreview(last.text)}` : t("Noch keine Nachricht")}</p>
                 {last && <span className="mono t3 small">{fmtAgo(last.at * 1000)}</span>}
               </Link>
             </li>

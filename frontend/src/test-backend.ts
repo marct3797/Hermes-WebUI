@@ -62,11 +62,13 @@ export function sessionMessages(_path: string) {
   ];
 }
 
-const diag = (agent: string, withRun = false) => ({
-  agent: `server/hermes/${agent}`, status: withRun ? "warn" : "ok", at: 1_792_000_000,
+const diag = (agent: string, withRun = false, warns?: string[]) => ({
+  agent: `server/hermes/${agent}`, status: withRun || (warns && warns.length > 0) ? "warn" : "ok", at: 1_792_000_000,
   checks: withRun
     ? [{ id: "run.start", label: "Run starten", status: "ok", detail: "Run run_1", ms: 12 }, { id: "run.stream", label: "Ereignisstrom bis zum Abschluss", status: "warn", detail: "Antwort kam ohne Zeichenstrom", ms: 80 }]
-    : [{ id: "health", label: "Erreichbar und angemeldet", status: "ok", detail: "Version 0.21.6", ms: 5 }, { id: "models", label: "Modelle und Anbieter", status: "ok", detail: "1 Anbieter, 2 Modelle", ms: 9 }],
+    : warns && warns.length > 0
+      ? warns.map((w, i) => { const [label, detail] = w.split(/: (.+)/); return { id: `warn.${i}`, label: label ?? w, status: "warn", detail: detail ?? "", ms: 5 }; })
+      : [{ id: "health", label: "Erreichbar und angemeldet", status: "ok", detail: "Version 0.21.6", ms: 5 }, { id: "models", label: "Modelle und Anbieter", status: "ok", detail: "1 Anbieter, 2 Modelle", ms: 9 }],
 });
 
 const memItem = (id: string, text: string, kind: string, entities: string[] = []) => ({ id, text, kind, context: null, entities, at: 1_792_000_000_000, tags: [], document: null });
@@ -179,11 +181,43 @@ function knowledgeRoute(url: string, method: string, kn: KnowledgeState, provide
 export type DashState = {
   available: boolean; reason: string | null; soul: string; description: string; model: { provider: string; model: string };
   history: Array<{ id: string; at: string; reason: string; chars: number }>; versions: Record<string, string>; stepUp: boolean;
+  routing: { sort: string | null; only: string[]; ignore: string[]; order: string[]; require_parameters: boolean; data_collection: string | null }; routingModels: string[];
+  auto: Array<Record<string, unknown>>; autoOld: boolean;
   keys: Record<string, string>; // gesetzte Anbieter-Keys (Variable → Wert); der Wert verlässt die Attrappe nie
   loggedIn: Set<string>; // Anbieter mit Anmeldung (Codex ist von Anfang an angemeldet)
   polls: number; // wie oft die laufende Geräte-Anmeldung abgefragt wurde; ab der zweiten Abfrage ist sie bestätigt
   loginError: string | null; // lässt die Anmeldung scheitern
+  config: Record<string, unknown>; // Werte der Hermes-Einstellungen (Punkt-Pfad → Wert)
+  msg: { available: boolean; enabled: Record<string, boolean>; env: Record<string, string>; gateway: { running: boolean; busy: boolean; sessions: number }; polls: number; applied: string[]; waPolls: number; waDone: boolean }; // Messaging und Gateway
+  tmBackend: string | null;
+  hm: { available: boolean; active: string; files: { memory: number; user: number }; keySet: boolean; project: string; mode: string; memfiles: { content: Record<string, string>; sha: Record<string, string>; conflict: boolean; oldHostd: boolean } }; // Hermes-Gedächtnis
+  tools: { available: boolean; enabled: Record<string, boolean>; keys: Record<string, string>; provider: Record<string, string>; model: string; installed: boolean }; // Werkzeug-Gruppen
+  ac: { pending: Array<{ platform: string; request_id: string; user_id: string; user_name: string }>; approved: Array<{ platform: string; user_id: string; user_name: string }>; hooksOn: boolean; hooks: Array<{ name: string; enabled: boolean }> };
+  mdDown?: boolean; mdFresh: boolean; // frische Installation: noch kein Anbieter, kein Modell (gültige, leere Antworten)
+  hostsEmpty?: boolean; // keine Hosts eingetragen (leere, gültige Antwort)
+  statusDown?: boolean; altDown?: boolean; sessDown?: boolean; sessEmpty?: boolean; provFresh?: boolean; diagDown?: boolean; provDown?: boolean; diagWarn?: string[]; // Fehler-/Leer-Proben je Schritt
+  sa: { down?: boolean; sessions: Array<{ id: string; ageDays: number; messages: number; active?: boolean }> };
+  ep: { backend: string; endpoints: Array<{ id: string; name: string; base_url: string; model: string; hasKey: boolean }>; current: string };
+  lcProfiles: string[]; lcActive: string; kbImportFail?: string | null; // Profil-Lebenszyklus: Namen als Text, nie Serverpfade
+  p3: { pool: Array<{ provider: string; entries: Array<{ index: number; label: string; source: string; token_tail: string }> }>; voiceOn: boolean; paused: boolean; nodes: Record<string, string>; theme: string; font: string;
+    metrics: { enabled: boolean; send: boolean; decided: boolean; managed: boolean }; unlocked: boolean; workers: Array<{ run_id: number; task_id: string }>;    spawnNone?: boolean; stale?: boolean; cuMissing?: boolean; cuNotReady?: boolean; old501?: string; kbImportFail?: string | null; };
 };
+
+const TOOL_CATALOG = [
+  { name: "terminal", label: "Terminal", description: "Befehle ausführen.", tools: ["terminal"], providers: [] as Array<Record<string, unknown>> },
+  { name: "web", label: "Web", description: "Suchen und Seiten lesen.", tools: ["web_search"], providers: [
+    { name: "Brave Search (Free)", badge: "free", status: "needs_keys", capabilities: ["search"], env: [{ key: "BRAVE_SEARCH_API_KEY", prompt: "Brave Search API key", url: "https://brave.com/search/api/" }] },
+    { name: "Firecrawl Cloud", badge: "paid", status: "needs_keys", capabilities: ["search", "extract"], env: [{ key: "FIRECRAWL_API_KEY", prompt: "Firecrawl API key", url: "javascript:alert(1)" }] }] },
+  { name: "image_gen", label: "Bilder", description: "Bilder erzeugen.", tools: ["image_generate"], providers: [{ name: "FAL.ai", badge: "paid", status: "needs_keys", env: [{ key: "FAL_KEY", prompt: "FAL API key" }] }] },
+  { name: "computer_use", label: "Computer Use", description: "Bildschirm steuern.", tools: ["computer_use"], providers: [{ name: "Cua Driver", badge: "local", status: "needs_setup", post_setup: "cua_driver", env: [] }] },
+];
+const MSG_CATALOG = [
+  { id: "telegram", name: "Telegram", description: "Hermes über Telegram nutzen.", docs_url: "https://core.telegram.org/bots/features#botfather", vars: [
+    { key: "TELEGRAM_BOT_TOKEN", required: true, is_password: true, prompt: "Bot token", url: "https://t.me/BotFather" }, { key: "TELEGRAM_ALLOWED_USERS", required: false, is_password: false, is_list: true, prompt: "Allowed user IDs" }] },
+  { id: "discord", name: "Discord", description: "Hermes über Discord nutzen.", docs_url: "javascript:alert(1)", vars: [{ key: "DISCORD_BOT_TOKEN", required: true, is_password: true, prompt: "Bot token" }] },
+  { id: "slack", name: "Slack", description: "Hermes über Slack nutzen.", docs_url: null, vars: [{ key: "SLACK_BOT_TOKEN", required: true, is_password: true, prompt: "Bot token" }] },
+];
+const stepUpBody = { detail: { code: "step_up_required", message: "Bitte erneut anmelden" } };
 const hashOf = (text: string) => `h${text.length}:${text.slice(0, 12)}`;
 
 const KEY_VARS: Array<[provider: string, label: string, varName: string]> = [
@@ -253,14 +287,18 @@ function providersOverview(dash: DashState, days: number) {
   return { providers, period_days: days, warnings: [] as string[] };
 }
 
-function dashboardRoute(rest: string, method: string, agent: string, dash: DashState, json: (b: unknown, s?: number) => Response, body?: Record<string, unknown>): Response | undefined {
+function dashboardRoute(rest: string, method: string, agent: string, dash: DashState, json: (b: unknown, s?: number) => Response, body?: Record<string, unknown>, init?: RequestInit): Response | undefined {
   if (rest === "/dashboard") {
     return json(dash.available
       ? { available: true, reason: null, profile: { name: agent, ...dash.model, description: dash.description, description_auto: false, skill_count: 12, gateway_running: false, has_env: true } }
       : { available: false, reason: dash.reason, profile: null });
   }
   const path = rest.split("?")[0];
-  if (path === "/providers" && method === "GET") return json(providersOverview(dash, Number(new URL(rest, "http://bff").searchParams.get("days") ?? 30)));
+  if (path === "/providers" && method === "GET") {
+    if (dash.provDown) return json({ detail: "Anbieterliste nicht lesbar" }, 502);
+    if (dash.provFresh || dash.mdFresh) return json({ providers: [], period_days: Number(new URL(rest, "http://bff").searchParams.get("days") ?? 30), warnings: [] as string[] });
+    return json(providersOverview(dash, Number(new URL(rest, "http://bff").searchParams.get("days") ?? 30)));
+  }
   if (path === "/providers/models" && method === "GET") {
     return json({ providers: [
       { slug: dash.model.provider, name: dash.model.provider === "mock" ? "Mock" : dash.model.provider, current: true, authenticated: true, models: ["mock-large", "mock-small"], warning: null },
@@ -303,6 +341,29 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
     dash.versions[id] = dash.soul;
     dash.history = [{ id, at: "2026-10-23T17:00:00Z", reason, chars: dash.soul.length }, ...dash.history];
   };
+  if (rest === "/provider-routing" && method === "GET") return json({ routing: dash.routing, per_model: dash.routingModels });
+  if (rest === "/provider-routing" && method === "PUT") {
+    if (dash.stepUp) return json({ detail: { code: "step_up_required", message: "Bitte erneut anmelden" } }, 401);
+    dash.routing = { ...(body as typeof dash.routing) };
+    return json({ ok: true, routing: dash.routing, per_model: dash.routingModels });
+  }
+  if (rest === "/config" && method === "GET") {
+    const fields = [
+      { key: "model", type: "string", description: "Default model", category: "general" },
+      { key: "agent.service_tier", type: "select", description: "Fast mode", category: "agent", options: ["", "normal", "fast"] },
+      { key: "agent.max_turns", type: "number", description: "Max turns", category: "agent" },
+      { key: "display.streaming", type: "boolean", description: "Streaming", category: "display" },
+      { key: "fallback_providers", type: "list", description: "Fallback providers", category: "general" },
+      { key: "fallback.min_switch_reset_seconds", type: "number", description: "Min reset", category: "general" },
+    ].map((x) => ({ ...x, value: dash.config[x.key] }));
+    return json({ fields: [...fields, { key: "web.api_key", type: "string", description: "Search key", category: "tools", secret: true, set: true, value: null }], category_order: ["general", "agent", "display", "tools"] });
+  }
+  if (rest === "/config" && method === "PUT") {
+    if (dash.stepUp) return json({ detail: { code: "step_up_required", message: "Bitte erneut anmelden" } }, 401);
+    if ("agent.max_turns" in (body?.changes as object) && (body?.changes as Record<string, unknown>)["agent.max_turns"] === 0) return json({ detail: "agent.max_turns: ungültiger Wert für Typ „number“" }, 422);
+    Object.assign(dash.config, body?.changes);
+    return json({ ok: true, changed: Object.keys(body?.changes as object).sort() });
+  }
   if (rest === "/soul" && method === "GET") return json({ content: dash.soul, exists: true, hash: hashOf(dash.soul), max_chars: 100, history: dash.history });
   if (rest === "/soul" && method === "PUT") {
     if (dash.stepUp) return json({ detail: { code: "step_up_required", message: "Bitte erneut anmelden" } }, 401);
@@ -326,6 +387,430 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
   }
   if (rest === "/profile/description" && method === "PUT") { dash.description = String(body?.description).trim(); return json({ ok: true, description: dash.description }); }
   if (rest === "/profile/model" && method === "PUT") { dash.model = { provider: String(body?.provider), model: String(body?.model) }; return json({ ok: true, ...dash.model }); }
+  if (path.startsWith("/messaging") || path.startsWith("/gateway")) {
+    if (!dash.msg.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
+    const m = dash.msg;
+    const rows = () => MSG_CATALOG.map((p) => {
+      const configured = p.vars.filter((v) => v.required).every((v) => v.key in m.env);
+      const enabled = Boolean(m.enabled[p.id]);
+      return { id: p.id, name: p.name, description: p.description, docs_url: p.docs_url, enabled, configured, gateway_running: m.gateway.running, home_channel_set: false,
+        state: !enabled ? "disabled" : !configured ? "not_configured" : !m.gateway.running ? "gateway_stopped" : "connected", error_message: null,
+        env_vars: p.vars.map((v) => ({ ...v, is_set: v.key in m.env, ...(v.is_password ? {} : { value: m.env[v.key] ?? "" }) })) };
+    });
+    if (path === "/messaging" && method === "GET") return json({ platforms: rows() });
+    const put = /^\/messaging\/([a-z_]+)$/.exec(path);
+    if (put && method === "PUT") {
+      if (dash.stepUp) return json(stepUpBody, 401);
+      const entry = MSG_CATALOG.find((p) => p.id === put[1]);
+      if (!entry) return json({ detail: "Unbekannte Plattform" }, 404);
+      const env = (body?.env ?? {}) as Record<string, string>;
+      if (Object.values(env).includes("kein-token")) return json({ detail: "Das Dashboard meldet Fehler 400: Telegram bot token must be the complete token from @BotFather" }, 502);
+      Object.assign(m.env, env);
+      for (const k of (body?.clear_env ?? []) as string[]) delete m.env[k];
+      if (typeof body?.enabled === "boolean") m.enabled[entry.id] = body.enabled;
+      return json({ ok: true, platform: entry.id, needs_restart: true });
+    }
+    const test = /^\/messaging\/([a-z_]+)\/test$/.exec(path);
+    if (test && method === "POST") { const r = rows().find((x) => x.id === test[1])!; return json({ ok: r.state === "connected", state: r.state, message: `Zustand: ${r.state}` }); }
+    if (path === "/gateway" && method === "GET") return json({ running: m.gateway.running, state: m.gateway.running ? "running" : null, busy: m.gateway.busy, active_sessions: m.gateway.sessions, version: "0.22.5" });
+    const gw = /^\/gateway\/(start|stop|restart)$/.exec(path);
+    if (gw && method === "POST") {
+      if (dash.stepUp) return json(stepUpBody, 401);
+      if (gw[1] !== "start" && (m.gateway.busy || m.gateway.sessions) && !body?.confirm_interrupt) {
+        return json({ detail: { code: "interrupt_confirmation_required", message: `Das Gateway ist beschäftigt (${m.gateway.sessions} laufende Sitzung(en)). Der Neustart unterbricht sie.`, active_sessions: m.gateway.sessions, busy: m.gateway.busy } }, 409);
+      }
+      m.gateway.running = gw[1] !== "stop"; m.gateway.busy = false; m.gateway.sessions = 0;
+      return json({ ok: true, started: true, action: `gateway-${gw[1]}`, interrupted: Boolean(body?.confirm_interrupt) });
+    }
+    if (/^\/gateway\/actions\/gateway-(start|stop|restart)$/.test(path)) return json({ name: path.split("/").pop(), running: false, exit_code: 0, lines: ["Gateway gestartet"] });
+    if (path === "/messaging/telegram/onboarding" && method === "POST") {
+      if (dash.stepUp) return json(stepUpBody, 401);
+      m.polls = 0;
+      return json({ pairing_id: "pair_abc123", suggested_username: "hermes_test_bot", deep_link: "https://t.me/newbot/hermes/hermes_test_bot", expires_at: "2026-10-24T18:00:00Z" });
+    }
+    const tg = /^\/messaging\/telegram\/onboarding\/(pair_[a-z0-9]+)(\/apply)?$/.exec(path);
+    if (tg && method === "GET") { m.polls += 1; return json(m.polls < 2 ? { status: "waiting", expires_at: "2026-10-24T18:00:00Z" } : { status: "ready", bot_username: "hermes_test_bot", owner_user_id: "424242", expires_at: "2026-10-24T18:00:00Z" }); }
+    if (tg && tg[2] && method === "POST") {
+      if (dash.stepUp) return json(stepUpBody, 401);
+      const ids = (body?.allowed_user_ids ?? []) as string[];
+      m.env.TELEGRAM_BOT_TOKEN = "123456:SECRET-FROM-TELEGRAM"; m.env.TELEGRAM_ALLOWED_USERS = ids.join(","); m.enabled.telegram = true; m.applied = ids;
+      return json({ ok: true, platform: "telegram", bot_username: "hermes_test_bot", needs_restart: true, restart_started: false, restart_error: "Live sessions" });
+    }
+    if (tg && method === "DELETE") return json({ ok: true });
+    const wa = /^\/messaging\/whatsapp\/onboarding\/(wa_[a-z0-9_]+)(\/apply)?$/.exec(path);
+    if (path === "/messaging/whatsapp/onboarding" && method === "POST") {
+      if (dash.stepUp) return json(stepUpBody, 401);
+      m.waPolls = 0;
+      return json({ pairing_id: "wa_pair_1", status: "waiting", qr_payload: "WA-QR-1", expires_at: "2026-10-24T18:00:00Z", mode: "qr", account: null, error: null });
+    }
+    if (wa && method === "GET") {
+      m.waPolls += 1;
+      return m.waPolls < 2
+        ? json({ pairing_id: "wa_pair_1", status: "waiting", qr_payload: "WA-QR-1", expires_at: "2026-10-24T18:00:00Z", mode: "qr", account: null, error: null })
+        : json({ pairing_id: "wa_pair_1", status: "connected", qr_payload: null, expires_at: "2026-10-24T18:00:00Z", mode: "qr", account: { account_id: "4917", account_name: "Handy", account_phone: "4917" }, error: null });
+    }
+    if (wa && wa[2] && method === "POST") {
+      if (dash.stepUp) return json(stepUpBody, 401);
+      if (m.waPolls < 2) return json({ detail: "WhatsApp setup is not connected yet." }, 502);
+      m.waDone = true;
+      return json({ ok: true, platform: "whatsapp" });
+    }
+    if (wa && method === "DELETE") { m.waPolls = 0; return json({ ok: true }); }
+  }
+  const lcPath = /^\/hermes-profiles(\/import|\/active|\/([^/]+))?$/.exec(path);
+  if (lcPath) {
+    if (!dash.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
+    if (method !== "GET" && dash.stepUp) return json(stepUpBody, 401);
+    if (path === "/hermes-profiles" && method === "GET") {
+      return json({ profiles: dash.lcProfiles.map((n: string) => ({ name: n, is_default: n === dash.lcProfiles[0], has_env: true })), active: dash.lcActive });
+    }
+    if (path === "/hermes-profiles" && method === "POST") {
+      if (body?.clone_from && !dash.lcProfiles.includes(String(body.clone_from))) return json({ detail: "Quelle: unbekanntes Profil" }, 422);
+      dash.lcProfiles.push(String(body?.name));
+      return json({ ok: true, name: String(body?.name), setup: "Einrichtung: hermes setup" });
+    }
+    if (path === "/hermes-profiles/import" && method === "POST") {
+      if (dash.kbImportFail) return json({ detail: dash.kbImportFail }, 502);
+      if (!(init?.body instanceof FormData)) return json({ detail: "Nur hochgeladene Archive, kein Serverpfad" }, 422);
+      if (!dash.lcProfiles.includes("rueck")) dash.lcProfiles.push("rueck");
+      return json({ ok: true, name: "rueck" });
+    }
+    if (path === "/hermes-profiles/active" && method === "POST") { dash.lcActive = String(body?.name); return json({ ok: true }); }
+    const one = /^\/hermes-profiles\/([^/]+)$/.exec(path);
+    if (one && method === "PATCH") {
+      dash.lcProfiles = dash.lcProfiles.map((n: string) => (n === one[1] ? String(body?.new_name) : n));
+      if (dash.lcActive === one[1]) dash.lcActive = String(body?.new_name);
+      return json({ ok: true, name: String(body?.new_name) });
+    }
+    if (one && method === "DELETE") {
+      if (String(body?.confirm) !== one[1]) return json({ detail: "Nur mit Namenseingabe" }, 422);
+      dash.lcProfiles = dash.lcProfiles.filter((n: string) => n !== one[1]);
+      return json({ ok: true });
+    }
+  }
+  if (path.startsWith("/hermes-models")) {
+    if (!dash.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
+    if (method !== "GET" && dash.stepUp) return json(stepUpBody, 401);
+    if (dash.mdDown && method === "GET") return json({ detail: "Das Dashboard liefert Modell-Info in unbekannter Form" }, 502);
+    if (path === "/hermes-models/info" && method === "GET") return json(dash.mdFresh ? { provider: "", model: "", configured: false, context_window: 0, capabilities: {} } : { provider: "anthropic", model: "claude-test", configured: true, context_window: 200000, capabilities: { supports_tools: true } });
+    if (path === "/hermes-models/options" && method === "GET" && dash.mdFresh) return json({ providers: [], current: { provider: "", model: "" } });
+    if (path === "/hermes-models/options" && method === "GET") return json({ providers: [{ slug: "anthropic", name: "Anthropic", models: ["claude-test", "claude-small"], authenticated: true }], current: { provider: "anthropic", model: "claude-test" } });
+    if (path === "/hermes-models/recommended-default" && method === "GET") return json({ provider: "anthropic", model: "claude-test" });
+    if (path === "/hermes-models/auxiliary" && method === "GET") return json({ main: { provider: "anthropic", model: "claude-test" }, tasks: [{ task: "coding", provider: "auto", model: "" }] });
+    if (path === "/hermes-models/moa" && method === "GET") return json({ presets: { d: { reference_models: [{ provider: "anthropic", model: "claude-test" }], aggregator: { provider: "anthropic", model: "claude-test" } } }, active_preset: "d", default_preset: "d" });
+    if (path === "/hermes-models/set" && method === "POST") {
+      if (String(body?.scope) !== "main" && String(body?.scope) !== "auxiliary") return json({ detail: [{ loc: ["body", "scope"], msg: "muss main oder auxiliary sein" }] }, 422);
+      if (!String(body?.model ?? "").trim()) return json({ detail: [{ loc: ["body", "model"], msg: "leer ist kein Modell" }] }, 422);
+      if (/opus|o1|o3|gpt-5|claude-teuer/i.test(String(body?.model ?? "")) && !body?.confirm_expensive_model) return json({ ok: false, confirm_required: true, confirm_message: "Teures Modell: bitte bestätigen." });
+      dash.mdFresh = false; return json({ ok: true, provider: String(body?.provider), model: String(body?.model).trim() });
+    }
+    return json({ detail: "Unbekannte Modell-Route" }, 404);
+  }
+  if (path === "/automation" && method === "POST") {
+    if (dash.stepUp) return json(stepUpBody, 401);
+    if (dash.autoOld) return json({ detail: "Hermes ist für das Ändern zu alt. Aktualisiere Hermes auf diesem Rechner (getestet ab Version 0.23.0; es braucht den Gateway-Client mit session.automation)." }, 501);
+    const { session_id, kind, action, text } = body as { session_id: string; kind: string; action: string; text?: string };
+    const hit = dash.auto.findIndex((i) => i.kind === kind && i.session_id === session_id);
+    if (action === "clear") { if (hit >= 0) dash.auto.splice(hit, 1); return json({ ok: true, kind, action, status: "cleared" }); }
+    if (action === "set") {
+      const row = { kind, session_id, title: "Release prüfen", text: String(text), status: "active", ...(kind === "heartbeat" ? { interval_seconds: Number((body as { interval_seconds?: number }).interval_seconds) } : {}) };
+      if (hit >= 0) dash.auto[hit] = row; else dash.auto.push(row);
+      return json({ ok: true, kind, action, status: "active", started: kind === "goal" });
+    }
+    if (hit >= 0) dash.auto[hit].status = action === "pause" ? "paused" : "active";
+    return json({ ok: true, kind, action, status: action === "pause" ? "paused" : "active", started: kind === "goal" && action === "resume" ? true : null });
+  }
+  if (path === "/automation") return json({ available: true, truncated: false, reason: null, items: dash.auto });
+  if (/^\/hermes-(credentials|voice|system|computer-use|curator|learning|appearance|privacy)/.test(path)) {
+    if (!dash.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
+    const x = dash.p3;
+    if (method !== "GET" && dash.stepUp) return json(stepUpBody, 401);
+    const qs = new URL(rest, "http://bff").searchParams;
+    if (path === "/hermes-credentials" && method === "GET") return json({ providers: x.pool });
+    if (path === "/hermes-credentials" && method === "POST" && x.old501) return json({ detail: x.old501 }, 501);
+    if (path === "/hermes-credentials" && method === "POST") {
+      const row = x.pool.find((p) => p.provider === body?.provider) ?? (x.pool.push({ provider: String(body?.provider), entries: [] }), x.pool[x.pool.length - 1]);
+      row.entries.push({ index: row.entries.length + 1, label: String(body?.label ?? ""), source: "manual", token_tail: String(body?.api_key).slice(-4) }); return json({ ok: true, count: row.entries.length });
+    }
+    const rm = /^\/hermes-credentials\/([^/]+)\/(\d+)$/.exec(path);
+    if (rm && method === "DELETE") {
+      if (qs.get("confirm") !== rm[1]) return json({ detail: "Entfernen: den Anbieternamen zur Bestätigung eingeben" }, 422);
+      const row = x.pool.find((p) => p.provider === rm[1]); if (row) row.entries = row.entries.filter((e) => e.index !== Number(rm[2])); return json({ ok: true, count: row?.entries.length ?? 0 });
+    }
+    if (path === "/hermes-voice/status") return json(x.voiceOn ? { mode: "chained", available: true, reason: "" } : { mode: "", available: false, reason: "Kein Sprachanbieter eingerichtet" });
+    if (path === "/hermes-voice/speak" && method === "POST") return json({ data_url: "data:audio/mpeg;base64,AAAA", mime_type: "audio/mpeg", provider: "edge" });
+    if (path === "/hermes-voice/transcribe" && method === "POST") return json({ transcript: "Hallo Welt", provider: "whisper" });
+    if (path === "/hermes-system") return json({ hermes_version: "0.22.5", system: "Linux", arch: "x86_64", python_version: "3.14", cpu_count: 8, cpu_percent: 5, memory: { used: 4 * 1024 ** 3, total: 16 * 1024 ** 3 }, disk: { used: 100 * 1024 ** 3, total: 500 * 1024 ** 3 } });
+    if (path === "/hermes-computer-use") return json(x.cuMissing ? { platform: "linux", platform_supported: true, installed: false, version: null, ready: null, checks: [], error: null } : { platform: "linux", platform_supported: true, installed: true, version: "cua 1.0", ready: !x.cuNotReady, checks: [{ name: "driver", ok: true }, { name: "display", ok: false }], error: null });
+    if (path === "/hermes-curator" && method === "GET") return json({ enabled: true, paused: x.paused, interval_hours: 168, last_run_at: null, min_idle_hours: 2, stale_after_days: 30, archive_after_days: 90 });
+    if (path === "/hermes-curator/paused") { x.paused = Boolean(body?.paused); return json({ ok: true, paused: x.paused }); }
+    if (path === "/hermes-curator/run" && method === "POST") return body?.confirm_archive ? json({ started: true, name: "curator-run" }) : json({ detail: "confirm_archive=true senden" }, 422);
+    if (path === "/hermes-curator/run") return json({ running: false, exit_code: 0, log: "Curator fertig" });
+    if (path === "/hermes-learning") return json({ nodes: Object.keys(x.nodes).map((id) => ({ id, label: id, kind: id.startsWith("memory:") ? "memory" : "skill", category: "", use_count: 2, state: "", pinned: false })), edges: Object.keys(x.nodes).filter((k) => k.startsWith("memory:")).slice(0, 1).map((k) => ({ source: "skill-a", target: k })) });
+    if (path === "/hermes-learning/node") {
+      const id = qs.get("id") ?? "";
+      if (method === "GET") return id in x.nodes ? json({ id, kind: id.startsWith("memory:") ? "memory" : "skill", label: id, content: x.nodes[id] }) : json({ detail: "Diesen Knoten gibt es nicht" }, 404);
+      if (method === "DELETE") { if (qs.get("confirm") !== id) return json({ detail: "Löschen: die Knoten-ID zur Bestätigung eingeben" }, 422); delete x.nodes[id]; return json({ ok: true }); }
+      if (method === "PUT") {
+        const old = String(body?.id), text = String(body?.content);
+        const now = old.startsWith("memory:") ? `${old.split(":").slice(0, 3).join(":")}:${text.length.toString(16).padStart(12, "0")}` : old; // wie Hermes: Fingerabdruck des Textes steckt in der ID
+        x.nodes = Object.fromEntries(Object.entries(x.nodes).map(([k, v]) => (k === old ? [now, text] : [k, v])));
+        return json({ ok: true, id: now });
+      }
+    }
+    if (path === "/hermes-appearance" && method === "GET") return json({ themes: [{ name: "default", label: "Default", description: "" }, { name: "midnight", label: "Midnight", description: "" }], active: x.theme, font: x.font, fonts: ["theme", "inter"] });
+    if (path === "/hermes-appearance/theme") { x.theme = String(body?.name); return json({ ok: true }); }
+    if (path === "/hermes-appearance/font") { x.font = String(body?.font); return json({ ok: true }); }
+    if (path === "/hermes-privacy" && method === "GET") return json({ egress: "Egress-Proxy: aus", metrics: x.metrics });
+    if (path === "/hermes-privacy/metrics") {
+      if (body?.send && !body?.confirm_send) return json({ detail: "confirm_send=true senden" }, 422);
+      x.metrics = { ...x.metrics, enabled: Boolean(body?.enabled), send: Boolean(body?.send), decided: true }; return json({ ok: true, metrics: x.metrics });
+    }
+  }
+  if (path.startsWith("/hermes-pairing") || path.startsWith("/hermes-webhooks")) {
+    if (!dash.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
+    const ac = dash.ac;
+    if (method !== "GET" && dash.stepUp) return json(stepUpBody, 401);
+    const pairing = () => ({ pending: ac.pending.map((p) => ({ ...p, age_minutes: 3 })), approved: ac.approved });
+    const hooks = () => ({ enabled: ac.hooksOn, base_url: "http://gw.test", subscriptions: ac.hooks.map((h) => ({ name: h.name, description: "", events: ["push"], deliver: "log", url: `http://gw.test/webhooks/${h.name}`, secret_set: true, enabled: h.enabled })) });
+    if (path === "/hermes-pairing" && method === "GET") return json(pairing());
+    if (path === "/hermes-pairing/approve" && method === "POST") {
+      const p = ac.pending.find((x) => x.request_id === body?.request_id); if (!p) return json({ detail: "nicht gefunden" }, 404);
+      ac.pending = ac.pending.filter((x) => x !== p); ac.approved.push({ platform: p.platform, user_id: p.user_id, user_name: p.user_name }); return json(pairing());
+    }
+    if (path === "/hermes-pairing/revoke" && method === "POST") {
+      if (body?.confirm !== body?.user_id) return json({ detail: "Sperren: die Nutzer-ID zur Bestätigung eingeben" }, 422);
+      ac.approved = ac.approved.filter((x) => x.user_id !== body?.user_id); return json(pairing());
+    }
+    if (path === "/hermes-webhooks" && method === "GET") return json(hooks());
+    if (path === "/hermes-webhooks/enable" && method === "POST") { if (body?.confirm_restart !== true) return json({ detail: "confirm_restart" }, 422); ac.hooksOn = true; return json({ ok: true, ...hooks() }); }
+    if (path === "/hermes-webhooks" && method === "POST") {
+      if (!ac.hooksOn) return json({ detail: "Die Webhook-Plattform ist ausgeschaltet" }, 409);
+      ac.hooks.push({ name: String(body?.name), enabled: true }); return json({ ok: true, name: String(body?.name), url: `http://gw.test/webhooks/${String(body?.name)}`, secret: "whsec-EINMALIG-123" });
+    }
+    const tog = /^\/hermes-webhooks\/([^/]+)\/enabled$/.exec(path);
+    if (tog && method === "PUT") { const h = ac.hooks.find((x) => x.name === tog[1]); if (h) h.enabled = Boolean(body?.enabled); return json({ ok: true }); }
+    const del = /^\/hermes-webhooks\/([^/?]+)$/.exec(path);
+    if (del && method === "DELETE") {
+      if (new URL(rest, "http://bff").searchParams.get("confirm") !== del[1]) return json({ detail: "Löschen: den Webhook-Namen zur Bestätigung eingeben" }, 422);
+      ac.hooks = ac.hooks.filter((x) => x.name !== del[1]); return json({ ok: true });
+    }
+    return json({ detail: "Unbekannte Zugangs-Route" }, 404);
+  }
+  if (path.startsWith("/hermes-sessions")) {
+    if (!dash.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
+    const sa = dash.sa;
+    if (sa.down) return json({ detail: "Session store is not initialized. Start this profile's gateway to initialize it." }, 503);
+    if (method !== "GET" && dash.stepUp) return json(stepUpBody, 401);
+    const hit = (days: number) => sa.sessions.filter((s) => s.ageDays > days && !s.active);
+    const empties = () => sa.sessions.filter((s) => s.messages === 0 && !s.active);
+    if (path === "/hermes-sessions/stats" && method === "GET") return json({ total: sa.sessions.length, active_store: sa.sessions.length, archived: 0, messages: sa.sessions.reduce((n, s) => n + s.messages, 0), by_source: { cli: sa.sessions.length } });
+    if (path === "/hermes-sessions/prune/preview" && method === "POST") { const h = hit(Number(body?.older_than_days)); return json({ matched: h.length, skipped_open: 1, sample: h.map((s) => ({ id: s.id, title: `Sitzung ${s.id}` })) }); }
+    if (path === "/hermes-sessions/prune" && method === "POST") {
+      const h = hit(Number(body?.older_than_days));
+      if (Number(body?.confirm_count) !== h.length) return json({ detail: `Aufräumen: die Vorschau zeigt ${h.length} Sitzungen, die eingegebene Zahl stimmt nicht` }, 422);
+      sa.sessions = sa.sessions.filter((s) => !h.includes(s)); return json({ ok: true, removed: h.length, skipped_open: 1 });
+    }
+    if (path === "/hermes-sessions/empty" && method === "GET") return json({ count: empties().length });
+    if (path === "/hermes-sessions/empty" && method === "DELETE") {
+      const e = empties();
+      if (new URL(rest, "http://bff").searchParams.get("confirm") !== String(e.length)) return json({ detail: "Löschen: die eingegebene Zahl stimmt nicht" }, 422);
+      sa.sessions = sa.sessions.filter((s) => !e.includes(s)); return json({ ok: true, deleted: e.length });
+    }
+    const tlm = /^\/hermes-sessions\/([^/]+)\/timeline$/.exec(path);
+    if (tlm && method === "GET") return json({ session_id: tlm[1], profile: "gamma", events: [{ row_id: 1, type: "user_message", summary: "Hallo" }], after_row_id: 0 });
+    if (path === "/hermes-sessions/import" && method === "POST") {
+      const ss = Array.isArray(body?.sessions) ? body.sessions : [];
+      if (Number(body?.confirm_count) !== ss.length || ss.length === 0) return json({ detail: "Zahl stimmt nicht" }, 422);
+      return json({ ok: true, imported: ss.length }, 201);
+    }
+    if (path === "/hermes-sessions/owner-backfill" && method === "POST") return body?.confirm ? json({ ok: true, stamped: 2, profile: "gamma" }) : json({ detail: "confirm" }, 422);
+    return json({ detail: "Unbekannte Sitzungs-Route" }, 404);
+  }
+  if (path.startsWith("/hermes-delegation") || path.startsWith("/hermes-endpoints") || path.startsWith("/hermes-local-models")) {
+    if (!dash.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
+    const ep = dash.ep;
+    if (method !== "GET" && dash.stepUp) return json(stepUpBody, 401);
+    const rows = () => ep.endpoints.map((e) => ({ ...e, models: [e.model], has_api_key: e.hasKey, api_key_preview: e.hasKey ? "sk-…9876" : "", is_current: ep.current === e.id }));
+    if (path === "/hermes-delegation" && method === "GET") return json({ configured: ep.backend, blocked_reason: null, backends: [{ name: "default", description: "Eingebaut", builtin: true }, { name: "docker", description: "Container", builtin: false }], profiles: ["gamma"] });
+    if (path === "/hermes-delegation/backend" && method === "PUT") { ep.backend = String(body?.backend); return json({ ok: true, backend: ep.backend }); }
+    if (path === "/hermes-endpoints" && method === "GET") return json({ endpoints: rows(), current: {} });
+    if (path === "/hermes-endpoints" && method === "POST") {
+      if (!/^https?:\/\/[^@]+$/.test(String(body?.base_url))) return json({ detail: [{ loc: ["body", "base_url"], msg: "URL: nur http(s) ohne Zugangsdaten" }] }, 422);
+      const id = String(body?.name).toLowerCase().replace(/ /g, "-");
+      ep.endpoints.push({ id, name: String(body?.name), base_url: String(body?.base_url), model: String(body?.model), hasKey: Boolean(body?.api_key) });
+      return json({ ok: true, id, endpoints: rows(), current: {} });
+    }
+    if (path === "/hermes-endpoints/validate" && method === "POST") return json({ ok: true, reachable: true, message: "ok", models: ["llama3"] });
+    const act = path.match(/^\/hermes-endpoints\/([^/]+)\/activate$/);
+    if (act && method === "POST") { ep.current = act[1]; return json({ ok: true, id: act[1] }); }
+    const one = path.match(/^\/hermes-endpoints\/([^/?]+)$/);
+    if (one && method === "DELETE") {
+      if (new URL(rest, "http://bff").searchParams.get("confirm") !== one[1]) return json({ detail: "Löschen: die Endpunkt-ID zur Bestätigung eingeben" }, 422);
+      ep.endpoints = ep.endpoints.filter((e) => e.id !== one[1]); return json({ ok: true });
+    }
+    if (path === "/hermes-local-models/status" && method === "GET") return json({ enabled: false, runtime_installed: false, server_running: false, models: [{ id: "g1", name: "llama3.gguf", size_bytes: 1048576 }] });
+    return json({ detail: "Unbekannte Endpunkt-Route" }, 404);
+  }
+  if (path === "/hermes-ops/backup" && method === "POST") {
+    if (dash.stepUp) return json(stepUpBody, 401);
+    if (String(body?.confirm) !== "gamma") return json({ detail: "Nur mit Namenseingabe" }, 422);
+    return json({ ok: true, archive: "/hermes/backup-2026.tgz" });
+  }
+  if (path === "/hermes-ops/doctor" && method === "POST") {
+    if (dash.stepUp) return json(stepUpBody, 401);
+    return json({ ok: true, name: "doctor" });
+  }
+  if (path === "/hermes-ops/actions/doctor" && method === "GET") return json({ name: "doctor", lines: ["alles bereit"] });
+  if (path.startsWith("/hermes-memory")) {
+    if (!dash.hm.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
+    const h = dash.hm;
+    if (method !== "GET" && dash.stepUp) return json(stepUpBody, 401);
+    const status = (n: string) => (n === "byterover" ? "unavailable" : h.keySet ? "ready" : "needs_config");
+    if (path === "/hermes-memory" && method === "GET") {
+      return json({ active: h.active, files: h.files, providers: [
+        { name: "byterover", label: "ByteRover", docs_url: "https://byterover.dev/docs", description: "ByteRover, Wissensbaum.", status: "unavailable", configured: false, available: false, required_env: [], missing: [{ name: "brv", install: "curl -fsSL https://byterover.dev/install.sh | sh" }] },
+        { name: "retaindb", label: "RetainDB", docs_url: "https://retaindb.com/docs", description: "RetainDB, Cloud-Gedächtnis.", status: status("retaindb"), configured: h.keySet, available: true, required_env: ["RETAINDB_API_KEY"], missing: [] }] });
+    }
+    if (path === "/hermes-memory/provider" && method === "PUT") { h.active = String(body?.provider); return json({ ok: true, active: h.active }); }
+    if (path === "/hermes-memory/reset" && method === "POST") {
+      const t = String(body?.target); if (t === "all" || t === "memory") h.files.memory = 0; if (t === "all" || t === "user") h.files.user = 0;
+      return json({ ok: true, deleted: t === "memory" ? ["MEMORY.md"] : t === "user" ? ["USER.md"] : ["MEMORY.md", "USER.md"] });
+    }
+    const prov = /^\/hermes-memory\/providers\/(byterover|retaindb)$/.exec(path);
+    if (prov && method === "GET") {
+      return json({ name: prov[1], label: prov[1] === "retaindb" ? "RetainDB" : "ByteRover", docs_url: prov[1] === "retaindb" ? "https://retaindb.com/docs" : "https://byterover.dev/docs", fields: prov[1] === "retaindb" ? [
+        { key: "api_key", label: "Api Key", kind: "secret", description: "RetainDB API key", info: "Key aus der RetainDB-Konsole", group: "Zugang", inline: true, required: true, is_set: h.keySet, options: [] },
+        { key: "project", label: "Project", kind: "text", description: "Projekt", group: "Zugang", inline: true, required: false, is_set: Boolean(h.project), options: [], value: h.project },
+        { key: "mode", label: "Mode", kind: "select", description: "Modus", group: "Verhalten", required: false, is_set: true, options: [{ value: "fast", label: "schnell", description: "Schnelle Treffer" }, { value: "deep", label: "tief", description: "Gründliche Suche" }], value: h.mode },
+        { key: "cache", label: "Cache", kind: "bool", description: "Treffer zwischenspeichern", group: "Verhalten", required: false, is_set: true, options: [], value: true },
+        { key: "budget", label: "Budget", kind: "number", description: "Höchstzahl Treffer", group: "Verhalten", required: false, is_set: true, options: [], value: 5 },
+        { key: "mapping", label: "Mapping", kind: "json", description: "Feldzuordnung", group: "Verhalten", required: false, is_set: true, options: [], value: "{\"titel\": \"name\"}" }] : [
+        { key: "auto_extract", label: "Auto Extract", kind: "select", description: "Automatisch", is_set: true, options: [{ value: "true" }, { value: "false" }], value: "true" }] });
+    }
+    if (prov && method === "PUT") {
+      if (prov[1] === "byterover") return json({ detail: "Das Dashboard meldet Fehler 400: Memory provider 'byterover' is not ready (unavailable)." }, 502);
+      const v = (body?.values ?? {}) as Record<string, string>;
+      if (v.api_key) h.keySet = true; if ("project" in v) h.project = v.project; if ("mode" in v) h.mode = v.mode;
+      h.active = "retaindb";
+      return json({ ok: true, active: "retaindb" });
+    }
+    const setupProv = /^\/hermes-memory\/providers\/(byterover|retaindb)\/setup$/.exec(path);
+    if (setupProv && method === "POST") {
+      if (dash.stepUp) return json(stepUpBody, 401);
+      if (body?.confirm !== "einrichten") return json({ detail: "Bestätigung" }, 422);
+      return json({ ok: true, provider: setupProv[1] });
+    }
+    const memSha = (text: string) => `sha-${text.length}-${text.slice(0, 8)}`;
+    const memFile = /^\/hermes-memory\/files\/(MEMORY\.md|USER\.md)$/.exec(path);
+    if (path === "/hermes-memory/files" && method === "GET") {
+      if (h.memfiles.oldHostd) return json({ detail: "Der Host-Dienst ist zu alt für Gedächtnisdateien. Aktualisiere hostd auf dem Rechner." }, 501);
+      const enc = (s: string) => new TextEncoder().encode(s).length;
+      return json({ files: (["MEMORY.md", "USER.md"] as const).map((name) => ({ name, size: enc(h.memfiles.content[name] ?? ""), mtime: "2026-01-01T00:00:00+00:00", exists: Boolean(h.memfiles.content[name]) })) });
+    }
+    if (memFile && method === "GET") {
+      if (h.memfiles.oldHostd) return json({ detail: "Der Host-Dienst ist zu alt für Gedächtnisdateien. Aktualisiere hostd auf dem Rechner." }, 501);
+      const content = h.memfiles.content[memFile[1]] ?? "";
+      const sha = memSha(content);
+      h.memfiles.sha[memFile[1]] = sha;
+      return json({ name: memFile[1], content, sha256: sha, size: new TextEncoder().encode(content).length, mtime: "2026-01-01T00:00:00+00:00" });
+    }
+    if (memFile && method === "PUT") {
+      if (h.memfiles.oldHostd) return json({ detail: "Der Host-Dienst ist zu alt für Gedächtnisdateien. Aktualisiere hostd auf dem Rechner." }, 501);
+      if (h.memfiles.conflict) return json({ detail: "Die Datei wurde inzwischen geändert. Lade neu und speichere erneut." }, 409);
+      const content = String(body?.content ?? "");
+      if (content.includes("\0")) return json({ detail: "Der Inhalt ist ungültig (nur UTF-8-Text ohne NUL-Zeichen)" }, 422);
+      if (content.length > 262144) return json({ detail: "Die Datei ist zu groß für den Host-Dienst" }, 413);
+      if (body?.expected_sha256 !== h.memfiles.sha[memFile[1]]) return json({ detail: "Die Datei wurde inzwischen geändert. Lade neu und speichere erneut." }, 409);
+      h.memfiles.content[memFile[1]] = content;
+      const sha = memSha(content);
+      h.memfiles.sha[memFile[1]] = sha;
+      return json({ name: memFile[1], sha256: sha, size: new TextEncoder().encode(content).length, mtime: "2026-01-01T00:00:00+00:00", backup: `${memFile[1]}.bak-1` });
+    }
+  }
+  const toolRows = () => TOOL_CATALOG.map((t) => ({ name: t.name, label: t.label, description: t.description, enabled: dash.tools.enabled[t.name], configured: !t.providers.length || t.providers.some((p) => (p.env as Array<{ key: string }>).every((v) => v.key in dash.tools.keys)), tools: t.tools }));
+  const toolPath = /^\/tools(?:\/([a-z_]+)(?:\/(provider|env|model|models))?)?$/.exec(path);
+  if (path === "/terminal-backend" && method === "PUT") {
+    if (dash.stepUp) return json(stepUpBody, 401);
+    const want = String(body?.backend ?? "");
+    if (!["local", "docker"].includes(want)) return json({ detail: "kennt nicht" }, 422);
+    dash.tmBackend = want;
+    return json({ ok: true, backend: want });
+  }
+  if (path === "/computer-use/status" && method === "GET") return json({ ready: false, installed: true, can_grant: false, granted: null, platform: "linux", detail: null });
+  if (path === "/computer-use/grant" && method === "POST") {
+    if (dash.stepUp) return json(stepUpBody, 401);
+    return json({ ok: true, name: "computer-use-grant" });
+  }
+  const postSetup = /^\/tools\/([a-z_]+)\/post-setup$/.exec(path);
+  if (postSetup && method === "POST") {
+    if (dash.stepUp) return json(stepUpBody, 401);
+    return json({ ok: true, name: "tools-post-setup", key: String(body?.key ?? "") });
+  }
+  if (path === "/hermes-ops/update-check" && method === "GET") return json({ current: "mock-1", available: "mock-2" });
+  if (path === "/hermes-ops/update" && method === "POST") {
+    if (dash.stepUp) return json(stepUpBody, 401);
+    if (body?.confirm !== "aktualisieren") return json({ detail: "Bestätigung" }, 422);
+    return json({ ok: true, already_running: false });
+  }
+  if (path === "/hermes-ops/actions/update" && method === "GET") return json({ action: "hermes-update", running: false, exit_code: 0, log: "fertig" });
+  if (path === "/gateway/migrate/plan" && method === "GET") return json({ plan: { blockers: [], profiles: [{ profile: "default", home: "/home/user/.hermes", pid: 1258, service: { kind: "systemd", system: false }, services: [], run_as_user: null, uid: 1000, runtime_home: null }], notices: [], eligible: true } });
+  if (path === "/gateway/migrate" && method === "POST") {
+    if (dash.stepUp) return json(stepUpBody, 401);
+    if (body?.confirm !== "migrieren") return json({ detail: "Bestätigung" }, 422);
+    return json({ ok: true, name: "gateway-migrate" });
+  }
+  if (path === "/hermes-hooks" && method === "GET") return json({ hooks: [{ event: "before_tool", matcher: "", executable: true, allowed: false, approved_at: null, command_preview: "echo hi" }], valid_events: ["before_tool", "after_tool"] });
+  if (path === "/hermes-hooks" && method === "POST") {
+    if (dash.stepUp) return json(stepUpBody, 401);
+    if (body?.confirm !== body?.command) return json({ detail: "Bestätigung" }, 422);
+    return json({ ok: true, event: String(body?.event), approved: Boolean(body?.approve) });
+  }
+  if (path === "/hermes-hooks" && method === "DELETE") {
+    if (dash.stepUp) return json(stepUpBody, 401);
+    if (body?.confirm !== body?.command) return json({ detail: "Bestätigung" }, 422);
+    return json({ ok: true });
+  }
+  const envDel = /^\/env\/([A-Z0-9_]+)$/.exec(path);
+  if (envDel && method === "DELETE") {
+    if (dash.stepUp) return json(stepUpBody, 401);
+    if (body?.confirm !== envDel[1]) return json({ detail: "Bestätigung" }, 422);
+    delete dash.keys[envDel[1]];
+    return json({ ok: true, key: envDel[1] });
+  }
+  if (path === "/terminal-backends" && method === "GET") {
+    return dash.tools.available ? json({ active: dash.tmBackend ?? "local", backends: [{ name: "local", label: "Local", description: "Run commands directly on this machine. No isolation.", active: (dash.tmBackend ?? "local") === "local", status: "ready", detail: "" }, { name: "docker", label: "Docker / Podman", description: "Isolated container.", active: (dash.tmBackend ?? "local") === "docker", status: "needs_setup", detail: "Docker CLI not found" }] }) : json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
+  }
+  if (toolPath) {
+    if (!dash.tools.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
+    const [, name, sub] = toolPath;
+    const entry = TOOL_CATALOG.find((t) => t.name === name);
+    if (!name) return json({ toolsets: toolRows() });
+    if (!entry) return json({ detail: "Unbekannte Werkzeuggruppe" }, 404);
+    if (method !== "GET" && dash.stepUp) return json(stepUpBody, 401);
+    if (!sub && method === "GET") {
+      return json({ name, has_category: entry.providers.length > 0, active_provider: dash.tools.provider[name] ?? null, providers: entry.providers.map((p) => ({
+        name: p.name, badge: p.badge, status: p.post_setup && dash.tools.installed ? "ready" : p.status, post_setup: p.post_setup ?? null, is_active: dash.tools.provider[name] === p.name, capabilities: p.capabilities,
+        env_vars: (p.env as Array<{ key: string; prompt: string; url?: string }>).map((v) => ({ ...v, is_set: v.key in dash.tools.keys })) })) });
+    }
+    if (!sub && method === "PUT") {
+      const wantsInstall = entry.providers.some((p) => p.post_setup && !dash.tools.installed);
+      if (body?.enabled && wantsInstall && !body?.accept_install) return json({ detail: { code: "install_consent_required", message: "Das Einschalten kann Software installieren (cua_driver). Bitte ausdrücklich zustimmen." } }, 409);
+      dash.tools.enabled[name] = Boolean(body?.enabled);
+      return json({ ok: true, name, enabled: body?.enabled, post_setup_started: body?.enabled && wantsInstall ? "cua_driver" : null });
+    }
+    if (sub === "provider" && method === "PUT") { dash.tools.provider[name] = String(body?.provider); return json({ ok: true, name, provider: body?.provider, capability: body?.capability ?? null }); }
+    if (sub === "env" && method === "PUT") {
+      const env = (body?.env ?? {}) as Record<string, string>;
+      if (Object.values(env).some((v) => v.includes("abgelehnt"))) return json({ detail: "BRAVE_SEARCH_API_KEY: das ist eine geschwärzte Vorschau, kein Schlüssel" }, 422);
+      Object.assign(dash.tools.keys, env);
+      return json({ ok: true, name, saved: Object.keys(env), skipped: [] });
+    }
+    if (sub === "models" && method === "GET") {
+      return json(name === "image_gen" ? { name, has_models: true, provider: "FAL.ai", models: [{ id: "flux-2-pro", display: "FLUX 2 Pro", price: "$0.05" }, { id: "flux-2-klein", display: "FLUX 2 Klein", price: "$0.01" }], current: dash.tools.model, default: "flux-2-pro" } : { name, has_models: false, models: [], current: null, default: null });
+    }
+    if (sub === "model" && method === "PUT") { dash.tools.model = String(body?.model); return json({ ok: true, name, model: dash.tools.model }); }
+  }
   return undefined;
 }
 
@@ -342,17 +827,37 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
   const quota: { mode: QuotaMode } = { mode: "ok" };
   const dash: DashState = {
     available: true, reason: null, soul: "Du bist Gamma.\nDu antwortest knapp.\n", description: "", model: { provider: "mock", model: "mock-large" },
-    history: [], versions: {}, stepUp: false, keys: { ANTHROPIC_API_KEY: "sk-ant-geheim-1234" },
+    history: [], versions: {}, stepUp: false, routing: { sort: null, only: [], ignore: [], order: [], require_parameters: false, data_collection: null }, routingModels: ["anthropic/x"],
+    autoOld: false,
+    auto: [
+      { kind: "goal", session_id: "s1", title: "Release prüfen", text: "Alle Tests grün", status: "active", turns_used: 3, max_turns: 20, gates: 1, subgoals: ["ruff sauber"], last_reason: "noch 2 rot", last_turn_at: Date.now() / 1000 - 120 },
+      { kind: "heartbeat", session_id: "s1", title: "Release prüfen", text: "CI prüfen", status: "paused", interval_seconds: 600, fire_count: 4 },
+    ], keys: { ANTHROPIC_API_KEY: "sk-ant-geheim-1234" },
     loggedIn: new Set(["openai-codex"]), polls: 0, loginError: null,
+    config: { model: "claude-test", "agent.service_tier": "normal", "agent.max_turns": 90, "display.streaming": true, fallback_providers: [], "fallback.min_switch_reset_seconds": 0, "web.api_key": null },
+    msg: { available: true, enabled: {}, env: {}, gateway: { running: false, busy: false, sessions: 0 }, polls: 0, applied: [], waPolls: 0, waDone: false },
+    tmBackend: null,
+    hm: { available: true, active: "", files: { memory: 120, user: 45 }, keySet: false, project: "", mode: "fast", memfiles: { content: { "MEMORY.md": "Eintrag eins\n§\nEintrag zwei\n", "USER.md": "" }, sha: {}, conflict: false, oldHostd: false } },
+    tools: { available: true, enabled: { terminal: true, web: false, image_gen: true, computer_use: false }, keys: {}, provider: {}, model: "flux-2-pro", installed: false },
+    ac: { pending: [{ platform: "telegram", request_id: "req-1", user_id: "42", user_name: "Anna" }], approved: [{ platform: "telegram", user_id: "7", user_name: "Bob" }], hooksOn: false, hooks: [] },
+    mdFresh: false,
+    sa: { sessions: [{ id: "a1", ageDays: 200, messages: 3 }, { id: "a2", ageDays: 100, messages: 2 }, { id: "a3", ageDays: 1, messages: 4 }, { id: "e1", ageDays: 5, messages: 0 }, { id: "act", ageDays: 300, messages: 1, active: true }] },
+    ep: { backend: "default", endpoints: [], current: "" },
+    lcProfiles: [...agents], lcActive: agents[0] ?? "gamma",
+    p3: { pool: [{ provider: "openrouter", entries: [{ index: 1, label: "privat", source: "manual", token_tail: "abcd" }, { index: 2, label: "aus .env", source: "env:OPENROUTER_API_KEY", token_tail: "wxyz" }] }], voiceOn: true, paused: false,
+      nodes: { "skill-a": "# Skill A", "memory:memory:0:aaaaaaaaaaaa": "Merke dir das" }, theme: "default", font: "theme", metrics: { enabled: false, send: false, decided: false, managed: false }, unlocked: true, workers: [{ run_id: 7, task_id: "t_1" }] },
   };
   let runs = 0;
   const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
   vi.stubGlobal("EventSource", FakeEventSource);
   vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
     const method = init?.method ?? "GET";
-    calls.push({ method, url, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+    calls.push({ method, url, body: init?.body instanceof FormData ? { archive: "[datei]" } : init?.body ? JSON.parse(String(init.body)) : undefined });
     if (url === "/bff/me") return json({ user: { id: "42", name: "alex" }, auth_mode: "none", fresh: true, build: "3f5c30c" });
-    if (url === "/bff/hosts") return json({ hosts: hostsFor(agents), config_error: null });
+    if (url === "/bff/hosts") {
+      if (dash.hostsEmpty) return json({ hosts: [], config_error: null });
+      return json({ hosts: hostsFor(agents), config_error: null });
+    }
     if (url === "/bff/ui") return json(uiState);
     if (url.startsWith("/bff/rooms")) {
       const u = new URL(url, "http://bff");
@@ -402,34 +907,90 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
       }
       return json(uiState);
     }
+    if (url === "/bff/security") return json({ step_up: { enabled: true, window_s: 600, proof: "auth_time" } });
     if (url.endsWith("/_cli-auth") || url.endsWith("/_cli-auth/refresh")) {
       const refreshed = url.endsWith("/refresh");
       if (url.startsWith("/bff/h/laptop/")) return json({ available: false, reason: "Host-Dienst nicht eingerichtet" });
       return json({ available: true, reason: null, clis: [
         { id: "codex", state: "signed_in", method: "ChatGPT", checked_at: "2026-01-01T00:00:00+00:00", reason: null },
         { id: "claude", state: refreshed ? "signed_in" : "signed_out", method: refreshed ? "claude.ai" : null, checked_at: "2026-01-01T00:00:00+00:00", reason: null },
-        { id: "opencode", state: "unknown", method: null, checked_at: "2026-01-01T00:00:00+00:00", reason: "Zeitueberschreitung (15 s)" }] });
+        { id: "opencode", state: "unknown", method: null, checked_at: "2026-01-01T00:00:00+00:00", reason: "Zeitueberschreitung (15 s)" },
+        { id: "agy", state: refreshed ? "signed_in" : "unknown", method: refreshed ? "OAuth" : null, checked_at: refreshed ? "2026-01-01T00:00:00+00:00" : null, reason: refreshed ? null : "Noch nicht geprüft" }] });
     }
     const qm = quota.mode;
     if (url === "/bff/quota/summary") return json(quotaSummary(agents, qm));
     if (/^\/bff\/h\/server\/hermes\/_quota(\?refresh=1)?$/.test(url)) return json({ profiles: Object.fromEntries(agents.map((a) => [a, quotaOf(a, qm)])) });
     if (url === "/bff/h/server/hermes/_provider-matrix") return json(providerMatrix(agents, dash));
     if (url === "/bff/h/laptop/hermes/_provider-matrix") return json({ detail: "Hermes nicht erreichbar: keine Verbindung zu 100.64.3.4:8642. Läuft der API-Server dort und lauscht auf dieser Adresse?" }, 502);
+    const hs = /^\/bff\/h\/server\/(_achievements|_kanban)(\/[^?]*)?(\?.*)?$/.exec(url);
+    if (hs) {
+      const x = dash.p3; const sub = hs[2] ?? "";
+      const bd = init?.body instanceof FormData ? {} : init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : undefined;
+      if (method !== "GET" && dash.stepUp && !(sub === "/dispatch" && bd?.dry_run)) return json(stepUpBody, 401);
+      const ach = () => ({ total: 3, unlocked: x.unlocked ? 1 : 0, discovered: 1, secret: 1, generated_at: 1_790_000_000, is_stale: Boolean(x.stale), items: [
+        { id: "a", name: "Let Him Cook", description: "Viele Werkzeugaufrufe", category: "x", icon: "", state: x.unlocked ? "unlocked" : "discovered", unlocked: x.unlocked, tier: x.unlocked ? "Bronze" : null, progress: 5, next_threshold: 10, progress_pct: 50, unlocked_at: null },
+        { id: "s", name: "???", description: "Geheim, bis Hermes das erste passende Verhalten sieht.", category: "", icon: "", state: "secret", unlocked: false, tier: null, progress: 0, next_threshold: null, progress_pct: 0, unlocked_at: null }] });
+      if (hs[1] === "_achievements") {
+        if (sub === "") return json(ach());
+        if (sub === "/rescan") return json(ach());
+        if (sub === "/reset") { if (bd?.confirm !== "reset") return json({ detail: "reset eintippen" }, 422); x.unlocked = false; return json({ ok: true }); }
+      } else {
+        if (sub === "/diagnostics") return json({ count: 1, items: [{ task_id: "t_1", title: "Hängt", status: "blocked", assignee: "gamma", diagnostics: [{ kind: "stuck", severity: "warning", title: "Aufgabe blockiert", detail: "" }] }] });
+        if (sub === "/workers") return json({ count: x.workers.length, workers: x.workers.map((w) => ({ ...w, title: "Lauf", profile: "gamma", started_at: 1, last_heartbeat_at: 2, max_runtime_seconds: 600 })) });
+        const t = /^\/runs\/(\d+)\/terminate$/.exec(sub);
+        if (t) { if (bd?.confirm !== t[1]) return json({ detail: "Nummer eintippen" }, 422); x.workers = x.workers.filter((w) => w.run_id !== Number(t[1])); return json({ ok: true, run_id: Number(t[1]) }); }
+        if (/\/estimate$/.test(sub)) return json({ ok: true, est_tokens: 1200, complexity: "M", rationale: "Mittel", reason: "", model: "m" });
+        if (/\/specify$/.test(sub)) return bd?.confirm ? json({ ok: true, reason: "", new_title: "Klarer Titel" }) : json({ detail: "confirm" }, 422);
+        if (/\/decompose$/.test(sub)) return bd?.confirm ? json({ ok: true, reason: "", fanout: true, child_ids: ["t_9", "t_10"], new_title: null }) : json({ detail: "confirm" }, 422);
+        if (/\/tasks\/[^/]+\/attachments$/.test(sub)) {
+          const store = x as unknown as { atts?: Array<{ id: number; task_id: string; filename: string; size: number; uploaded_by: string; created_at: number }> };
+          store.atts ??= [];
+          if (method === "GET") return json({ task_id: "t_1", count: store.atts.length, attachments: store.atts });
+          const a = { id: 100 + store.atts.length, task_id: "t_1", filename: "hoch.txt", size: 5, uploaded_by: "user", created_at: 1 };
+          store.atts.push(a); return json(a, 201);
+        }
+        const adl = /^\/tasks\/[^/]+\/attachments\/(\d+)$/.exec(sub);
+        if (adl && method === "GET") return json({ id: Number(adl[1]) });
+        const adm = /^\/attachments\/(\d+)$/.exec(sub);
+        if (adm && method === "DELETE") {
+          const store = x as unknown as { atts?: Array<{ id: number }> };
+          store.atts = (store.atts ?? []).filter((a) => a.id !== Number(adm[1])); return json({ ok: true, deleted: Number(adm[1]) });
+        }
+        if (/\/boards\/[^/]+\/export$/.test(sub) && method === "POST") return json({ archive: "x.tar.gz" });
+        if (sub === "/boards/import" && method === "POST") {
+          if (x.kbImportFail) return json({ detail: x.kbImportFail }, 502);
+          return init?.body instanceof FormData ? json({ ok: true, board: "importiert" }, 201) : json({ detail: "archiv" }, 422);
+        }
+        if (/\/boards\/[^/]+$/.test(sub) && method === "DELETE") return json({ ok: true, board: "alpha" });
+        if (sub === "/dispatch") return json({ dry_run: Boolean(bd?.dry_run), spawned: x.spawnNone ? [] : ["t_1"], promoted: [] });
+      }
+    }
     const m = /^\/bff\/h\/server\/hermes\/([^/]+)(\/.*)$/.exec(url);
     if (m && agents.includes(m[1])) {
       const rest = m[2];
-      const d = dashboardRoute(rest, method, m[1], dash, json, init?.body ? JSON.parse(String(init.body)) : undefined);
+      const parsed = init?.body instanceof FormData ? { archive: "[datei]" } : init?.body ? JSON.parse(String(init.body)) : undefined;
+      const d = dashboardRoute(rest, method, m[1], dash, json, parsed, init);
       if (d) return d;
       if (/^\/quota(\?refresh=1)?$/.test(rest)) return json(quotaOf(m[1], qm));
-      if (rest === "/status") return json({ state: "online", online: true, version: "0.21.6", features, error: null });
+      if (rest === "/status") {
+        if (dash.statusDown || (dash.altDown && m[1] !== "gamma")) return json({ detail: "Agent antwortet nicht" }, 503);
+        return json({ state: "online", online: true, version: "0.21.6", features, error: null });
+      }
       if (rest === "/models") return json({ providers: [{ slug: "mock", name: "Mock", authenticated: true, is_current: true, models: ["mock-large", "mock-small"] }], model: "mock-large", provider: "mock" });
       if (rest === "/skills") return json({ object: "list", data: [{ name: "plan", description: "Zerlegt Aufgaben in Schritte.", category: "software-development" }, { name: "himalaya", description: "E-Mail über IMAP.", category: "email" }] });
       if (rest === "/toolsets") return json({ object: "list", data: [{ name: "terminal", label: "Terminal", enabled: true, configured: true, tools: ["terminal"] }, { name: "web", label: "Web", enabled: true, configured: false }, { name: "browser", enabled: false }] });
-      if (rest === "/diagnose") return json(diag(m[1]));
+      if (rest === "/diagnose") {
+        if (dash.diagDown) return json({ detail: "Diagnose nicht lesbar" }, 502);
+        return json(diag(m[1], false, (dash as DashState & { diagWarn?: string[] }).diagWarn));
+      }
       if (method === "POST" && rest === "/diagnose/run") return json(diag(m[1], true));
       if (method === "POST" && /^\/sessions\/[^/]+\/fork$/.test(rest)) return json({ session_id: `fork-${m[1]}` });
       if (/^\/sessions\/[^/]+\/messages$/.test(rest)) return json({ object: "list", data: sessionMessages(rest) });
-      if (rest === "/sessions") return json({ data: [{ id: `alt-${m[1]}`, title: `Alter Chat von ${m[1]}`, last_active_at: Math.floor(Date.now() / 1000) - 7260 }] });
+      if (rest === "/sessions") {
+        if (dash.sessDown) return json({ detail: "Sitzungen nicht lesbar" }, 503);
+        if (dash.sessEmpty) return json({ data: [] });
+        return json({ data: [{ id: `alt-${m[1]}`, title: `Alter Chat von ${m[1]}`, last_active_at: Math.floor(Date.now() / 1000) - 7260 }] });
+      }
       if (method === "POST" && rest === "/runs") { runs += 1; return json({ run_id: `run_${runs}`, session_id: `s${runs}` }); }
       if (method === "POST" && /^\/runs\/run_\d+\/(approval|steer|stop|clarify)$/.test(rest)) return json({});
     }

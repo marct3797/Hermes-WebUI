@@ -1,5 +1,6 @@
 /** Farben der Konstellation: Aktualität als Verlauf, Kontext/Entität/Gruppe als Palette, Verknüpfungstypen fest. */
 import type { MemNode } from "./types";
+import { t as tr } from "./i18n";
 
 export const LINK_COLORS: Record<string, string> = { semantic: "#4f8cff", temporal: "#2dd4bf", entity: "#ff9f43", causal: "#a855f7" };
 export const LINK_NAMES: Record<string, string> = { semantic: "Semantic", temporal: "Temporal", entity: "Entity", causal: "Causal" };
@@ -8,7 +9,7 @@ export const linkColor = (t: string | null | undefined) => LINK_COLORS[t ?? ""] 
 
 export type ColorMode = "recency" | "context" | "entity" | "group";
 export const COLOR_MODES: Array<{ id: ColorMode; label: string }> = [
-  { id: "recency", label: "Aktualität" }, { id: "context", label: "Kontext" }, { id: "entity", label: "Entität" }, { id: "group", label: "Gruppen" },
+  { id: "recency", get label() { return tr("Aktualität"); } }, { id: "context", get label() { return tr("Kontext"); } }, { id: "entity", get label() { return tr("Entität"); } }, { id: "group", get label() { return tr("Gruppen"); } },
 ];
 
 const PALETTE = ["#f87171", "#60a5fa", "#34d399", "#fbbf24", "#a78bfa", "#2dd4bf", "#fb923c", "#f472b6"];
@@ -35,7 +36,7 @@ function byCategory(values: Array<string | null>, label: (v: string) => string):
   const rest = values.filter((v) => !v || !color.has(v)).length;
   return {
     colors: values.map((v) => (v && color.get(v)) || NONE),
-    legend: [...top.map(([v, c]) => ({ label: label(v), color: color.get(v)!, count: c })), ...(rest ? [{ label: "Andere", color: NONE, count: rest }] : [])],
+    legend: [...top.map(([v, c]) => ({ label: label(v), color: color.get(v)!, count: c })), ...(rest ? [{ label: tr("Andere"), color: NONE, count: rest }] : [])],
   };
 }
 

@@ -3,6 +3,7 @@ import { ApiError, api } from "../../api";
 import type { AgentRef, OAuthStart } from "../../types";
 import { Icon } from "../Icon";
 import { StepUpNote, webUrl } from "./StepUpNote";
+import { t } from "../../i18n";
 
 type Props = {
   agent: AgentRef;
@@ -51,13 +52,13 @@ export function LoginFlow({ agent, provider, kind, label, onDone }: Props) {
       try {
         const r = await api.oauthPoll(agent, provider, session);
         if (stopped) return;
-        if (r.status === "approved") { stop(); done.current(`${label} ist angemeldet.`); return; }
-        if (r.status === "expired") { stop("Der Code ist abgelaufen. Bitte die Anmeldung neu starten."); return; }
-        if (r.status === "error") { stop(r.error_message || "Die Anmeldung ist fehlgeschlagen."); return; }
+        if (r.status === "approved") { stop(); done.current(t("{label} ist angemeldet.", { label })); return; }
+        if (r.status === "expired") { stop(t("Der Code ist abgelaufen. Bitte die Anmeldung neu starten.")); return; }
+        if (r.status === "error") { stop(r.error_message || t("Die Anmeldung ist fehlgeschlagen.")); return; }
         misses = 0;
       } catch (e) {
         if (stopped) return;
-        if (++misses >= 3) { stop(`Die Anmeldung ließ sich nicht abfragen: ${(e as Error).message}`); return; }
+        if (++misses >= 3) { stop(t("Die Anmeldung ließ sich nicht abfragen: {message}", { message: (e as Error).message })); return; }
       }
       timer = setTimeout(tick, interval);
     };
@@ -74,7 +75,7 @@ export function LoginFlow({ agent, provider, kind, label, onDone }: Props) {
     setError(undefined); setStepUp(false); setCode(""); setPhase({ step: "starting" });
     try {
       const s = await api.oauthStart(agent, provider);
-      if (!s.session_id) throw new Error("Das Dashboard hat keine Anmeldung gestartet.");
+      if (!s.session_id) throw new Error(t("Das Dashboard hat keine Anmeldung gestartet."));
       setPhase({ step: "waiting", start: s });
     } catch (e) { setPhase({ step: "idle" }); fail(e); }
   };
@@ -84,7 +85,7 @@ export function LoginFlow({ agent, provider, kind, label, onDone }: Props) {
     try {
       const r = await api.oauthSubmit(agent, provider, s.session_id, code.trim());
       setCode("");
-      if (r.status === "approved" || r.ok === true) { setPhase({ step: "idle" }); done.current(`${label} ist angemeldet.`); return; }
+      if (r.status === "approved" || r.ok === true) { setPhase({ step: "idle" }); done.current(t("{label} ist angemeldet.", { label })); return; }
       setPhase({ step: "checking", start: s });
     } catch (e) { setPhase({ step: "waiting", start: s }); fail(e); }
   };
@@ -98,34 +99,34 @@ export function LoginFlow({ agent, provider, kind, label, onDone }: Props) {
     <div className="login-flow col" style={{ gap: 10 }}>
       {!current ? (
         <button type="button" className="btn btn-s btn-p" style={{ alignSelf: "flex-start" }} disabled={phase.step === "starting"} onClick={() => void start()}>
-          <Icon name="lock" size={14} />{phase.step === "starting" ? "Starte…" : kind === "device" ? "Mit Gerätecode anmelden" : "Anmeldung starten"}
+          <Icon name="lock" size={14} />{phase.step === "starting" ? t("Starte…") : kind === "device" ? t("Mit Gerätecode anmelden") : t("Anmeldung starten")}
         </button>
       ) : (
         <div className="login-box" role="group" aria-label={`Anmeldung bei ${label}`}>
           {kind === "device" ? (
             <>
-              <p className="small">1. Diese Seite öffnen und anmelden: {link ? <a href={link} target="_blank" rel="noreferrer noopener">{link}</a> : <span className="mono">{current.verification_url ?? "(keine Adresse geliefert)"}</span>}</p>
-              <p className="small">2. Diesen Code dort eingeben:</p>
-              <p className="login-code mono" aria-label="Gerätecode">{current.user_code ?? "—"}</p>
-              <p className="hint" role="status">Warte auf die Bestätigung{minutes ? `, der Code gilt etwa ${minutes} Min.` : ""}. Die Seite kann offen bleiben.</p>
+              <p className="small">{t("1. Diese Seite öffnen und anmelden:")} {link ? <a href={link} target="_blank" rel="noreferrer noopener">{link}</a> : <span className="mono">{current.verification_url ?? t("(keine Adresse geliefert)")}</span>}</p>
+              <p className="small">{t("2. Diesen Code dort eingeben:")}</p>
+              <p className="login-code mono" aria-label={t("Gerätecode")}>{current.user_code ?? "—"}</p>
+              <p className="hint" role="status">{t("Warte auf die Bestätigung{minutes}. Die Seite kann offen bleiben.", { minutes: minutes ? t(", der Code gilt etwa {minutes} Min.", { minutes }) : "" })}</p>
             </>
           ) : (
             <form onSubmit={(e) => { e.preventDefault(); void submit(current); }} className="col" style={{ gap: 10 }}>
-              <p className="small">1. Die Anthropic-Seite öffnen und anmelden: {link ? <a href={link} target="_blank" rel="noreferrer noopener">Seite öffnen</a> : <span className="mono">(keine Adresse geliefert)</span>}</p>
+              <p className="small">{t("1. Die Anthropic-Seite öffnen und anmelden:")} {link ? <a href={link} target="_blank" rel="noreferrer noopener">{t("Seite öffnen")}</a> : <span className="mono">{t("(keine Adresse geliefert)")}</span>}</p>
               <div className="pf-fld">
-                <label htmlFor={`lc-${provider}`}>2. Den dort angezeigten Code einfügen</label>
-                <input id={`lc-${provider}`} className="pf-in mono" type="password" autoComplete="off" spellCheck={false} value={code} onChange={(e) => setCode(e.target.value)} placeholder="Code einfügen" />
+                <label htmlFor={`lc-${provider}`}>{t("2. Den dort angezeigten Code einfügen")}</label>
+                <input id={`lc-${provider}`} className="pf-in mono" type="password" autoComplete="off" spellCheck={false} value={code} onChange={(e) => setCode(e.target.value)} placeholder={t("Code einfügen")} />
               </div>
-              {phase.step === "checking" && <p className="hint" role="status">Prüfe die Anmeldung…</p>}
+              {phase.step === "checking" && <p className="hint" role="status">{t("Prüfe die Anmeldung…")}</p>}
               <button type="submit" className="btn btn-s btn-p" style={{ alignSelf: "flex-start" }} disabled={!code.trim() || phase.step !== "waiting"}>
-                <Icon name="check" size={14} />Code übergeben
+                <Icon name="check" size={14} />{t("Code übergeben")}
               </button>
             </form>
           )}
-          <button type="button" className="btn btn-s btn-g" style={{ alignSelf: "flex-start" }} onClick={cancel}>Abbrechen</button>
+          <button type="button" className="btn btn-s btn-g" style={{ alignSelf: "flex-start" }} onClick={cancel}>{t("Abbrechen")}</button>
         </div>
       )}
-      {stepUp && <StepUpNote what="Die Anmeldung bei einem Anbieter" />}
+      {stepUp && <StepUpNote what={t("Die Anmeldung bei einem Anbieter")} />}
       {error && <p className="banner" role="alert"><Icon name="alert" /><span>{error}</span></p>}
     </div>
   );

@@ -1,6 +1,7 @@
 import { agentKey } from "./router";
 import type { Conv, Snapshot } from "./runStore";
 import type { AgentRef, Item } from "./types";
+import { t } from "./i18n";
 
 type Approval = Extract<Item, { kind: "approval" }>;
 type Clarify = Extract<Item, { kind: "clarify" }>;
@@ -42,7 +43,7 @@ export function needs(snap: Snapshot): Need[] {
     const failed = c.state.runStatus === "failed" || c.state.runStatus === "lost";
     const id = `${c.key}:${c.state.runId ?? "start"}:${c.state.runStatus}`;
     if (failed && !snap.dismissed.has(id) && !c.stale) {
-      out.push({ ...base, id, kind: c.state.runStatus as "failed" | "lost", error: c.state.error ?? "Der Run ist fehlgeschlagen.", since: c.touched });
+      out.push({ ...base, id, kind: c.state.runStatus as "failed" | "lost", error: c.state.error ?? t("Der Run ist fehlgeschlagen."), since: c.touched });
     }
   }
   const rank = (n: Need) => (n.kind === "approval" ? 0 : n.kind === "clarify" ? 1 : 2);
@@ -73,10 +74,10 @@ export function liveRuns(snap: Snapshot): LiveRun[] {
       : s.items.some((i) => i.kind === "clarify" && !i.answer) ? "clarify" : null;
     const tool = [...s.items].reverse().find((i) => i.kind === "tool" && i.status === "running");
     const last = s.items[s.items.length - 1];
-    const activity = waiting === "approval" ? "wartet auf Freigabe"
-      : waiting === "clarify" ? "wartet auf Antwort"
+    const activity = waiting === "approval" ? t("wartet auf Freigabe")
+      : waiting === "clarify" ? t("wartet auf Antwort")
       : tool?.kind === "tool" ? [tool.name, (tool.preview ?? "").split("\n")[0]].filter(Boolean).join(" · ")
-      : last?.kind === "message" && last.role === "assistant" && last.streaming ? "streamt" : s.runStatus === "starting" ? "startet …" : "arbeitet …";
+      : last?.kind === "message" && last.role === "assistant" && last.streaming ? t("streamt") : s.runStatus === "starting" ? t("startet …") : t("arbeitet …");
     const tokens = s.usage ? (s.usage.total_tokens ?? (s.usage.input_tokens ?? 0) + (s.usage.output_tokens ?? 0)) : undefined;
     out.push({ convKey: c.key, agent: c.agent, sessionId: c.sessionId, runId: s.runId, startedAt: s.startedAt, waiting, activity, topic: topicOf(c), tokens });
   }

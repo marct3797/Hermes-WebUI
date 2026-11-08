@@ -67,6 +67,11 @@ class SessionStore:
         sess.last_seen = now
         return sess
 
+    def alive(self, sid: str | None) -> bool:
+        """Wie get(), aber ohne die Sitzung zu verlängern: für Dauerverbindungen, die nur Ausgabe liefern."""
+        sess, now = self._sessions.get(sid or ""), self._clock()
+        return sess is not None and now - sess.last_seen <= self.idle_s and now - sess.created <= self.max_s
+
     def delete(self, sid: str | None) -> Session | None:
         return self._sessions.pop(sid or "", None)
 

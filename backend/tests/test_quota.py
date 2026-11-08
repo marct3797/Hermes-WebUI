@@ -55,17 +55,20 @@ def test_real_fixture_providers_without_api_are_unavailable_not_failed():
     assert p["gemini"]["reason"] == "No public subscription-quota API for this provider."
 
 
-def test_removed_providers_from_live_plugin_never_reach_quota_or_summary(build):
+def test_providers_hidden_by_the_operator_never_reach_quota_or_summary(build):
     from app.quota import summary_items
     body = {"providers": [{"id": pid, "label": pid, "configured": True,
                            "quota": {"unavailable_reason": "401 unauthorized"}}
                           for pid in ("nous", "opencode-zen", "opencode-go")]}
-    assert [p["id"] for p in normalize(body)["providers"]] == ["opencode-go"]
+    hidden = frozenset({"nous", "opencode-zen"})
+    assert [p["id"] for p in normalize(body)["providers"]] == ["nous", "opencode-zen", "opencode-go"]  # ohne Einstellung bleibt nichts verborgen
+    assert [p["id"] for p in normalize(body, hidden=hidden)["providers"]] == ["opencode-go"]
     c = build(quota=body)
+    c.app.state.settings.hidden_providers = "nous,opencode-zen"
     assert [p["id"] for p in c.get(QUOTA).json()["providers"]] == ["opencode-go"]
     summary = c.get("/bff/quota/summary").json()
     assert {p["provider"] for p in summary["items"]} == {"opencode-go"}
-    assert {p["provider"] for p in summary_items("x", "hermes", "default", normalize(body))} == {"opencode-go"}
+    assert {p["provider"] for p in summary_items("x", "hermes", "default", normalize(body, hidden=hidden))} == {"opencode-go"}
 
 
 def test_unconfigured_inactive_provider_with_auth_words_is_only_unavailable():
@@ -217,10 +220,10 @@ def test_runtime_quota_timeout_is_per_profile(build, monkeypatch):
 
     async def quota(self, name, refresh):
         if name == "beta":
-            await asyncio.sleep(1)
+            await asyncio.sleep(5)
         return await orig(self, name, refresh)
 
-    monkeypatch.setattr(r, "QUOTA_TIMEOUT_S", 0.05)
+    monkeypatch.setattr(r, "QUOTA_TIMEOUT_S", 0.5)  # großzügig: "default" darf auf langsamen Runnern nicht in die Zeitgrenze laufen
     monkeypatch.setattr(DashboardClient, "quota", quota)
     profiles = build().get("/bff/h/server/hermes/_quota").json()["profiles"]
     assert profiles["beta"]["state"] == "error" and "rechtzeitig" in profiles["beta"]["reason"]

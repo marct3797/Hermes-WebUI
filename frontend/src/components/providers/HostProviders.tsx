@@ -13,6 +13,7 @@ import { AccountPanel } from "./AccountPanel";
 import { CliDot } from "./CliPanel";
 import { ModelEditor } from "./ModelEditor";
 import { QuotaBars, QuotaSection } from "./QuotaBars";
+import { t, tm } from "../../i18n";
 
 type Props = { host: HostInfo; runtime: RuntimeInfo };
 /** Was unter der Tabelle geöffnet ist: das Modell eines Profils oder ein Zugang in einem Profil. */
@@ -52,19 +53,19 @@ export function HostProviders({ host, runtime }: Props) {
       <header className="card-h">
         <StatusDot status={host.status} />
         <h2>{host.label}</h2>
-        <span className="tag">{host.kind === "local" ? "lokal" : "remote"}</span>
+        <span className="tag">{host.kind === "local" ? t("lokal") : "remote"}</span>
         <span className="muted small">{runtime.label}{runtime.version ? ` ${runtime.version}` : ""}</span>
         <span className="muted small" style={{ marginLeft: "auto" }}>{STATUS_LABEL[host.status]}</span>
-        <button type="button" className="btn btn-s btn-i btn-g" aria-label={`Anbieter von ${host.label} neu laden`} title="Neu laden" onClick={() => setReload((n) => n + 1)}>
+        <button type="button" className="btn btn-s btn-i btn-g" aria-label={t("Anbieter von {label} neu laden", { label: host.label })} title={t("Neu laden")} onClick={() => setReload((n) => n + 1)}>
           <Icon name="refresh" size={14} />
         </button>
       </header>
 
       <div className="hub-body col" style={{ gap: 12 }}>
-        {state.error && !matrix && <p className="banner" role="alert"><Icon name="alert" /><span>Anbieter von {host.label} nicht ladbar: {state.error}</span></p>}
-        {!matrix && state.loading && <p className="muted small">Lade…</p>}
+        {state.error && !matrix && <p className="banner" role="alert"><Icon name="alert" /><span>{t("Anbieter von {label} nicht ladbar: {error}", { label: host.label, error: state.error })}</span></p>}
+        {!matrix && state.loading && <p className="muted small">{t("Lade…")}</p>}
         {matrix && !matrix.available && matrix.reason && (
-          <p className="banner" role="alert"><Icon name="alert" /><span>Das Dashboard von {host.label} antwortet nicht ({matrix.reason}). Ohne Dashboard lassen sich hier weder Anbieter lesen noch ändern; die Profile stehen aus der Config.</span></p>
+          <p className="banner" role="alert"><Icon name="alert" /><span>{t("Das Dashboard von {label} antwortet nicht ({reason}). Ohne Dashboard lassen sich hier weder Anbieter lesen noch ändern; die Profile stehen aus der Config.", { label: host.label, reason: matrix.reason })}</span></p>
         )}
         {done && <p className="hint crimt" role="status" style={{ margin: 0 }}>{done}</p>}
 
@@ -73,8 +74,8 @@ export function HostProviders({ host, runtime }: Props) {
             <table className="hub-tbl">
               <thead>
                 <tr>
-                  <th scope="col">Profil</th>
-                  <th scope="col">Anbieter · Modell</th>
+                  <th scope="col">{t("Profil")}</th>
+                  <th scope="col">{t("Anbieter · Modell")}</th>
                   {matrix.accounts.map((a) => <th key={a.id} scope="col">{a.label}<span className="mono t3 hub-cli">{a.cli}</span></th>)}
                 </tr>
               </thead>
@@ -82,15 +83,15 @@ export function HostProviders({ host, runtime }: Props) {
                 {matrix.profiles.map((p) => (
                   <tr key={p.name}>
                     <th scope="row" data-label="Profil">
-                      <Link to={agentPath(refOf(p.name), "soul")} className="hub-profile" title="SOUL & Profil">
+                      <Link to={agentPath(refOf(p.name), "soul")} className="hub-profile" title={t("SOUL & Profil")}>
                         <Sigil name={labelOf(p.name)} config={sigilFor(sigils, refOf(p.name))} size="xs" />
                         <span className="trunc">{labelOf(p.name)}</span>
                       </Link>
-                      {p.error && <span className="hint hub-err" title={p.error}>nicht lesbar</span>}
+                      {p.error && <span className="hint hub-err" title={p.error}>{t("nicht lesbar")}</span>}
                     </th>
                     <td data-label="Anbieter · Modell">
                       <button type="button" className={`hub-cell${pick?.profile === p.name && pick.what === "model" ? " on" : ""}`} disabled={!usable || !!p.error}
-                        aria-label={`Modell von ${labelOf(p.name)} ändern`} aria-pressed={pick?.profile === p.name && pick.what === "model"} onClick={() => toggle(p.name, "model")}>
+                        aria-label={t("Modell von {name} ändern", { name: labelOf(p.name) })} aria-pressed={pick?.profile === p.name && pick.what === "model"} onClick={() => toggle(p.name, "model")}>
                         <span className="mono small trunc">{p.provider ?? "—"} · {p.model ?? "—"}</span>
                         <Icon name="edit" size={12} />
                       </button>
@@ -122,7 +123,7 @@ export function HostProviders({ host, runtime }: Props) {
 
         {matrix && (
           <p className="hint">
-            Die Zugänge gelten je Profil, jedes Profil hat seine eigene Anmeldung.
+            {t("Die Zugänge gelten je Profil, jedes Profil hat seine eigene Anmeldung.")}
           </p>
         )}
       </div>
@@ -151,12 +152,12 @@ function AccountCell({ cli, account, state, quota, quotaLoading, profile, on, di
   const set = !!state?.configured;
   return (
     <button type="button" className={`hub-cell${on ? " on" : ""}${set ? "" : " off"}`} disabled={disabled} aria-pressed={on}
-      aria-label={`${account.label} für ${profile}: ${set ? (state?.via === "login" ? "angemeldet" : "Key hinterlegt") : "nicht eingerichtet"}${quota?.state === "auth_failed" ? ", Zugang prüfen" : ""}`} title={quota?.state === "auth_failed" ? quota.reason ?? undefined : undefined} onClick={onClick}>
-      {set ? <span className="tag tag-m">{state?.via === "login" ? "ANGEMELDET" : "KEY"}</span> : <span className="muted small">einrichten</span>}
+      aria-label={t("{label} für {profile}: {eingerichtet}{fen}", { label: account.label, profile, eingerichtet: set ? (state?.via === "login" ? "angemeldet" : t("Key hinterlegt")) : t("nicht eingerichtet"), fen: quota?.state === "auth_failed" ? t(", Zugang prüfen") : "" })} title={quota?.state === "auth_failed" ? quota.reason ?? undefined : undefined} onClick={onClick}>
+      {set ? <span className="tag tag-m">{state?.via === "login" ? "ANGEMELDET" : "KEY"}</span> : <span className="muted small">{t("einrichten")}</span>}
       {!set && cli && <CliDot entry={cli} />}
       {set && quotaLoading && <span className="q-skel-s" aria-hidden="true" />}
-      {set && quota?.state === "auth_failed" && <><span className="q-dot" aria-hidden="true" /><span className="q-warn small">Zugang prüfen</span></>}
-      {set && state?.detail && <span className="mono t3 small trunc hub-detail">{state.detail}</span>}
+      {set && quota?.state === "auth_failed" && <><span className="q-dot" aria-hidden="true" /><span className="q-warn small">{t("Zugang prüfen")}</span></>}
+      {set && state?.detail && <span className="mono t3 small trunc hub-detail">{tm(state.detail)}</span>}
     </button>
   );
 }

@@ -63,6 +63,9 @@ class Settings(BaseSettings):
     step_up: bool = True
     step_up_s: int = 600
 
+    # Anbieter, die diese Installation nicht zeigen soll (Slugs, kommagetrennt), z. B. `nous,opencode-zen`. Standard: alle.
+    hidden_providers: str = ""
+
     audit_file: Path = Path("audit.log")
 
     max_body_bytes: int = 2 * 1024 * 1024  # Bild-Anhänge als Data-URL brauchen etwas Platz
@@ -81,6 +84,9 @@ class Settings(BaseSettings):
     # Diagnose: Cache und Zeitlimit der Prüfung "Modelle und Anbieter".
     diag_models_ttl_s: float = 60.0
     diag_models_timeout_s: float = 8.0
+
+    def hidden_provider_set(self) -> frozenset[str]:
+        return frozenset(s.strip().lower() for s in self.hidden_providers.split(",") if s.strip())
 
     def host_list(self) -> list[str]:
         return _split(self.allowed_hosts)

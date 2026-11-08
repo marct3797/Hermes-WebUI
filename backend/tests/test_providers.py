@@ -119,6 +119,14 @@ def test_keys_are_required_for_the_overview(make):
     assert make(running=False).get(P).status_code == 503
 
 
+def test_hidden_providers_setting_reaches_the_routes(client):
+    ids = lambda: {p["id"] for p in client.get(P).json()["providers"]}
+    slugs = lambda: {p["slug"] for p in client.get(P + "/models").json()["providers"]}
+    assert "anthropic" in ids() and "anthropic" in slugs()
+    client.app.state.settings.hidden_providers = "anthropic"
+    assert "anthropic" not in ids() and "anthropic" not in slugs()
+
+
 def test_overview_without_dashboard_is_501(client):
     assert client.get("/bff/h/laptop/hermes/default/providers").status_code == 501
 
@@ -222,6 +230,16 @@ def test_matrix_lists_profiles_with_provider_and_model_and_the_three_accounts(cl
     assert acc["opencode-go"]["profiles"]["eta"]["configured"] is False
     text = json.dumps(body)
     assert "ocg-geheim-9999" not in text and SECRET not in text  # nur geschwärzt
+
+
+def test_matrix_never_falls_back_to_dashboard_profiles_outside_the_config(client, dash):
+    """Kennt das Dashboard keines der konfigurierten Profile, werden nicht plötzlich alle Dashboard-Profile gezeigt."""
+    outsider = dash.state.profiles["default"]
+    dash.state.profiles.clear()
+    dash.state.profiles["outsider"] = outsider
+    body = client.get(MATRIX).json()
+    assert body["available"] is False and "konfigurierten Profile" in body["reason"]
+    assert "outsider" not in [p["name"] for p in body["profiles"]] and "default" in [p["name"] for p in body["profiles"]]
 
 
 def test_matrix_without_a_dashboard_still_lists_the_configured_profiles(client):

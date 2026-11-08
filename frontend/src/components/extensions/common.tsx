@@ -4,6 +4,7 @@ import { extApi } from "../../extApi";
 import { useHosts } from "../../hosts";
 import { useAsync } from "../../useAsync";
 import { Icon } from "../Icon";
+import { t as tr } from "../../i18n";
 
 export const msg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -11,13 +12,13 @@ export const msg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 export function Problem({ error }: { error?: unknown }) {
   if (!error) return null;
   if (error instanceof ApiError && error.code === "step_up_required") {
-    return <p className="banner" role="alert"><Icon name="lock" /><span>Diese Änderung verlangt eine frische Anmeldung. <button type="button" className="linkish" onClick={() => toLogin(true)}>Erneut anmelden</button></span></p>;
+    return <p className="banner" role="alert"><Icon name="lock" /><span>{tr("Diese Änderung verlangt eine frische Anmeldung.")} <button type="button" className="linkish" onClick={() => toLogin(true)}>{tr("Erneut anmelden")}</button></span></p>;
   }
   return <p className="banner" role="alert"><Icon name="alert" /><span>{msg(error)}</span></p>;
 }
 
 export function Loading({ what }: { what: string }) {
-  return <p className="muted small" role="status">{what} werden geladen…</p>;
+  return <p className="muted small" role="status">{tr("{what} werden geladen…", { what })}</p>;
 }
 
 export function Switch({ on, label, onChange, disabled }: { on: boolean; label: string; onChange: (next: boolean) => void; disabled?: boolean }) {
@@ -56,8 +57,8 @@ export function Confirm({ title, children, yes, danger, onYes, onClose }: { titl
       {children}
       <Problem error={error} />
       <div className="row" style={{ gap: 8, justifyContent: "flex-end" }}>
-        <button type="button" className="btn btn-s" disabled={busy} onClick={onClose}>Abbrechen</button>
-        <button type="button" className={`btn btn-s ${danger ? "btn-d" : "btn-p"}`} disabled={busy} onClick={() => void go()}>{busy ? "Bitte warten…" : yes}</button>
+        <button type="button" className="btn btn-s" disabled={busy} onClick={onClose}>{tr("Abbrechen")}</button>
+        <button type="button" className={`btn btn-s ${danger ? "btn-d" : "btn-p"}`} disabled={busy} onClick={() => void go()}>{busy ? tr("Bitte warten…") : yes}</button>
       </div>
     </Modal>
   );
@@ -90,14 +91,14 @@ export function useScope(hostProp?: string) {
 export function ScopeBar({ s, profile = true }: { s: ReturnType<typeof useScope>; profile?: boolean }) {
   return (
     <div className="ext-scope row" style={{ gap: 12, flexWrap: "wrap" }}>
-      <label className="row small" style={{ gap: 6 }}>Host
-        <select className="field field-line" style={{ width: "auto", minWidth: 120 }} value={s.host} onChange={(e) => s.setHost(e.target.value)} aria-label="Host">
+      <label className="row small" style={{ gap: 6 }}>{tr("Host")}
+        <select className="field field-line" style={{ width: "auto", minWidth: 120 }} value={s.host} onChange={(e) => s.setHost(e.target.value)} aria-label={tr("Host")}>
           {s.hosts.map((h) => <option key={h.id} value={h.id}>{h.label}</option>)}
         </select>
       </label>
       {profile && (
-        <label className="row small" style={{ gap: 6 }}>Profil
-          <select className="field field-line" style={{ width: "auto", minWidth: 120 }} value={s.profile} onChange={(e) => s.setProfile(e.target.value)} aria-label="Profil" disabled={!s.profiles.length}>
+        <label className="row small" style={{ gap: 6 }}>{tr("Profil")}
+          <select className="field field-line" style={{ width: "auto", minWidth: 120 }} value={s.profile} onChange={(e) => s.setProfile(e.target.value)} aria-label={tr("Profil")} disabled={!s.profiles.length}>
             {s.profiles.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
         </label>

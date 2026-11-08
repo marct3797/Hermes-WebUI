@@ -7,9 +7,10 @@ from __future__ import annotations
 
 import itertools
 import time
+from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, Response, UploadFile
 from pydantic import BaseModel
 
 COLUMNS = ["triage", "todo", "scheduled", "ready", "running", "blocked", "review", "done"]
@@ -92,16 +93,22 @@ class BoardIn(BaseModel):
     color: Optional[str] = None
 
 
-def create_mock() -> FastAPI:
+class Terminate(BaseModel):
+    reason: Optional[str] = None
+
+
+def create_mock(shared_fs: bool = True) -> FastAPI:
     app = FastAPI()
     app.state.db = seed()
     app.state.fail = None
+    app.state.shared_fs = shared_fs
     app.state.calls = []  # (Methode, Pfad, Query, Body) jeder Anfrage, damit Tests prüfen, was wirklich ankam
+    app.state.attach = {}  # aid -> {id, task_id, filename, size, content, uploaded_by, created_at, stored_path}
     ids = itertools.count(100)
 
     @app.middleware("http")
     async def failing(request: Request, call_next):
-        body = (await request.body()).decode() or None
+        body = (await request.body()).decode(errors="replace") or None
         app.state.calls.append((request.method, request.url.path, dict(request.query_params), body))
         if app.state.fail:
             from fastapi.responses import JSONResponse
@@ -306,6 +313,149 @@ def create_mock() -> FastAPI:
         if ok:
             child["parents"].remove(parent_id)
         return {"ok": ok}
+
+    # Tiefe: Läufe, Worker, Diagnose, Spezifizieren/Schätzen, Dispatch, Board wechseln (Formen nach plugin_api.py 0.22.5)
+    app.state.live = {21: {"id": 21, "task_id": "t_aaaa0003", "profile": "beta", "worker_pid": 4242, "started_at": NOW - 300, "claim_lock": "host:4242",
+                           "claim_expires": NOW + 600, "last_heartbeat_at": NOW - 10, "max_runtime_seconds": 3600, "ended_at": None}}
+    app.state.drop_terminate = False
+
+    @app.get("/api/plugins/kanban/diagnostics")
+    def diagnostics(board: Optional[str] = None, severity: Optional[str] = None):
+        b = bd(board)
+        rows = [{"task_id": t["id"], "task_title": t["title"], "task_status": t["status"], "task_assignee": t["assignee"],
+                 "diagnostics": [{"kind": "stuck_in_blocked", "severity": "warning", "title": "Aufgabe blockiert", "detail": "Wartet seit Stunden", "actions": [{"kind": "x"}]}]}
+                for t in b["tasks"].values() if t["status"] == "blocked"]
+        return {"diagnostics": rows, "count": len(rows)}
+
+    @app.get("/api/plugins/kanban/workers/active")
+    def workers(board: Optional[str] = None):
+        bd(board)
+        rows = [{"run_id": r["id"], "task_id": r["task_id"], "task_title": "Bericht schreiben", "task_status": "running", "task_assignee": r["profile"], "profile": r["profile"],
+                 "worker_pid": r["worker_pid"], "started_at": r["started_at"], "claim_lock": r["claim_lock"], "claim_expires": r["claim_expires"],
+                 "last_heartbeat_at": r["last_heartbeat_at"], "max_runtime_seconds": r["max_runtime_seconds"]} for r in app.state.live.values() if r["ended_at"] is None]
+        return {"workers": rows, "count": len(rows), "checked_at": NOW}
+
+    @app.get("/api/plugins/kanban/runs/{rid}")
+    def get_run(rid: int, board: Optional[str] = None):
+        if rid not in app.state.live:
+            raise HTTPException(404, f"run {rid} not found")
+        return {"run": app.state.live[rid]}
+
+    @app.get("/api/plugins/kanban/runs/{rid}/inspect")
+    def inspect_run(rid: int, board: Optional[str] = None):
+        if rid not in app.state.live:
+            raise HTTPException(404, f"run {rid} not found")
+        return {"run_id": rid, "alive": True, "pid": 4242, "cpu_percent": 1.5, "memory_rss_bytes": 52428800, "memory_vms_bytes": 1, "num_threads": 4, "num_fds": 9,
+                "status": "running", "create_time": 1.0, "cmdline": ["hermes", "--api-key", "sk-LEAK-cmdline"]}
+
+    @app.post("/api/plugins/kanban/runs/{rid}/terminate")
+    def terminate(rid: int, p: Terminate, board: Optional[str] = None):
+        r = app.state.live.get(rid)
+        if r is None:
+            raise HTTPException(404, f"run {rid} not found")
+        if r["ended_at"] is not None:
+            raise HTTPException(409, f"run {rid} already ended")
+        if not app.state.drop_terminate:
+            r["ended_at"] = NOW
+        return {"ok": True, "run_id": rid, "task_id": r["task_id"]}
+
+    @app.post("/api/plugins/kanban/tasks/{tid}/specify")
+    def specify(tid: str, board: Optional[str] = None):
+        t = tk(bd(board), tid)
+        t["title"] = t["title"] + " (präzisiert)"
+        return {"ok": True, "task_id": tid, "reason": None, "new_title": t["title"]}
+
+    @app.post("/api/plugins/kanban/tasks/{tid}/estimate")
+    def estimate(tid: str, board: Optional[str] = None):
+        tk(bd(board), tid)
+        return {"ok": True, "est_tokens": 120000, "complexity": "M", "rationale": "Mehrere Dateien.", "model": "aux-model"}
+
+    @app.post("/api/plugins/kanban/dispatch")
+    def dispatch(dry_run: bool = False, max: int = 8, board: Optional[str] = None):
+        return {"spawned": [] if dry_run else ["t_aaaa0003"], "promoted": ["t_aaaa0004"], "dry_run": dry_run, "skipped_unassigned": []}
+
+    @app.post("/api/plugins/kanban/boards/{slug}/switch")
+    def switch(slug: str):
+        if slug not in app.state.db["boards"]:
+            raise HTTPException(404, f"board {slug!r} does not exist")
+        if not getattr(app.state, "drop_switch", False):
+            app.state.db["current"] = slug
+        return {"current": slug}
+
+    @app.post("/api/plugins/kanban/tasks/{tid}/decompose")
+    def decompose(tid: str, board: Optional[str] = None):
+        tk(bd(board), tid)
+        return {"ok": True, "task_id": tid, "reason": None, "fanout": True,
+                "child_ids": ["t_aaaa0010", "t_aaaa0011"], "new_title": None}
+
+    def _attachments(tid: str, board: Optional[str]):
+        tk(bd(board), tid)
+        return [a for a in app.state.attach.values() if a["task_id"] == tid]
+
+    @app.get("/api/plugins/kanban/tasks/{tid}/attachments")
+    def attachments_list(tid: str, board: Optional[str] = None):
+        return {"attachments": [{k: a[k] for k in ("id", "task_id", "filename", "size", "uploaded_by", "created_at", "stored_path")}
+                                for a in _attachments(tid, board)]}
+
+    @app.post("/api/plugins/kanban/tasks/{tid}/attachments")
+    async def attachments_upload(tid: str, board: Optional[str] = None,
+                                 file: UploadFile = File(...), uploaded_by: Optional[str] = Form(None)):
+        tk(bd(board), tid)
+        data = await file.read()
+        aid = next(ids)
+        app.state.attach[aid] = {"id": aid, "task_id": tid, "filename": file.filename or "datei", "size": len(data), "content": data,
+                                 "uploaded_by": uploaded_by or "dashboard", "created_at": NOW,
+                                 "stored_path": f"/srv/kanban/attachments/{tid}/{aid}"}
+        a = app.state.attach[aid]
+        return {k: a[k] for k in ("id", "task_id", "filename", "size", "uploaded_by", "created_at", "stored_path")}
+
+    @app.get("/api/plugins/kanban/attachments/{aid}")
+    def attachments_download(aid: int, board: Optional[str] = None):
+        a = app.state.attach.get(aid)
+        if a is None:
+            raise HTTPException(404, "attachment not found")
+        return Response(a["content"], media_type="application/octet-stream",
+                        headers={"Content-Disposition": f'attachment; filename="{a["filename"]}"'})
+
+    @app.delete("/api/plugins/kanban/attachments/{aid}")
+    def attachments_delete(aid: int, board: Optional[str] = None):
+        if aid not in app.state.attach:
+            raise HTTPException(404, "attachment not found")
+        del app.state.attach[aid]
+        return {"ok": True, "deleted": aid}
+
+    @app.post("/api/plugins/kanban/boards/{slug}/export")
+    def boards_export(slug: str, body: dict, request: Request):
+        if slug not in app.state.db["boards"]:
+            raise HTTPException(404, f"board {slug!r} does not exist")
+        out = (body or {}).get("output") or f"/tmp/{slug}.tar.gz"
+        if not request.app.state.shared_fs:
+            return {"archive": out, "board": slug, "tasks": len(app.state.db["boards"][slug]["tasks"]), "attachments": 0, "logs": 0}
+        if getattr(request.app.state, "export_junk", False):
+            Path(out).write_bytes("kein archiv".encode())
+        else:
+            import gzip
+            Path(out).write_bytes(gzip.compress(b"board:" + slug.encode()))
+        return {"archive": out, "board": slug, "tasks": len(app.state.db["boards"][slug]["tasks"]), "attachments": 0, "logs": 0}
+
+    @app.post("/api/plugins/kanban/boards/import")
+    def boards_import(body: dict, request: Request):
+        if not request.app.state.shared_fs:
+            return {"board": "importiert", "tasks": 2, "attachments": 1, "current": app.state.db["current"]}
+        archive = (body or {}).get("archive", "")
+        if not archive or not Path(archive).exists():
+            raise HTTPException(404, f"archive not found: {archive}")
+        if "importiert" not in app.state.db["boards"]:
+            app.state.db["boards"]["importiert"] = {"meta": {"slug": "importiert", "name": "Importiert", "description": "", "icon": "",
+                "color": "", "archived": False, "db_path": "/x", "default_workdir": None}, "tasks": {}, "comments": {}, "runs": {}}
+        return {"board": "importiert", "tasks": 2, "attachments": 1, "current": app.state.db["current"]}
+
+    @app.delete("/api/plugins/kanban/boards/{slug}")
+    def boards_delete(slug: str, delete: bool = False):
+        if slug not in app.state.db["boards"]:
+            raise HTTPException(404, f"board {slug!r} does not exist")
+        app.state.db["boards"][slug]["meta"]["archived"] = True
+        return {"ok": True, "deleted": slug, "archived": True}
 
     return app
 

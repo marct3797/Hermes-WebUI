@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import type { Decision, Room, RoomAsk, RoomEvent, RoomMessage } from "./types";
+import { t } from "./i18n";
 
 /** Eine offene Frage eines Mitglieds an die Person: Freigabe oder Rückfrage. Sie gehört zum Run des Mitglieds. */
 export type MemberAsk =
@@ -64,7 +65,7 @@ export function reduceRoom(s: RoomState, ev: RoomEvent): RoomState {
 type RoomPage = Room & { has_more?: boolean; has_older?: boolean; next_after?: number; next_before?: number };
 async function roomPage(roomId: string, query: string): Promise<RoomPage> {
   const response = await fetch(`/bff/rooms/${encodeURIComponent(roomId)}?${query}`, { credentials: "same-origin" });
-  if (!response.ok) throw new Error(`Raum nicht ladbar (${response.status})`);
+  if (!response.ok) throw new Error(t("Raum nicht ladbar ({status})", { status: response.status }));
   return response.json();
 }
 
@@ -85,7 +86,7 @@ export function useRoom(roomId: string) {
           const room: RoomPage = initial ? await api.room(roomId) : await roomPage(roomId, `after=${ctx.cursor}`);
           if (ctx.disposed) return;
           const cursor = room.next_after ?? room.messages?.at(-1)?.seq ?? ctx.cursor ?? 0;
-          if (room.has_more && !initial && cursor <= ctx.cursor!) throw new Error("Ungültiger Raum-Cursor");
+          if (room.has_more && !initial && cursor <= ctx.cursor!) throw new Error(t("Ungültiger Raum-Cursor"));
           ctx.cursor = cursor;
           if (initial) ctx.before = room.next_before ?? room.messages?.[0]?.seq;
           setState((s) => ({ ...s, room, messages: mergeMessages(s.messages, room.messages ?? []), running: room.running, speaker: room.speaker, hasOlder: initial ? !!room.has_older : s.hasOlder, error: undefined }));

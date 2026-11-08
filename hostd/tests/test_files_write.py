@@ -222,6 +222,7 @@ def test_workspaces_cli_add_list_validation(tmp_path):
     assert not [p for p in tmp_path.iterdir() if p.name.startswith('.config-')]
 
 
+@pytest.mark.skipif(os.geteuid() == 0, reason='install-hostd.sh verweigert root')
 @pytest.mark.parametrize('spec', ['x=/', 'x=~HOME~', 'x=relativ', 'x=~TMP~/fehlt', 'bad id=~TMP~'])
 def test_installer_rejects_bad_workspace_before_installing(tmp_path, spec):
     script = os.path.join(os.path.dirname(__file__), '..', '..', 'deploy', 'install-hostd.sh')

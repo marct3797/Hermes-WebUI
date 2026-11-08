@@ -41,4 +41,10 @@ describe("CliPanel", () => {
     await within(region).findByRole("table");
     expect((await within(region).findAllByRole("img", { name: /CLI OpenCode: unbekannt/ })).length).toBeGreaterThan(0);
   });
+
+  it("Seitenaufruf liest nur (GET) und löst nie eine Prüfung aus; Nie-Geprüftes steht als solches da", async () => {
+    const { backend, group } = await open();
+    expect(backend.calls.filter((c) => c.url.includes("_cli-auth")).every((c) => c.method === "GET" && !c.url.endsWith("/refresh"))).toBe(true);
+    expect(within(group).getByText("NICHT GEPRÜFT")).toBeInTheDocument();
+  });
 });

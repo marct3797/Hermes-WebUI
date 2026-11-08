@@ -2,6 +2,7 @@
 name = "hermes-webui-bff"
 version = "0.2.0"
 description = "Backend for Frontend der Hermes WebUI: Hosts, Runtime-Adapter, Login und Sicherheitsbasis"
+license = "AGPL-3.0-only"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.115",
@@ -9,6 +10,7 @@ dependencies = [
   "httpx>=0.27",
   "pydantic-settings>=2.4",
   "PyJWT[crypto]>=2.8",
+  "python-multipart>=0.0.9",  # Profil-Import (Formular-Upload); FastAPI bricht ohne es schon beim Start ab
 ]
 
 [project.optional-dependencies]

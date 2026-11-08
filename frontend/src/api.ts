@@ -1,6 +1,7 @@
 import { invalidate } from "./dataCache";
 import { getPreferences } from "./preferences";
-import type { AgentRef, AgentStatus, CliAuth, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import type { AutomationResp, AcCreated, AcHooks, AcPairing, SaPreview, SaStats, SaTimeline, EpDelegation, EpList, EpLocal, EpValidate, LcCreated, LcList, MdAuxiliary, MdInfo, MdMoa, MdOptions, MdRecommended, MdSetResult, HmField, HmFile, HmFileList, HmFileName, HmFileSaved, HmOverview, GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, WhatsAppPairing, ComputerUse, ShellHooks, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProviderRouting, ProviderRoutingResp, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import { t, tm } from "./i18n";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string, public data?: Record<string, unknown>) {
@@ -47,9 +48,52 @@ export async function call<T>(method: string, path: string, body?: unknown, sign
       }
     } catch { /* kein JSON */ }
     if (res.status === 401 && !code) toLogin();
-    throw new ApiError(res.status, detail, code, data);
+    throw new ApiError(res.status, tm(detail), code, data);
   }
   return (res.status === 204 ? undefined : await res.json()) as T;
+}
+
+async function fail(res: Response): Promise<never> {
+  let detail = res.statusText;
+  let code: string | undefined;
+  let data: Record<string, unknown> | undefined;
+  try {
+    const j = await res.json();
+    if (j.detail && typeof j.detail === "object") {
+      code = j.detail.code;
+      data = j.detail;
+      detail = j.detail.message ?? JSON.stringify(j.detail);
+    } else {
+      detail = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail ?? j);
+    }
+  } catch { /* kein JSON */ }
+  if (res.status === 401 && !code) toLogin();
+  throw new ApiError(res.status, tm(detail), code, data);
+}
+
+/** Formular mit Datei ans BFF schicken (Anhänge, Board-Archive). */
+export async function postForm<T>(path: string, form: FormData): Promise<T> {
+  const res = await fetch(path, { method: "POST", headers: { "X-Requested-With": "hermes-webui" }, body: form, credentials: "same-origin" });
+  if (!res.ok) await fail(res);
+  return (res.status === 204 ? undefined : await res.json()) as T;
+}
+
+/** Binärdatei vom BFF laden und im Browser speichern (Anhänge, Board-Exporte). */
+export async function downloadFile(method: string, path: string, filename: string, body?: unknown): Promise<void> {
+  const res = await fetch(path, {
+    method, headers: { "X-Requested-With": "hermes-webui", ...(body ? { "Content-Type": "application/json" } : {}) },
+    body: body ? JSON.stringify(body) : undefined, credentials: "same-origin",
+  });
+  if (!res.ok) await fail(res);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 const kn = (p: string) => `/bff/knowledge/${encodeURIComponent(p)}`;
@@ -66,6 +110,7 @@ const dropSessions = () => invalidate("sessions:");
 
 export const api = {
   me: () => call<Me>("GET", "/bff/me"),
+  security: () => call<Security>("GET", "/bff/security"),
   logout: () => call<void>("POST", "/auth/logout"),
   hosts: (signal?: AbortSignal) => call<HostsResponse>("GET", "/bff/hosts", undefined, signal),
   ui: (signal?: AbortSignal) => call<UiConfig>("GET", "/bff/ui", undefined, signal),
@@ -88,7 +133,7 @@ export const api = {
   runStatus: (a: AgentRef, rid: string) => call<{ status?: string }>("GET", `${base(a)}/runs/${id(rid)}`),
   stop: (a: AgentRef, rid: string) => call<unknown>("POST", `${base(a)}/runs/${id(rid)}/stop`, {}),
   approve: async (a: AgentRef, rid: string, decision: Decision) => {
-    if (decision !== "deny" && getPreferences().confirmApprovals && !window.confirm(`Freigabe „${decision}“ für ${a.agent} bestätigen?`)) throw new Error("Freigabe abgebrochen");
+    if (decision !== "deny" && getPreferences().confirmApprovals && !window.confirm(t("Freigabe „{decision}“ für {agent} bestätigen?", { decision, agent: a.agent }))) throw new Error(t("Freigabe abgebrochen"));
     return call<unknown>("POST", `${base(a)}/runs/${id(rid)}/approval`, { decision });
   },
   steer: (a: AgentRef, rid: string, text: string) =>
@@ -98,6 +143,56 @@ export const api = {
   dashboard: (a: AgentRef) => call<DashboardStatus>("GET", `${base(a)}/dashboard`),
   soul: (a: AgentRef) => call<SoulState>("GET", `${base(a)}/soul`),
   saveSoul: (a: AgentRef, content: string, baseHash: string) => call<SoulSaved>("PUT", `${base(a)}/soul`, { content, base: baseHash }),
+  hermesConfig: (a: AgentRef) => call<HermesConfig>("GET", `${base(a)}/config`),
+  tools: (a: AgentRef) => call<{ toolsets: ToolsetRow[] }>("GET", `${base(a)}/tools`),
+  toolConfig: (a: AgentRef, name: string) => call<ToolConfig>("GET", `${base(a)}/tools/${encodeURIComponent(name)}`),
+  toolModels: (a: AgentRef, name: string) => call<ToolModels>("GET", `${base(a)}/tools/${encodeURIComponent(name)}/models`),
+  terminalBackends: (a: AgentRef) => call<TerminalBackends>("GET", `${base(a)}/terminal-backends`),
+  toggleTool: (a: AgentRef, name: string, enabled: boolean, acceptInstall = false) => call<{ ok: boolean; post_setup_started: string | null }>("PUT", `${base(a)}/tools/${encodeURIComponent(name)}`, { enabled, accept_install: acceptInstall }),
+  setToolProvider: (a: AgentRef, name: string, provider: string, capability?: "search" | "extract") => call<{ ok: boolean }>("PUT", `${base(a)}/tools/${encodeURIComponent(name)}/provider`, { provider, ...(capability ? { capability } : {}) }),
+  setToolKeys: (a: AgentRef, name: string, env: Record<string, string>) => call<{ ok: boolean; saved: string[]; skipped: string[] }>("PUT", `${base(a)}/tools/${encodeURIComponent(name)}/env`, { env }),
+  setToolModel: (a: AgentRef, name: string, model: string) => call<{ ok: boolean }>("PUT", `${base(a)}/tools/${encodeURIComponent(name)}/model`, { model }),
+  messaging: (a: AgentRef) => call<{ platforms: MsgPlatform[] }>("GET", `${base(a)}/messaging`),
+  saveMessaging: (a: AgentRef, id: string, body: { enabled?: boolean; env?: Record<string, string>; clear_env?: string[] }) => call<{ ok: boolean; needs_restart: boolean }>("PUT", `${base(a)}/messaging/${encodeURIComponent(id)}`, body),
+  testMessaging: (a: AgentRef, id: string) => call<{ ok: boolean; state: string | null; message: string; auth_posture?: string | null }>("POST", `${base(a)}/messaging/${encodeURIComponent(id)}/test`),
+  gateway: (a: AgentRef) => call<GatewayState>("GET", `${base(a)}/gateway`),
+  gatewayAction: (a: AgentRef, what: "start" | "stop" | "restart", confirmInterrupt = false) => call<{ ok: boolean; started: boolean; action: string; interrupted: boolean }>("POST", `${base(a)}/gateway/${what}`, what === "start" ? undefined : { confirm_interrupt: confirmInterrupt }),
+  gatewayLog: (a: AgentRef, name: string) => call<GatewayAction>("GET", `${base(a)}/gateway/actions/${encodeURIComponent(name)}`),
+  telegramStart: (a: AgentRef, botName?: string) => call<TelegramPairing>("POST", `${base(a)}/messaging/telegram/onboarding`, botName ? { bot_name: botName } : {}),
+  telegramPoll: (a: AgentRef, id: string) => call<TelegramPoll>("GET", `${base(a)}/messaging/telegram/onboarding/${encodeURIComponent(id)}`),
+  telegramApply: (a: AgentRef, id: string, allowedUserIds: string[]) => call<{ ok: boolean; bot_username: string | null; needs_restart: boolean; restart_started: boolean; restart_error: string | null }>("POST", `${base(a)}/messaging/telegram/onboarding/${encodeURIComponent(id)}/apply`, { allowed_user_ids: allowedUserIds }),
+  telegramCancel: (a: AgentRef, id: string) => call<{ ok: boolean }>("DELETE", `${base(a)}/messaging/telegram/onboarding/${encodeURIComponent(id)}`),
+  whatsappStart: (a: AgentRef, mode: string) => call<WhatsAppPairing>("POST", `${base(a)}/messaging/whatsapp/onboarding`, { mode }),
+  whatsappPoll: (a: AgentRef, id: string) => call<WhatsAppPairing>("GET", `${base(a)}/messaging/whatsapp/onboarding/${encodeURIComponent(id)}`),
+  whatsappApply: (a: AgentRef, id: string) => call<{ ok: boolean; platform: string }>("POST", `${base(a)}/messaging/whatsapp/onboarding/${encodeURIComponent(id)}/apply`, {}),
+  whatsappCancel: (a: AgentRef, id: string) => call<{ ok: boolean }>("DELETE", `${base(a)}/messaging/whatsapp/onboarding/${encodeURIComponent(id)}`),
+  setTerminalBackend: (a: AgentRef, backend: string) => call<{ ok: boolean; backend: string }>("PUT", `${base(a)}/terminal-backend`, { backend }),
+  postSetup: (a: AgentRef, name: string, key: string) => call<{ ok: boolean; name: string; key: string }>("POST", `${base(a)}/tools/${encodeURIComponent(name)}/post-setup`, { key }),
+  computerUse: (a: AgentRef) => call<ComputerUse>("GET", `${base(a)}/computer-use/status`),
+  grantComputerUse: (a: AgentRef) => call<{ ok: boolean; name: string }>("POST", `${base(a)}/computer-use/grant`, {}),
+  updateCheck: (a: AgentRef) => call<{ current: string; available: string | null }>("GET", `${base(a)}/hermes-ops/update-check`),
+  runUpdate: (a: AgentRef) => call<{ ok: boolean; already_running: boolean; error?: string | null; message?: string | null; update_command?: string | null }>("POST", `${base(a)}/hermes-ops/update`, { confirm: "aktualisieren" }),
+  updateAction: (a: AgentRef) => call<{ action: string; running: boolean; exit_code: number | null; log: string }>("GET", `${base(a)}/hermes-ops/actions/update`),
+  migratePlan: (a: AgentRef) => call<{ plan: { blocked?: string[]; profiles?: string[]; target?: string } }>("GET", `${base(a)}/gateway/migrate/plan`),
+  runMigrate: (a: AgentRef) => call<{ ok: boolean; name: string }>("POST", `${base(a)}/gateway/migrate`, { confirm: "migrieren" }),
+  shellHooks: (a: AgentRef) => call<ShellHooks>("GET", `${base(a)}/hermes-hooks`),
+  createHook: (a: AgentRef, body: { event: string; command: string; matcher?: string; timeout?: number; approve: boolean; confirm: string }) => call<{ ok: boolean; event: string; approved: boolean }>("POST", `${base(a)}/hermes-hooks`, body),
+  deleteHook: (a: AgentRef, body: { event: string; command: string; confirm: string }) => call<{ ok: boolean }>("DELETE", `${base(a)}/hermes-hooks`, body),
+  deleteEnv: (a: AgentRef, key: string) => call<{ ok: boolean; key: string }>("DELETE", `${base(a)}/env/${encodeURIComponent(key)}`, { key, confirm: key }),
+  hmSetup: (a: AgentRef, name: string) => call<{ ok: boolean; provider: string }>("POST", `${base(a)}/hermes-memory/providers/${encodeURIComponent(name)}/setup`, { confirm: "einrichten" }),
+  changeAutomation: (a: AgentRef, change: Record<string, unknown>) => call<{ ok: boolean; status: string | null; started: boolean | null }>("POST", `${base(a)}/automation`, change),
+  automation: (a: AgentRef) => call<AutomationResp>("GET", `${base(a)}/automation`),
+  hmOverview: (a: AgentRef) => call<HmOverview>("GET", `${base(a)}/hermes-memory`),
+  hmSetProvider: (a: AgentRef, provider: string) => call<{ ok: boolean; active: string }>("PUT", `${base(a)}/hermes-memory/provider`, { provider }),
+  hmReset: (a: AgentRef, target: "all" | "memory" | "user", confirm: string) => call<{ ok: boolean; deleted: string[] }>("POST", `${base(a)}/hermes-memory/reset`, { target, confirm }),
+  hmFields: (a: AgentRef, name: string) => call<{ name: string; label?: string | null; docs_url?: string | null; fields: HmField[] }>("GET", `${base(a)}/hermes-memory/providers/${encodeURIComponent(name)}`),
+  hmSave: (a: AgentRef, name: string, values: Record<string, string | boolean | number>) => call<{ ok: boolean; active: string | null }>("PUT", `${base(a)}/hermes-memory/providers/${encodeURIComponent(name)}`, { values }),
+  hmFiles: (a: AgentRef) => call<HmFileList>("GET", `${base(a)}/hermes-memory/files`),
+  hmFile: (a: AgentRef, name: HmFileName) => call<HmFile>("GET", `${base(a)}/hermes-memory/files/${encodeURIComponent(name)}`),
+  hmSaveFile: (a: AgentRef, name: HmFileName, content: string, expected_sha256: string) => call<HmFileSaved>("PUT", `${base(a)}/hermes-memory/files/${encodeURIComponent(name)}`, { content, expected_sha256 }),
+  providerRouting: (a: AgentRef) => call<ProviderRoutingResp>("GET", `${base(a)}/provider-routing`),
+  saveProviderRouting: (a: AgentRef, routing: ProviderRouting) => call<{ ok: boolean } & ProviderRoutingResp>("PUT", `${base(a)}/provider-routing`, routing),
+  saveHermesConfig: (a: AgentRef, changes: Record<string, unknown>) => call<{ ok: boolean; changed: string[] }>("PUT", `${base(a)}/config`, { changes }),
   soulVersion: (a: AgentRef, vid: string) => call<SoulVersion>("GET", `${base(a)}/soul/history/${id(vid)}`),
   restoreSoul: (a: AgentRef, vid: string) => call<SoulSaved & { content: string }>("POST", `${base(a)}/soul/restore`, { id: vid }),
   saveDescription: (a: AgentRef, description: string) => call<{ ok: boolean; description: string }>("PUT", `${base(a)}/profile/description`, { description }),
@@ -143,4 +238,48 @@ export const api = {
   stopRoom: (rid: string) => call<{ stopped: boolean }>("POST", `/bff/rooms/${id(rid)}/stop`, {}),
   roomEventsUrl: (rid: string) => `/bff/rooms/${id(rid)}/events`,
   eventsUrl: (a: AgentRef, rid: string) => `${base(a)}/runs/${id(rid)}/events`,
+  lcList: (a: AgentRef) => call<LcList>("GET", `${base(a)}/hermes-profiles`),
+  mdInfo: (a: AgentRef) => call<MdInfo>("GET", `${base(a)}/hermes-models/info`),
+  mdOptions: (a: AgentRef) => call<MdOptions>("GET", `${base(a)}/hermes-models/options`),
+  mdRecommended: (a: AgentRef) => call<MdRecommended>("GET", `${base(a)}/hermes-models/recommended-default`),
+  mdAuxiliary: (a: AgentRef) => call<MdAuxiliary>("GET", `${base(a)}/hermes-models/auxiliary`),
+  mdMoa: (a: AgentRef) => call<MdMoa>("GET", `${base(a)}/hermes-models/moa`),
+  mdSet: (a: AgentRef, body: { scope: "main" | "auxiliary"; provider: string; model: string; task?: string; confirm_expensive_model?: boolean }) => call<MdSetResult>("POST", `${base(a)}/hermes-models/set`, body),
+  epDelegation: (a: AgentRef) => call<EpDelegation>("GET", `${base(a)}/hermes-delegation`),
+  epBackend: (a: AgentRef, backend: string) => call<{ ok: boolean; backend: string }>("PUT", `${base(a)}/hermes-delegation/backend`, { backend }),
+  epList: (a: AgentRef) => call<EpList>("GET", `${base(a)}/hermes-endpoints`),
+  epSave: (a: AgentRef, body: { name: string; base_url: string; model: string; api_key?: string }) => call<{ ok: boolean; id: string }>("POST", `${base(a)}/hermes-endpoints`, body),
+  epValidate: (a: AgentRef, body: { name: string; base_url: string; model: string; api_key?: string }) => call<EpValidate>("POST", `${base(a)}/hermes-endpoints/validate`, body),
+  epActivate: (a: AgentRef, eid: string) => call<{ ok: boolean }>("POST", `${base(a)}/hermes-endpoints/${encodeURIComponent(eid)}/activate`),
+  epDelete: (a: AgentRef, eid: string, confirm: string) => call<{ ok: boolean }>("DELETE", `${base(a)}/hermes-endpoints/${encodeURIComponent(eid)}?confirm=${encodeURIComponent(confirm)}`),
+  epLocal: (a: AgentRef) => call<EpLocal>("GET", `${base(a)}/hermes-local-models/status`),
+  saStats: (a: AgentRef) => call<SaStats>("GET", `${base(a)}/hermes-sessions/stats`),
+  saPreview: (a: AgentRef, older_than_days: number) => call<SaPreview>("POST", `${base(a)}/hermes-sessions/prune/preview`, { older_than_days }),
+  saPrune: (a: AgentRef, older_than_days: number, confirm_count: number) => call<{ ok: boolean; removed: number }>("POST", `${base(a)}/hermes-sessions/prune`, { older_than_days, confirm_count }),
+  saEmpty: (a: AgentRef) => call<{ count: number }>("GET", `${base(a)}/hermes-sessions/empty`),
+  saEmptyDelete: (a: AgentRef, confirm: string) => call<{ ok: boolean; deleted: number }>("DELETE", `${base(a)}/hermes-sessions/empty?confirm=${encodeURIComponent(confirm)}`),
+  saTimeline: (a: AgentRef, sid: string, limit = 100) => call<SaTimeline>("GET", `${base(a)}/hermes-sessions/${id(sid)}/timeline?limit=${limit}`),
+  saImport: (a: AgentRef, sessions: unknown[], confirm_count: number) => call<{ ok: boolean; imported: number }>("POST", `${base(a)}/hermes-sessions/import`, { sessions, confirm_count }),
+  saBackfill: (a: AgentRef) => call<{ ok: boolean; stamped: number | null; profile: string }>("POST", `${base(a)}/hermes-sessions/owner-backfill`, { confirm: true }),
+  acPairing: (a: AgentRef) => call<AcPairing>("GET", `${base(a)}/hermes-pairing`),
+  acApprove: (a: AgentRef, platform: string, request_id: string) => call<AcPairing>("POST", `${base(a)}/hermes-pairing/approve`, { platform, request_id }),
+  acRevoke: (a: AgentRef, platform: string, user_id: string, confirm: string) => call<AcPairing>("POST", `${base(a)}/hermes-pairing/revoke`, { platform, user_id, confirm }),
+  acHooks: (a: AgentRef) => call<AcHooks>("GET", `${base(a)}/hermes-webhooks`),
+  acHooksEnable: (a: AgentRef) => call<AcHooks>("POST", `${base(a)}/hermes-webhooks/enable`, { confirm_restart: true }),
+  acHookCreate: (a: AgentRef, body: { name: string; description?: string; events: string[]; prompt?: string }) => call<AcCreated>("POST", `${base(a)}/hermes-webhooks`, body),
+  acHookToggle: (a: AgentRef, name: string, enabled: boolean) => call<{ ok: boolean }>("PUT", `${base(a)}/hermes-webhooks/${encodeURIComponent(name)}/enabled`, { enabled }),
+  acHookDelete: (a: AgentRef, name: string, confirm: string) => call<{ ok: boolean }>("DELETE", `${base(a)}/hermes-webhooks/${encodeURIComponent(name)}?confirm=${encodeURIComponent(confirm)}`),
+  lcCreate: (a: AgentRef, body: { name: string; clone_from?: string; description?: string; clone_channels?: boolean }) => call<LcCreated>("POST", `${base(a)}/hermes-profiles`, body),
+  lcRename: (a: AgentRef, name: string, new_name: string) => call<{ ok: boolean; name: string }>("PATCH", `${base(a)}/hermes-profiles/${id(name)}`, { new_name }),
+  lcDelete: (a: AgentRef, name: string, confirm: string) => call<{ ok: boolean }>("DELETE", `${base(a)}/hermes-profiles/${id(name)}`, { confirm }),
+  lcSetActive: (a: AgentRef, name: string) => call<{ ok: boolean }>("POST", `${base(a)}/hermes-profiles/active`, { name }),
+  lcBackup: (a: AgentRef, confirm: string) => call<{ ok: boolean; archive: string }>("POST", `${base(a)}/hermes-ops/backup`, { confirm }),
+  lcDoctor: (a: AgentRef) => call<{ ok: boolean; name: string }>("POST", `${base(a)}/hermes-ops/doctor`, {}),
+  lcDoctorLog: (a: AgentRef) => call<{ name: string; lines: string[] }>("GET", `${base(a)}/hermes-ops/actions/doctor`),
+  lcImport: async (a: AgentRef, file: File, name?: string): Promise<{ ok: boolean; name: string }> => {
+    const f = new FormData(); f.append("archive", file, file.name); if (name) f.append("name", name);
+    const res = await fetch(`${base(a)}/hermes-profiles/import`, { method: "POST", headers: { "X-Requested-With": "hermes-webui" }, body: f, credentials: "same-origin" });
+    if (!res.ok) { let detail = res.statusText; try { const j = await res.json(); detail = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail ?? j); } catch { /* kein JSON */ } throw new ApiError(res.status, tm(detail)); }
+    return await res.json() as { ok: boolean; name: string };
+  },
 };

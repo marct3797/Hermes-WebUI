@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { activityByAgent, liveRuns, needs as needsOf, type AgentActivity, type LiveRun, type Need } from "./attention";
 import { createRunStore, type RunStore, type Snapshot } from "./runStore";
+import { t } from "./i18n";
 
 const Ctx = createContext<RunStore | null>(null);
 
@@ -13,7 +14,7 @@ export function RunsProvider({ children, store }: { children: ReactNode; store?:
 
 export function useRunStore(): RunStore {
   const store = useContext(Ctx);
-  if (!store) throw new Error("RunsProvider fehlt");
+  if (!store) throw new Error(t("RunsProvider fehlt"));
   return store;
 }
 

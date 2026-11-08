@@ -6,10 +6,11 @@ import { useAsync } from "../useAsync";
 import { ContentSearch } from "../components/operations/ContentSearch";
 import { enc, operationsHttp, unavailable, type Catalog, type Listing } from "../components/operations/http";
 import { Jobs, Kanban, Logs, ManagedItems, Marketplaces, type Ask } from "../components/operations/Views";
+import { t } from "../i18n";
 
 export type OperationsSection = "kanban" | "jobs" | "logs" | "manage" | "marketplaces" | "search";
 const titles: Record<OperationsSection, string> = { kanban: "Kanban", jobs: "Jobs", logs: "Logs", manage: "Verwaltung", marketplaces: "Marktplätze", search: "Inhaltssuche" };
-const kinds = [{ id: "skills", label: "Skills" }, { id: "mcp", label: "MCP" }, { id: "plugins", label: "Plugins" }];
+const kinds = [{ id: "skills", get label() { return t("Skills"); } }, { id: "mcp", label: "MCP" }, { id: "plugins", get label() { return t("Plugins"); } }];
 
 export function OperationsPage({ section, host }: { section: OperationsSection; host?: string }) {
   const registry = useHosts();
@@ -17,14 +18,14 @@ export function OperationsPage({ section, host }: { section: OperationsSection; 
   const selected = host ?? chosen ?? registry.hosts?.[0]?.id;
   const known = registry.hosts?.find(item => item.id === selected);
   return <main className="page operations-page">
-    <PageHead title={titles[section]} sub="Native Host-Daten · keine simulierten Ergebnisse">
-      {section !== "search" && !host && registry.hosts && registry.hosts.length > 0 && <label>Host <select className="field field-line" aria-label="Host" value={selected} onChange={e => setChosen(e.target.value)}>{registry.hosts.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>}
+    <PageHead title={titles[section]} sub={t("Native Host-Daten · keine simulierten Ergebnisse")}>
+      {section !== "search" && !host && registry.hosts && registry.hosts.length > 0 && <label>{t("Host")} <select className="field field-line" aria-label={t("Host")} value={selected} onChange={e => setChosen(e.target.value)}>{registry.hosts.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>}
     </PageHead>
     {section === "search" ? <ContentSearch /> : <>
       {registry.error && <p className="banner" role="alert">{registry.error}</p>}
-      {registry.configError && <p className="banner" role="alert">Host-Konfiguration fehlerhaft: {registry.configError}</p>}
-      {!registry.hosts && !registry.error && <p role="status">Hosts werden geladen…</p>}
-      {registry.hosts && !known && <p className="empty">{host ? "Host nicht in der Registry vorhanden." : "Keine Hosts konfiguriert."}</p>}
+      {registry.configError && <p className="banner" role="alert">{t("Host-Konfiguration fehlerhaft: {configError}", { configError: registry.configError })}</p>}
+      {!registry.hosts && !registry.error && <p role="status">{t("Hosts werden geladen…")}</p>}
+      {registry.hosts && !known && <p className="empty">{host ? t("Host nicht in der Registry vorhanden.") : t("Keine Hosts konfiguriert.")}</p>}
       {known && <HostOperations key={`${known.id}/${section}`} host={known.id} section={section} agents={known.runtimes.find(runtime => runtime.id === "hermes")?.agents ?? []} />}
     </>}
   </main>;
@@ -54,7 +55,7 @@ function HostOperations({ host, section, agents }: { host: string; section: Oper
       await operationsHttp(pending.url, { method: pending.method, body: JSON.stringify(pending.body) });
       setPending(undefined);
       setRevision(value => value + 1);
-    } catch (error) { setWriteError(error instanceof Error ? error.message : "Änderung fehlgeschlagen."); }
+    } catch (error) { setWriteError(error instanceof Error ? error.message : t("Änderung fehlgeschlagen.")); }
     finally { setWriting(false); }
   };
   const error = catalog.error ?? listing.error;
@@ -62,27 +63,27 @@ function HostOperations({ host, section, agents }: { host: string; section: Oper
   const loading = catalog.loading || listing.loading;
   return <div className="ops-stack" aria-busy={loading || writing}>
     <div className="ops-toolbar">
-      {profiles.length > 0 && <label>Profil <select className="field field-line" aria-label="Profil" disabled={writing || !!pending} value={profile} onChange={e => setChosenProfile(e.target.value)}>{profiles.map(item => <option key={item.id} value={item.id}>{"label" in item ? item.label as string : item.id}</option>)}</select></label>}
-      <button className="btn btn-s" type="button" disabled={loading || writing || !!pending} onClick={() => setRevision(value => value + 1)}><Icon name="refresh" size={14} />Erneut laden</button>
+      {profiles.length > 0 && <label>{t("Profil")} <select className="field field-line" aria-label={t("Profil")} disabled={writing || !!pending} value={profile} onChange={e => setChosenProfile(e.target.value)}>{profiles.map(item => <option key={item.id} value={item.id}>{"label" in item ? item.label as string : item.id}</option>)}</select></label>}
+      <button className="btn btn-s" type="button" disabled={loading || writing || !!pending} onClick={() => setRevision(value => value + 1)}><Icon name="refresh" size={14} />{t("Erneut laden")}</button>
     </div>
-    {section === "manage" && <div className="tabs" aria-label="Verwaltungsbereiche">{kinds.map(item => <button type="button" className={`tab${kind === item.id ? " on" : ""}`} aria-pressed={kind === item.id} disabled={writing || !!pending} key={item.id} onClick={() => setKind(item.id)}>{item.label}</button>)}</div>}
-    {loading && <p role="status">Daten werden geladen…</p>}
+    {section === "manage" && <div className="tabs" aria-label={t("Verwaltungsbereiche")}>{kinds.map(item => <button type="button" className={`tab${kind === item.id ? " on" : ""}`} aria-pressed={kind === item.id} disabled={writing || !!pending} key={item.id} onClick={() => setKind(item.id)}>{item.label}</button>)}</div>}
+    {loading && <p role="status">{t("Daten werden geladen…")}</p>}
     {error && <p className="banner" role="alert">{error}</p>}
     {unavailableReason && <p className="banner" role="status">{unavailableReason}</p>}
-    {catalog.data && !unavailableReason && !Array.isArray(catalog.data.profiles) && <p role="alert">Antwortformat nicht unterstützt: Profil-Liste fehlt.</p>}
-    {!loading && !error && !unavailableReason && profiles.length === 0 && <p className="empty">Keine Profile verfügbar. Host-Daemon und Profilfreigaben prüfen.</p>}
+    {catalog.data && !unavailableReason && !Array.isArray(catalog.data.profiles) && <p role="alert">{t("Antwortformat nicht unterstützt: Profil-Liste fehlt.")}</p>}
+    {!loading && !error && !unavailableReason && profiles.length === 0 && <p className="empty">{t("Keine Profile verfügbar. Host-Daemon und Profilfreigaben prüfen.")}</p>}
     {catalog.data?.warnings?.map((warning, index) => <p className="banner" key={`catalog/${index}`}>{warning}</p>)}
     {listing.data?.note && <p className={listing.data.source === "dashboard" ? "muted" : "banner"} role="status">{listing.data.note}</p>}
-    {listing.data?.truncated && section !== "logs" && <p role="status">Ausgabe gekürzt. Es werden nicht alle Einträge angezeigt.</p>}
+    {listing.data?.truncated && section !== "logs" && <p role="status">{t("Ausgabe gekürzt. Es werden nicht alle Einträge angezeigt.")}</p>}
     {listing.data?.warnings?.map((warning, index) => <p className="banner" key={index}>{warning}</p>)}
-    {pending && <section className="card ops-card" role="alertdialog" aria-label="Aktion bestätigen" aria-describedby="ops-confirm-description" onKeyDown={e => { if (e.key === "Escape" && !writing) { e.preventDefault(); setPending(undefined); } }}>
-      <h2>Aktion bestätigen</h2><p id="ops-confirm-description">{pending.label}</p><p className="muted">Host: {host} · Profil: {profile}. Die Änderung wird serverseitig geprüft; eine frische Anmeldung kann erforderlich sein.</p>
-      <div className="ops-toolbar"><button className="btn" type="button" autoFocus disabled={writing} onClick={() => setPending(undefined)}>Abbrechen</button><button className="btn" type="button" disabled={writing} onClick={() => void write()}>{writing ? "Wird angewendet…" : "Bestätigen"}</button></div>
+    {pending && <section className="card ops-card" role="alertdialog" aria-label={t("Aktion bestätigen")} aria-describedby="ops-confirm-description" onKeyDown={e => { if (e.key === "Escape" && !writing) { e.preventDefault(); setPending(undefined); } }}>
+      <h2>{t("Aktion bestätigen")}</h2><p id="ops-confirm-description">{pending.label}</p><p className="muted">{t("Host: {host} · Profil: {profile}. Die Änderung wird serverseitig geprüft; eine frische Anmeldung kann erforderlich sein.", { host, profile })}</p>
+      <div className="ops-toolbar"><button className="btn" type="button" autoFocus disabled={writing} onClick={() => setPending(undefined)}>{t("Abbrechen")}</button><button className="btn" type="button" disabled={writing} onClick={() => void write()}>{writing ? t("Wird angewendet…") : t("Bestätigen")}</button></div>
     </section>}
-    {section === "jobs" && jobCapabilities.error && <p className="banner">Schreibfähigkeiten nicht prüfbar: {jobCapabilities.error}</p>}
+    {section === "jobs" && jobCapabilities.error && <p className="banner">{t("Schreibfähigkeiten nicht prüfbar: {error}", { error: jobCapabilities.error })}</p>}
     {writeError && <p className="banner" role="alert">{writeError}</p>}
     {!error && !unavailableReason && <fieldset className="ops-content" disabled={writing || !!pending}>
-      {section === "marketplaces" && catalog.data && (Array.isArray(catalog.data.sources) ? <Marketplaces sources={catalog.data.sources} base={profile ? `${root}/_manage/${enc(profile)}` : undefined} ask={ask} /> : <p role="alert">Antwortformat nicht unterstützt: Quellen-Katalog fehlt.</p>)}
+      {section === "marketplaces" && catalog.data && (Array.isArray(catalog.data.sources) ? <Marketplaces sources={catalog.data.sources} base={profile ? `${root}/_manage/${enc(profile)}` : undefined} ask={ask} /> : <p role="alert">{t("Antwortformat nicht unterstützt: Quellen-Katalog fehlt.")}</p>)}
       {listing.data && section === "kanban" && <Kanban data={listing.data} base={base} ask={ask} />}
       {listing.data && section === "jobs" && <Jobs data={jobsData!} base={base} ask={ask} />}
       {listing.data && section === "logs" && <Logs data={listing.data} />}

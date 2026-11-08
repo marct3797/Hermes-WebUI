@@ -3,6 +3,7 @@ import { chatReducer, historyItems, initialState, type Action } from "./chatRedu
 import { modelOptions, type Reasoning } from "./composerLogic";
 import { agentKey } from "./router";
 import { TERMINAL_EVENTS, type AgentRef, type ChatState, type Decision, type StreamEvent } from "./types";
+import { t as tr } from "./i18n";
 
 /**
  * Alle Unterhaltungen dieser WebUI mit ihrem Run-Zustand, unabhängig davon, welche Seite gerade offen ist.
@@ -39,7 +40,7 @@ type Source = { es: EventSource; holder: { key: string }; finished: boolean };
 
 const MAX_CONVS = 40;
 export const DECISION_DONE: Record<Decision, string> = {
-  once: "einmal erlaubt", session: "für die Session erlaubt", always: "dauerhaft erlaubt", deny: "abgelehnt",
+  once: "einmal erlaubt", get session() { return tr("für die Session erlaubt"); }, always: "dauerhaft erlaubt", deny: "abgelehnt",
 };
 
 const live = (s: ChatState) => s.runStatus === "starting" || s.runStatus === "running";
@@ -164,7 +165,7 @@ export function createRunStore(deps: Deps = { api: realApi, eventSource: (u) => 
         if (disposed || snap.convs.get(key)?.state.runId !== runId) return;
         if (st.status === "completed" && live(snap.convs.get(key)!.state)) dispatch(key, { type: "event", event: { type: "run.completed" } });
         if (["stopped", "cancelled", "canceled", "interrupted"].includes(st.status)) dispatch(key, { type: "event", event: { type: "run.stopped" } });
-        else if (st.status === "failed") dispatch(key, { type: "event", event: { type: "run.failed", error: "Lauf fehlgeschlagen" } });
+        else if (st.status === "failed") dispatch(key, { type: "event", event: { type: "run.failed", error: tr("Lauf fehlgeschlagen") } });
         patch(key, { stale: false });
         runEnded(conv.agent, !recovering);
         return;
@@ -248,7 +249,7 @@ export function createRunStore(deps: Deps = { api: realApi, eventSource: (u) => 
       // Sessions aus Discord, CLI oder Cron lassen sich über die API nicht fortsetzen (409): die Ansicht bietet einen Fork an.
       const locked = sessionId !== undefined && e instanceof ApiError && e.status === 409;
       dispatch(key, locked
-        ? { type: "run-error", error: "Diese Session gehört zu einer anderen Quelle (z. B. Discord) und lässt sich hier nicht fortsetzen.", code: "session_locked" }
+        ? { type: "run-error", error: tr("Diese Session gehört zu einer anderen Quelle (z. B. Discord) und lässt sich hier nicht fortsetzen."), code: "session_locked" }
         : { type: "run-error", error: (e as Error).message });
     }
   }
@@ -349,7 +350,7 @@ export function createRunStore(deps: Deps = { api: realApi, eventSource: (u) => 
       dispatch(key, { type: "answered", id: itemId, answer: text });
       try {
         await api.clarify(conv.agent, conv.state.runId, text, clarifyId);
-        if (item?.kind === "clarify") log({ id: `${key}:${itemId}`, at: Date.now(), agent: conv.agent, text: `Rückfrage beantwortet · ${item.question}` });
+        if (item?.kind === "clarify") log({ id: `${key}:${itemId}`, at: Date.now(), agent: conv.agent, text: tr("Rückfrage beantwortet · {question}", { question: item.question }) });
       } catch (e) {
         dispatch(key, { type: "notice", error: (e as Error).message });
       }
@@ -367,7 +368,7 @@ export function createRunStore(deps: Deps = { api: realApi, eventSource: (u) => 
         onSession(session_id);
         await send(conv.agent, session_id, last.text, last.images, { model: conv.model, reasoning: conv.reasoning, onSession });
       } catch (e) {
-        dispatch(key, { type: "notice", error: `Fork nicht möglich: ${(e as Error).message}`, code: "session_locked" });
+        dispatch(key, { type: "notice", error: tr("Fork nicht möglich: {message}", { message: (e as Error).message }), code: "session_locked" });
       }
     },
 

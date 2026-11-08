@@ -1,3 +1,4 @@
+import { t as tr } from "./i18n";
 /**
  * Hintergrund-Shader: ein Vollflächen-Fragment-Shader (WebGL 1, ohne Bibliothek) mit langsam fließendem, verwirbeltem Rauschen
  * in Zinc und einem Hauch Crimson. Er liegt hinter allen Kacheln und reagiert nicht auf die Maus.
@@ -33,10 +34,10 @@ const START_T = 40; // der Verlauf beginnt nicht bei Null, dort ist das Muster n
 
 function compile(gl: WebGLRenderingContext, type: number, src: string): WebGLShader {
   const sh = gl.createShader(type);
-  if (!sh) throw new Error("Shader nicht anlegbar");
+  if (!sh) throw new Error(tr("Shader nicht anlegbar"));
   gl.shaderSource(sh, src);
   gl.compileShader(sh);
-  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh) ?? "Shader nicht übersetzbar");
+  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh) ?? tr("Shader nicht übersetzbar"));
   return sh;
 }
 

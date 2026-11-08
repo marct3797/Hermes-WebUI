@@ -15,7 +15,7 @@ export type Run = { id: string; status: string | null; started_at: number | null
 export type Target = { id: string; name: string; ready: boolean };
 export type BlueprintField = { name: string; type: string; label: string; default: string; options: string[]; optional: boolean; help: string | null };
 export type Blueprint = { key: string; title: string; description: string; category: string | null; schedule_human: string | null; fields: BlueprintField[] };
-export type JobInput = { name?: string; schedule?: string; prompt?: string; deliver?: string; repeat?: number; skills?: string[]; repeat_unlimited?: boolean; confirm_system?: boolean };
+export type JobInput = { name?: string; schedule?: string; prompt?: string; deliver?: string; repeat?: number; skills?: string[]; repeat_unlimited?: boolean; confirm_system?: boolean; script?: string; no_agent?: boolean };
 
 const cron = (host: string, profile: string) => `/bff/h/${enc(host)}/_cron/${enc(profile)}`;
 const job = (host: string, profile: string, id: string) => `${cron(host, profile)}/schedules/${enc(id)}`;

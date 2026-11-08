@@ -185,6 +185,16 @@ def create_mock(verdict: str = "safe") -> FastAPI:
         s.mcp = [x for x in s.mcp if x["name"] != name]
         return {"ok": True}
 
+    @app.put("/api/mcp/servers")
+    async def mcp_replace_all(request: Request):
+        servers = body_of(request).get("servers")
+        if not isinstance(servers, dict) or not servers:
+            raise HTTPException(400, "servers fehlt")
+        s.calls.append(("PUT", "/api/mcp/servers", sorted(servers), {}))
+        s.mcp = [{"name": n, "transport": "stdio", "url": None, "command": "x", "args": [], "env": {},
+                  "auth": None, "enabled": True, "tools": None, "source": "config", "plugin": None} for n in sorted(servers)]
+        return {"ok": True}
+
     @app.get("/api/mcp/catalog")
     async def mcp_catalog():
         entries = copy.deepcopy(s.fx["mcp_catalog"]["entries"])

@@ -40,10 +40,12 @@ def test_http_ws_contract_and_disconnect_persistence(tmp_path, monkeypatch):
             frame = ws.receive_json()
             assert frame['type'] == 'output'
             assert b'hello' in base64.b64decode(frame['data'])
+            ws.close()  # Schließen vor dem Verlassen: sonst bricht der TestClient den Handler unter Last mit CancelledError ab
         assert client.get('/v1/terminals', headers=headers).json()['terminals'][0]['running']
         with client.websocket_connect(url, headers=headers) as ws:
             assert ws.receive_json()['type'] == 'state'
             assert ws.receive_json()['type'] == 'output'
+            ws.close()
         assert client.delete('/v1/terminals/' + terminal['id'], headers=headers).status_code == 200
         assert client.get('/v1/terminals', headers=headers).json() == {'terminals': []}
 

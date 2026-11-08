@@ -14,6 +14,7 @@ describe("Sidebar", () => {
     const areas = await screen.findByRole("group", { name: "Bereiche von gamma" });
     const link = (name: string) => within(areas).getByRole("link", { name });
     expect(link("SOUL & Profil")).toHaveAttribute("href", "/h/server/hermes/gamma/soul");
+    expect(link("Hermes-Einstellungen")).toHaveAttribute("href", "/h/server/hermes/gamma/config");
     expect(link("Keys & Nutzung")).toHaveAttribute("href", "/h/server/hermes/gamma/providers");
     expect(link("Keys & Nutzung")).toHaveAttribute("aria-current", "page");
     expect(link("Skills")).toHaveAttribute("href", "/h/server/hermes/gamma/skills");

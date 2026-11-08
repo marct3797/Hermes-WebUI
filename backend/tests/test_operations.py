@@ -417,3 +417,23 @@ def test_git_details_and_hostd_error_texts(operations_client):
     daemon.state.fail = 403  # Pfadverbot des Host-Dienstes ist kein Token-Problem
     denied = c.get(BASE + "/_files", params={"workspace": "repo", "path": "x"})
     assert denied.status_code == 403 and "freigegeben" in denied.json()["detail"]
+
+
+@pytest.mark.parametrize("how", ["logout", "expired"])
+def test_websocket_closes_when_the_session_ends_and_forwards_nothing(operations_client, live_fake_daemon, how):
+    """Sitzung und Abmeldung werden nicht nur beim Verbindungsaufbau geprüft: eine offene Shell darf nach Logout oder Ablauf nichts mehr annehmen."""
+    c, daemon, app, session = operations_client
+    live, port = live_fake_daemon
+    config = json.loads(app.state.settings.hosts_file.read_text())
+    config["hosts"][0]["hostd"]["base_url"] = f"http://127.0.0.1:{port}"
+    app.state.settings.hosts_file.write_text(json.dumps(config))
+    with c.websocket_connect(BASE + "/_terminals/term-1/stream", headers={"origin": "http://testserver"}) as ws:
+        assert ws.receive_json()["type"] == "output"
+        if how == "logout":
+            app.state.sessions.delete(session.id)
+        else:
+            session.created -= app.state.settings.session_max_s + 1
+        ws.send_json({"type": "input", "data": "eA=="})
+        with pytest.raises(WebSocketDisconnect) as closed:
+            ws.receive_json()  # kein Echo des Daemons: die Eingabe wurde nie weitergereicht
+    assert closed.value.code == 4401

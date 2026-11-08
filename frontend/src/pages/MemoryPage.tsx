@@ -7,16 +7,17 @@ import { EntitiesView, ItemsView, ModelsView, ReflectView, SearchView, StatsView
 import { PageHead } from "../components/PageHead";
 import type { DiagReport, MemProvider } from "../types";
 import { useAsync } from "../useAsync";
+import { t as tr } from "../i18n";
 
 /** Welche Ansicht ein Anbieter kann, steht in seinen Fähigkeiten. Die Reihenfolge ist die der Tabs. */
 const TABS: Array<{ id: string; label: string; needs: string }> = [
-  { id: "stats", label: "Übersicht", needs: "stats" },
-  { id: "items", label: "Fakten", needs: "items" },
-  { id: "search", label: "Suche", needs: "search" },
-  { id: "graph", label: "Graph", needs: "graph" },
-  { id: "entities", label: "Entitäten", needs: "entities" },
-  { id: "models", label: "Modelle", needs: "models" },
-  { id: "reflect", label: "Fragen", needs: "reflect" },
+  { id: "stats", get label() { return tr("Übersicht"); }, needs: "stats" },
+  { id: "items", get label() { return tr("Fakten"); }, needs: "items" },
+  { id: "search", get label() { return tr("Suche"); }, needs: "search" },
+  { id: "graph", get label() { return tr("Graph"); }, needs: "graph" },
+  { id: "entities", get label() { return tr("Entitäten"); }, needs: "entities" },
+  { id: "models", get label() { return tr("Modelle"); }, needs: "models" },
+  { id: "reflect", get label() { return tr("Fragen"); }, needs: "reflect" },
 ];
 
 /** Womit eine Ansicht geöffnet wird, wenn man aus einer anderen hierher springt. */
@@ -74,34 +75,34 @@ export function MemoryPage() {
 
   return (
     <main className="page">
-      <PageHead title="Gedächtnis" sub={provider ? `${provider.label} · Bank ${provider.bank}` : undefined}>
+      <PageHead title={tr("Gedächtnis")} sub={provider ? `${provider.label} · Bank ${provider.bank}` : undefined}>
         {providers.length > 1 && (
           <label className="row" style={{ gap: 6 }}>
-            <span className="lbl">Anbieter</span>
-            <select className="field field-line" value={provider?.id} onChange={(e) => { setChosen(e.target.value); setTabId(undefined); setFocus({}); setReport(undefined); }} aria-label="Anbieter">
+            <span className="lbl">{tr("Anbieter")}</span>
+            <select className="field field-line" value={provider?.id} onChange={(e) => { setChosen(e.target.value); setTabId(undefined); setFocus({}); setReport(undefined); }} aria-label={tr("Anbieter")}>
               {providers.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
             </select>
           </label>
         )}
-        {provider && <button type="button" className="btn btn-s" onClick={() => void check()} disabled={checking}><Icon name="refresh" size={14} />{checking ? "Prüfe…" : "Verbindung prüfen"}</button>}
+        {provider && <button type="button" className="btn btn-s" onClick={() => void check()} disabled={checking}><Icon name="refresh" size={14} />{checking ? tr("Prüfe…") : tr("Verbindung prüfen")}</button>}
       </PageHead>
 
-      {list.error && <p className="banner" role="alert"><Icon name="alert" />Gedächtnis nicht ladbar: {list.error}</p>}
-      {list.loading && <p className="muted">Lade…</p>}
-      {list.data?.config_error && <p className="banner" role="alert"><Icon name="alert" />Die Gedächtnis-Konfiguration ist fehlerhaft: {list.data.config_error}</p>}
+      {list.error && <p className="banner" role="alert"><Icon name="alert" />{tr("Gedächtnis nicht ladbar: {error}", { error: list.error })}</p>}
+      {list.loading && <p className="muted">{tr("Lade…")}</p>}
+      {list.data?.config_error && <p className="banner" role="alert"><Icon name="alert" />{tr("Die Gedächtnis-Konfiguration ist fehlerhaft: {config_error}", { config_error: list.data.config_error })}</p>}
       {list.data && providers.length === 0 && !list.data.config_error && (
         <div className="empty">
-          <h2>Kein Gedächtnis-Anbieter eingerichtet</h2>
-          <p className="muted">Anbieter stehen in der Datei, auf die <code>HERMES_WEBUI_MEMORY_FILE</code> zeigt (Vorlage: <code>backend/memory.example.json</code>).</p>
+          <h2>{tr("Kein Gedächtnis-Anbieter eingerichtet")}</h2>
+          <p className="muted">{tr("Anbieter stehen in der Datei, auf die")} <code>HERMES_WEBUI_MEMORY_FILE</code> {tr("zeigt (Vorlage:")} <code>backend/memory.example.json</code>).</p>
         </div>
       )}
 
       {checkError && <p className="error small" role="alert">{checkError}</p>}
-      {report && <section className="card diag-card" aria-label="Verbindungsprüfung"><DiagChecks checks={report.checks} /></section>}
+      {report && <section className="card diag-card" aria-label={tr("Verbindungsprüfung")}><DiagChecks checks={report.checks} /></section>}
 
       {provider && tab && (
         <>
-          <div className="tabs" role="tablist" aria-label="Ansichten">
+          <div className="tabs" role="tablist" aria-label={tr("Ansichten")}>
             {tabs.map((t) => (
               <button key={t.id} type="button" role="tab" className={`tab${t.id === tab.id ? " on" : ""}`} aria-selected={t.id === tab.id} onClick={() => { setFocus({}); setTabId(t.id); }}>{t.label}</button>
             ))}

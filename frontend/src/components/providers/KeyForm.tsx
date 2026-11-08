@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ApiError, api, toLogin } from "../../api";
 import type { AgentRef, ProviderGroup } from "../../types";
 import { Icon } from "../Icon";
+import { t } from "../../i18n";
 
 type Props = { agent: AgentRef; group: ProviderGroup; onSaved: (message: string) => void; onCancel: () => void };
 
@@ -22,10 +23,10 @@ export function KeyForm({ agent, group, onSaved, onCancel }: Props) {
     setBusy(true); setError(undefined); setStepUp(false);
     try {
       const check = await api.validateKey(agent, name, value);
-      if (!check.ok && check.reachable) { setError(check.message || "Der Anbieter hat den Key abgelehnt."); return; }
+      if (!check.ok && check.reachable) { setError(check.message || t("Der Anbieter hat den Key abgelehnt.")); return; }
       await api.saveKey(agent, name, value);
       setValue("");
-      onSaved(check.reachable ? `Key für ${group.label} gespeichert und geprüft.` : `Key für ${group.label} gespeichert. Der Anbieter ließ sich nicht zur Prüfung erreichen.`);
+      onSaved(check.reachable ? t("Key für {label} gespeichert und geprüft.", { label: group.label }) : t("Key für {label} gespeichert. Der Anbieter ließ sich nicht zur Prüfung erreichen.", { label: group.label }));
     } catch (e) {
       if (e instanceof ApiError && e.code === "step_up_required") setStepUp(true);
       else setError((e as Error).message);
@@ -34,29 +35,29 @@ export function KeyForm({ agent, group, onSaved, onCancel }: Props) {
 
   const current = vars.find((k) => k.var === name);
   return (
-    <form className="prov-form" onSubmit={(e) => { e.preventDefault(); void submit(); }} aria-label={`Key für ${group.label}`}>
+    <form className="prov-form" onSubmit={(e) => { e.preventDefault(); void submit(); }} aria-label={t("Key für {label}", { label: group.label })}>
       {options.length > 1 && (
         <div className="pf-fld">
-          <label htmlFor={`kv-${group.id}`}>Variable</label>
+          <label htmlFor={`kv-${group.id}`}>{t("Variable")}</label>
           <select id={`kv-${group.id}`} className="pf-in" value={name} onChange={(e) => setName(e.target.value)}>
             {options.map((k) => <option key={k.var} value={k.var}>{k.var}{k.set ? " (gesetzt)" : ""}</option>)}
           </select>
         </div>
       )}
       <div className="pf-fld">
-        <label htmlFor={`kk-${group.id}`}>{options.length > 1 ? "Neuer Wert" : name}</label>
-        <input id={`kk-${group.id}`} className="pf-in mono" type="password" autoComplete="off" spellCheck={false} value={value} placeholder={current?.set ? "Neuen Key einfügen, um ihn zu ersetzen" : "Key einfügen"}
+        <label htmlFor={`kk-${group.id}`}>{options.length > 1 ? t("Neuer Wert") : name}</label>
+        <input id={`kk-${group.id}`} className="pf-in mono" type="password" autoComplete="off" spellCheck={false} value={value} placeholder={current?.set ? t("Neuen Key einfügen, um ihn zu ersetzen") : t("Key einfügen")}
           onChange={(e) => setValue(e.target.value.trim())} />
-        {current?.url && <a className="hint" href={current.url} target="_blank" rel="noreferrer noopener">Key beim Anbieter anlegen</a>}
+        {current?.url && <a className="hint" href={current.url} target="_blank" rel="noreferrer noopener">{t("Key beim Anbieter anlegen")}</a>}
       </div>
       {stepUp && (
-        <p className="banner" role="alert"><Icon name="lock" /><span>Das Speichern eines Keys verlangt eine frische Anmeldung. Nach der Anmeldung den Key erneut einfügen.{" "}
-          <button type="button" className="linkish" onClick={() => toLogin(true)}>Erneut anmelden</button></span></p>
+        <p className="banner" role="alert"><Icon name="lock" /><span>{t("Das Speichern eines Keys verlangt eine frische Anmeldung. Nach der Anmeldung den Key erneut einfügen.")}{" "}
+          <button type="button" className="linkish" onClick={() => toLogin(true)}>{t("Erneut anmelden")}</button></span></p>
       )}
       {error && <p className="banner" role="alert"><Icon name="alert" /><span>{error}</span></p>}
       <div className="row" style={{ gap: 8 }}>
-        <button type="submit" className="btn btn-p btn-s" disabled={busy || !value || !name}><Icon name="check" size={14} />Prüfen und speichern</button>
-        <button type="button" className="btn btn-s btn-g" onClick={onCancel}>Abbrechen</button>
+        <button type="submit" className="btn btn-p btn-s" disabled={busy || !value || !name}><Icon name="check" size={14} />{t("Prüfen und speichern")}</button>
+        <button type="button" className="btn btn-s btn-g" onClick={onCancel}>{t("Abbrechen")}</button>
       </div>
     </form>
   );

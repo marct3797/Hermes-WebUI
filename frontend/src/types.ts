@@ -138,6 +138,8 @@ export type DashboardStatus = { available: boolean; reason: string | null; profi
 export type SoulEntry = { id: string; at: string; reason: string; chars: number };
 export type SoulState = { content: string; exists: boolean; hash: string; max_chars: number; history: SoulEntry[] };
 export type SoulSaved = { changed: boolean; hash: string; history: SoulEntry[] };
+export type ConfigField = { key: string; type: "string" | "text" | "number" | "boolean" | "select" | "list"; description: string; category: string; options?: string[]; value?: unknown; secret?: boolean; set?: boolean };
+export type HermesConfig = { fields: ConfigField[]; category_order: string[] };
 export type SoulVersion = { id: string; at: string; reason: string; content: string };
 
 export type ProviderKey = { var: string; set: boolean; redacted: string | null; description: string; url: string | null; secret: boolean; advanced: boolean };
@@ -176,7 +178,9 @@ export type ModelProvider = { slug: string; name: string; current: boolean; auth
 export type OAuthStart = { session_id: string; flow?: string; user_code?: string; verification_url?: string; auth_url?: string; expires_in?: number; poll_interval?: number };
 export type OAuthPoll = { session_id: string; status: "pending" | "approved" | "error" | "expired" | string; error_message: string | null; expires_at: number | null };
 
-export type CliAuthEntry = { id: string; state: "signed_in" | "signed_out" | "unknown"; method: string | null; checked_at: string; reason: string | null };
+export type CliAuthEntry = { id: string; state: "signed_in" | "signed_out" | "unknown"; method: string | null; checked_at: string | null; reason: string | null };
+/** Anmeldeschutz (Step-up) und ob der OIDC-Anbieter die Frische der Anmeldung belegen kann. */
+export type Security = { step_up: { enabled: boolean; window_s: number; proof: "off" | "auth_time" | "prompt_login_only" | "unknown" | "unavailable" } };
 export type CliAuth = { available: boolean; reason: string | null; clis?: CliAuthEntry[] };
 /** Restkontingente (BFF, aus dem Dashboard-Plugin ai-usage-tracker). */
 export type QuotaWindow = { label: string; used_percent: number | null; remaining_percent: number | null; reset_at: string | null; reset_in_s: number | null; detail: string | null };
@@ -185,3 +189,81 @@ export type QuotaProvider = { id: string; label: string; configured: boolean; ac
 export type Quota = { state: "ok" | "plugin_missing" | "dashboard_unavailable" | "error"; reason: string | null; generated_at: string; cached: boolean; providers: QuotaProvider[] };
 export type QuotaItem = { host: string; runtime: string; profile: string; provider: string; label: string; state: QuotaState; remaining_percent: number | null; window: string | null; reset_in_s: number | null; reason: string | null };
 export type QuotaSummary = { runtimes: Array<{ host: string; runtime: string; state: Quota["state"]; reason: string | null }>; items: QuotaItem[]; worst: QuotaItem | null };
+
+/** Werkzeug-Gruppen eines Profils (vom Dashboard): Zustand, Anbieter mit „Schlüssel gesetzt“, nie ein Wert. */
+export type ToolsetRow = { name: string; label?: string; description?: string; platform?: string; enabled: boolean; configured: boolean; tools?: string[] };
+export type ToolEnvVar = { key: string; prompt?: string; url?: string | null; is_set: boolean };
+export type ToolProvider = { name: string; badge?: string; tag?: string; post_setup?: string | null; requires_nous_auth?: boolean; is_active?: boolean; status?: string; web_backend?: string; capabilities?: string[]; env_vars: ToolEnvVar[] };
+export type ToolConfig = { name: string; has_category: boolean; active_provider: string | null; providers: ToolProvider[] };
+export type ToolModel = { id: string; display?: string; speed?: string; strengths?: string; price?: string };
+export type ToolModels = { name: string; has_models: boolean; provider?: string | null; models: ToolModel[]; current: string | null; default: string | null };
+export type TerminalBackend = { name: string; label?: string; description?: string; active?: boolean; status?: string; detail?: string };
+export type TerminalBackends = { active: string | null; backends: TerminalBackend[] };
+
+/** Messaging-Plattformen und Gateway (vom Dashboard). Geheimnisse haben nie einen Wert, nur `is_set`. */
+export type MsgVar = { key: string; required?: boolean; is_set: boolean; description?: string; prompt?: string; url?: string | null; is_password?: boolean; is_list?: boolean; advanced?: boolean; value?: string };
+export type MsgPlatform = { id: string; name: string; description?: string; docs_url?: string | null; enabled: boolean; configured: boolean; gateway_running?: boolean; state?: string | null; error_code?: string | null; error_message?: string | null; home_channel_set?: boolean; env_vars: MsgVar[] };
+export type GatewayState = { running: boolean; state: string | null; busy: boolean; active_sessions: number; version?: string | null };
+export type GatewayAction = { name: string; running: boolean; exit_code: number | null; lines: string[] };
+export type TelegramPairing = { pairing_id: string; suggested_username?: string; deep_link: string; expires_at?: string };
+export type TelegramPoll = { status: "waiting" | "ready"; bot_username?: string | null; owner_user_id?: string | null; expires_at?: string };
+export type WhatsAppPairing = { pairing_id: string; status: string; qr_payload?: string | null; expires_at?: string | null; mode?: string | null; account?: { account_id?: string | null; account_name?: string | null; account_phone?: string | null } | null; error?: string | null };
+export type ComputerUse = { ready?: boolean | null; installed?: boolean | null; can_grant?: boolean | null; granted?: boolean | null; platform?: string | null; detail?: string | null };
+export type ShellHook = { event: string; matcher?: string; executable: boolean; allowed: boolean; approved_at?: string | null; command_preview?: string };
+export type ShellHooks = { hooks: ShellHook[]; valid_events: string[] };
+
+/** Eingebautes Hermes-Gedächtnis (nur Dateigrößen) und externe Anbieter. Geheimnisfelder haben nie einen Wert, nur `is_set`. */
+export type HmProvider = { name: string; label?: string; docs_url?: string | null; description?: string; status?: string; configured: boolean; available: boolean; required_env: string[]; missing: Array<{ name: string; install: string }> };
+export type AutomationItem = {
+  kind: "goal" | "heartbeat" | "loop"; session_id: string; title: string; text: string; status: string | null;
+  turns_used?: number | null; max_turns?: number | null; last_verdict?: string | null; last_reason?: string | null; paused_reason?: string | null;
+  subgoals?: string[]; gates?: number; interval_seconds?: number | null; fire_count?: number | null; ticks_fired?: number | null; mode?: string | null;
+  until?: string | null; times?: number | null; last_turn_at?: number | null; last_fired_at?: number | null; next_due_at?: number | null; created_at?: number | null;
+};
+export type AutomationResp = { items: AutomationItem[]; truncated: boolean; available: boolean; reason: string | null };
+export type HmOverview = { active: string; providers: HmProvider[]; files: { memory: number; user: number } };
+export type HmField = { key: string; label?: string; kind: string; description?: string; info?: string; inline?: boolean; group?: string; placeholder?: string; required?: boolean; is_set: boolean; options: Array<{ value: string; label?: string; description?: string }>; url?: string | null; value?: string | boolean | number };
+export type HmFileName = "MEMORY.md" | "USER.md";
+export type HmFileList = { files: Array<{ name: HmFileName; size: number; mtime: string; exists: boolean }> };
+export type HmFile = { name: HmFileName; content: string; sha256: string; size: number; mtime: string };
+export type HmFileSaved = { name: HmFileName; sha256: string; size: number; mtime: string; backup?: boolean };
+
+/** Profil-Lebenszyklus und Betrieb: Namen kommen als Text vom Dashboard, Serverpfade nie. */
+export type LcEntry = { name: string; is_default?: boolean; has_env?: boolean };
+export type LcList = { profiles: LcEntry[]; active?: string };
+export type LcCreated = { ok: boolean; name: string; setup?: string };
+
+/** Modelle eines Profils (vom Dashboard): Info, Auswahl, Empfehlung, Hilfsmodelle, MoA. Geheimnisse nie. */
+export type MdInfo = { provider: string; model: string; configured: boolean; context_window: number; capabilities: Record<string, unknown> };
+export type MdProvider = { slug: string; name: string; models: string[]; authenticated?: boolean; is_current?: boolean };
+export type MdOptions = { providers: MdProvider[]; current: { provider: string; model: string } };
+export type MdRecommended = { provider: string; model: string; available: boolean };
+export type MdAuxTask = { task: string; provider: string; model: string; base_url?: string; reasoning_effort?: string | null };
+export type MdAuxiliary = { main: { provider: string; model: string }; tasks: MdAuxTask[] };
+export type MdMoa = { presets: Record<string, { reference_models: Array<{ provider: string; model: string }>; aggregator: { provider: string; model: string } }>; active_preset: string; default_preset?: string };
+export type MdSetResult = { ok: boolean; provider?: string; model?: string; confirm_required?: boolean; confirm_message?: string };
+
+// Punkt 8b: Delegation, eigene Endpunkte, lokale Modelle (Schlüssel nie im Typ, nur has_api_key)
+export type EpBackend = { name: string; description: string; builtin: boolean };
+export type EpDelegation = { configured: string; blocked_reason: string | null; backends: EpBackend[]; profiles: string[] };
+export type EpEndpoint = { id: string; name: string; base_url: string; model: string; has_api_key: boolean; api_key_preview: string; is_current: boolean };
+export type EpList = { endpoints: EpEndpoint[]; current: { provider?: string; model?: string; base_url?: string } };
+export type EpValidate = { ok: boolean; reachable: boolean; message: string; models: string[] };
+export type EpLocal = { enabled: boolean; runtime_installed: boolean; server_running: boolean; models: Array<{ id: string; name: string; size_bytes: number }> };
+
+// Punkt 9: Sitzungen verwalten (Inhalte der Sitzungen nie im Typ)
+export type SaStats = { total: number; active_store: number; archived: number; messages: number; by_source: Record<string, number> };
+export type SaPreview = { matched: number; skipped_open: number; sample: Array<{ id: string; title: string }> };
+export type SaTimelineEvent = { row_id: number | null; type: string; summary: string };
+export type SaTimeline = { session_id: string; profile: string; events: SaTimelineEvent[]; after_row_id: number };
+
+// Punkt 10: Pairing und Webhooks (Codes und Secrets nie im Typ; das Secret gibt es nur in AcCreated, einmalig)
+export type AcPending = { platform: string; request_id: string; user_id: string; user_name: string; age_minutes: number };
+export type AcApproved = { platform: string; user_id: string; user_name: string };
+export type AcPairing = { pending: AcPending[]; approved: AcApproved[] };
+export type AcHook = { name: string; description: string; events: string[]; deliver: string; url: string; secret_set: boolean; enabled: boolean };
+export type AcHooks = { enabled: boolean; base_url: string; subscriptions: AcHook[] };
+export type AcCreated = { ok: boolean; name: string; url: string; secret: string };
+
+export type ProviderRouting = { sort: "price" | "throughput" | "latency" | null; only: string[]; ignore: string[]; order: string[]; require_parameters: boolean; data_collection: "allow" | "deny" | null };
+export type ProviderRoutingResp = { routing: ProviderRouting; per_model: string[] };

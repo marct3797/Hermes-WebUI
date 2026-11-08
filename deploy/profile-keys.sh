@@ -4,6 +4,7 @@
 # Jedes Profil im Multiplex-Gateway hat sein eigenes API_SERVER_KEY in <Datenordner>/profiles/<profil>/.env.
 # Gelesen wird für jeden Agent in config/hosts.json, der ein `api_key_env` hat. Die Werte werden nie ausgegeben,
 # nur Profil, Name der Variablen und Länge. Überschreibt nur diese Variablen, löscht nichts (Sicherung: webui.env.bak).
+umask 077   # webui.env.new entsteht nie für andere lesbar
 home="${1:-$HOME/hermes-webui}"
 data="${HERMES_DATA:-$(sed -n 's/^HERMES_DATA=//p' "$home/webui.env" 2>/dev/null | head -n1)}"
 [ -n "$data" ] || { echo "HERMES_DATA fehlt (Datenordner des Hermes-Containers, enthält profiles/) in webui.env oder Umgebung"; exit 1; }

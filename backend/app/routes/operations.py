@@ -161,9 +161,21 @@ async def terminal_stream(ws: WebSocket, host: str, terminal_id: str):
         await ws.close(code=4403)
         return
 
+    sid = ws.cookies.get(SESSION_COOKIE)
+
+    def ended(typing: bool) -> bool:
+        """Sitzung seit dem Verbindungsaufbau beendet (Abmeldung, Ablauf)? Eingabe verlängert sie wie jede Aktivität, reine Ausgabe nicht."""
+        if settings.auth_mode == "none":
+            return False
+        store = ws.app.state.sessions
+        return store.get(sid) is None if typing else not store.alive(sid)
+
     async def browser_to_daemon(remote):
         while True:
             raw = await ws.receive_text()
+            if ended(True):
+                await ws.close(code=4401)
+                return
             if len(raw) > 96 * 1024:
                 await ws.close(code=1009)
                 return
@@ -188,6 +200,9 @@ async def terminal_stream(ws: WebSocket, host: str, terminal_id: str):
 
     async def daemon_to_browser(remote):
         async for frame in remote:
+            if ended(False):
+                await ws.close(code=4401)
+                return
             if not isinstance(frame, str):
                 await ws.close(code=1008)
                 return
@@ -342,7 +357,11 @@ async def search(request: Request, q: str = Query(min_length=1, max_length=200),
             dash = host_dashboard(request, host.id)
             if dash is not None and not (isinstance(batch.get("results"), list) and batch["results"]):
                 try:  # Host-Dienst fehlt, ist veraltet oder sieht keine Profile: das Dashboard kennt die Sitzungen
-                    return await upstream(dashboard_ops.search(dash, q))
+                    found = await upstream(dashboard_ops.search(dash, q))
+                    allowed = {a.id for rt in host.runtimes if rt.dashboard is not None for a in rt.agents}
+                    if isinstance(found, dict) and isinstance(found.get("results"), list):
+                        found = {**found, "results": [r for r in found["results"] if isinstance(r, dict) and r.get("profile") in allowed]}
+                    return found
                 except HTTPException as exc:
                     failure = failure or exc.detail
             return {"warning": failure} if failure else batch

@@ -23,6 +23,10 @@ class Settings:
     allow_shell: bool = False
     max_terminals: int = 8
     exited_ttl_s: int = EXITED_TTL_S
+    hermes_command: list = field(default_factory=list)  # absoluter argv der Hermes-CLI fuer Plugin-Verwaltung (operations/native.py)
+    native_python: str | None = None
+    native_source: str | None = None
+    reviewed_catalog: list = field(default_factory=list)
     probe_overrides: dict = field(default_factory=dict)  # nur Tests: ID -> argv; load() ignoriert es
 
     @classmethod
@@ -63,6 +67,13 @@ class Settings:
             command = cli.get('command')
             if not isinstance(command, list) or not command or any(not isinstance(arg, str) or not arg or '\0' in arg for arg in command):
                 raise ValueError('CLI command must be a fixed argv list')
+        if not isinstance(settings.hermes_command, list) or any(not isinstance(arg, str) or not arg or '\0' in arg for arg in settings.hermes_command):
+            raise ValueError('hermes_command must be a fixed argv list')
+        for name in ('native_python', 'native_source'):
+            if getattr(settings, name) is not None and (not isinstance(getattr(settings, name), str) or not getattr(settings, name)):
+                raise ValueError(f'{name} must be a path string')
+        if not isinstance(settings.reviewed_catalog, list):
+            raise ValueError('reviewed_catalog must be a list')
         for workspace in settings.workspaces:
             path = Path(workspace['path']).expanduser()
             if not path.is_absolute() or not path.is_dir():

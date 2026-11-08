@@ -5,10 +5,12 @@ export type Page =
   | { name: "cockpit" }
   | { name: "inbox" }
   | { name: "hosts" }
+  | { name: "assistant" }
   | { name: "terminal"; host: string }
   | { name: "workspace"; host: string }
   | { name: "operations"; section: "search"; host?: string }
   | { name: "kanban"; host?: string }
+  | { name: "achievements"; host?: string }
   | { name: "jobs"; host?: string }
   | { name: "logs"; host?: string }
   | { name: "extensions"; host?: string }
@@ -20,6 +22,7 @@ export type Page =
   | { name: "providers" }
   | { name: "rooms" }
   | { name: "room"; id: string }
+  | { name: "guide" }
   | { name: "agent"; ref: AgentRef; module: string; sessionId?: string }
   | { name: "notfound" };
 
@@ -34,11 +37,12 @@ export function parsePath(pathname: string): Page {
     const [head, ...rest] = parts;
     if (head === "inbox" && rest.length === 0) return { name: "inbox" };
     if (head === "hosts" && rest.length === 0) return { name: "hosts" };
+    if (head === "assistant" && rest.length === 0) return { name: "assistant" };
     if (head === "hosts" && rest.length === 2 && (rest[1] === "terminal" || rest[1] === "workspace")) {
       return { name: rest[1], host: dec(rest[0]) };
     }
     if (head === "search" && rest.length <= 1) return { name: "operations", section: "search", ...(rest.length ? { host: dec(rest[0]) } : {}) };
-    const section = { kanban: "kanban", jobs: "jobs", logs: "logs", extensions: "extensions", manage: "extensions", marketplace: "marketplace", marketplaces: "marketplace" }[head];
+    const section = { kanban: "kanban", achievements: "achievements", jobs: "jobs", logs: "logs", extensions: "extensions", manage: "extensions", marketplace: "marketplace", marketplaces: "marketplace" }[head];
     if (section && rest.length <= 1) return { name: section, ...(rest.length ? { host: dec(rest[0]) } : {}) } as Page;
     if (head === "settings" && rest.length === 0) return { name: "settings" };
     if (head === "system" && rest.length === 0) return { name: "system" };
@@ -47,6 +51,7 @@ export function parsePath(pathname: string): Page {
     if (head === "providers" && rest.length === 0) return { name: "providers" };
     if (head === "rooms" && rest.length === 0) return { name: "rooms" };
     if (head === "rooms" && rest.length === 1) return { name: "room", id: dec(rest[0]) };
+    if (head === "guide" && rest.length === 0) return { name: "guide" };
     if (head === "h" && rest.length >= 3) {
       const [host, runtime, agent, module = "chat", sessionId] = rest.map(dec);
       return { name: "agent", ref: { host, runtime, agent }, module, sessionId };

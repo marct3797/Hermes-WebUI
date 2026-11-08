@@ -191,6 +191,24 @@ describe("Zeitpläne", () => {
     expect(within(detail).getByRole("button", { name: "Aktivieren" })).toBeInTheDocument();
   });
 
+  it("creates a script job only with the server confirmation", async () => {
+    await open();
+    fireEvent.click(screen.getByRole("button", { name: "Neuer Zeitplan" }));
+    const panel = await screen.findByRole("region", { name: "Neuer Zeitplan" });
+    fireEvent.change(within(panel).getByLabelText("Name"), { target: { value: "Skript" } });
+    fireEvent.change(within(panel).getByLabelText("Zeitplan"), { target: { value: "every 30m" } });
+    fireEvent.change(within(panel).getByLabelText("Prompt"), { target: { value: "egal" } });
+    fireEvent.change(within(panel).getByLabelText("Skript (statt Agent)"), { target: { value: "echo hi" } });
+    const make = within(panel).getByRole("button", { name: "Pausiert anlegen" });
+    expect(make).toBeDisabled();
+    fireEvent.click(within(panel).getByLabelText("Ohne Agent ausführen (nur das Skript läuft)"));
+    fireEvent.click(within(panel).getByLabelText("Ich weiß, dass das Skript direkt auf dem Server läuft"));
+    fireEvent.click(make);
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(writes()[0]).toEqual({ method: "POST", url: `${BASE}/schedules`,
+      body: { name: "Skript", schedule: "every 30m", prompt: "egal", deliver: "local", script: "echo hi", no_agent: true, confirm_system: true } });
+  });
+
   it("creates from a template, which also starts paused", async () => {
     await open();
     fireEvent.click(screen.getByRole("button", { name: "Aus Vorlage" }));

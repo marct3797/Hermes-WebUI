@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 /**
  * Gemeinsame Abfragen kurz zwischenspeichern: gleiche Schlüssel teilen sich eine Anfrage (Dedupe), frische Antworten kommen
  * aus dem Speicher, `peek` liefert den letzten Stand sofort (stale-while-revalidate: anzeigen, dann im Hintergrund auffrischen).
@@ -8,7 +9,7 @@ type Flight = { promise: Promise<unknown>; ctl: AbortController; refs: number };
 const done = new Map<string, { at: number; value: unknown }>();
 const flights = new Map<string, Flight>();
 
-const abortError = () => new DOMException("Abgebrochen", "AbortError");
+const abortError = () => new DOMException(t("Abgebrochen"), "AbortError");
 export const isAbort = (e: unknown) => e instanceof DOMException && e.name === "AbortError";
 
 export const peek = <T>(key: string): T | undefined => done.get(key)?.value as T | undefined;

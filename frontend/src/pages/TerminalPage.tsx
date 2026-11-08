@@ -10,21 +10,22 @@ import type { CliAuth } from "../types";
 import "../styles/workspace.css";
 import "../styles/files.css";
 import { getPreferences } from "../preferences";
+import { N_, t as tr } from "../i18n";
 
 type Terminal = { id: string; cli: string; workspace: string; running: boolean; pid: number; created_at: number | string; exit_code?: number };
 type Info = { version?: string; available?: boolean; reason?: string; clis: { id: string; label: string; available: boolean; authenticated?: boolean | null; auth_note?: string }[]; workspaces: { id: string; label: string }[] };
 const request = <T,>(url: string, method = "GET", body?: unknown, signal?: AbortSignal) => call<T>(method, url, body, signal);
 const ADD_WORKSPACE = "python -m hostd.workspaces add --config ~/.config/hermes-hostd/config.json --id projekt --path /absoluter/pfad";
 const LOGIN_HINT: Record<string, string> = { codex: "codex login", claude: "claude auth login", opencode: "opencode auth login" };
-const OLD_HOSTD = "Der Host-Dienst kennt diese Funktion nicht und ist vermutlich veraltet. Mit deploy/install-hostd.sh aktualisieren.";
+const OLD_HOSTD = N_("Der Host-Dienst kennt diese Funktion nicht und ist vermutlich veraltet. Mit deploy/install-hostd.sh aktualisieren.");
 
 /** Verständlicher Fehlertext je Aktion und Status. */
 export function explain(e: unknown, action: string): string {
   const status = e instanceof ApiError ? e.status : 0;
-  if (status === 400) return `${action} nicht möglich: CLI oder Arbeitsordner sind auf dem Host nicht verfügbar oder das Terminal-Limit ist erreicht.`;
-  if (status === 404 || status === 405) return `${action} nicht möglich. ${OLD_HOSTD}`;
-  if (status === 401 || status === 403) return `${action} nicht erlaubt; ggf. frisch anmelden.`;
-  if (status === 422) return `${action} nicht möglich: ungültige Angaben.`;
+  if (status === 400) return tr("{action} nicht möglich: CLI oder Arbeitsordner sind auf dem Host nicht verfügbar oder das Terminal-Limit ist erreicht.", { action });
+  if (status === 404 || status === 405) return tr("{action} nicht möglich. {OLD_HOSTD}", { action, OLD_HOSTD: tr(OLD_HOSTD) });
+  if (status === 401 || status === 403) return tr("{action} nicht erlaubt; ggf. frisch anmelden.", { action });
+  if (status === 422) return tr("{action} nicht möglich: ungültige Angaben.", { action });
   return `${action} fehlgeschlagen: ${(e as Error).message}`;
 }
 const olderThan = (version: string | undefined, min: number[]) => {
@@ -47,7 +48,7 @@ export function TerminalPage({ host }: { host: string }) {
   const [authMissing, setAuthMissing] = useState(false);
   const [error, setError] = useState<string>();
   const [gap, setGap] = useState<string>();
-  const [connection, setConnection] = useState("Nicht verbunden");
+  const [connection, setConnection] = useState(tr("Nicht verbunden"));
   const [busy, setBusy] = useState(false);
   const [notifications, setNotifications] = useState(false);
   const container = useRef<HTMLDivElement>(null);
@@ -74,7 +75,7 @@ export function TerminalPage({ host }: { host: string }) {
       let saved: string | null = null;
       try { saved = sessionStorage.getItem(`hermes-terminal:${host}`); } catch { /* private mode */ }
       setSelected(list.terminals.find((t) => t.id === saved)?.id ?? list.terminals[0]?.id ?? "");
-    }).catch((e: Error) => { if (!controller.signal.aborted) setError(explain(e, "Terminal-Konfiguration laden")); });
+    }).catch((e: Error) => { if (!controller.signal.aborted) setError(explain(e, tr("Terminal-Konfiguration laden"))); });
     return () => controller.abort();
   }, [base, host]);
 
@@ -98,7 +99,7 @@ export function TerminalPage({ host }: { host: string }) {
       clearTimeout(timer);
       const previous = socket.current;
       if (previous) { previous.onclose = null; previous.close(); }
-      setConnection("Verbinde…");
+      setConnection(tr("Verbinde…"));
       const url = new URL(`${base}/_terminals/${encodeURIComponent(selected)}/stream?after=${offset}`, location.href);
       url.protocol = location.protocol === "https:" ? "wss:" : "ws:";
       const ws = new WebSocket(url.toString()); socket.current = ws;
@@ -109,11 +110,11 @@ export function TerminalPage({ host }: { host: string }) {
           const frame = JSON.parse(event.data);
           if (frame.type === "gap") {
             if (Number.isSafeInteger(frame.available_from) && frame.available_from >= 0) offset = frame.available_from;
-            setGap("Ältere Terminal-Ausgabe ist nicht mehr im Replay-Puffer verfügbar.");
+            setGap(tr("Ältere Terminal-Ausgabe ist nicht mehr im Replay-Puffer verfügbar."));
           } else if (frame.type === "output") {
-            if (typeof frame.data !== "string" || frame.data.length > 524288 || !Number.isSafeInteger(frame.offset) || frame.offset < 0) throw new Error("Ungültige Terminal-Ausgabe");
+            if (typeof frame.data !== "string" || frame.data.length > 524288 || !Number.isSafeInteger(frame.offset) || frame.offset < 0) throw new Error(tr("Ungültige Terminal-Ausgabe"));
             const bytes = Uint8Array.from(atob(frame.data), (char) => char.charCodeAt(0));
-            if (frame.offset > offset) setGap("Terminal-Ausgabe unvollständig: Replay-Lücke.");
+            if (frame.offset > offset) setGap(tr("Terminal-Ausgabe unvollständig: Replay-Lücke."));
             const skip = Math.max(0, offset - frame.offset);
             if (skip < bytes.length) term.write(bytes.slice(skip));
             offset = Math.max(offset, frame.offset + bytes.length);
@@ -122,16 +123,16 @@ export function TerminalPage({ host }: { host: string }) {
             setTerminals((all) => all.map((t) => t.id === selected ? ended : t));
             term.options.disableStdin = !ended.running;
             if (wasRunning && !ended.running && noticeOptIn.current && typeof Notification !== "undefined" && Notification.permission === "granted") {
-              try { new Notification("Terminal beendet", { body: `${host} · ${ended.cli}` }); } catch { /* unsupported platform */ }
+              try { new Notification(tr("Terminal beendet"), { body: `${host} · ${ended.cli}` }); } catch { /* unsupported platform */ }
             }
             wasRunning = ended.running;
           }
-        } catch { setError("Terminal-Ereignis konnte nicht gelesen werden."); }
+        } catch { setError(tr("Terminal-Ereignis konnte nicht gelesen werden.")); }
       };
       ws.onerror = () => { if (!disposed) setError("Terminal-Verbindung unterbrochen. Erneute Anmeldung kann erforderlich sein."); };
       ws.onclose = () => {
         if (disposed || socket.current !== ws) return;
-        setConnection(wasRunning ? "Verbindung unterbrochen" : "Beendet");
+        setConnection(wasRunning ? tr("Verbindung unterbrochen") : tr("Beendet"));
         if (wasRunning) timer = setTimeout(connect, Math.min(1000 * 2 ** retry++, 10000));
       };
     };
@@ -150,61 +151,61 @@ export function TerminalPage({ host }: { host: string }) {
     try {
       const term = await request<Terminal>(`${base}/_terminals`, "POST", { cli, workspace, cols: terminalRef.current?.cols ?? 80, rows: terminalRef.current?.rows ?? 24 });
       setTerminals((all) => [...all, term]); setSelected(term.id);
-    } catch (e) { setError(explain(e, "Terminal starten")); } finally { setBusy(false); }
+    } catch (e) { setError(explain(e, tr("Terminal starten"))); } finally { setBusy(false); }
   };
   // DELETE beendet einen laufenden Prozess und entfernt den Eintrag; laufende Terminals nur nach Bestätigung.
   const close = async (t: Terminal) => {
-    if (t.running && !window.confirm("Diesen laufenden Terminal-Prozess beenden und schließen?")) return;
+    if (t.running && !window.confirm(tr("Diesen laufenden Terminal-Prozess beenden und schließen?"))) return;
     setBusy(true); setError(undefined);
     try {
       await request(`${base}/_terminals/${encodeURIComponent(t.id)}`, "DELETE");
       const data = await request<{ terminals: Terminal[] }>(`${base}/_terminals`);
       setTerminals(data.terminals);
       if (t.id === selected) setSelected(data.terminals[0]?.id ?? "");
-    } catch (e) { setError(explain(e, "Terminal schließen")); } finally { setBusy(false); }
+    } catch (e) { setError(explain(e, tr("Terminal schließen"))); } finally { setBusy(false); }
   };
   const toggleNotifications = async (checked: boolean) => {
     try {
       noticeOptIn.current = checked && typeof Notification !== "undefined" && (Notification.permission === "granted" || await Notification.requestPermission() === "granted");
       setNotifications(noticeOptIn.current);
       sessionStorage.setItem("hermes-terminal-notifications", String(noticeOptIn.current));
-      if (checked && !noticeOptIn.current) setError("Benachrichtigungen sind nicht freigegeben.");
-    } catch { setError("Benachrichtigungen sind nicht verfügbar."); }
+      if (checked && !noticeOptIn.current) setError(tr("Benachrichtigungen sind nicht freigegeben."));
+    } catch { setError(tr("Benachrichtigungen sind nicht verfügbar.")); }
   };
 
   return <main className="page terminal-page">
-    <header className="workspace-toolbar"><div><h1>Terminal</h1><p className="muted">{host} · Bestehende CLI-Anmeldung auf diesem Host</p></div>
-      <label><input type="checkbox" checked={notifications} onChange={(e) => void toggleNotifications(e.target.checked)} /> Abschluss melden (opt-in)</label>
+    <header className="workspace-toolbar"><div><h1>{tr("Terminal")}</h1><p className="muted">{tr("{host} · Bestehende CLI-Anmeldung auf diesem Host", { host })}</p></div>
+      <label><input type="checkbox" checked={notifications} onChange={(e) => void toggleNotifications(e.target.checked)} /> {tr("Abschluss melden (opt-in)")}</label>
     </header>
     {(error || gap) && <p className="banner" role="alert">{error ?? gap}</p>}
-    {!info && !error && <p role="status">Lade Terminal-Konfiguration…</p>}
-    {info?.available === false ? <p role="status">{info.reason ?? "Host-Dienst nicht eingerichtet."}</p> : info && <>
-      {olderThan(info.version, [0, 3, 0]) && <p className="muted" role="status">Host-Dienst {info.version} ist veraltet. Neuere Funktionen (Dateien bearbeiten, Arbeitsordner-Anzeige) brauchen 0.3.0: <code>deploy/install-hostd.sh</code> erneut ausführen.</p>}
-      {info.workspaces?.length === 0 && <p className="banner" role="status">Kein Arbeitsordner konfiguriert. Auf dem Host eintragen und den Dienst neu starten: <code className="mono">{ADD_WORKSPACE}</code></p>}
-      {info.clis?.length > 0 && !info.clis.some((c) => c.available) && <p className="banner" role="status">Keine der konfigurierten CLIs ist auf dem Host installiert (PATH des Dienstes prüfen).</p>}
+    {!info && !error && <p role="status">{tr("Lade Terminal-Konfiguration…")}</p>}
+    {info?.available === false ? <p role="status">{info.reason ?? tr("Host-Dienst nicht eingerichtet.")}</p> : info && <>
+      {olderThan(info.version, [0, 3, 0]) && <p className="muted" role="status">{tr("Host-Dienst")} {info.version} {tr("ist veraltet. Neuere Funktionen (Dateien bearbeiten, Arbeitsordner-Anzeige) brauchen 0.3.0:")} <code>deploy/install-hostd.sh</code> {tr("erneut ausführen.")}</p>}
+      {info.workspaces?.length === 0 && <p className="banner" role="status">{tr("Kein Arbeitsordner konfiguriert. Auf dem Host eintragen und den Dienst neu starten:")} <code className="mono">{ADD_WORKSPACE}</code></p>}
+      {info.clis?.length > 0 && !info.clis.some((c) => c.available) && <p className="banner" role="status">{tr("Keine der konfigurierten CLIs ist auf dem Host installiert (PATH des Dienstes prüfen).")}</p>}
       <div className="workspace-toolbar">
-        <label>CLI <select className="field" value={cli} onChange={(e) => setCli(e.target.value)}><option value="" disabled>CLI wählen</option>{info.clis?.map((c) => <option value={c.id} key={c.id} disabled={!c.available}>{c.label}{!c.available ? " · nicht verfügbar" : ""}</option>)}</select></label>
-        <label>Arbeitsordner <select className="field" value={workspace} onChange={(e) => setWorkspace(e.target.value)}><option value="" disabled>Arbeitsordner wählen</option>{info.workspaces?.map((w) => <option key={w.id} value={w.id}>{w.label}</option>)}</select></label>
-        <button className="btn btn-s" disabled={busy || !cli || !workspace} onClick={() => void create()}>Terminal starten</button>
+        <label>{tr("CLI")} <select className="field" value={cli} onChange={(e) => setCli(e.target.value)}><option value="" disabled>{tr("CLI wählen")}</option>{info.clis?.map((c) => <option value={c.id} key={c.id} disabled={!c.available}>{c.label}{!c.available ? tr(" · nicht verfügbar") : ""}</option>)}</select></label>
+        <label>{tr("Arbeitsordner")} <select className="field" value={workspace} onChange={(e) => setWorkspace(e.target.value)}><option value="" disabled>{tr("Arbeitsordner wählen")}</option>{info.workspaces?.map((w) => <option key={w.id} value={w.id}>{w.label}</option>)}</select></label>
+        <button className="btn btn-s" disabled={busy || !cli || !workspace} onClick={() => void create()}>{tr("Terminal starten")}</button>
       </div>
-      {(() => { const st = auth?.clis?.find((c) => c.id === cli); return st && <p className="muted" role="status">Anmeldung: {CLI_DOT[st.state].text}{st.method ? ` (${st.method})` : ""}{st.reason ? ` · ${st.reason}` : ""}{st.state === "signed_out" ? `. Der Start bleibt möglich, die Anmeldung erfolgt im Terminal${LOGIN_HINT[cli] ? ` mit ${LOGIN_HINT[cli]}` : ""}.` : ""}</p>; })()}
-      {authMissing && <p className="muted" role="status">Anmeldestatus nicht abrufbar (Host-Dienst veraltet oder nicht erreichbar). Der Start bleibt möglich.</p>}
-      <p className="muted">Installation ist kein Anmeldenachweis. {info.clis?.find((c) => c.id === cli)?.auth_note ?? "Anmeldestatus unbekannt; Anmeldung bleibt in der CLI."}</p>
-      {terminals.length ? <ul className="term-list" aria-label="Terminals">{terminals.map((t) => {
+      {(() => { const st = auth?.clis?.find((c) => c.id === cli); return st && <p className="muted" role="status">{tr("Anmeldung: {text}{method}{reason}{state}", { text: CLI_DOT[st.state].text, method: st.method ? ` (${st.method})` : "", reason: st.reason ? ` · ${st.reason}` : "", state: st.state === "signed_out" ? tr(". Der Start bleibt möglich, die Anmeldung erfolgt im Terminal{cli}.", { cli: LOGIN_HINT[cli] ? tr(" mit {cli}", { cli: LOGIN_HINT[cli] }) : "" }) : "" })}</p>; })()}
+      {authMissing && <p className="muted" role="status">{tr("Anmeldestatus nicht abrufbar (Host-Dienst veraltet oder nicht erreichbar). Der Start bleibt möglich.")}</p>}
+      <p className="muted">{tr("Installation ist kein Anmeldenachweis. {auth_note}", { auth_note: info.clis?.find((c) => c.id === cli)?.auth_note ?? tr("Anmeldestatus unbekannt; Anmeldung bleibt in der CLI.") })}</p>
+      {terminals.length ? <ul className="term-list" aria-label={tr("Terminals")}>{terminals.map((t) => {
         const start = toMs(t.created_at);
         const label = info.workspaces?.find((w) => w.id === t.workspace)?.label ?? t.workspace;
         return <li key={t.id} className={`term-row${t.id === selected ? " on" : ""}`}>
-          <span id={`term-${t.id}`}><strong>{info.clis?.find((c) => c.id === t.cli)?.label ?? t.cli}</strong> · {label} · {t.running ? "läuft" : `Beendet · Exit ${t.exit_code ?? "unbekannt"}`}
+          <span id={`term-${t.id}`}><strong>{info.clis?.find((c) => c.id === t.cli)?.label ?? t.cli}</strong> · {label} · {t.running ? "läuft" : `Beendet · Exit ${t.exit_code ?? tr("unbekannt")}`}
             {start !== undefined && <span className="muted"> · {t.running ? `Laufzeit ${fmtDuration(now - start)}` : `gestartet ${fmtAgo(start, now)}`}</span>}</span>
           <span className="row" style={{ gap: 6 }}>
-            <button className="btn btn-s" aria-describedby={`term-${t.id}`} onClick={() => { setGap(undefined); if (t.id === selected) reconnect.current(); else setSelected(t.id); }}>{t.id === selected ? "Neu verbinden" : "Wieder verbinden"}</button>
-            <button className="btn btn-s btn-g" aria-describedby={`term-${t.id}`} disabled={busy} onClick={() => void close(t)}>Schließen</button>
+            <button className="btn btn-s" aria-describedby={`term-${t.id}`} onClick={() => { setGap(undefined); if (t.id === selected) reconnect.current(); else setSelected(t.id); }}>{t.id === selected ? tr("Neu verbinden") : tr("Wieder verbinden")}</button>
+            <button className="btn btn-s btn-g" aria-describedby={`term-${t.id}`} disabled={busy} onClick={() => void close(t)}>{tr("Schließen")}</button>
           </span>
-        </li>; })}</ul> : <p role="status">Keine Terminals. Ein Start führt die konfigurierte CLI aus.</p>}
+        </li>; })}</ul> : <p role="status">{tr("Keine Terminals. Ein Start führt die konfigurierte CLI aus.")}</p>}
     </>}
-    <div ref={container} className="terminal-viewport" aria-label="CLI Terminal" hidden={!selected} />
-    {selected && <><div className="workspace-toolbar"><p role="status">{connection}{current && !current.running ? ` · Beendet · Exit ${current.exit_code ?? "unbekannt"}` : ""}</p></div>
-      <div className="terminal-keys" aria-label="Mobile CLI-Tasten">{MOBILE_KEYS.map(([label, key]) => <button className="btn btn-s" key={label} disabled={!current?.running || connection !== "Verbunden"} onClick={() => { if (socket.current?.readyState === 1) socket.current.send(JSON.stringify({ type: "input", data: encodeInput(key) })); terminalRef.current?.focus(); }}>{label}</button>)}</div>
-      <p className="muted small">Navigation und Verbindungsabbruch beenden den Prozess nicht. Ausgabe wird nur begrenzt wiederholt.</p></>}
+    <div ref={container} className="terminal-viewport" aria-label={tr("CLI Terminal")} hidden={!selected} />
+    {selected && <><div className="workspace-toolbar"><p role="status">{connection}{current && !current.running ? ` · Beendet · Exit ${current.exit_code ?? tr("unbekannt")}` : ""}</p></div>
+      <div className="terminal-keys" aria-label={tr("Mobile CLI-Tasten")}>{MOBILE_KEYS.map(([label, key]) => <button className="btn btn-s" key={label} disabled={!current?.running || connection !== "Verbunden"} onClick={() => { if (socket.current?.readyState === 1) socket.current.send(JSON.stringify({ type: "input", data: encodeInput(key) })); terminalRef.current?.focus(); }}>{label}</button>)}</div>
+      <p className="muted small">{tr("Navigation und Verbindungsabbruch beenden den Prozess nicht. Ausgabe wird nur begrenzt wiederholt.")}</p></>}
   </main>;
 }

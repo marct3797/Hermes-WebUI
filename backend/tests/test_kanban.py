@@ -84,6 +84,16 @@ def test_log_is_redacted_and_pathless(kb):
     assert c.get(f"{B}/tasks/t_aaaa0002/log", params={"tail": 0}).status_code == 422
 
 
+def test_todo_is_created_as_triage_first_so_nothing_dispatches_in_between(kb):
+    c, mock, _, _ = kb
+    tid = c.post(f"{B}/tasks", json={"title": "Später", "status": "todo"}).json()["id"]
+    sent = [x for x in mock.state.calls if x[0] in ("POST", "PATCH") and x[1].endswith(("/tasks", f"/tasks/{tid}"))][-2:]
+    assert json.loads(sent[0][3])["triage"] is True and sent[1][:2] == ("PATCH", f"/api/plugins/kanban/tasks/{tid}") and json.loads(sent[1][3]) == {"status": "todo"}
+    ready = c.post(f"{B}/tasks", json={"title": "Los", "assignee": "beta"}).json()["id"]
+    assert [x for x in mock.state.calls if x[0] == "POST" and x[1].endswith("/tasks")][-1][3] and json.loads([x for x in mock.state.calls if x[0] == "POST" and x[1].endswith("/tasks")][-1][3])["triage"] is False  # ready bleibt ready
+    assert c.get(f"{B}/tasks/{ready}").json()["task"]["status"] == "ready"
+
+
 def test_create_task_variants(kb):
     c, mock, _, audit = kb
     ready = c.post(f"{B}/tasks", json={"title": "Neu", "body": "Text", "assignee": "beta", "priority": 2}).json()["id"]
@@ -161,12 +171,16 @@ def test_bulk_move_archive_and_rules(kb):
     assert c.post(f"{B}/tasks/bulk", json={"ids": ["t_aaaa0001"], "delete": True}).status_code == 422
 
 
-def test_there_is_no_delete_route(kb):
+def test_only_boards_and_attachments_have_delete_routes(kb):
     c, mock, app, _ = kb
-    assert c.delete(f"{B}/tasks/t_aaaa0001").status_code == 405
-    assert c.delete(f"{B}/boards/alpha").status_code == 405
+    assert c.delete(f"{B}/tasks/t_aaaa0001").status_code == 405  # Aufgaben lassen sich nicht löschen
     assert not [x for x in mock.state.calls if x[0] == "DELETE"]
-    assert not [p for p in app.openapi()["paths"] if "_kanban" in p and "delete" in app.openapi()["paths"][p] and not p.endswith("/links")]
+    paths = app.openapi()["paths"]
+    assert sorted(p for p in paths if "_kanban" in p and "delete" in paths[p]) == [
+        "/bff/h/{host}/_kanban/attachments/{attachment_id}",
+        "/bff/h/{host}/_kanban/boards/{slug}",  # archiviert nur, kein hartes Löschen
+        "/bff/h/{host}/_kanban/links",
+    ]
 
 
 def test_boards_create_and_update(kb):
