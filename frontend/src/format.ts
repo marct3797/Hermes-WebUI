@@ -1,6 +1,10 @@
 /** Zahlen und Zeiten für die Anzeige: deutsches Format, Zahlen in Mono. */
 import { getPreferences } from "./preferences";
-import { t as tr } from "./i18n";
+import { getLanguage, t as tr } from "./i18n";
+
+/** Zahlen- und Datumsformat folgt der gewählten Oberflächensprache (nicht fest Deutsch). Englisch als en-GB: Tag.Monat und 24 Stunden. */
+const LOCALES: Record<string, string> = { en: "en-GB", "zh-hant": "zh-Hant" };
+export const loc = (): string => LOCALES[getLanguage()] ?? getLanguage();
 
 export const dec = (n: number, digits = 1) => n.toFixed(digits).replace(".", ",");
 
@@ -23,11 +27,11 @@ export function fmtClock(totalSeconds: number): string {
 export const plainPreview = (md: string) =>
   md.replace(/```[\s\S]*?```/g, " [Code] ").replace(/[*_`#>~]/g, "").replace(/\s+/g, " ").trim();
 
-export const fmtCount = (n: number) => n.toLocaleString("de-DE");
+export const fmtCount = (n: number) => n.toLocaleString(loc());
 
-export const fmtTime = (ms: number) => new Date(ms).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", hour12: getPreferences().timeFormat === "12h" });
-export const fmtTimeSec = (ms: number) => new Date(ms).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: getPreferences().timeFormat === "12h" });
-export const fmtDay = (ms: number) => new Date(ms).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+export const fmtTime = (ms: number) => new Date(ms).toLocaleTimeString(loc(), { hour: "2-digit", minute: "2-digit", hour12: getPreferences().timeFormat === "12h" });
+export const fmtTimeSec = (ms: number) => new Date(ms).toLocaleTimeString(loc(), { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: getPreferences().timeFormat === "12h" });
+export const fmtDay = (ms: number) => new Date(ms).toLocaleDateString(loc(), { day: "2-digit", month: "2-digit" });
 
 /** Epoche in Sekunden oder Millisekunden sowie ISO-Texte; alles andere ergibt `undefined`. */
 export function toMs(t: number | string | undefined): number | undefined {
@@ -66,14 +70,14 @@ export function toolIcon(name: string): string {
 export function fmtAgo(ms: number, now = Date.now()): string {
   const s = Math.max(0, (now - ms) / 1000);
   if (s < 60) return tr("gerade eben");
-  if (s < 3600) return `vor ${Math.floor(s / 60)} Min`;
-  if (s < 86_400) return `vor ${Math.floor(s / 3600)} Std`;
-  return `vor ${Math.floor(s / 86_400)} T`;
+  if (s < 3600) return tr("vor {n} Min", { n: Math.floor(s / 60) });
+  if (s < 86_400) return tr("vor {n} Std", { n: Math.floor(s / 3600) });
+  return tr("vor {n} T", { n: Math.floor(s / 86_400) });
 }
 
 /** Do 22.10. */
 export function fmtDate(ms: number): string {
   const d = new Date(ms);
-  const day = d.toLocaleDateString("de-DE", { weekday: "short" }).replace(".", "");
-  return `${day} ${d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}`;
+  const day = d.toLocaleDateString(loc(), { weekday: "short" }).replace(".", "");
+  return `${day} ${d.toLocaleDateString(loc(), { day: "2-digit", month: "2-digit" })}`;
 }

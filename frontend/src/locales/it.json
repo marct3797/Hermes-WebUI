@@ -2347,5 +2347,16 @@
  "Zustimmen und einschalten": "Accetta e attiva",
  "Zuweisung": "Assegnazione",
  "Zwei Mitglieder tragen denselben Namen; ändere einen Anzeigenamen in der hosts.json": "Due membri hanno lo stesso nome; modifica un nome visualizzato in hosts.json",
- "Zweite Meinung (SkillEvaluator): {passed}, {findings} Funde.": "Secondo parere (SkillEvaluator): {passed}, {findings} riscontri."
+ "Zweite Meinung (SkillEvaluator): {passed}, {findings} Funde.": "Secondo parere (SkillEvaluator): {passed}, {findings} riscontri.",
+ "Anmeldung fehlt": "Accesso mancante",
+ "Einrichtung fehlt": "Configurazione mancante",
+ "fehlgeschlagen": "non riuscito",
+ "getrennt": "disconnesso",
+ "Key fehlt": "Chiave mancante",
+ "Nachricht an {name} … · {hint}": "Messaggio a {name} … · {hint}",
+ "Nachricht an {name}…": "Messaggio a {name}…",
+ "Programm fehlt": "Programma mancante",
+ "vor {n} Min": "{n} min fa",
+ "vor {n} Std": "{n} h fa",
+ "vor {n} T": "{n} g fa"
 }

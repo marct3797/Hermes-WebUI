@@ -2347,5 +2347,16 @@
  "Zustimmen und einschalten": "Aceptar y activar",
  "Zuweisung": "Asignación",
  "Zwei Mitglieder tragen denselben Namen; ändere einen Anzeigenamen in der hosts.json": "Dos miembros comparten el mismo nombre; cambia un nombre visible en hosts.json",
- "Zweite Meinung (SkillEvaluator): {passed}, {findings} Funde.": "Segunda opinión (SkillEvaluator): {passed}, {findings} hallazgos."
+ "Zweite Meinung (SkillEvaluator): {passed}, {findings} Funde.": "Segunda opinión (SkillEvaluator): {passed}, {findings} hallazgos.",
+ "Anmeldung fehlt": "Falta iniciar sesión",
+ "Einrichtung fehlt": "Falta configuración",
+ "fehlgeschlagen": "falló",
+ "getrennt": "desconectado",
+ "Key fehlt": "Falta la clave",
+ "Nachricht an {name} … · {hint}": "Mensaje a {name} … · {hint}",
+ "Nachricht an {name}…": "Mensaje a {name}…",
+ "Programm fehlt": "Falta el programa",
+ "vor {n} Min": "hace {n} min",
+ "vor {n} Std": "hace {n} h",
+ "vor {n} T": "hace {n} d"
 }

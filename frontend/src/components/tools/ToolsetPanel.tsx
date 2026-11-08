@@ -4,7 +4,7 @@ import type { AgentRef, ToolProvider, ToolsetRow } from "../../types";
 import { type Async, useAsync } from "../../useAsync";
 import { Icon } from "../Icon";
 import { StepUpNote, webUrl } from "../providers/StepUpNote";
-import { t } from "../../i18n";
+import { N_, t } from "../../i18n";
 
 type Props = { agent: AgentRef; row: ToolsetRow; onChanged: () => void };
 
@@ -14,7 +14,7 @@ function kept<T>(now: Async<T>, last: { current?: T }): T | undefined {
   return now.data ?? last.current;
 }
 
-const STATUS: Record<string, string> = { ready: "bereit", needs_keys: "Key fehlt", needs_auth: "Anmeldung fehlt", needs_setup: "Einrichtung fehlt" };
+const STATUS: Record<string, string> = { ready: N_("bereit"), needs_keys: N_("Key fehlt"), needs_auth: N_("Anmeldung fehlt"), needs_setup: N_("Einrichtung fehlt") };
 
 /**
  * Eine Werkzeug-Gruppe einrichten: ein- und ausschalten, Anbieter wählen, Werkzeug-Keys eintragen, Modell wählen.
@@ -99,7 +99,7 @@ function Provider({ provider: p, name, busy, onChoose, onKey }: {
       <div className="row" style={{ gap: 8 }}>
         <b>{p.name}</b>
         {p.badge && <span className="tag tag-m">{p.badge}</span>}
-        {p.status && <span className="tag">{STATUS[p.status] ?? p.status}</span>}
+        {p.status && <span className="tag">{STATUS[p.status] ? t(STATUS[p.status]) : p.status}</span>}
         {p.is_active && <span className="tag tag-c">{t("aktiv")}</span>}
         {parts.length > 0 ? parts.map((c) => (
           <button key={c} type="button" className="btn btn-s btn-g" disabled={busy} aria-label={t("{name} für {Extraktion} wählen", { name: p.name, Extraktion: c === "search" ? t("Suche") : t("Extraktion") })} onClick={() => onChoose(c)}>

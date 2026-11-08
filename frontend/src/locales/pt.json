@@ -2347,5 +2347,16 @@
  "Zustimmen und einschalten": "Concordar e ativar",
  "Zuweisung": "Atribuição",
  "Zwei Mitglieder tragen denselben Namen; ändere einen Anzeigenamen in der hosts.json": "Dois membros têm o mesmo nome; altere um nome visível no hosts.json",
- "Zweite Meinung (SkillEvaluator): {passed}, {findings} Funde.": "Segunda opinião (SkillEvaluator): {passed}, {findings} achados."
+ "Zweite Meinung (SkillEvaluator): {passed}, {findings} Funde.": "Segunda opinião (SkillEvaluator): {passed}, {findings} achados.",
+ "Anmeldung fehlt": "Falta o login",
+ "Einrichtung fehlt": "Falta a configuração",
+ "fehlgeschlagen": "falhou",
+ "getrennt": "desconectado",
+ "Key fehlt": "Falta a chave",
+ "Nachricht an {name} … · {hint}": "Mensagem para {name} … · {hint}",
+ "Nachricht an {name}…": "Mensagem para {name}…",
+ "Programm fehlt": "Falta o programa",
+ "vor {n} Min": "há {n} min",
+ "vor {n} Std": "há {n} h",
+ "vor {n} T": "há {n} d"
 }

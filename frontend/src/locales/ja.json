@@ -2347,5 +2347,16 @@
  "Zustimmen und einschalten": "同意して有効にする",
  "Zuweisung": "割り当て",
  "Zwei Mitglieder tragen denselben Namen; ändere einen Anzeigenamen in der hosts.json": "2件のメンバーが同じ名前です。hosts.json で表示名を変更してください",
- "Zweite Meinung (SkillEvaluator): {passed}, {findings} Funde.": "セカンドオピニオン (SkillEvaluator): {passed}、{findings}件の所見。"
+ "Zweite Meinung (SkillEvaluator): {passed}, {findings} Funde.": "セカンドオピニオン (SkillEvaluator): {passed}、{findings}件の所見。",
+ "Anmeldung fehlt": "ログインが未設定",
+ "Einrichtung fehlt": "セットアップが未完了",
+ "fehlgeschlagen": "失敗",
+ "getrennt": "切断",
+ "Key fehlt": "キーが未設定",
+ "Nachricht an {name} … · {hint}": "{name} へのメッセージ … · {hint}",
+ "Nachricht an {name}…": "{name} へのメッセージ…",
+ "Programm fehlt": "プログラムが見つかりません",
+ "vor {n} Min": "{n} 分前",
+ "vor {n} Std": "{n} 時間前",
+ "vor {n} T": "{n} 日前"
 }

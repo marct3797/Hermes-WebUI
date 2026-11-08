@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { api } from "../../api";
-import { fmtCount } from "../../format";
+import { fmtCount, loc } from "../../format";
 import type { MemRow } from "../../types";
 import { useAsync } from "../../useAsync";
 import { t as tr } from "../../i18n";
@@ -8,7 +8,7 @@ import { t as tr } from "../../i18n";
 const cut = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 const SHOWN = 500; // shortcut: mehr Zeilen auf einmal machen den DOM träge; Filter eingrenzen oder sortieren, bis eine Seitenlogik nötig wird
 export type Range = { from: number; to: number; label: string };
-export const dayLabel = (ms: number, timeZone?: string) => new Date(ms).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", timeZone });
+export const dayLabel = (ms: number, timeZone?: string) => new Date(ms).toLocaleDateString(loc(), { day: "2-digit", month: "2-digit", year: "numeric", timeZone });
 
 /** Tabelle der geladenen Erinnerungen. Sortierbar nach Datum und Kontext; ein Klick auf die Zeile wählt wie ein Klick auf den Knoten. */
 export function GraphTable({ rows, selectedId, onSelect, range, onClearRange }: { rows: MemRow[]; selectedId?: string; onSelect: (id: string) => void; range?: Range; onClearRange: () => void }) {
@@ -36,7 +36,7 @@ export function GraphTable({ rows, selectedId, onSelect, range, onClearRange }: 
                   <td><button type="button" className="mem-open" onClick={() => onSelect(r.id)}>{cut(r.text ?? r.id, 220)}</button></td>
                   <td className="small">{r.context ?? "—"}</td>
                   <td className="small">{r.entities.length ? cut(r.entities.join(", "), 80) : "—"}</td>
-                  <td className="small mono">{r.date ? new Date(r.date).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" }) : "—"}</td>
+                  <td className="small mono">{r.date ? new Date(r.date).toLocaleString(loc(), { dateStyle: "short", timeStyle: "short" }) : "—"}</td>
                 </tr>
               ))}
             </tbody>

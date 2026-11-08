@@ -4,9 +4,9 @@ import { Icon } from "../components/Icon";
 import { PageHead } from "../components/PageHead";
 import { StepUpNote } from "../components/providers/StepUpNote";
 import type { AgentRef, HmField, HmFileName, HmOverview, HmProvider } from "../types";
-import { t } from "../i18n";
+import { N_, t } from "../i18n";
 
-const STATUS: Record<string, string> = { ready: "bereit", needs_config: "Key fehlt", unavailable: "Programm fehlt", get missing() { return t("nicht gefunden"); } };
+const STATUS: Record<string, string> = { ready: N_("bereit"), needs_config: N_("Key fehlt"), unavailable: N_("Programm fehlt"), missing: N_("nicht gefunden") };
 const FILES = [["memory", "MEMORY.md"], ["user", "USER.md"]] as const;
 const MEM_NAMES: HmFileName[] = ["MEMORY.md", "USER.md"];
 const MEM_LIMIT = 262144;
@@ -185,7 +185,7 @@ function Provider({ agent, p, active, onChanged }: { agent: AgentRef; p: HmProvi
     <section className="card tool-panel" role="region" aria-label={`Anbieter ${p.name}`}>
       <div className="row" style={{ gap: 8 }}>
         <b>{p.label ?? p.name}</b>
-        <span className="tag">{STATUS[p.status ?? ""] ?? p.status}</span>
+        <span className="tag">{STATUS[p.status ?? ""] ? t(STATUS[p.status ?? ""]) : p.status}</span>
         {active && <span className="tag tag-c">{t("aktiv")}</span>}
         <span className="grow" />
         {active && <button type="button" className="btn btn-s btn-g" disabled={busy} onClick={async () => { if (await run(() => api.hmSetProvider(agent, ""))) onChanged(); }}>{t("Eingebautes Gedächtnis verwenden")}</button>}

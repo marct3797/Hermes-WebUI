@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { robustBounds, createSim, fitView, hitTest, settled, setEdges, step, toScreen, type Sim, type View } from "../../graphForce";
 import { linkColor } from "../../graphColor";
 import type { MemEdge, MemNode } from "../../types";
+import { loc } from "../../format";
 import { t as tr } from "../../i18n";
 
 const WARMUP = 100;
@@ -214,7 +215,7 @@ export function Constellation({ nodes, edges, colors, selected, highlight, onSel
       {tip && hover && (
         <div className="graph-tip" role="tooltip" style={{ left: Math.min(hover.x + 14, size.current.w - 260), top: hover.y + 14 }}>
           <p>{cut(tip.text ?? tip.label, 160)}</p>
-          <p className="muted small mono">{[tip.date ? new Date(tip.date).toLocaleDateString("de-DE") : null, tip.context].filter(Boolean).join(" · ")}</p>
+          <p className="muted small mono">{[tip.date ? new Date(tip.date).toLocaleDateString(loc()) : null, tip.context].filter(Boolean).join(" · ")}</p>
           {tip.entities.length > 0 && <p className="muted small">{cut(tip.entities.join(", "), 100)}</p>}
         </div>
       )}

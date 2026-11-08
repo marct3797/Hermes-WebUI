@@ -304,7 +304,7 @@ export function Composer(p: Props) {
     if (e.key === "Enter" && !e.shiftKey && (prefs.enterSends || e.ctrlKey || e.metaKey)) { e.preventDefault(); void submit(); }
   };
 
-  const placeholder = p.disabled ? t("{name} ist nicht erreichbar", { name: p.name }) : p.busy ? `Nachricht an ${p.name} … · ${MODE_HINT[mode]}` : `Nachricht an ${p.name}…`;
+  const placeholder = p.disabled ? t("{name} ist nicht erreichbar", { name: p.name }) : p.busy ? t("Nachricht an {name} … · {hint}", { name: p.name, hint: MODE_HINT[mode] }) : t("Nachricht an {name}…", { name: p.name });
   const groups = [...new Set(items.map((i) => i.group))];
   let index = -1;
 

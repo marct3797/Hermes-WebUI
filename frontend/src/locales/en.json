@@ -2347,5 +2347,16 @@
  "Zustimmen und einschalten": "Agree and turn on",
  "Zuweisung": "Assignment",
  "Zwei Mitglieder tragen denselben Namen; ändere einen Anzeigenamen in der hosts.json": "Two members share the same name; change a display name in hosts.json",
- "Zweite Meinung (SkillEvaluator): {passed}, {findings} Funde.": "Second opinion (SkillEvaluator): {passed}, {findings} findings."
+ "Zweite Meinung (SkillEvaluator): {passed}, {findings} Funde.": "Second opinion (SkillEvaluator): {passed}, {findings} findings.",
+ "Anmeldung fehlt": "Sign-in missing",
+ "Einrichtung fehlt": "Setup missing",
+ "fehlgeschlagen": "failed",
+ "getrennt": "disconnected",
+ "Key fehlt": "Key missing",
+ "Nachricht an {name} … · {hint}": "Message to {name} … · {hint}",
+ "Nachricht an {name}…": "Message to {name}…",
+ "Programm fehlt": "Program missing",
+ "vor {n} Min": "{n} min ago",
+ "vor {n} Std": "{n} h ago",
+ "vor {n} T": "{n} d ago"
 }

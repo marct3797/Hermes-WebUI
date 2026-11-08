@@ -18,7 +18,7 @@ import { useChat } from "../useChat";
 import { parseModelOptions, type ModelGroup } from "../models";
 import { useNow } from "../useNow";
 import { usePreferences } from "../preferences";
-import { t as tr } from "../i18n";
+import { N_, t as tr } from "../i18n";
 
 type Props = { agent: AgentRef; label: string; runtimeLabel: string; sessionId?: string };
 
@@ -29,7 +29,7 @@ const OFFLINE_HINT: Record<string, string> = {
   get unreachable() { return tr("Der Agent ist nicht erreichbar."); },
 };
 
-const RUN_LABEL = { idle: "bereit", starting: "startet …", running: "arbeitet …", done: "fertig", failed: "fehlgeschlagen", stopped: "gestoppt", lost: "getrennt" } as const;
+const RUN_LABEL = { idle: N_("bereit"), starting: N_("startet …"), running: N_("arbeitet …"), done: N_("fertig"), failed: N_("fehlgeschlagen"), stopped: N_("gestoppt"), lost: N_("getrennt") } as const;
 type Approval = Extract<Item, { kind: "approval" }>;
 
 export function ChatPage({ agent, label, runtimeLabel, sessionId }: Props) {
@@ -198,7 +198,7 @@ export function ChatPage({ agent, label, runtimeLabel, sessionId }: Props) {
             onSendQueued={chat.sendQueued} onDropQueued={chat.dropQueued} />
           <div className="dockw"><div className="tkrail" aria-label={tr("Status")}>
             {tokens != null && <span className="cnt"><Icon name="layers" size={12} /><b>{fmtCount(tokens)}</b> {tr("tok")}</span>}
-            <span>{RUN_LABEL[state.runStatus]}</span>
+            <span>{tr(RUN_LABEL[state.runStatus])}</span>
             {busy && <span className="r cnt"><i className="dot dot-run" />{tr("Live")}</span>}
           </div></div>
         </div>

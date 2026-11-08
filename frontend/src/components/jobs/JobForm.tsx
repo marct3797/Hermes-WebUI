@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from "react";
 import { describeInterval, nextRuns } from "../../cronPreview";
 import type { Job, JobInput, Target } from "../../opsApi";
+import { loc } from "../../format";
 import { N_, t as tr } from "../../i18n";
 
-const when = (d: Date) => d.toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-export const stamp = (iso: string | null) => (iso && !Number.isNaN(Date.parse(iso)) ? new Date(iso).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "–");
+const when = (d: Date) => d.toLocaleString(loc(), { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+export const stamp = (iso: string | null) => (iso && !Number.isNaN(Date.parse(iso)) ? new Date(iso).toLocaleString(loc(), { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "–");
 
 export function SchedulePreview({ value }: { value: string }) {
   const v = value.trim();

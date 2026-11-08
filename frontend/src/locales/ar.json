@@ -2347,5 +2347,16 @@
  "Zustimmen und einschalten": "وافق وشغّل",
  "Zuweisung": "التعيين",
  "Zwei Mitglieder tragen denselben Namen; ändere einen Anzeigenamen in der hosts.json": "يحمل عضوان الاسم نفسه؛ غيّر اسما معروضا في hosts.json",
- "Zweite Meinung (SkillEvaluator): {passed}, {findings} Funde.": "رأي ثانٍ (SkillEvaluator): {passed}، {findings} نتائج."
+ "Zweite Meinung (SkillEvaluator): {passed}, {findings} Funde.": "رأي ثانٍ (SkillEvaluator): {passed}، {findings} نتائج.",
+ "Anmeldung fehlt": "تسجيل الدخول مفقود",
+ "Einrichtung fehlt": "الإعداد مفقود",
+ "fehlgeschlagen": "فشل",
+ "getrennt": "غير متصل",
+ "Key fehlt": "المفتاح مفقود",
+ "Nachricht an {name} … · {hint}": "رسالة إلى {name} … · {hint}",
+ "Nachricht an {name}…": "رسالة إلى {name}…",
+ "Programm fehlt": "البرنامج مفقود",
+ "vor {n} Min": "قبل {n} دقيقة",
+ "vor {n} Std": "قبل {n} ساعة",
+ "vor {n} T": "قبل {n} يوم"
 }

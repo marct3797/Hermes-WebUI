@@ -2347,5 +2347,16 @@
  "Zustimmen und einschalten": "Kabul et ve aç",
  "Zuweisung": "Atama",
  "Zwei Mitglieder tragen denselben Namen; ändere einen Anzeigenamen in der hosts.json": "İki üye aynı adı taşıyor; hosts.json içinde görünen adı değiştir",
- "Zweite Meinung (SkillEvaluator): {passed}, {findings} Funde.": "İkinci görüş (SkillEvaluator): {passed}, {findings} bulgu."
+ "Zweite Meinung (SkillEvaluator): {passed}, {findings} Funde.": "İkinci görüş (SkillEvaluator): {passed}, {findings} bulgu.",
+ "Anmeldung fehlt": "Oturum açma eksik",
+ "Einrichtung fehlt": "Kurulum eksik",
+ "fehlgeschlagen": "başarısız",
+ "getrennt": "bağlantı kesildi",
+ "Key fehlt": "Anahtar eksik",
+ "Nachricht an {name} … · {hint}": "{name} için mesaj … · {hint}",
+ "Nachricht an {name}…": "{name} için mesaj…",
+ "Programm fehlt": "Program eksik",
+ "vor {n} Min": "{n} dk önce",
+ "vor {n} Std": "{n} sa önce",
+ "vor {n} T": "{n} gün önce"
 }

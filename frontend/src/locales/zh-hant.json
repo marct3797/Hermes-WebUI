@@ -2347,5 +2347,16 @@
  "Zustimmen und einschalten": "同意並啟用",
  "Zuweisung": "指派",
  "Zwei Mitglieder tragen denselben Namen; ändere einen Anzeigenamen in der hosts.json": "兩名成員同名；請於 hosts.json 修改顯示名",
- "Zweite Meinung (SkillEvaluator): {passed}, {findings} Funde.": "第二意見 (SkillEvaluator)：{passed}，發現 {findings} 個。"
+ "Zweite Meinung (SkillEvaluator): {passed}, {findings} Funde.": "第二意見 (SkillEvaluator)：{passed}，發現 {findings} 個。",
+ "Anmeldung fehlt": "缺少登入",
+ "Einrichtung fehlt": "缺少設定",
+ "fehlgeschlagen": "失敗",
+ "getrennt": "已中斷",
+ "Key fehlt": "缺少金鑰",
+ "Nachricht an {name} … · {hint}": "給 {name} 的訊息 … · {hint}",
+ "Nachricht an {name}…": "給 {name} 的訊息…",
+ "Programm fehlt": "缺少程式",
+ "vor {n} Min": "{n} 分鐘前",
+ "vor {n} Std": "{n} 小時前",
+ "vor {n} T": "{n} 天前"
 }

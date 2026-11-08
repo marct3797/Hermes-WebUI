@@ -2347,5 +2347,16 @@
  "Zustimmen und einschalten": "동의 및 켜기",
  "Zuweisung": "할당",
  "Zwei Mitglieder tragen denselben Namen; ändere einen Anzeigenamen in der hosts.json": "두 구성원이 같은 이름을 공유합니다. hosts.json에서 표시 이름을 변경하십시오",
- "Zweite Meinung (SkillEvaluator): {passed}, {findings} Funde.": "두 번째 의견(SkillEvaluator): {passed}, 발견 {findings}건."
+ "Zweite Meinung (SkillEvaluator): {passed}, {findings} Funde.": "두 번째 의견(SkillEvaluator): {passed}, 발견 {findings}건.",
+ "Anmeldung fehlt": "로그인 필요",
+ "Einrichtung fehlt": "설정 필요",
+ "fehlgeschlagen": "실패",
+ "getrennt": "연결 끊김",
+ "Key fehlt": "키 없음",
+ "Nachricht an {name} … · {hint}": "{name}에게 메시지 … · {hint}",
+ "Nachricht an {name}…": "{name}에게 메시지…",
+ "Programm fehlt": "프로그램 없음",
+ "vor {n} Min": "{n}분 전",
+ "vor {n} Std": "{n}시간 전",
+ "vor {n} T": "{n}일 전"
 }
