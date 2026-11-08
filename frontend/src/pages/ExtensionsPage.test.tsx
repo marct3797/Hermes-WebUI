@@ -219,3 +219,21 @@ describe("Erweiterungen: Plugins", () => {
     expect(bff.find("POST", "/plugins/install")[0].body).toEqual({ identifier: "owner/repo" });
   });
 });
+
+describe("Erweiterungen: Plugin-Aktualisierung", () => {
+  it("schaltet die automatische Aktualisierung und aktualisiert alles erst nach dem Bestätigungswort", async () => {
+    render(<ExtensionsPage host="server" />);
+    fireEvent.click(await screen.findByRole("tab", { name: /Plugins/ }));
+    const sw = await screen.findByRole("switch", { name: "Automatisch aktualisieren" });
+    expect(sw).toHaveAttribute("aria-checked", "false");
+    fireEvent.click(sw);
+    await waitFor(() => expect(screen.getByRole("switch", { name: "Automatisch aktualisieren" })).toHaveAttribute("aria-checked", "true"));
+    expect(bff.find("PUT", "/plugins/auto-update")[0].body).toEqual({ enabled: true });
+    const go = screen.getByRole("button", { name: "Alle Plugins aktualisieren" });
+    expect(go).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Zum Aktualisieren „aktualisieren“ eintippen"), { target: { value: "aktualisieren" } });
+    fireEvent.click(go);
+    await screen.findByText(/braucht deine Prüfung/);
+    expect(bff.find("POST", "/plugins/update-all")[0].body).toEqual({ confirm: "aktualisieren" });
+  });
+});

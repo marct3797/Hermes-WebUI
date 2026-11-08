@@ -229,6 +229,22 @@ def create_mock(verdict: str = "safe") -> FastAPI:
     async def plugin_catalog():
         return s.fx["plugin_catalog"]
 
+    @app.get("/api/dashboard/plugins/auto-update")
+    async def plugin_auto_get():
+        return {"auto_apply": getattr(s, "auto_apply", False), "check_hours": 24}
+
+    @app.put("/api/dashboard/plugins/auto-update")
+    async def plugin_auto_put(request: Request):
+        if not getattr(s, "drop_auto", False):
+            s.auto_apply = bool(body_of(request)["enabled"])
+        return {"auto_apply": getattr(s, "auto_apply", False), "check_hours": 24}
+
+    @app.post("/api/dashboard/agent-plugins/update-all")
+    async def plugin_update_all():
+        return {"results": [{"name": "alpha-plugin", "status": "updated", "detail": ""}, {"name": "beta-plugin", "status": "needs_review", "detail": "new capabilities in /opt/example/plugins/beta"},
+                            {"name": "weird", "status": "unbekannt", "detail": ""}],
+                "skipped": [{"name": "pinned-one", "reason": "pinned"}], "current": 3}
+
     @app.post("/api/dashboard/agent-plugins/install")
     async def plugin_install(request: Request):
         b = body_of(request)

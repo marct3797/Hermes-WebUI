@@ -73,6 +73,9 @@ export const extApi = {
   pluginCatalog: (h: string, p: string) => call<{ entries: PluginCatalogEntry[] }>("GET", `${ext(h, p)}/plugins/catalog`),
   pluginAction: (h: string, p: string, n: string, action: "enable" | "disable" | "update", accept = false) =>
     call<PluginResult>("POST", `${ext(h, p)}/plugins/${e(n)}/${action}`, accept ? { accept_capabilities: true } : {}),
+  pluginAutoUpdate: (h: string, p: string) => call<{ auto_apply: boolean; check_hours: number | null }>("GET", `${ext(h, p)}/plugins/auto-update`),
+  setPluginAutoUpdate: (h: string, p: string, enabled: boolean) => call<{ auto_apply: boolean; check_hours: number | null }>("PUT", `${ext(h, p)}/plugins/auto-update`, { enabled }),
+  updateAllPlugins: (h: string, p: string, confirm: string) => call<{ results: Array<{ name: string; status: string; detail: string }>; skipped: Array<{ name: string; reason: string }>; current: number }>("POST", `${ext(h, p)}/plugins/update-all`, { confirm }),
   removePlugin: (h: string, p: string, n: string) => call<{ ok: boolean }>("DELETE", `${ext(h, p)}/plugins/${e(n)}`),
   installPlugin: (h: string, p: string, body: { identifier?: string; catalog_name?: string; force?: boolean }) => call<PluginResult>("POST", `${ext(h, p)}/plugins/install`, body),
 

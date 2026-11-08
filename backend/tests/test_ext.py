@@ -535,3 +535,22 @@ def test_skill_lock_is_read_back_and_visible_in_the_list(ext):
     assert c.put(f"{E}/skills/gibt-es-nicht/lock", json={"locked": True}).status_code == 404
     s.drop_lock = True  # das Dashboard antwortet ok, übernimmt aber nichts
     assert c.put(f"{E}/skills/alpha/lock", json={"locked": False}).status_code == 502
+
+
+def test_plugin_auto_update_needs_fresh_login_and_is_read_back(ext):
+    c, s, _reg, _tmp = ext
+    assert c.get(f"{E}/plugins/auto-update").json() == {"auto_apply": False, "check_hours": 24}
+    assert c.put(f"{E}/plugins/auto-update", json={"enabled": "ja"}).status_code == 422
+    assert c.put(f"{E}/plugins/auto-update", json={"enabled": True}).json()["auto_apply"] is True
+    s.drop_auto = True
+    assert c.put(f"{E}/plugins/auto-update", json={"enabled": False}).status_code == 502  # Dashboard übernimmt nichts
+
+
+def test_plugin_update_all_needs_the_word_and_reports_review_without_paths(ext):
+    c, _s, _reg, tmp = ext
+    assert c.post(f"{E}/plugins/update-all", json={"confirm": "ja"}).status_code == 422
+    r = c.post(f"{E}/plugins/update-all", json={"confirm": "aktualisieren"})
+    assert r.status_code == 200, r.text
+    b = r.json()
+    assert [x["status"] for x in b["results"]] == ["updated", "needs_review"]  # unbekannte Zustände fallen weg
+    assert "/opt/example" not in r.text and b["skipped"] == [{"name": "pinned-one", "reason": "pinned"}] and b["current"] == 3

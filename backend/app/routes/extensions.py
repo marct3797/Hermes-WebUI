@@ -12,11 +12,13 @@ from typing import Annotated, Any, Literal
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Request
+from pydantic import Field
 
 from ..auth import User, current_user, fresh_user
-from ..extensions import (Lock, MCP_NAME_RE, PLUGIN_NAME_RE, SKILL_OLD_RE, CatalogInstall, McpNew, PluginInstall, PluginUpdate, SkillNew, SkillSave,
+from ..extensions import (Lock, Strict, trim, MCP_NAME_RE, PLUGIN_NAME_RE, SKILL_OLD_RE, CatalogInstall, McpNew, PluginInstall, PluginUpdate, SkillNew, SkillSave,
                           Toggle, check_skill_content, mcp_catalog_view, mcp_test_view, mcp_view, plugin_catalog_view, plugin_view, skill_view)
 from ._dash import dash
+from .ops_more import strip_paths as strip_path
 from .operations import HostId, ProfileId
 
 router = APIRouter(prefix="/bff")
@@ -257,6 +259,51 @@ async def plugin_action(request: Request, host: HostId, profile: ProfileId, name
     raw = await dash(request, host, "POST", f"/api/dashboard/agent-plugins/{quote(name, safe='')}/{action}", body=send)
     rec(request, user, f"ext.plugin.{action}", host, profile=profile, plugin=name)
     return _action_result(raw)
+
+
+@router.get(P + "/plugins/auto-update")
+async def plugin_auto_update(request: Request, host: HostId, profile: ProfileId, _user: User = Depends(current_user)):
+    return _auto_state(await dash(request, host, "GET", "/api/dashboard/plugins/auto-update"))
+
+
+def _auto_state(raw: Any) -> dict[str, Any]:
+    if not isinstance(raw, dict) or not isinstance(raw.get("auto_apply"), bool):
+        raise HTTPException(502, "Das Dashboard liefert die Plugin-Aktualisierung in unbekannter Form")
+    hours = raw.get("check_hours")
+    return {"auto_apply": raw["auto_apply"], "check_hours": hours if isinstance(hours, (int, float)) and not isinstance(hours, bool) else None}
+
+
+@router.put(P + "/plugins/auto-update")
+async def plugin_auto_update_set(request: Request, host: HostId, profile: ProfileId, body: Toggle, user: User = Depends(fresh_user)):
+    """Automatisch aktualisieren führt neuen Plugin-Code ohne Rückfrage aus: darum frische Anmeldung und Gegenlesen."""
+    request.app.state.limiter.check(f"{user.id}:ext-plugin-auto")
+    await dash(request, host, "PUT", "/api/dashboard/plugins/auto-update", body={"enabled": body.enabled})
+    state = _auto_state(await dash(request, host, "GET", "/api/dashboard/plugins/auto-update"))
+    if state["auto_apply"] != body.enabled:
+        raise HTTPException(502, "Das Dashboard hat die automatische Aktualisierung nicht übernommen")
+    rec(request, user, "ext.plugin.auto_update_on" if body.enabled else "ext.plugin.auto_update_off", host, profile=profile)
+    return state
+
+
+class UpdateAll(Strict):
+    confirm: str = Field(max_length=30)
+
+
+@router.post(P + "/plugins/update-all")
+async def plugin_update_all(request: Request, host: HostId, profile: ProfileId, body: UpdateAll, user: User = Depends(fresh_user)):
+    """Alle Plugins mit Update ohne Rückfrage aktualisieren. Was Prüfung braucht (neue Berechtigungen, Warnung der Sicherheitsprüfung),
+    kommt als `needs_review` zurück und ändert nichts; das geht dann einzeln über das Plugin."""
+    if body.confirm.strip() != "aktualisieren":
+        raise HTTPException(422, "Zum Bestätigen „aktualisieren“ eintippen.")
+    request.app.state.limiter.check(f"{user.id}:ext-plugin-update-all")
+    raw = await dash(request, host, "POST", "/api/dashboard/agent-plugins/update-all", body={})
+    if not isinstance(raw, dict) or not isinstance(raw.get("results"), list):
+        raise HTTPException(502, "Das Dashboard liefert das Ergebnis in unbekannter Form")
+    status = ("updated", "current", "failed", "needs_review")
+    results = [{"name": trim(r.get("name"), 100), "status": r["status"], "detail": strip_path(trim(r.get("detail"), 300))} for r in raw["results"] if isinstance(r, dict) and r.get("status") in status]
+    skipped = [{"name": trim(r.get("name"), 100), "reason": strip_path(trim(r.get("reason"), 300))} for r in raw.get("skipped") or [] if isinstance(r, dict)]
+    rec(request, user, "ext.plugin.update_all", host, profile=profile, updated=sum(r["status"] == "updated" for r in results), review=sum(r["status"] == "needs_review" for r in results), failed=sum(r["status"] == "failed" for r in results))
+    return {"results": results, "skipped": skipped, "current": raw["current"] if isinstance(raw.get("current"), int) else 0}
 
 
 @router.delete(P + "/plugins/{name}")
