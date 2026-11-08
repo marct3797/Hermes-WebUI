@@ -107,6 +107,7 @@ describe("Modelle", () => {
     expect(screen.getByText(/Anbieter-Kennungen/)).toBeInTheDocument();
     expect(save).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Nur diese Anbieter"), { target: { value: "anthropic, google-vertex" } });
+    expect((screen.getByLabelText("Sortierung") as HTMLSelectElement).value).toBe("");
     fireEvent.change(screen.getByLabelText("Sortierung"), { target: { value: "throughput" } });
     fireEvent.change(screen.getByLabelText("Datenspeicherung"), { target: { value: "deny" } });
     fireEvent.click(save);

@@ -64,7 +64,8 @@ WRITE_ERRORS = {
     501: "Der Hermes-Client ist in hostd nicht eingerichtet (native_python).",
     409: "Hermes hat die Änderung abgelehnt, zum Beispiel weil die Sitzung nicht gefunden wurde.",
     422: "Hermes hat die Eingabe abgelehnt, zum Beispiel weil das Intervall zu kurz ist.",
-    502: "Der Hermes-Client in hostd hat nicht geantwortet. Läuft der Gateway?",
+    502: "Der Hermes-Client in hostd hat nicht geantwortet.",
+    503: "Der Gateway dieses Profils läuft nicht. hostd startet keinen. Starte ihn und versuche es erneut.",
     504: "Keine Antwort in der Zeit. Das Ergebnis ist unbekannt: lade die Liste neu und prüfe.",
 }
 
@@ -89,4 +90,4 @@ async def change(request: Request, target: Tgt, req: ChangeIn, user: User = Depe
     if not isinstance(body, dict) or body.get("ok") is not True:
         raise HTTPException(502, "Der Host-Dienst liefert die Antwort in einer unbekannten Form")
     audit(request, user, "profile.automation", target, kind=req.kind, change=req.action, session=req.session_id)
-    return {"ok": True, "kind": req.kind, "action": req.action, "status": body.get("status")}
+    return {"ok": True, "kind": req.kind, "action": req.action, "status": body.get("status"), "started": body.get("started") if isinstance(body.get("started"), bool) else None}

@@ -2431,5 +2431,9 @@
  "Was soll regelmäßig geprüft werden?": "要定期检查什么?",
  "Wirklich löschen? Das beendet es für diese Sitzung.": "确定删除吗?这将结束此会话中的该项。",
  "Ziel-Text": "目标文本",
- "Ziele und Heartbeats lassen sich hier setzen, Schleifen nur pausieren, fortsetzen und löschen. Neue Schleifen legst du in Hermes mit /loop an. Änderungen laufen über den Gateway von Hermes und brauchen eine frische Anmeldung.": "在这里可以设置目标和心跳;循环只能暂停、继续和删除。新循环请在 Hermes 中用 /loop 创建。更改通过 Hermes 网关进行,需要近期登录。"
+ "Ziele und Heartbeats lassen sich hier setzen, Schleifen nur pausieren, fortsetzen und löschen. Neue Schleifen legst du in Hermes mit /loop an. Änderungen laufen über den Gateway von Hermes und brauchen eine frische Anmeldung.": "在这里可以设置目标和心跳;循环只能暂停、继续和删除。新循环请在 Hermes 中用 /loop 创建。更改通过 Hermes 网关进行,需要近期登录。",
+ "Gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "已保存,但未能启动运行。将在会话的下一条消息时开始。",
+ "Heartbeat gesetzt.": "心跳已设置。",
+ "Ziel gesetzt. Hermes arbeitet jetzt daran.": "目标已设置。Hermes 正在处理。",
+ "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "目标已保存,但未能启动运行。将在会话的下一条消息时开始。"
 }

@@ -2431,5 +2431,9 @@
  "Was soll regelmäßig geprüft werden?": "Cosa si deve controllare regolarmente?",
  "Wirklich löschen? Das beendet es für diese Sitzung.": "Eliminare davvero? Termina per questa sessione.",
  "Ziel-Text": "Testo dell’obiettivo",
- "Ziele und Heartbeats lassen sich hier setzen, Schleifen nur pausieren, fortsetzen und löschen. Neue Schleifen legst du in Hermes mit /loop an. Änderungen laufen über den Gateway von Hermes und brauchen eine frische Anmeldung.": "Qui puoi impostare obiettivi e heartbeat; i cicli si possono solo mettere in pausa, riprendere ed eliminare. Crea nuovi cicli in Hermes con /loop. Le modifiche passano dal gateway di Hermes e richiedono un accesso recente."
+ "Ziele und Heartbeats lassen sich hier setzen, Schleifen nur pausieren, fortsetzen und löschen. Neue Schleifen legst du in Hermes mit /loop an. Änderungen laufen über den Gateway von Hermes und brauchen eine frische Anmeldung.": "Qui puoi impostare obiettivi e heartbeat; i cicli si possono solo mettere in pausa, riprendere ed eliminare. Crea nuovi cicli in Hermes con /loop. Le modifiche passano dal gateway di Hermes e richiedono un accesso recente.",
+ "Gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "Salvato, ma non è stato possibile avviare l’esecuzione. Partirà con il prossimo messaggio della sessione.",
+ "Heartbeat gesetzt.": "Heartbeat impostato.",
+ "Ziel gesetzt. Hermes arbeitet jetzt daran.": "Obiettivo impostato. Hermes ci sta lavorando.",
+ "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "Obiettivo salvato, ma non è stato possibile avviare l’esecuzione. Partirà con il prossimo messaggio della sessione."
 }

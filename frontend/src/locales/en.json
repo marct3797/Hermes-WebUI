@@ -2431,5 +2431,9 @@
  "Was soll regelmäßig geprüft werden?": "What should be checked regularly?",
  "Wirklich löschen? Das beendet es für diese Sitzung.": "Really delete? This ends it for this session.",
  "Ziel-Text": "Goal text",
- "Ziele und Heartbeats lassen sich hier setzen, Schleifen nur pausieren, fortsetzen und löschen. Neue Schleifen legst du in Hermes mit /loop an. Änderungen laufen über den Gateway von Hermes und brauchen eine frische Anmeldung.": "You can set goals and heartbeats here; loops can only be paused, resumed and deleted. Create new loops in Hermes with /loop. Changes go through the Hermes gateway and need a fresh sign-in."
+ "Ziele und Heartbeats lassen sich hier setzen, Schleifen nur pausieren, fortsetzen und löschen. Neue Schleifen legst du in Hermes mit /loop an. Änderungen laufen über den Gateway von Hermes und brauchen eine frische Anmeldung.": "You can set goals and heartbeats here; loops can only be paused, resumed and deleted. Create new loops in Hermes with /loop. Changes go through the Hermes gateway and need a fresh sign-in.",
+ "Gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "Saved, but the run could not be started. It will start with the next message in the session.",
+ "Heartbeat gesetzt.": "Heartbeat set.",
+ "Ziel gesetzt. Hermes arbeitet jetzt daran.": "Goal set. Hermes is working on it now.",
+ "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "Goal saved, but the run could not be started. It will start with the next message in the session."
 }

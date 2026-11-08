@@ -181,7 +181,7 @@ function knowledgeRoute(url: string, method: string, kn: KnowledgeState, provide
 export type DashState = {
   available: boolean; reason: string | null; soul: string; description: string; model: { provider: string; model: string };
   history: Array<{ id: string; at: string; reason: string; chars: number }>; versions: Record<string, string>; stepUp: boolean;
-  routing: { sort: string; only: string[]; ignore: string[]; order: string[]; require_parameters: boolean; data_collection: string | null }; routingModels: string[];
+  routing: { sort: string | null; only: string[]; ignore: string[]; order: string[]; require_parameters: boolean; data_collection: string | null }; routingModels: string[];
   auto: Array<Record<string, unknown>>;
   keys: Record<string, string>; // gesetzte Anbieter-Keys (Variable → Wert); der Wert verlässt die Attrappe nie
   loggedIn: Set<string>; // Anbieter mit Anmeldung (Codex ist von Anfang an angemeldet)
@@ -514,10 +514,10 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
     if (action === "set") {
       const row = { kind, session_id, title: "Release prüfen", text: String(text), status: "active", ...(kind === "heartbeat" ? { interval_seconds: Number((body as { interval_seconds?: number }).interval_seconds) } : {}) };
       if (hit >= 0) dash.auto[hit] = row; else dash.auto.push(row);
-      return json({ ok: true, kind, action, status: "active" });
+      return json({ ok: true, kind, action, status: "active", started: kind === "goal" });
     }
     if (hit >= 0) dash.auto[hit].status = action === "pause" ? "paused" : "active";
-    return json({ ok: true, kind, action, status: action === "pause" ? "paused" : "active" });
+    return json({ ok: true, kind, action, status: action === "pause" ? "paused" : "active", started: kind === "goal" && action === "resume" ? true : null });
   }
   if (path === "/automation") return json({ available: true, truncated: false, reason: null, items: dash.auto });
   if (/^\/hermes-(credentials|voice|system|computer-use|curator|learning|appearance|privacy)/.test(path)) {
@@ -826,7 +826,7 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
   const quota: { mode: QuotaMode } = { mode: "ok" };
   const dash: DashState = {
     available: true, reason: null, soul: "Du bist Gamma.\nDu antwortest knapp.\n", description: "", model: { provider: "mock", model: "mock-large" },
-    history: [], versions: {}, stepUp: false, routing: { sort: "price", only: [], ignore: [], order: [], require_parameters: false, data_collection: null }, routingModels: ["anthropic/x"],
+    history: [], versions: {}, stepUp: false, routing: { sort: null, only: [], ignore: [], order: [], require_parameters: false, data_collection: null }, routingModels: ["anthropic/x"],
     auto: [
       { kind: "goal", session_id: "s1", title: "Release prüfen", text: "Alle Tests grün", status: "active", turns_used: 3, max_turns: 20, gates: 1, subgoals: ["ruff sauber"], last_reason: "noch 2 rot", last_turn_at: Date.now() / 1000 - 120 },
       { kind: "heartbeat", session_id: "s1", title: "Release prüfen", text: "CI prüfen", status: "paused", interval_seconds: 600, fire_count: 4 },

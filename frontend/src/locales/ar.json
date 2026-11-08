@@ -2431,5 +2431,9 @@
  "Was soll regelmäßig geprüft werden?": "ما الذي يجب فحصه بانتظام؟",
  "Wirklich löschen? Das beendet es für diese Sitzung.": "هل تريد الحذف فعلًا؟ سينتهي لهذه الجلسة.",
  "Ziel-Text": "نص الهدف",
- "Ziele und Heartbeats lassen sich hier setzen, Schleifen nur pausieren, fortsetzen und löschen. Neue Schleifen legst du in Hermes mit /loop an. Änderungen laufen über den Gateway von Hermes und brauchen eine frische Anmeldung.": "يمكنك هنا تعيين الأهداف والنبضات، أما الحلقات فيمكن إيقافها مؤقتًا واستئنافها وحذفها فقط. أنشئ حلقات جديدة في Hermes باستخدام /loop. تمر التغييرات عبر بوابة Hermes وتتطلب تسجيل دخول حديثًا."
+ "Ziele und Heartbeats lassen sich hier setzen, Schleifen nur pausieren, fortsetzen und löschen. Neue Schleifen legst du in Hermes mit /loop an. Änderungen laufen über den Gateway von Hermes und brauchen eine frische Anmeldung.": "يمكنك هنا تعيين الأهداف والنبضات، أما الحلقات فيمكن إيقافها مؤقتًا واستئنافها وحذفها فقط. أنشئ حلقات جديدة في Hermes باستخدام /loop. تمر التغييرات عبر بوابة Hermes وتتطلب تسجيل دخول حديثًا.",
+ "Gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "تم الحفظ، لكن تعذّر بدء التشغيل. سيبدأ مع الرسالة التالية في الجلسة.",
+ "Heartbeat gesetzt.": "تم تعيين النبض.",
+ "Ziel gesetzt. Hermes arbeitet jetzt daran.": "تم تعيين الهدف. يعمل Hermes عليه الآن.",
+ "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "تم حفظ الهدف، لكن تعذّر بدء التشغيل. سيبدأ مع الرسالة التالية في الجلسة."
 }

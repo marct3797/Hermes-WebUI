@@ -142,7 +142,7 @@ FULL = {"sort": "throughput", "only": ["anthropic"], "ignore": ["deepinfra"], "o
 
 def test_routing_defaults_when_nothing_is_configured(env):
     body = env.get(RT).json()
-    assert body["routing"] == {"sort": "price", "only": [], "ignore": [], "order": [], "require_parameters": False, "data_collection": None}
+    assert body["routing"] == {"sort": None, "only": [], "ignore": [], "order": [], "require_parameters": False, "data_collection": None}
     assert body["per_model"] == []
 
 
@@ -155,7 +155,7 @@ def test_routing_is_written_in_full_and_read_back(env):
 
 def test_routing_reset_removes_old_values_despite_deep_merge(env):
     env.put(RT, json=FULL)
-    cleared = {"sort": "price", "only": [], "ignore": [], "order": [], "require_parameters": False, "data_collection": None}
+    cleared = {"sort": None, "only": [], "ignore": [], "order": [], "require_parameters": False, "data_collection": None}
     assert env.put(RT, json=cleared).json()["routing"] == cleared
     assert env.get(RT).json()["routing"] == cleared
 
@@ -165,6 +165,16 @@ def test_routing_keeps_per_model_overrides_and_lists_them(env):
     assert env.get(RT).json()["per_model"] == ["anthropic/x"]
     env.put(RT, json=FULL)
     assert env.dash.state.profiles["default"]["config"]["provider_routing"]["models"] == {"anthropic/x": {"only": ["anthropic"]}}
+
+
+def test_routing_unset_sort_is_the_neutral_value_and_overwrites_an_old_one(env):
+    """Hermes-Standard ist „nicht gesetzt“: Speichern darf keine Preis-Sortierung erzwingen."""
+    assert env.get(RT).json()["routing"]["sort"] is None
+    env.put(RT, json={**FULL, "sort": "latency"})
+    assert env.put(RT, json={**FULL, "sort": None}).json()["routing"]["sort"] is None
+    assert env.dash.state.profiles["default"]["config"]["provider_routing"]["sort"] is None
+    env.dash.state.profiles["default"]["config"].pop("provider_routing")
+    assert env.put(RT, json={}).json()["routing"]["sort"] is None
 
 
 def test_routing_null_removes_data_collection_like_hermes_merge(env):
@@ -188,6 +198,7 @@ def test_mock_merge_matches_hermes_deep_merge():
     base = {"provider_routing": {"sort": "latency", "only": ["a"], "data_collection": "deny", "models": {"m": {"only": ["x"]}}}, "terminal": {"cwd": "/"}}
     for extra in (
         {"provider_routing": FULL},
+        {"provider_routing": {**FULL, "sort": None}},
         {"provider_routing": {**FULL, "data_collection": None, "only": []}},
         {"terminal": None},
         {"provider_routing": None},
@@ -206,3 +217,28 @@ def test_routing_needs_a_fresh_login_and_is_audited_without_values(env):
     assert "profile.provider_routing" in env.audit_file.read_text() and "deepinfra" not in env.audit_file.read_text()
     env.app.state.sessions.get(env.cookies.get(SESSION_COOKIE)).auth_time = 0
     assert env.put(RT, json=FULL).status_code == 401
+
+
+# --- Geheimnisse in verschachtelten Werten ------------------------------------------------------------------------------------------
+def test_nested_secrets_never_reach_the_browser_and_survive_an_edit(env):
+    stored = [{"provider": "custom", "model": "m1", "base_url": "http://x/v1", "api_key": "sk-geheim-1", "api_key_env": "X_KEY"},
+              {"provider": "openrouter", "model": "m2", "api_key": "sk-geheim-2"}]
+    env.dash.state.profiles["default"]["config"]["fallback_providers"] = stored
+    shown = env.get(CFG)
+    assert "sk-geheim" not in shown.text
+    value = fields(env)["fallback_providers"]["value"]
+    assert value[0] == {"provider": "custom", "model": "m1", "base_url": "http://x/v1", "api_key_env": "X_KEY"}  # api_key_env ist nur ein Name
+    value.reverse()  # umsortiert und Modell geändert
+    value[0]["model"] = "m2b"
+    assert env.put(CFG, json={"changes": {"fallback_providers": value}}).status_code == 200
+    now = env.dash.state.profiles["default"]["config"]["fallback_providers"]
+    assert now[0]["api_key"] == "sk-geheim-2" and now[0]["model"] == "m2b"
+    assert now[1]["api_key"] == "sk-geheim-1" and now[1]["base_url"] == "http://x/v1"
+
+
+def test_a_new_or_changed_provider_entry_gets_no_foreign_secret_and_secrets_cannot_be_written(env):
+    env.dash.state.profiles["default"]["config"]["fallback_providers"] = [{"provider": "custom", "model": "m1", "api_key": "sk-geheim-1"}]
+    assert env.put(CFG, json={"changes": {"fallback_providers": [{"provider": "nous", "model": "m"}]}}).status_code == 200
+    assert "api_key" not in env.dash.state.profiles["default"]["config"]["fallback_providers"][0]
+    r = env.put(CFG, json={"changes": {"fallback_providers": [{"provider": "nous", "model": "m", "api_key": "sk-neu"}]}})
+    assert r.status_code == 422 and "sk-neu" not in env.dash.state.profiles["default"]["config"]["fallback_providers"][0].values()

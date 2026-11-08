@@ -12,9 +12,11 @@ export type Change = { session_id: string; kind: Kind; action: "set" | "pause" |
 export function RowActions({ agent, item, onDone }: { agent: AgentRef; item: AutomationItem; onDone: () => void }) {
   const { run, notes, busy } = useAction();
   const [confirm, setConfirm] = useState(false);
+  const [hint, setHint] = useState("");
   const send = (action: Change["action"]) => run(async () => {
-    await api.changeAutomation(agent, { session_id: item.session_id, kind: item.kind, action });
+    const r = await api.changeAutomation(agent, { session_id: item.session_id, kind: item.kind, action });
     setConfirm(false);
+    setHint(r.started === false ? t("Gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.") : "");
     onDone();
   });
   return (
@@ -33,6 +35,7 @@ export function RowActions({ agent, item, onDone }: { agent: AgentRef; item: Aut
             </>
           )}
       </div>
+      {hint && <p className="muted small" role="status">{hint}</p>}
       {notes}
     </div>
   );
@@ -46,6 +49,7 @@ export function SetForm({ agent, items, onDone }: { agent: AgentRef; items: Auto
   const [text, setText] = useState("");
   const [turns, setTurns] = useState("");
   const [minutes, setMinutes] = useState("10");
+  const [done, setDone] = useState("");
   const { run, notes, busy } = useAction();
   useEffect(() => {
     let stop = false;
@@ -63,7 +67,10 @@ export function SetForm({ agent, items, onDone }: { agent: AgentRef; items: Auto
     const change: Change = { session_id: chosen, kind, action: "set", text: text.trim() };
     if (kind === "goal" && turns !== "") change.max_turns = n;
     if (kind === "heartbeat") change.interval_seconds = m * 60;
-    await api.changeAutomation(agent, change);
+    const r = await api.changeAutomation(agent, change);
+    setDone(kind === "goal"
+      ? (r.started ? t("Ziel gesetzt. Hermes arbeitet jetzt daran.") : t("Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung."))
+      : t("Heartbeat gesetzt."));
     setText(""); setTurns("");
     onDone();
   });
@@ -88,6 +95,7 @@ export function SetForm({ agent, items, onDone }: { agent: AgentRef; items: Auto
         ? <label>{t("Höchstens so viele Runden (leer = Standard)")}<input className="field" inputMode="numeric" value={turns} onChange={(ev) => setTurns(ev.target.value)} aria-label={t("Höchstzahl Runden")} /></label>
         : <label>{t("Alle so viele Minuten")}<input className="field" inputMode="numeric" value={minutes} onChange={(ev) => setMinutes(ev.target.value)} aria-label={t("Intervall in Minuten")} /></label>}
       {replaces && <p className="muted small">{kind === "goal" ? t("Diese Sitzung hat schon ein Ziel. Es wird ersetzt.") : t("Diese Sitzung hat schon einen Heartbeat. Er wird ersetzt.")}</p>}
+      {done && <p className="muted small" role="status">{done}</p>}
       {notes}
       <div className="row">
         <button type="button" className="btn primary" disabled={busy || bad} onClick={() => void save()}>{t("Setzen")}</button>

@@ -57,8 +57,9 @@ inside a profile. Missing/incompatible native capabilities return
 `GET /v1/profiles/{profile}/automation` reads `state_meta` of the profile's `state.db` (read-only, whitelisted fields, redacted).
 `POST /v1/profiles/{profile}/automation` (`{session_id, kind: goal|heartbeat|loop, action: set|pause|resume|clear, text?, max_turns?, interval_seconds?}`)
 changes them and is off unless the profile sets `allow_automation: true`. hostd never writes `state.db`: it runs Hermes' own gateway client
-(`hermes_cli.gateway_client.connect_gateway`, `session.resume` then `session.automation`) with `native_python` as the profile's OS user, so the
-gateway stays the single writer. Needs a running (or startable) Hermes gateway for the profile and a Hermes that has `session.automation`
+(`discover_gateway_endpoint`, then `connect_gateway(endpoint)`, `session.resume`, `session.automation`) with `native_python` as the profile's OS user, so the
+gateway stays the single writer. hostd never starts a gateway (503 if none is running). `goal set` and `goal resume` also submit the kick-off prompt
+(`prompt.submit`, queued) like the terminal client does; the response says `started`. Needs a running (or startable) Hermes gateway for the profile and a Hermes that has `session.automation`
 (checked against Hermes main of 2026-11-07, not against a running instance). Loops cannot be created (`/loop` stays in Hermes).
 
 ## HTTP contract

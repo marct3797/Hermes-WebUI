@@ -2431,5 +2431,9 @@
  "Was soll regelmäßig geprüft werden?": "Düzenli olarak ne kontrol edilmeli?",
  "Wirklich löschen? Das beendet es für diese Sitzung.": "Gerçekten silinsin mi? Bu oturum için sona erer.",
  "Ziel-Text": "Hedef metni",
- "Ziele und Heartbeats lassen sich hier setzen, Schleifen nur pausieren, fortsetzen und löschen. Neue Schleifen legst du in Hermes mit /loop an. Änderungen laufen über den Gateway von Hermes und brauchen eine frische Anmeldung.": "Burada hedefler ve heartbeat’ler ayarlanabilir; döngüler yalnızca duraklatılabilir, sürdürülebilir ve silinebilir. Yeni döngüleri Hermes’te /loop ile oluştur. Değişiklikler Hermes ağ geçidi üzerinden gider ve yakın zamanda yapılmış bir oturum açma gerektirir."
+ "Ziele und Heartbeats lassen sich hier setzen, Schleifen nur pausieren, fortsetzen und löschen. Neue Schleifen legst du in Hermes mit /loop an. Änderungen laufen über den Gateway von Hermes und brauchen eine frische Anmeldung.": "Burada hedefler ve heartbeat’ler ayarlanabilir; döngüler yalnızca duraklatılabilir, sürdürülebilir ve silinebilir. Yeni döngüleri Hermes’te /loop ile oluştur. Değişiklikler Hermes ağ geçidi üzerinden gider ve yakın zamanda yapılmış bir oturum açma gerektirir.",
+ "Gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "Kaydedildi, ancak çalışma başlatılamadı. Oturumdaki bir sonraki iletiyle başlayacak.",
+ "Heartbeat gesetzt.": "Heartbeat ayarlandı.",
+ "Ziel gesetzt. Hermes arbeitet jetzt daran.": "Hedef ayarlandı. Hermes şimdi üzerinde çalışıyor.",
+ "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "Hedef kaydedildi, ancak çalışma başlatılamadı. Oturumdaki bir sonraki iletiyle başlayacak."
 }

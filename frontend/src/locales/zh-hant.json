@@ -2431,5 +2431,9 @@
  "Was soll regelmäßig geprüft werden?": "要定期檢查什麼?",
  "Wirklich löschen? Das beendet es für diese Sitzung.": "確定刪除嗎?這會結束此工作階段中的該項。",
  "Ziel-Text": "目標文字",
- "Ziele und Heartbeats lassen sich hier setzen, Schleifen nur pausieren, fortsetzen und löschen. Neue Schleifen legst du in Hermes mit /loop an. Änderungen laufen über den Gateway von Hermes und brauchen eine frische Anmeldung.": "在這裡可以設定目標與心跳;迴圈只能暫停、繼續與刪除。新迴圈請在 Hermes 中用 /loop 建立。變更會經由 Hermes 閘道進行,需要近期登入。"
+ "Ziele und Heartbeats lassen sich hier setzen, Schleifen nur pausieren, fortsetzen und löschen. Neue Schleifen legst du in Hermes mit /loop an. Änderungen laufen über den Gateway von Hermes und brauchen eine frische Anmeldung.": "在這裡可以設定目標與心跳;迴圈只能暫停、繼續與刪除。新迴圈請在 Hermes 中用 /loop 建立。變更會經由 Hermes 閘道進行,需要近期登入。",
+ "Gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "已儲存,但未能啟動執行。將在工作階段的下一則訊息時開始。",
+ "Heartbeat gesetzt.": "心跳已設定。",
+ "Ziel gesetzt. Hermes arbeitet jetzt daran.": "目標已設定。Hermes 正在處理。",
+ "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "目標已儲存,但未能啟動執行。將在工作階段的下一則訊息時開始。"
 }

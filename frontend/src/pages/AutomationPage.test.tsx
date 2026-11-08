@@ -67,6 +67,7 @@ describe("Ziele und Schleifen", () => {
     const sent = posts(backend)[0].body as Record<string, unknown>;
     expect(sent).toMatchObject({ kind: "goal", action: "set", text: "Release ausliefern", max_turns: 15 });
     expect(typeof sent.session_id).toBe("string");
+    expect(await screen.findByText("Ziel gesetzt. Hermes arbeitet jetzt daran.")).toBeTruthy();
   });
 
   it("setzt einen Heartbeat mit Intervall in Sekunden", async () => {

@@ -38,6 +38,40 @@ def lookup(config: Any, key: str) -> Any:
     return config
 
 
+def scrub(value: Any) -> Any:
+    """Geheimnisse in verschachtelten Werten (`fallback_providers[].api_key`) verlassen das BFF nie: Schlüssel mit Geheimnis-Namen entfallen."""
+    if isinstance(value, dict):
+        return {k: scrub(v) for k, v in value.items() if not (isinstance(v, str) and SECRET_RE.search(k))}
+    if isinstance(value, list):
+        return [scrub(v) for v in value]
+    return value
+
+
+def has_secret(value: Any) -> bool:
+    if isinstance(value, dict):
+        return any((isinstance(v, str) and SECRET_RE.search(k)) or has_secret(v) for k, v in value.items())
+    return isinstance(value, list) and any(has_secret(v) for v in value)
+
+
+def restore(new: Any, old: Any) -> Any:
+    """Listeneinträge, die wir ohne Geheimnisse ausgeliefert haben, bekommen sie beim Speichern aus dem gespeicherten Stand zurück
+    (gleiche Stelle und gleicher Anbieter; sonst der einzige Eintrag dieses Anbieters; sonst gleicher Anbieter mit gleichem Modell). Ein neuer Eintrag bekommt nichts."""
+    if not (isinstance(new, list) and isinstance(old, list)):
+        return new
+    out = []
+    for i, entry in enumerate(new):
+        if not (isinstance(entry, dict) and "provider" in entry):
+            out.append(entry)
+            continue
+        same = lambda o: isinstance(o, dict) and o.get("provider") == entry.get("provider")
+        same_provider = [o for o in old if same(o)]
+        match = (old[i] if i < len(old) and same(old[i]) else same_provider[0] if len(same_provider) == 1
+                 else next((o for o in same_provider if o.get("model") == entry.get("model")), None))
+        secrets = {k: v for k, v in (match or {}).items() if isinstance(v, str) and SECRET_RE.search(k) and k not in entry}
+        out.append({**entry, **secrets})
+    return out
+
+
 def nest(changes: dict[str, Any]) -> dict[str, Any]:
     out: dict[str, Any] = {}
     for key, value in changes.items():
@@ -89,7 +123,7 @@ async def read_config(target: Tgt, dash: Dash):
         if is_secret(key, meta.get("type")):
             item.update(secret=True, set=bool(value), value=None)
         else:
-            item["value"] = value
+            item["value"] = scrub(value)
         out.append(item)
     return {"fields": out, "category_order": order}
 
@@ -97,16 +131,20 @@ async def read_config(target: Tgt, dash: Dash):
 @router.put("/config")
 async def write_config(request: Request, target: Tgt, dash: Dash, req: ConfigIn, user: User = Depends(fresh_user)):
     request.app.state.limiter.check(f"{user.id}:dashboard")
-    fields, _, _ = await _schema_and_config(target, dash)
+    fields, _, before = await _schema_and_config(target, dash)
+    changes = dict(req.changes)
     for key, value in req.changes.items():
         if key not in fields:
             raise HTTPException(422, f"{key}: kein Feld dieses Profils")
         if is_secret(key, fields[key].get("type")):
             raise HTTPException(422, f"{key}: Geheimnisse werden unter „Keys & Nutzung“ verwaltet")
         check_value(key, fields[key], value)
-    await upstream(dash.request("PUT", "/api/config", body={"config": nest(req.changes), "profile": target.agent.id}, params={"profile": target.agent.id}))
+        if has_secret(value):
+            raise HTTPException(422, f"{key}: Geheimnisse in Listeneinträgen werden hier nicht geschrieben")
+        changes[key] = restore(value, lookup(before, key))
+    await upstream(dash.request("PUT", "/api/config", body={"config": nest(changes), "profile": target.agent.id}, params={"profile": target.agent.id}))
     _, _, after = await _schema_and_config(target, dash)
-    dropped = sorted(k for k, v in req.changes.items() if lookup(after, k) != v)
+    dropped = sorted(k for k, v in req.changes.items() if scrub(lookup(after, k)) != v)
     if dropped:
         raise HTTPException(502, "Das Dashboard hat nicht übernommen: " + ", ".join(dropped))
     audit(request, user, "profile.config", target, keys=sorted(req.changes))
@@ -136,15 +174,15 @@ async def delete_env(request: Request, key: str, target: Tgt, dash: Dash, req: E
 # Provider-Routing (OpenRouter): `provider_routing` steht nicht im Schema des Dashboards (kein Eintrag in DEFAULT_CONFIG), die
 # Einstellungen-Maske kann es also nicht schreiben. Dashboard-PUT /api/config mischt aber beliebige Schlüssel per Tiefenmischung
 # ein: ein fehlender Schlüssel würde einen alten Wert NICHT löschen. Darum gehen immer alle sechs Schlüssel mit ihrem neutralen
-# Wert (leere Listen, `price`, `false`, `null`) raus; `models` (Einträge je Modell) bleibt unberührt.
+# Wert (leere Listen, `null`, `false`); `sort: null` heißt „nicht gesetzt“ (OpenRouter gewichtet dann selbst) und ist der Standard von Hermes raus; `models` (Einträge je Modell) bleibt unberührt.
 SLUG_RE = r"^[a-z0-9][a-z0-9._/-]{0,63}$"
-ROUTING_DEFAULT: dict[str, Any] = {"sort": "price", "only": [], "ignore": [], "order": [], "require_parameters": False, "data_collection": None}
+ROUTING_DEFAULT: dict[str, Any] = {"sort": None, "only": [], "ignore": [], "order": [], "require_parameters": False, "data_collection": None}
 Slugs = list[str]
 
 
 class RoutingIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    sort: Literal["price", "throughput", "latency"] = "price"
+    sort: Literal["price", "throughput", "latency"] | None = None
     only: Slugs = Field(default_factory=list, max_length=50)
     ignore: Slugs = Field(default_factory=list, max_length=50)
     order: Slugs = Field(default_factory=list, max_length=50)

@@ -2431,5 +2431,9 @@
  "Was soll regelmäßig geprüft werden?": "¿Qué se debe comprobar con regularidad?",
  "Wirklich löschen? Das beendet es für diese Sitzung.": "¿Eliminar de verdad? Esto lo termina para esta sesión.",
  "Ziel-Text": "Texto del objetivo",
- "Ziele und Heartbeats lassen sich hier setzen, Schleifen nur pausieren, fortsetzen und löschen. Neue Schleifen legst du in Hermes mit /loop an. Änderungen laufen über den Gateway von Hermes und brauchen eine frische Anmeldung.": "Aquí puedes definir objetivos y heartbeats; los bucles solo se pueden pausar, reanudar y eliminar. Crea bucles nuevos en Hermes con /loop. Los cambios pasan por el gateway de Hermes y requieren un inicio de sesión reciente."
+ "Ziele und Heartbeats lassen sich hier setzen, Schleifen nur pausieren, fortsetzen und löschen. Neue Schleifen legst du in Hermes mit /loop an. Änderungen laufen über den Gateway von Hermes und brauchen eine frische Anmeldung.": "Aquí puedes definir objetivos y heartbeats; los bucles solo se pueden pausar, reanudar y eliminar. Crea bucles nuevos en Hermes con /loop. Los cambios pasan por el gateway de Hermes y requieren un inicio de sesión reciente.",
+ "Gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "Guardado, pero no se pudo iniciar la ejecución. Empezará con el siguiente mensaje de la sesión.",
+ "Heartbeat gesetzt.": "Heartbeat definido.",
+ "Ziel gesetzt. Hermes arbeitet jetzt daran.": "Objetivo definido. Hermes está trabajando en ello.",
+ "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "Objetivo guardado, pero no se pudo iniciar la ejecución. Empezará con el siguiente mensaje de la sesión."
 }

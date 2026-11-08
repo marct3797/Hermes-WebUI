@@ -2,7 +2,9 @@
 
 Hermes ist der einzige Schreiber (der Gateway führt auch den Ziel-Prüfer aus). Die Verbindung läuft deshalb mit `hermes_cli.gateway_client`
 im Python-Venv von Hermes (`native_python`, wie beim Kanban-Adapter): Sitzung per `session.resume` laden, dann `session.automation`. Ticket,
-Steuer-Socket und Rahmenformat bleiben Sache von Hermes und folgen seinen Updates. hostd erlaubt nur eine feste Liste von Aufrufen und
+Steuer-Socket und Rahmenformat bleiben Sache von Hermes und folgen seinen Updates. hostd startet nie einen Gateway: erst `discover_gateway_endpoint`,
+dann `connect_gateway(endpoint)` (ohne Endpunkt würde Hermes selbst einen starten, auf Hikari ein zweiter neben dem im Container). Ein neues oder
+fortgesetztes Ziel stößt den ersten Lauf an wie das Terminal: der Gateway speichert nur den Zustand, den ersten Prompt schickt der Client (`prompt.submit`). hostd erlaubt nur eine feste Liste von Aufrufen und
 verlangt `allow_automation: true` am Profil.
 """
 import json
@@ -20,7 +22,7 @@ CALLS = {('goal', 'set'): 'set', ('goal', 'pause'): 'pause', ('goal', 'resume'):
          ('heartbeat', 'set'): 'set', ('heartbeat', 'pause'): 'pause', ('heartbeat', 'resume'): 'resume', ('heartbeat', 'clear'): 'clear',
          ('loop', 'pause'): 'pause', ('loop', 'resume'): 'resume', ('loop', 'clear'): 'clear'}
 
-SCRIPT = r"""import sys, json, asyncio
+SCRIPT = r"""import sys, json, asyncio, uuid
 if sys.argv[1]:
     sys.path.insert(0, sys.argv[1])
 try:
@@ -31,11 +33,30 @@ req = json.loads(sys.argv[2])
 
 async def main():
     from hermes_cli.gateway_client import connect_gateway
-    async with connect_gateway() as client:
+    from hermes_cli.gateway_runtime import attachable, discover_gateway_endpoint, gateway_profile_home
+    from hermes_constants import get_hermes_home
+    found = discover_gateway_endpoint(gateway_profile_home(get_hermes_home()), timeout=2.0)
+    if not attachable(found):
+        raise RuntimeError('gateway_not_running: ' + str(getattr(found, 'state', '')) + ' ' + str(getattr(found, 'reason_code', '')))
+    async with connect_gateway(found.endpoint) as client:
         snapshot = await client.rpc('session.resume', session_id=req['session_id'])
         live = snapshot.get('session_id') or snapshot.get('stored_session_id') or req['session_id']
-        return await client.rpc('session.automation', session_id=live, kind=req['kind'], call=req['call'],
-                                args=req['args'], kwargs=req['kwargs'])
+        reply = await client.rpc('session.automation', session_id=live, kind=req['kind'], call=req['call'],
+                                 args=req['args'], kwargs=req['kwargs'])
+        kick = None
+        if not reply.get('error'):
+            if req.get('kick') == 'goal':
+                from hermes_cli.goals import goal_kick_prompt
+                kick = goal_kick_prompt(req['args'][0], '')
+            elif req.get('kick') == 'prompt':
+                value = reply.get('value')
+                kick = value.get('prompt') if isinstance(value, dict) else None
+        started = False
+        if kick:
+            receipt = await client.rpc('prompt.submit', session_id=live, submission_id=uuid.uuid4().hex, text=kick, queued=True)
+            started = bool((receipt or {}).get('admission_id'))
+        reply['started'] = started
+        return reply
 
 try:
     out = {'ok': True, 'reply': asyncio.run(main())}
@@ -50,6 +71,8 @@ def build(kind, action, text, max_turns, interval_seconds):
     call = CALLS.get((kind, action))
     if call is None:
         raise HTTPException(422, 'Action not supported for this kind')
+    if kind == 'goal' and action == 'resume':
+        return 'command', ['resume'], {}
     if action != 'set':
         return call, [], {}
     clean = (text or '').strip()
@@ -71,7 +94,8 @@ def apply(settings, profile, session_id, kind, action, text=None, max_turns=None
     if not python or not Path(python).is_absolute() or (source and not Path(source).is_absolute()) or not path:
         raise HTTPException(501, 'Hermes client not configured (native_python)')
     call, args, kwargs = build(kind, action, text, max_turns, interval_seconds)
-    request = json.dumps({'session_id': session_id, 'kind': kind, 'call': call, 'args': args, 'kwargs': kwargs})
+    kick = 'goal' if (kind, action) == ('goal', 'set') else 'prompt' if (kind, action) == ('goal', 'resume') else None
+    request = json.dumps({'session_id': session_id, 'kind': kind, 'call': call, 'args': args, 'kwargs': kwargs, 'kick': kick})
     try:
         output, cut, code = native.run([python, '-c', SCRIPT, source, request], cwd=path, env=native.native_env(profile), timeout=TIMEOUT)
     except OSError:
@@ -85,10 +109,13 @@ def apply(settings, profile, session_id, kind, action, text=None, max_turns=None
         raise HTTPException(502, 'Hermes client gave no usable answer')
     if not result.get('ok'):
         message = native.redact(str(result.get('error') or ''))[:200]
+        if 'gateway_not_running' in message:
+            raise HTTPException(503, 'Hermes gateway not running for this profile')
         raise HTTPException(409, f'Hermes refused: {message}')
     reply = result.get('reply')
     error = reply.get('error') if isinstance(reply, dict) else None
     if isinstance(error, dict):
         raise HTTPException(422, native.redact(str(error.get('message') or 'Hermes refused'))[:200])
     state = reply.get('state') if isinstance(reply, dict) else None
-    return {'ok': True, 'kind': kind, 'action': action, 'status': state.get('status') if isinstance(state, dict) else 'cleared'}
+    return {'ok': True, 'kind': kind, 'action': action, 'status': state.get('status') if isinstance(state, dict) else 'cleared',
+            'started': reply.get('started') is True if kick else None}

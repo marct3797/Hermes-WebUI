@@ -6,7 +6,7 @@ import { t } from "../../i18n";
 import type { AgentRef, ProviderRouting } from "../../types";
 
 const SLUG = /^[a-z0-9][a-z0-9._/-]{0,63}$/;
-const EMPTY: ProviderRouting = { sort: "price", only: [], ignore: [], order: [], require_parameters: false, data_collection: null };
+const EMPTY: ProviderRouting = { sort: null, only: [], ignore: [], order: [], require_parameters: false, data_collection: null };
 type Text = { only: string; ignore: string; order: string };
 
 const toText = (r: ProviderRouting): Text => ({ only: r.only.join(", "), ignore: r.ignore.join(", "), order: r.order.join(", ") });
@@ -50,7 +50,8 @@ export function RoutingEditor({ agent }: { agent: AgentRef }) {
     <div>
       <p className="muted small">{t("Steuert, welche Anbieter hinter OpenRouter deine Anfragen bearbeiten. Wirkt nur bei OpenRouter, nicht bei direkten Anbieter-Verbindungen.")}</p>
       <label>{t("Sortierung")}
-        <select className="field" value={routing.sort} onChange={(ev) => setRouting({ ...routing, sort: ev.target.value as ProviderRouting["sort"] })} aria-label={t("Sortierung")}>
+        <select className="field" value={routing.sort ?? ""} onChange={(ev) => setRouting({ ...routing, sort: (ev.target.value || null) as ProviderRouting["sort"] })} aria-label={t("Sortierung")}>
+          <option value="">{t("Nicht festgelegt")}</option>
           <option value="price">{t("Preis (günstigster zuerst)")}</option>
           <option value="throughput">{t("Durchsatz (schnellster zuerst)")}</option>
           <option value="latency">{t("Latenz (kürzeste Wartezeit zuerst)")}</option>

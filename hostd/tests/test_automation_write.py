@@ -8,23 +8,50 @@ from fastapi.testclient import TestClient
 
 FAKE = '''
 import json, os
+def log(entry):
+    with open(os.environ["FAKE_LOG"], "a") as f:
+        f.write(json.dumps(entry) + "\\n")
 class Client:
     async def rpc(self, method, **params):
-        with open(os.environ["FAKE_LOG"], "a") as f:
-            f.write(json.dumps([method, params]) + "\\n")
+        log([method, params])
         if method == "session.resume":
             if params["session_id"] == "missing":
                 raise RuntimeError("not_found")
             return {"session_id": "live-" + params["session_id"]}
+        if method == "prompt.submit":
+            return {} if os.environ.get("FAKE_NO_ADMISSION") else {"admission_id": "a1"}
         if params["call"] == "set" and params["kind"] == "heartbeat" and params["args"][1] < 60:
             return {"error": {"type": "ValueError", "message": "interval must be at least 60s"}, "state": None}
         if params["call"] == "clear":
             return {"value": True, "state": None}
+        if params["call"] == "command":
+            return {"value": {"output": "resumed", "prompt": "Weiterarbeiten am Ziel", "kickoff": False}, "state": {"status": "active"}}
         return {"value": None, "state": {"status": {"pause": "paused", "resume": "active", "set": "active"}[params["call"]]}}
 class _Ctx:
+    def __init__(self, endpoint): log(["connect_gateway", {"endpoint": endpoint}])
     async def __aenter__(self): return Client()
     async def __aexit__(self, *a): return False
-def connect_gateway(*a, **k): return _Ctx()
+def connect_gateway(endpoint=None, *a, **k):
+    if endpoint is None:
+        raise AssertionError("connect_gateway without endpoint would start a gateway")
+    return _Ctx(endpoint)
+'''
+RUNTIME = '''
+import os
+class Found:
+    def __init__(self):
+        down = os.environ.get("FAKE_GATEWAY") == "down"
+        self.state, self.reason_code, self.endpoint = ("not_running", "no_owner", None) if down else ("ready", None, "ws://127.0.0.1:1")
+def discover_gateway_endpoint(home, timeout=2.0): return Found()
+def attachable(found): return found.endpoint is not None and found.state == "ready"
+def gateway_profile_home(home): return home
+'''
+GOALS = '''
+def goal_kick_prompt(goal, last): return goal
+'''
+CONSTANTS = '''
+import os
+def get_hermes_home(): return os.environ["HERMES_HOME"]
 '''
 
 
@@ -34,6 +61,9 @@ def setup(tmp_path, monkeypatch, allow=True, python=True):
     src.mkdir(parents=True, exist_ok=True)
     (src / '__init__.py').write_text('')
     (src / 'gateway_client.py').write_text(FAKE)
+    (src / 'gateway_runtime.py').write_text(RUNTIME)
+    (src / 'goals.py').write_text(GOALS)
+    (src.parent / 'hermes_constants.py').write_text(CONSTANTS)
     root = tmp_path / 'p'
     root.mkdir(exist_ok=True)
     log = tmp_path / 'calls.log'
@@ -58,9 +88,13 @@ def post(client, **body):
 def test_goal_set_resumes_the_session_then_calls_session_automation(tmp_path, monkeypatch):
     client, log = setup(tmp_path, monkeypatch)
     r = post(client, kind='goal', action='set', text='  Alle Tests grün ', max_turns=12)
-    assert r.status_code == 200 and r.json() == {'ok': True, 'kind': 'goal', 'action': 'set', 'status': 'active'}
-    assert calls(log) == [['session.resume', {'session_id': 's1'}],
-                          ['session.automation', {'session_id': 'live-s1', 'kind': 'goal', 'call': 'set', 'args': ['Alle Tests grün'], 'kwargs': {'max_turns': 12}}]]
+    assert r.status_code == 200 and r.json() == {'ok': True, 'kind': 'goal', 'action': 'set', 'status': 'active', 'started': True}
+    assert r.json()['started'] is True
+    done = calls(log)
+    assert [c[0] for c in done] == ['connect_gateway', 'session.resume', 'session.automation', 'prompt.submit']
+    assert done[0][1] == {'endpoint': 'ws://127.0.0.1:1'}  # nie ohne Endpunkt: hostd startet keinen Gateway
+    assert done[2][1] == {'session_id': 'live-s1', 'kind': 'goal', 'call': 'set', 'args': ['Alle Tests grün'], 'kwargs': {'max_turns': 12}}
+    assert done[3][1]['text'] == 'Alle Tests grün' and done[3][1]['session_id'] == 'live-s1' and done[3][1]['queued'] is True
 
 
 @pytest.mark.parametrize('kind,action,status', [('goal', 'pause', 'paused'), ('heartbeat', 'resume', 'active'), ('loop', 'pause', 'paused'), ('loop', 'clear', 'cleared')])
@@ -113,3 +147,36 @@ def test_state_db_is_never_written(tmp_path, monkeypatch):
     client, _ = setup(tmp_path, monkeypatch)
     post(client, kind='goal', action='clear')
     assert not (tmp_path / 'p' / 'state.db').exists()
+
+
+def test_resume_goal_uses_the_goal_command_and_kicks_its_prompt(tmp_path, monkeypatch):
+    client, log = setup(tmp_path, monkeypatch)
+    r = post(client, kind='goal', action='resume')
+    assert r.status_code == 200 and r.json()['started'] is True and r.json()['status'] == 'active'
+    done = calls(log)
+    assert done[2][1]['call'] == 'command' and done[2][1]['args'] == ['resume']
+    assert done[3][0] == 'prompt.submit' and done[3][1]['text'] == 'Weiterarbeiten am Ziel'
+
+
+@pytest.mark.parametrize('kind,action', [('goal', 'pause'), ('goal', 'clear'), ('heartbeat', 'set'), ('heartbeat', 'resume'), ('loop', 'resume')])
+def test_only_goal_set_and_resume_start_a_run(tmp_path, monkeypatch, kind, action):
+    client, log = setup(tmp_path, monkeypatch)
+    extra = {'text': 'x', 'interval_seconds': 600} if action == 'set' else {}
+    r = post(client, kind=kind, action=action, **extra)
+    assert r.status_code == 200 and r.json()['started'] is None
+    assert 'prompt.submit' not in [c[0] for c in calls(log)]
+
+
+def test_a_kick_without_admission_is_reported_as_not_started(tmp_path, monkeypatch):
+    monkeypatch.setenv('FAKE_NO_ADMISSION', '1')
+    client, _ = setup(tmp_path, monkeypatch)
+    r = post(client, kind='goal', action='set', text='Ziel')
+    assert r.status_code == 200 and r.json()['started'] is False
+
+
+def test_no_running_gateway_means_503_and_nothing_is_started(tmp_path, monkeypatch):
+    monkeypatch.setenv('FAKE_GATEWAY', 'down')
+    client, log = setup(tmp_path, monkeypatch)
+    r = post(client, kind='goal', action='set', text='Ziel')
+    assert r.status_code == 503
+    assert calls(log) == []  # weder verbunden noch gestartet

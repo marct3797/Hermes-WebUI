@@ -2431,5 +2431,9 @@
  "Was soll regelmäßig geprüft werden?": "何を定期的に確認しますか?",
  "Wirklich löschen? Das beendet es für diese Sitzung.": "本当に削除しますか?このセッションでは終了します。",
  "Ziel-Text": "目標のテキスト",
- "Ziele und Heartbeats lassen sich hier setzen, Schleifen nur pausieren, fortsetzen und löschen. Neue Schleifen legst du in Hermes mit /loop an. Änderungen laufen über den Gateway von Hermes und brauchen eine frische Anmeldung.": "ここでは目標とハートビートを設定できます。ループは一時停止、再開、削除のみ可能です。新しいループは Hermes で /loop を使って作成してください。変更は Hermes のゲートウェイ経由で行われ、直近のサインインが必要です。"
+ "Ziele und Heartbeats lassen sich hier setzen, Schleifen nur pausieren, fortsetzen und löschen. Neue Schleifen legst du in Hermes mit /loop an. Änderungen laufen über den Gateway von Hermes und brauchen eine frische Anmeldung.": "ここでは目標とハートビートを設定できます。ループは一時停止、再開、削除のみ可能です。新しいループは Hermes で /loop を使って作成してください。変更は Hermes のゲートウェイ経由で行われ、直近のサインインが必要です。",
+ "Gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "保存しましたが、実行を開始できませんでした。セッションの次のメッセージで開始されます。",
+ "Heartbeat gesetzt.": "ハートビートを設定しました。",
+ "Ziel gesetzt. Hermes arbeitet jetzt daran.": "目標を設定しました。Hermes が取り組み始めます。",
+ "Ziel gespeichert, aber der Lauf konnte nicht angestoßen werden. Er startet mit der nächsten Nachricht in der Sitzung.": "目標を保存しましたが、実行を開始できませんでした。セッションの次のメッセージで開始されます。"
 }

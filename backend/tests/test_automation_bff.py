@@ -57,10 +57,10 @@ def writable(mode="ok"):
     @app.post("/v1/profiles/{profile}/automation")
     async def change(profile: str, body: dict):
         POSTED.append(body)
-        codes = {"forbidden": 403, "notfound": 404, "refused": 409, "bad": 422, "notconfigured": 501, "timeout": 504}
+        codes = {"forbidden": 403, "notfound": 404, "refused": 409, "bad": 422, "notconfigured": 501, "timeout": 504, "down": 503}
         if mode in codes:
             raise HTTPException(codes[mode], "intern: /home/geheim")
-        return {"ok": True, "kind": body["kind"], "action": body["action"], "status": "paused"}
+        return {"ok": True, "kind": body["kind"], "action": body["action"], "status": "paused", "started": True if body["action"] == "set" else None}
     return app
 
 
@@ -73,7 +73,7 @@ def make_w(tmp_path, make_settings, monkeypatch, mode="ok"):
 def test_change_is_forwarded_audited_without_text_and_needs_fresh_login(tmp_path, make_settings, monkeypatch):
     for c in make_w(tmp_path, make_settings, monkeypatch):
         r = c.post(BASE_URL, json={"session_id": "s1", "kind": "goal", "action": "set", "text": "Geheimes Ziel", "max_turns": 5})
-        assert r.status_code == 200 and r.json() == {"ok": True, "kind": "goal", "action": "set", "status": "paused"}
+        assert r.status_code == 200 and r.json() == {"ok": True, "kind": "goal", "action": "set", "status": "paused", "started": True}
         assert POSTED == [{"session_id": "s1", "kind": "goal", "action": "set", "text": "Geheimes Ziel", "max_turns": 5}]
         log = c.audit_file.read_text()
         assert "profile.automation" in log and "Geheimes Ziel" not in log
@@ -92,7 +92,7 @@ def test_invalid_changes_never_reach_hostd(tmp_path, make_settings, monkeypatch,
     assert c.post(BASE_URL, json={"session_id": "../x", "kind": "goal", "action": "clear"}).status_code == 422
 
 
-@pytest.mark.parametrize("mode,status", [("forbidden", 403), ("notfound", 501), ("refused", 409), ("bad", 422), ("notconfigured", 501), ("timeout", 504)])
+@pytest.mark.parametrize("mode,status", [("forbidden", 403), ("notfound", 501), ("refused", 409), ("bad", 422), ("notconfigured", 501), ("timeout", 504), ("down", 503)])
 def test_hostd_refusals_become_german_hints_without_internals(tmp_path, make_settings, monkeypatch, mode, status):
     for c in make_w(tmp_path, make_settings, monkeypatch, mode):
         r = c.post(BASE_URL, json={"session_id": "s1", "kind": "goal", "action": "clear"})
