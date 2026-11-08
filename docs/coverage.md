@@ -15,7 +15,7 @@ cd backend
 python -m devtools.check_upstream /pfad/zu/hermes-agent --coverage
 ```
 
-Von 425 Routen auf Hermes `main` (Modul, Methode, Pfad) nutzt das BFF 229 pfadgenau (Etappe 1 vom 08.11.2026 hat 10 dazugebracht). Die Zahl gegen v0.22.5 (zuvor 219 von 390) ist nach Etappe 1 nicht neu gemessen. Nach Modul, wenig genutzte zuerst:
+Von 425 Routen auf Hermes `main` (Modul, Methode, Pfad) nutzt das BFF 241 pfadgenau (Etappe 1 vom 08.11.2026 brachte 10 dazu, Etappe 2 weitere 12). Die Zahl gegen v0.22.5 (zuvor 219 von 390) ist nach Etappe 1 nicht neu gemessen. Nach Modul, wenig genutzte zuerst:
 
 | Modul | Routen | genutzt | Inhalt |
 |---|---|---:|---|
@@ -36,7 +36,7 @@ Von 425 Routen auf Hermes `main` (Modul, Methode, Pfad) nutzt das BFF 229 pfadge
 | `web_routers/status.py` | 20 | 11 | Status, Systemwerte, Curator (pausieren/starten), Lerngraph (lesen/bearbeiten/löschen, Skills werden archiviert), Computer-Use-Status; **nicht**: Host-Identität, Gesundheit, SSH-Besitz, Portal |
 | `web_routers/tools.py` | 12 | 12 | Toolsets, Anbieter, Keys, Modelle; **bewusst nicht**: Terminal-Backend setzen, `post-setup`, Computer-Use-Rechte, siehe unten |
 | `web_routers/models.py` | 7 | 7 | Hauptmodell, Auswahl, Hilfsmodelle, Mixture of Agents, empfohlenes Standardmodell (alle genutzt) |
-| `plugins/kanban` | 48 | 27 | Kanban inkl. Diagnose, Worker, Lauf beenden, Dispatch (erst Vorschau), Schätzen, Spezifizieren, Zerlegen, Anhänge, Board-Export/Import mit Gegenlesen, Board-Archivieren/Wechseln; **nicht**: Orchestrierung schreiben, Profil-Metadaten schreiben, hartes Löschen |
+| `plugins/kanban` | 48 | 39 | Kanban inkl. Diagnose, Worker, Lauf beenden, Dispatch (erst Vorschau), Schätzen, Spezifizieren, Zerlegen, Anhänge, Board-Export/Import mit Gegenlesen, Board-Archivieren/Wechseln; dazu seit Etappe 2 Orchestrierung (lesen, schreiben mit Rücklesen), Profil-Beschreibungen (setzen, automatisch beschreiben mit Token-Warnung), Heimatkanäle je Aufgabe, Anzeige-Einstellungen, Spalten, Modellauswahl, Projekte; **nicht**: hartes Löschen, Event-WebSocket (die WebUI fragt per Poll) |
 | `web_routers/profiles.py` | 20 | 10 | Profile anlegen, löschen, umbenennen, exportieren, importieren |
 | `web_routers/dashboard_ui.py` | 19 | 11 | Plugin-Verwaltung, Themes, Schrift (nur aus der Liste); **nicht**: eigene Theme-Dateien |
 | `web_routers/sessions.py` | 18 | 15 | Statistik, Export, Aufräumen, Mehrfach-Löschen, leere löschen, Zeitachse, Import, Profil-Zuordnung (genutzt); **nicht**: Umbenennen/Fork (laufen über die Agent-API) |
@@ -94,7 +94,7 @@ Die letzten fünf Zeilen stammen aus dem Nutzerhandbuch (`website/docs/user-guid
 | MCP | Liste, Katalog, Installieren, Testen, Aktivieren, Entfernen, OAuth. **Nicht**: ganze `mcp_servers`-Map ersetzen (`PUT /api/mcp/servers`) | `mcp.py`, `routes/extensions.py` |
 | Plugins | Hub, Katalog, Installieren, Aktivieren, Deaktivieren, Aktualisieren, Entfernen. **Nicht**: Sichtbarkeit in der Seitenleiste, Speicher-/Kontext-Anbieter über `plugin-providers` (stehen im Einstellungs-Editor) | `dashboard_ui.py`, `routes/extensions.py` |
 | Zeitpläne (`Cron Jobs`) | abgebildet (12 von 13 Routen); `POST /api/cron/fire` ist der NAS-Webhook (kein manueller Auslöser, bewusst nicht verdrahtet), manuell auslösen geht über `trigger`. Skript-Jobs ohne Agent (`no_agent`) lassen sich mit eingetippter Bestätigung anlegen | `cron.py`, `app/cron.py` |
-| Kanban | teilweise (27 von 48): Board, Aufgaben, Kommentare, Verknüpfungen, Anhänge, Zerlegen/Spezifizieren/Schätzen, Läufe prüfen und beenden, Worker, Boards importieren/exportieren/archivieren/wechseln. Fehlt: Orchestrierung schreiben, Profil-Metadaten, hartes Löschen | `plugins/kanban` |
+| Kanban | weitgehend (39 von 48): Board, Aufgaben, Kommentare, Verknüpfungen, Anhänge, Zerlegen/Spezifizieren/Schätzen, Läufe prüfen und beenden, Worker, Boards importieren/exportieren/archivieren/wechseln. Seit Etappe 2 unter dem Board „Kanban-Einstellungen“ (`routes/kanban_settings.py`, `KanbanSettingsPanel.tsx`): Orchestrator-Profil, Standard-Zuweisung, Auto-Zerlegen/-Freigeben, Profil-Beschreibungen, Spalten und Anzeige (lesend); je Aufgabe Heimatkanal-Benachrichtigung (`HomeChannels.tsx`). Fehlt: hartes Löschen (bewusst), Event-WebSocket. Forgejo-Issues baut ein eigener Thread | `plugins/kanban` |
 | Hooks, Webhooks, Pairing | **Pairing** (offene Anfragen freigeben nur per Anfrage-ID, Zugang sperren mit eingetippter ID) und **Webhooks** (anlegen ohne `script` und ohne eigenes Secret, Secret nur einmal sichtbar, ein-/ausschalten, löschen mit Namenseingabe, Plattform einschalten nur mit Neustart-Bestätigung). **Nicht**: Hooks (führen Shell-Befehle aus), Freigabe per Code, `clear-pending` | `routes/access.py` |
 | Delegation, Subagenten | Backend wählen (nur aus der gemeldeten Liste), Routen lesen (Schlüssel nie). **Nicht**: `model_map`/`profile_routes` schreiben (tragen Schlüssel je Route) | `delegation.py`: 2 von 4, `routes/endpoints.py` |
 | Messaging-Plattformen | **ja**: Liste mit Zustand, Variablen setzen/löschen (Tokens nie sichtbar), ein-/ausschalten, Verbindung prüfen, Telegram-Assistent. WhatsApp koppeln (QR-Bild, `/messaging/whatsapp/onboarding`). **Nicht**: Heimatkanal setzen, Plattform-Plugins verwalten | `routes/messaging.py`, `MessagingPage.tsx`; `messaging.py`: 11 von 11 |

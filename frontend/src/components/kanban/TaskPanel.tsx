@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { HomeChannels } from "./HomeChannels";
 import { Icon } from "../Icon";
 import { Markdown } from "../Markdown";
 import { fmtDate, fmtTime } from "../../format";
@@ -171,6 +172,7 @@ export function TaskPanel({ host, board, id, columns, assignees, allTasks, onClo
         {log?.data && (log.data.exists ? <pre className="kb-log" aria-label={tr("Log")}>{log.data.content || "(leer)"}</pre> : <p className="t3 small">{tr("Für diese Aufgabe gibt es noch kein Log.")}</p>)}
       </div>
 
+      <HomeChannels host={host} board={board} id={id} />
       <div className="kb-sec row" style={{ gap: 8 }}>
         <button type="button" className="btn btn-s btn-d" disabled={busy} onClick={() => setArchive(true)}>{tr("Archivieren")}</button>
       </div>
