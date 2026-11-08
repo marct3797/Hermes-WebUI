@@ -6,12 +6,16 @@ import { Icon } from "../Icon";
 import { KeyForm } from "./KeyForm";
 import { LoginFlow } from "./LoginFlow";
 import { t } from "../../i18n";
+import { useAction } from "../../useAction";
 
 type Props = { agent: AgentRef; account: HostAccount; state: AccountState | undefined; onChanged: (message: string) => void; onClose: () => void };
 
 /** Ein Zugang (Codex, Claude, OpenCode Go) in einem Profil: Stand, Anmeldung und Key. */
 export function AccountPanel({ agent, account, state, onChanged, onClose }: Props) {
   const [editingKey, setEditingKey] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [word, setWord] = useState("");
+  const out = useAction();
   // Die Key-Variablen des Anbieters stehen in der Anbieterliste des Profils; sie werden erst geholt, wenn man den Zugang öffnet.
   const overview = useAsync(() => api.providers(agent, 7), [agent.host, agent.runtime, agent.agent]);
   const group = overview.data?.providers.find((g) => g.id === account.provider);
@@ -33,6 +37,14 @@ export function AccountPanel({ agent, account, state, onChanged, onClose }: Prop
           <Icon name={keySet ? "edit" : "plus"} size={14} />{keySet ? t("Key ersetzen") : t("Key eintragen")}
         </button>
       ))}
+      {state?.via === "login" && (leaving ? (
+        <>
+          <label>{t("Zum Bestätigen „")}{account.provider}{t("“ eintippen")} <input className="field field-line" value={word} onChange={(e) => setWord(e.target.value)} autoComplete="off" /></label>
+          <button type="button" className="btn btn-s btn-danger" style={{ alignSelf: "flex-start" }} disabled={out.busy || word !== account.provider}
+            onClick={() => void out.run(async () => { await api.omLogout(agent, account.provider, word); setLeaving(false); setWord(""); onChanged(t("Abgemeldet.")); })}>{t("Abmelden")}</button>
+        </>
+      ) : <button type="button" className="btn btn-s" style={{ alignSelf: "flex-start" }} onClick={() => setLeaving(true)}>{t("Abmelden …")}</button>)}
+      {out.notes}
       <button type="button" className="btn btn-s btn-g" style={{ alignSelf: "flex-start" }} onClick={onClose}>{t("Schließen")}</button>
     </div>
   );

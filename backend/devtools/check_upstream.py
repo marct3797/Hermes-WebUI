@@ -45,6 +45,8 @@ USED: dict[str, list[str]] = {
         "/api/system/stats", "/api/tools/computer-use/status", "/api/curator", "/api/curator/paused", "/api/curator/run", "/api/learning/graph", "/api/learning/node",
         "/api/dashboard/themes", "/api/dashboard/theme", "/api/dashboard/font", "/api/egress/status", "/api/shared-metrics/consent",
         "/api/mcp/servers/{}", "/api/mcp/servers/{}/test", "/api/mcp/servers/{}/auth", "/api/mcp/servers/{}/enabled", "/api/mcp/oauth/flows/{}",
+        "/api/ops/checkpoints", "/api/ops/checkpoints/prune", "/api/ops/security-audit", "/api/gateway/drain", "/api/hermes/update/receipt", "/api/config/defaults", "/api/config/raw",
+        "/api/cron/jobs/{}/cancel", "/api/providers/oauth/{}",
         "/api/dashboard/agent-plugins/{}", "/api/dashboard/agent-plugins/{}/enable", "/api/dashboard/agent-plugins/{}/disable", "/api/dashboard/agent-plugins/{}/update",
     ],
     "achievements-plugin": ["/api/plugins/hermes-achievements/achievements", "/api/plugins/hermes-achievements/rescan", "/api/plugins/hermes-achievements/reset-state"],  # plugins/hermes-achievements/dashboard/plugin_api.py

@@ -30,6 +30,7 @@ export const cronApi = {
   update: (h: string, p: string, id: string, body: JobInput) => call<Job>("PUT", job(h, p, id), body),
   act: (h: string, p: string, id: string, action: "pause" | "resume" | "trigger", confirmSystem = false) =>
     call<Job>("POST", `${job(h, p, id)}/${action}`, confirmSystem ? { confirm_system: true } : undefined),
+  cancel: (h: string, p: string, id: string) => call<{ ok: boolean; cancelled: boolean }>("POST", `${job(h, p, id)}/cancel`),
   remove: (h: string, p: string, id: string, confirmSystem = false) => call<{ ok: boolean }>("DELETE", job(h, p, id), confirmSystem ? { confirm_system: true } : undefined),
   instantiate: (h: string, p: string, blueprint: string, values: Record<string, string>) => call<Job>("POST", `${cron(h, p)}/blueprints`, { blueprint, values }),
 };

@@ -58,6 +58,7 @@ export function JobPanel({ host, profile, job, targets, skills, onChanged, onClo
   const save = (body: JobInput) => run("save", () => cronApi.update(host, profile, job.id, { ...body, ...(job.system ? { confirm_system: true } : {}) }), "Gespeichert.");
   const toggle = () => run("toggle", () => cronApi.act(host, profile, job.id, job.enabled ? "pause" : "resume"), job.enabled ? "Pausiert." : "Aktiviert.");
   const trigger = () => run("trigger", () => cronApi.act(host, profile, job.id, "trigger", job.system), "Lauf gestartet.", () => setRunsRev((n) => n + 1));
+  const stop = () => run("stop", async () => { const r = await cronApi.cancel(host, profile, job.id); setNote(r.cancelled ? t("Lauf gestoppt.") : t("Es lief gerade kein Lauf.")); });
   const remove = async () => {
     setDeleting(true); setErr(undefined);
     try { await cronApi.remove(host, profile, job.id, job.system); setSure(false); onChanged(true); } catch (e) { setErr(e); setSure(false); } finally { setDeleting(false); }
@@ -75,6 +76,7 @@ export function JobPanel({ host, profile, job, targets, skills, onChanged, onClo
       <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
         <button type="button" className="btn btn-s" disabled={!!busy || st.key === "done"} onClick={() => void toggle()}>{job.enabled && job.state !== "paused" ? t("Pausieren") : t("Aktivieren")}</button>
         <button type="button" className="btn btn-s" disabled={!!busy || (locked && job.system)} onClick={() => void trigger()}><Icon name="play" size={14} />{t("Jetzt ausführen")}</button>
+        <button type="button" className="btn btn-s" disabled={!!busy || locked} onClick={() => void stop()}>{t("Lauf stoppen")}</button>
         <button type="button" className="btn btn-s" disabled={!!busy || locked} onClick={() => setSure(true)}><Icon name="x" size={14} />{t("Löschen")}</button>
       </div>
       {job.system && (

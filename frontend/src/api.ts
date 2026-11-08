@@ -275,6 +275,15 @@ export const api = {
   lcSetActive: (a: AgentRef, name: string) => call<{ ok: boolean }>("POST", `${base(a)}/hermes-profiles/active`, { name }),
   lcBackup: (a: AgentRef, confirm: string) => call<{ ok: boolean; archive: string }>("POST", `${base(a)}/hermes-ops/backup`, { confirm }),
   lcDoctor: (a: AgentRef) => call<{ ok: boolean; name: string }>("POST", `${base(a)}/hermes-ops/doctor`, {}),
+  omCheckpoints: (a: AgentRef) => call<{ sessions: { session: string; files: number | null; bytes: number | null }[]; total_bytes: number | null; truncated: boolean }>("GET", `${base(a)}/hermes-ops/checkpoints`),
+  omPrune: (a: AgentRef, confirm: string) => call<{ ok: boolean }>("POST", `${base(a)}/hermes-ops/checkpoints/prune`, { confirm }),
+  omAudit: (a: AgentRef) => call<{ ok: boolean }>("POST", `${base(a)}/hermes-ops/security-audit`, {}),
+  omAction: (a: AgentRef, name: "checkpoints-prune" | "security-audit") => call<{ action: string; running: boolean; exit_code: number | null; log: string }>("GET", `${base(a)}/hermes-ops/actions/${name}`),
+  omDrain: (a: AgentRef, action: "drain" | "cancel", confirm = "") => call<{ ok: boolean; action: string; was_draining: boolean | null }>("POST", `${base(a)}/gateway/drain`, { action, confirm }),
+  omReceipt: (a: AgentRef) => call<{ receipt: Record<string, string | number | boolean> | null }>("GET", `${base(a)}/hermes-ops/update-receipt`),
+  omDefaults: (a: AgentRef) => call<{ defaults: Record<string, unknown> }>("GET", `${base(a)}/hermes-config/defaults`),
+  omRaw: (a: AgentRef) => call<{ yaml: string; truncated: boolean; redacted: boolean }>("GET", `${base(a)}/hermes-config/raw`),
+  omLogout: (a: AgentRef, provider: string, confirm: string) => call<{ ok: boolean }>("DELETE", `${base(a)}/providers/oauth/${provider}`, { confirm }),
   lcDoctorLog: (a: AgentRef) => call<{ name: string; lines: string[] }>("GET", `${base(a)}/hermes-ops/actions/doctor`),
   lcImport: async (a: AgentRef, file: File, name?: string): Promise<{ ok: boolean; name: string }> => {
     const f = new FormData(); f.append("archive", file, file.name); if (name) f.append("name", name);
