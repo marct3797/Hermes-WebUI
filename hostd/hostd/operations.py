@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from . import workspace as files
 from . import memory_files as memfiles
-from . import automation, automation_write, credentials, distributions, native, sessions
+from . import automation, automation_write, credentials, distributions, native, peers, sessions
 
 router = APIRouter(prefix='/v1')
 
@@ -343,6 +343,25 @@ class SecretsAct(BaseModel):
 def secrets_act(profile: str, body: SecretsAct, request: Request):
     settings = request.app.state.settings
     return credentials.secrets(settings, selected(settings, 'profiles', profile), body.provider, body.action, body.env_var, body.reference)
+
+
+class PeerAct(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    action: Literal['list', 'add', 'remove', 'run', 'status', 'stop']
+    name: str | None = Field(default=None, max_length=64)
+    url: str | None = Field(default=None, max_length=200)
+    key: str | None = Field(default=None, max_length=500)
+    note: str | None = Field(default=None, max_length=200)
+    target: str | None = Field(default=None, max_length=130)
+    run_id: str | None = Field(default=None, max_length=128)
+    message: str | None = Field(default=None, max_length=12000)
+    idempotency_key: str | None = Field(default=None, max_length=128)
+
+
+@router.post('/profiles/{profile}/peers')
+def peers_act(profile: str, body: PeerAct, request: Request):
+    settings = request.app.state.settings
+    return peers.act(settings, selected(settings, 'profiles', profile), body.model_dump())
 
 
 class DistributionAct(BaseModel):

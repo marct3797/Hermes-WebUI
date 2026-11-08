@@ -37,6 +37,7 @@ Example **operator-managed** configuration fragment (not a usable deployment):
       "allow_vault": false,
       "allow_secrets": false,
       "allow_distributions": false,
+      "allow_peers": false,
       "allowed_plugins": []
     }
   },
@@ -247,3 +248,11 @@ A distribution ships SOUL, `mcp.json`, skills, cron jobs and config: foreign cod
   copy from the same clone that was hashed (`409` if the source changed). `update` re-pulls from the source recorded in the profile, which must equal the *chosen* source (`403` otherwise,
   because the agent can edit `distribution.yaml` in its profile). A profile that already exists can only be overwritten or updated if hostd lists it with `allow_distributions: true` (`403` otherwise), and only one change per profile runs at a time (`409`). The digest also covers the execute bit and directories; more than 2000 files or 200 MB are refused. `install_distribution`'s optional shell alias is not created. It uses Hermes' private installer functions; a Hermes without them gives `426`.
 
+### Bot mode peers (CLI-only in Hermes)
+
+Peers are other Hermes gateways (with the `api_server` platform) that this agent can message. Off unless the profile sets `allow_peers: true`; needs `native_python` and `native_source` like the vault.
+
+- `POST /v1/profiles/{profile}/peers` with `{action: list | add | remove | run | status | stop, ...}` calls the functions of `hermes_cli.subcommands.peer` in `native_python` (`-I`, cwd = `native_source`). The peer's API key (`add`) and the message (`run`) travel only on stdin, never as arguments. Nothing from `add`/`remove` is returned except `ok`; `list` returns name, URL, note and whether a key is set.
+- Peer URLs must be `http(s)://host[:port]/...` without credentials, query or fragment (the peer receives the key as a bearer token). Names are lowercase slugs. Targets are `<peer>` or `<peer>/<profile>`; run ids and idempotency keys are restricted to `[A-Za-z0-9_.:-]`. Link-local, unspecified and multicast addresses (such as the cloud metadata service) are refused; loopback and tailnet addresses are allowed on purpose. Keys must be ASCII. Messages up to 12000 characters (sent as UTF-8). The helper loads Hermes' `.env` itself, as Hermes only does that in its own programs. `add`/`remove` of one profile run one at a time (`409`). The `run` limit is 200 seconds because Hermes makes up to five requests of 30 seconds each; keep a reverse proxy's timeout above that. The BFF requires the key again when a peer's address changes.
+- `run` starts an asynchronous run (`hermes peer run`); `status` and `stop` take the run id. The synchronous `dm` is not offered (it can block for ten minutes). `remove` keeps the key in Hermes' `.env`, like the CLI.
+- The session WebSocket (A2A) of the gateway is Hermes-internal profile forwarding and has no operator surface; it is not connected.

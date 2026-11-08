@@ -277,6 +277,8 @@ export type RelayPlatform = { platform: string; bot_url: string | null; accounts
 export type RelayStatus = { managed_by: string; portal_url: string | null; platforms: RelayPlatform[] };
 export type RelayLink = { platform: string; code: string; command: string; expires_at: string | number | null; bot_url: string | null };
 
+export type PeerRow = { name: string; url: string; note: string; has_key: boolean };
+export type PeerRun = { peer?: string; profile?: string | null; session_id?: string; run_id?: string; status?: string; replayed?: boolean; output?: string; error?: string; ok?: boolean };
 export type VaultItem = { id: string; kind: "login" | "payment" | "address"; label: string; origin?: string | null; identifier?: string | null; identifier_type?: string | null; has_otp?: boolean; created_at?: string };
 export type VaultList = { items: VaultItem[]; key_storage: "file" | "keychain" | null };
 export type VaultIn = { kind: VaultItem["kind"]; label: string; origin: string; identifier_type?: string; identifier?: string; password?: string; otp_secret?: string; fields?: Record<string, string> };
