@@ -33,3 +33,14 @@ def test_unlink_needs_the_word_and_is_read_back(env, lossy):
     assert env.delete(f"{R}/telegram/accounts/tg-4711?confirm=trennen").status_code == 200
     assert env.get(R).json()["platforms"][0]["accounts"] == []
     assert lossy.delete(f"{R}/telegram/accounts/tg-4711?confirm=trennen").status_code == 502  # bleibt verknüpft
+
+
+def test_unlink_cannot_smuggle_path_parts(env):
+    for bad in ("..", ".", "x%3Fy%3D1", "a%2Fb", "x?y=1"):
+        assert env.delete(f"{R}/telegram/accounts/{bad}?confirm=trennen").status_code in (404, 422), bad
+    assert len(env.get(R).json()["platforms"][0]["accounts"]) == 1  # nichts getrennt
+
+
+def test_unlink_audits_even_when_the_account_stays_linked(lossy):
+    assert lossy.delete(f"{R}/telegram/accounts/tg-4711?confirm=trennen").status_code == 502
+    assert "messaging.relay_unlink" in open(lossy.audit_file).read()

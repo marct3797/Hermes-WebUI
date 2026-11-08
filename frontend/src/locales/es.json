@@ -2432,7 +2432,6 @@
  "Aufgaben automatisch zerlegen": "Dividir tareas automáticamente",
  "Automatisch aktualisieren": "Actualizar automáticamente",
  "Automatisch beschreiben …": "Describir automáticamente …",
- "Automatisch heißt: neuer Plugin-Code läuft ohne Rückfrage auf dem Host.": "Automático significa: el código nuevo del plugin se ejecuta en el host sin preguntar.",
  "Bei Änderungen in {name} ({platform}) melden": "Avisarme de cambios en {name} ({platform})",
  "Benannte Modelle, aus denen der Agent für Unteraufgaben wählt. Schlüssel werden nie angezeigt; ein leeres Feld behält den gespeicherten.": "Modelos con nombre entre los que el agente elige para subtareas. Las claves nunca se muestran; un campo vacío conserva la guardada.",
  "Bereinigte Ansicht von config.yaml und der Standardwerte. Geheimnisse, MCP-Umgebung und Pfade sind ersetzt, Kommentare entfallen. Ändern geht über die Einstellungsseite.": "Vista depurada de config.yaml y de los valores predeterminados. Secretos, entorno MCP y rutas se sustituyen, los comentarios se omiten. Los cambios se hacen en la página de ajustes.",
@@ -2610,5 +2609,8 @@
  "Routen-Namen müssen eindeutig sein.": "Los nombres de las rutas deben ser únicos.",
  "Zum Bestätigen „aktualisieren“ eintippen.": "Para confirmar, escribe «aktualisieren».",
  "Zum Bestätigen „trennen“ eintippen.": "Para confirmar, escribe «trennen».",
- "Zum Bestätigen „verwerfen“ eintippen.": "Para confirmar, escribe «verwerfen»."
+ "Zum Bestätigen „verwerfen“ eintippen.": "Para confirmar, escribe «verwerfen».",
+ "automatisch": "automático",
+ "Automatisch heißt: neuer Plugin-Code läuft ohne Rückfrage auf dem Host. Die Einstellung gilt für das aktive Profil des Dashboards.": "Automático significa: el código nuevo de los plugins se ejecuta en el host sin preguntar. El ajuste se aplica al perfil activo del panel.",
+ "Zum Einschalten „automatisch“ eintippen": "Para activar, escribe «automatisch»"
 }

@@ -36,7 +36,7 @@ export default function AccessPage({ agent }: { agent: AgentRef }) {
           </li>))}</ul>
         {(pairing?.pending.length ?? 0) > 0 && <>
           <input aria-label={t("Zum Verwerfen „verwerfen“ eintippen")} placeholder={t("verwerfen")} value={typed["clear"] ?? ""} onChange={(e) => setTyped({ ...typed, clear: e.target.value })} />
-          <button type="button" disabled={busy || typed["clear"]?.trim() !== "verwerfen"} onClick={() => void run(async () => { setPairing(await api.acClear(agent, "verwerfen")); setTyped({ ...typed, clear: "" }); })}>{t("Alle offenen Anfragen verwerfen")}</button>
+          <button type="button" disabled={busy || typed["clear"]?.trim() !== "verwerfen"} onClick={() => void run(async () => { setPairing(await api.acClear(agent, "verwerfen")); setTyped((v) => ({ ...v, clear: "" })); })}>{t("Alle offenen Anfragen verwerfen")}</button>
         </>}
         <h3>{t("Freigegeben")}</h3>
         <ul>{(pairing?.approved ?? []).map((a) => (

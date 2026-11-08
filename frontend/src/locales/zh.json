@@ -2432,7 +2432,6 @@
  "Aufgaben automatisch zerlegen": "自动拆分任务",
  "Automatisch aktualisieren": "自动更新",
  "Automatisch beschreiben …": "自动生成描述 …",
- "Automatisch heißt: neuer Plugin-Code läuft ohne Rückfrage auf dem Host.": "自动的意思是:新的插件代码会不经询问在主机上运行。",
  "Bei Änderungen in {name} ({platform}) melden": "{name}({platform})有变化时通知我",
  "Benannte Modelle, aus denen der Agent für Unteraufgaben wählt. Schlüssel werden nie angezeigt; ein leeres Feld behält den gespeicherten.": "代理为子任务选择的命名模型。密钥不会显示;留空则保留已保存的密钥。",
  "Bereinigte Ansicht von config.yaml und der Standardwerte. Geheimnisse, MCP-Umgebung und Pfade sind ersetzt, Kommentare entfallen. Ändern geht über die Einstellungsseite.": "config.yaml 和默认值的清理后视图。密钥、MCP 环境和路径已被替换,注释已省略。修改请通过设置页面进行。",
@@ -2610,5 +2609,8 @@
  "Routen-Namen müssen eindeutig sein.": "路由名称必须唯一。",
  "Zum Bestätigen „aktualisieren“ eintippen.": "要确认,请输入“aktualisieren”。",
  "Zum Bestätigen „trennen“ eintippen.": "要确认,请输入“trennen”。",
- "Zum Bestätigen „verwerfen“ eintippen.": "要确认,请输入“verwerfen”。"
+ "Zum Bestätigen „verwerfen“ eintippen.": "要确认,请输入“verwerfen”。",
+ "automatisch": "自动",
+ "Automatisch heißt: neuer Plugin-Code läuft ohne Rückfrage auf dem Host. Die Einstellung gilt für das aktive Profil des Dashboards.": "“自动”表示新的插件代码会在主机上直接运行，不再询问。该设置适用于仪表板的当前配置文件。",
+ "Zum Einschalten „automatisch“ eintippen": "要开启，请输入“automatisch”"
 }

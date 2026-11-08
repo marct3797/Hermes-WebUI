@@ -8,7 +8,8 @@ const EFFORT = ["", "none", "minimal", "low", "medium", "high", "xhigh"];
 const TIER = ["", "normal", "fast", "ultrafast"];
 
 type Row = DlgRouteIn & { had_key: boolean };
-const toRow = (r: DlgRoute): Row => ({ name: r.name, original_name: r.name, description: r.description, provider: r.provider, model: r.model, base_url: r.base_url, reasoning_effort: r.reasoning_effort, service_tier: r.service_tier, api_key: "", clear_api_key: false, had_key: r.has_api_key });
+const toRow = (r: DlgRoute): Row => ({ name: r.name, original_name: r.name, description: r.description ?? "", provider: r.provider ?? "", model: r.model ?? "", base_url: r.base_url ?? "", reasoning_effort: r.reasoning_effort ?? "", service_tier: r.service_tier ?? "", api_key: "", clear_api_key: false, had_key: Boolean(r.has_api_key) });
+const withValue = (list: string[], v: string) => (v && !list.includes(v) ? [...list, v] : list); // ein Wert aus der CLI, den die Liste nicht kennt, bleibt wählbar
 const blank = (): Row => ({ name: "", original_name: "", description: "", provider: "", model: "", base_url: "", reasoning_effort: "", service_tier: "", api_key: "", clear_api_key: false, had_key: false });
 
 /** Modell- und Profilrouten der Delegation. Schlüssel sind write-only; ein leeres Schlüsselfeld behält den gespeicherten. */
@@ -22,12 +23,12 @@ export function DelegationRoutes({ agent, del, onSaved }: { agent: AgentRef; del
   const [saved, setSaved] = useState("");
   const m = useAction();
   const p = useAction();
-  useEffect(() => {
-    setRows((del.model_map?.options ?? []).map(toRow)); setDef(del.model_map?.default ?? "");
-    setPr(del.profile_routes?.profiles ?? []); setPrDef(del.profile_routes?.default ?? "");
-  }, [del]);
+  const mm = JSON.stringify(del.model_map ?? null);
+  const prs = JSON.stringify(del.profile_routes ?? null);
+  useEffect(() => { setRows((del.model_map?.options ?? []).map(toRow)); setDef(del.model_map?.default ?? ""); }, [mm]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setPr((del.profile_routes?.profiles ?? []).map((x) => ({ name: x.name, description: x.description ?? "" }))); setPrDef(del.profile_routes?.default ?? ""); }, [prs]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!del.model_map || !del.profile_routes) return null;
-  const set = (i: number, patch: Partial<Row>) => setRows(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  const set = (i: number, patch: Partial<Row>) => { if (patch.name !== undefined && def && def === rows[i].name) setDef(patch.name.trim()); setRows(rows.map((r, j) => (j === i ? { ...r, ...patch } : r))); };
   const names = rows.map((r) => r.name.trim());
   const rowsOk = rows.every((r) => r.name.trim() && r.description.trim() && r.model.trim() && (r.provider.trim() || r.base_url.trim())) && new Set(names).size === names.length;
   const free = del.profiles.filter((n) => !pr.some((x) => x.name === n));
@@ -46,8 +47,8 @@ export function DelegationRoutes({ agent, del, onSaved }: { agent: AgentRef; del
             <label>{t("Routenmodell")} <input aria-label={t("Routenmodell {n}", { n: i + 1 })} value={r.model} onChange={(e) => set(i, { model: e.target.value })} /></label>
             <label>{t("Routenanbieter")} <input aria-label={t("Routenanbieter {n}", { n: i + 1 })} value={r.provider} onChange={(e) => set(i, { provider: e.target.value })} /></label>
             <label>{t("Routenadresse")} <input aria-label={t("Routenadresse {n}", { n: i + 1 })} value={r.base_url} onChange={(e) => set(i, { base_url: e.target.value })} /></label>
-            <label>{t("Denkaufwand")} <select aria-label={t("Denkaufwand {n}", { n: i + 1 })} value={r.reasoning_effort} onChange={(e) => set(i, { reasoning_effort: e.target.value })}>{EFFORT.map((x) => <option key={x} value={x}>{x || t("Standard")}</option>)}</select></label>
-            <label>{t("Dienststufe")} <select aria-label={t("Dienststufe {n}", { n: i + 1 })} value={r.service_tier} onChange={(e) => set(i, { service_tier: e.target.value })}>{TIER.map((x) => <option key={x} value={x}>{x || t("Standard")}</option>)}</select></label>
+            <label>{t("Denkaufwand")} <select aria-label={t("Denkaufwand {n}", { n: i + 1 })} value={r.reasoning_effort} onChange={(e) => set(i, { reasoning_effort: e.target.value })}>{withValue(EFFORT, r.reasoning_effort).map((x) => <option key={x} value={x}>{x || t("Standard")}</option>)}</select></label>
+            <label>{t("Dienststufe")} <select aria-label={t("Dienststufe {n}", { n: i + 1 })} value={r.service_tier} onChange={(e) => set(i, { service_tier: e.target.value })}>{withValue(TIER, r.service_tier).map((x) => <option key={x} value={x}>{x || t("Standard")}</option>)}</select></label>
             <label>{t("Routenschlüssel")} <input aria-label={t("Routenschlüssel {n}", { n: i + 1 })} type="password" autoComplete="off" placeholder={r.had_key ? t("gesetzt – leer lassen zum Behalten") : ""} value={r.api_key} onChange={(e) => set(i, { api_key: e.target.value })} /></label>
             {r.had_key && <label><input type="checkbox" checked={r.clear_api_key} onChange={(e) => { const c = e.target.checked; set(i, { clear_api_key: c }); }} /> {t("Gespeicherten Schlüssel entfernen")}</label>}
             <button type="button" onClick={() => { setRows(rows.filter((_, j) => j !== i)); if (def === r.name) setDef(""); }}>{t("Route {n} entfernen", { n: i + 1 })}</button>
@@ -78,7 +79,7 @@ export function DelegationRoutes({ agent, del, onSaved }: { agent: AgentRef; del
         <label>{t("Standardprofil")} <select aria-label={t("Standardprofil")} value={prDef} onChange={(e) => setPrDef(e.target.value)}><option value="">{t("keins")}</option>{pr.map((x) => <option key={x.name} value={x.name}>{x.name}</option>)}</select></label>
         <label>{t("Zum Ersetzen „{word}“ eintippen", { word: agent.agent })} <input aria-label={t("Bestätigung Profilrouten")} value={typedP} onChange={(e) => setTypedP(e.target.value)} /></label>
         <button type="button" disabled={p.busy || typedP.trim() !== agent.agent} onClick={() => void p.run(async () => {
-          await api.dlgProfileRoutes(agent, { profiles: pr, default: prDef, confirm: typedP.trim() }); setTypedP(""); setSaved(t("Profilrouten gespeichert.")); await onSaved();
+          await api.dlgProfileRoutes(agent, { profiles: pr.map((x) => ({ name: x.name, description: x.description ?? "" })), default: prDef, confirm: typedP.trim() }); setTypedP(""); setSaved(t("Profilrouten gespeichert.")); await onSaved();
         })}>{t("Profilrouten speichern")}</button>
       </section>
     </>

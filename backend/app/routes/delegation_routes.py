@@ -10,7 +10,7 @@ Darum gilt hier:
 """
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
@@ -24,8 +24,8 @@ router = APIRouter(prefix="/bff/h/{host}/{runtime}/{agent}", dependencies=[Depen
 
 NAME = r"^[^\x00-\x1f]{1,100}$"
 TEXT_KEYS = ("description", "provider", "model", "base_url")
-Effort = Literal["", "none", "minimal", "low", "medium", "high", "xhigh"]
-Tier = Literal["", "normal", "fast", "ultrafast"]
+Effort = Annotated[str, Field(default="", max_length=30, pattern=r"^[A-Za-z0-9_-]*$")]  # Hermes prüft die Werte selbst (VALID_REASONING_EFFORTS, STATIC_TIERS)
+Tier = Annotated[str, Field(default="", max_length=30, pattern=r"^[A-Za-z0-9_-]*$")]
 
 
 class Route(BaseModel):
@@ -36,8 +36,8 @@ class Route(BaseModel):
     provider: str = Field(default="", max_length=100)
     model: str = Field(default="", max_length=200)
     base_url: str = Field(default="", max_length=500)
-    reasoning_effort: Effort = ""
-    service_tier: Tier = ""
+    reasoning_effort: Effort
+    service_tier: Tier
     api_key: str = Field(default="", max_length=5000)  # write-only; leer = vorhandenen behalten
     clear_api_key: bool = False
 
@@ -96,6 +96,9 @@ def build_option(route: Route, stored: dict[str, dict[str, Any]]) -> dict[str, A
         out["api_key"] = route.api_key.strip()
     elif route.clear_api_key:
         out.pop("api_key", None)
+    elif out.get("api_key") and any(str(base.get(k) or "") != str(out.get(k) or "") for k in ("base_url", "provider")):
+        # Ein gespeicherter Schlüssel darf nicht an ein anderes Ziel mitwandern, ohne dass jemand ihn neu eingibt.
+        raise HTTPException(422, f"Route „{route.name.strip()}“: Adresse oder Anbieter geändert. Schlüssel neu eingeben oder entfernen.")
     return out
 
 
@@ -115,12 +118,16 @@ async def save_model_map(request: Request, target: Tgt, dash: Dash, req: ModelMa
         raise HTTPException(422, "Die Standardroute muss in der Liste stehen.")
     before = (await _routing(dash, target.agent.id)).get("model_map") or {}
     stored = _stored(before)
-    body = {"options": [build_option(o, stored) for o in req.options], "default": req.default.strip()}
+    options = [build_option(o, stored) for o in req.options]
+    body = {"options": options, "default": req.default.strip()}
     await upstream(dash.request("PUT", "/api/delegation/backends/model_map", body=body, params={"profile": target.agent.id}))
     after = (await _routing(dash, target.agent.id)).get("model_map") or {}
-    if [o.get("name") for o in after.get("options") or [] if isinstance(o, dict)] != names or (after.get("default") or "") != req.default.strip():
+    now = _stored(after)
+    kept = all(bool(now.get(o["name"], {}).get("api_key")) == bool(o.get("api_key")) for o in options)  # ein Hermes ohne Vorschau-Erkennung würde den echten Schlüssel überschreiben
+    ok = [o.get("name") for o in after.get("options") or [] if isinstance(o, dict)] == names and (after.get("default") or "") == req.default.strip() and kept
+    audit(request, user, "delegation.model_map", target, routes=len(names), new_keys=sum(bool(o.api_key.strip()) for o in req.options), default=bool(req.default.strip()), verified=ok)
+    if not ok:
         raise HTTPException(502, "Das Dashboard hat die Modellrouten nicht übernommen")
-    audit(request, user, "delegation.model_map", target, routes=len(names), new_keys=sum(bool(o.api_key.strip()) for o in req.options), default=bool(req.default.strip()))
     return {"ok": True, "options": _view(after.get("options")), "default": after.get("default") or None}
 
 
@@ -140,7 +147,8 @@ async def save_profile_routes(request: Request, target: Tgt, dash: Dash, req: Pr
     await upstream(dash.request("PUT", "/api/delegation/backends/profile_routes", body=body, params={"profile": target.agent.id}))
     after = (await _routing(dash, target.agent.id)).get("profile_routes") or {}
     rows = [p for p in after.get("profiles") or [] if isinstance(p, dict)]
-    if [p.get("name") for p in rows] != names or (after.get("default") or "") != req.default.strip():
+    ok = [p.get("name") for p in rows] == names and (after.get("default") or "") == req.default.strip()
+    audit(request, user, "delegation.profile_routes", target, profiles=len(names), default=bool(req.default.strip()), verified=ok)
+    if not ok:
         raise HTTPException(502, "Das Dashboard hat die Profilrouten nicht übernommen")
-    audit(request, user, "delegation.profile_routes", target, profiles=len(names), default=bool(req.default.strip()))
     return {"ok": True, "profiles": [{"name": p.get("name"), "description": p.get("description", "")} for p in rows], "default": after.get("default") or None}

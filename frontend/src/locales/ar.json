@@ -2432,7 +2432,6 @@
  "Aufgaben automatisch zerlegen": "تقسيم المهام تلقائيًا",
  "Automatisch aktualisieren": "التحديث تلقائيًا",
  "Automatisch beschreiben …": "وصف تلقائي …",
- "Automatisch heißt: neuer Plugin-Code läuft ohne Rückfrage auf dem Host.": "تلقائي يعني: تعمل شيفرة الإضافة الجديدة على المضيف دون سؤال.",
  "Bei Änderungen in {name} ({platform}) melden": "أبلغني بالتغييرات في {name} ({platform})",
  "Benannte Modelle, aus denen der Agent für Unteraufgaben wählt. Schlüssel werden nie angezeigt; ein leeres Feld behält den gespeicherten.": "نماذج مسماة يختار منها الوكيل للمهام الفرعية. لا تُعرض المفاتيح أبدًا؛ الحقل الفارغ يُبقي المحفوظ.",
  "Bereinigte Ansicht von config.yaml und der Standardwerte. Geheimnisse, MCP-Umgebung und Pfade sind ersetzt, Kommentare entfallen. Ändern geht über die Einstellungsseite.": "عرض منقّح لملف config.yaml والقيم الافتراضية. تُستبدل الأسرار وبيئة MCP والمسارات، وتُحذف التعليقات. تتم التعديلات عبر صفحة الإعدادات.",
@@ -2610,5 +2609,8 @@
  "Routen-Namen müssen eindeutig sein.": "يجب أن تكون أسماء المسارات فريدة.",
  "Zum Bestätigen „aktualisieren“ eintippen.": "للتأكيد اكتب «aktualisieren».",
  "Zum Bestätigen „trennen“ eintippen.": "للتأكيد اكتب «trennen».",
- "Zum Bestätigen „verwerfen“ eintippen.": "للتأكيد اكتب «verwerfen»."
+ "Zum Bestätigen „verwerfen“ eintippen.": "للتأكيد اكتب «verwerfen».",
+ "automatisch": "تلقائي",
+ "Automatisch heißt: neuer Plugin-Code läuft ohne Rückfrage auf dem Host. Die Einstellung gilt für das aktive Profil des Dashboards.": "تلقائي يعني: يعمل كود الإضافة الجديد على المضيف دون سؤال. ينطبق الإعداد على الملف الشخصي النشط في لوحة التحكم.",
+ "Zum Einschalten „automatisch“ eintippen": "للتفعيل اكتب «automatisch»"
 }

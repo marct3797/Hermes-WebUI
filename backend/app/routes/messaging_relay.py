@@ -7,12 +7,13 @@ Konten werden nur mit Kennung, Anzeigename und Zeitpunkt gezeigt; eine Trennung 
 """
 from __future__ import annotations
 
+import re
 from typing import Annotated, Any
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 
 from ..auth import User, current_user, fresh_user
-from ..dashboard_ops import clip
 from .agents import Tgt, upstream
 from .dashboard import Dash, audit
 
@@ -20,8 +21,13 @@ router = APIRouter(prefix="/bff/h/{host}/{runtime}/{agent}", dependencies=[Depen
 
 Platform = Annotated[str, Path(pattern=r"^[a-z][a-z0-9_]{0,39}$")]
 Code = Annotated[str, Path(pattern=r"^[A-Za-z0-9_-]{1,64}$")]
-UserId = Annotated[str, Path(min_length=1, max_length=200, pattern=r"^[^\x00-\x1f/]+$")]
+UserId = Annotated[str, Path(pattern=r"^[A-Za-z0-9_@+:=~-][A-Za-z0-9_@.+:=~-]{0,199}$")]
 BASE = "/api/messaging/relay"
+
+
+def clip(value: Any, limit: int) -> str:
+    """Nur kürzen. Codes und Kennungen dürfen nicht durch die Schwärzung laufen: ein Code mit „token“ im Text würde unbrauchbar."""
+    return re.sub(r"[\x00-\x1f]", " ", str(value))[:limit] if value is not None else ""
 
 
 def _limit(request: Request, user: User) -> None:
@@ -78,11 +84,12 @@ async def relay_unlink(request: Request, target: Tgt, dash: Dash, platform: Plat
     _limit(request, user)
     if confirm.strip() != "trennen":
         raise HTTPException(422, "Zum Bestätigen „trennen“ eintippen.")
-    b = await upstream(dash.request("DELETE", f"{BASE}/{platform}/accounts/{user_id}"))
+    b = await upstream(dash.request("DELETE", f"{BASE}/{platform}/accounts/{quote(user_id, safe='')}"))
     if not isinstance(b, dict) or b.get("unlinked") is not True:
         raise HTTPException(502, "Das Dashboard hat die Trennung nicht bestätigt")
     now = await relay_status(target, dash)
-    if any(a["id"] == user_id for r in now["platforms"] if r["platform"] == platform for a in r["accounts"]):
+    gone = not any(a["id"] == user_id for r in now["platforms"] if r["platform"] == platform for a in r["accounts"])
+    audit(request, user, "messaging.relay_unlink", target, platform=platform, verified=gone)
+    if not gone:
         raise HTTPException(502, "Das Konto ist nach der Trennung noch verknüpft")
-    audit(request, user, "messaging.relay_unlink", target, platform=platform)
     return {"ok": True}

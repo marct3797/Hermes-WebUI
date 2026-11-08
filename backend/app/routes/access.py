@@ -81,13 +81,13 @@ async def pairing_clear(request: Request, target: Tgt, dash: Dash, req: ClearIn,
     _limit(request, user, "hermes-access")
     if req.confirm != "verwerfen":
         raise HTTPException(422, "Zum Bestätigen „verwerfen“ eintippen.")
-    before = len((await _pairing(dash, target.agent.id))["pending"])
-    await upstream(dash.request("POST", "/api/pairing/clear-pending", params={"profile": target.agent.id}))
+    res = await upstream(dash.request("POST", "/api/pairing/clear-pending", params={"profile": target.agent.id}))
+    cleared = res.get("cleared") if isinstance(res, dict) and isinstance(res.get("cleared"), int) else 0
     after = await _pairing(dash, target.agent.id)
+    audit(request, user, "pairing.clear_pending", target, cleared=cleared, verified=not after["pending"])
     if after["pending"]:
         raise HTTPException(502, "Das Dashboard hat die Anfragen nicht verworfen")
-    audit(request, user, "pairing.clear_pending", target, cleared=before)
-    return {"ok": True, "cleared": before, **after}
+    return {"ok": True, "cleared": cleared, **after}
 
 
 class RevokeIn(BaseModel):

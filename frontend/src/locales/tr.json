@@ -2432,7 +2432,6 @@
  "Aufgaben automatisch zerlegen": "Görevleri otomatik böl",
  "Automatisch aktualisieren": "Otomatik güncelle",
  "Automatisch beschreiben …": "Otomatik tanımla …",
- "Automatisch heißt: neuer Plugin-Code läuft ohne Rückfrage auf dem Host.": "Otomatik şu demek: yeni eklenti kodu sormadan ana bilgisayarda çalışır.",
  "Bei Änderungen in {name} ({platform}) melden": "{name} ({platform}) içindeki değişiklikleri bildir",
  "Benannte Modelle, aus denen der Agent für Unteraufgaben wählt. Schlüssel werden nie angezeigt; ein leeres Feld behält den gespeicherten.": "Aracının alt görevler için seçtiği adlandırılmış modeller. Anahtarlar asla gösterilmez; boş alan kayıtlı olanı korur.",
  "Bereinigte Ansicht von config.yaml und der Standardwerte. Geheimnisse, MCP-Umgebung und Pfade sind ersetzt, Kommentare entfallen. Ändern geht über die Einstellungsseite.": "config.yaml ve varsayılanların temizlenmiş görünümü. Gizli bilgiler, MCP ortamı ve yollar değiştirilir, yorumlar atlanır. Değişiklikler ayarlar sayfasından yapılır.",
@@ -2610,5 +2609,8 @@
  "Routen-Namen müssen eindeutig sein.": "Rota adları benzersiz olmalı.",
  "Zum Bestätigen „aktualisieren“ eintippen.": "Onaylamak için “aktualisieren” yazın.",
  "Zum Bestätigen „trennen“ eintippen.": "Onaylamak için “trennen” yazın.",
- "Zum Bestätigen „verwerfen“ eintippen.": "Onaylamak için “verwerfen” yazın."
+ "Zum Bestätigen „verwerfen“ eintippen.": "Onaylamak için “verwerfen” yazın.",
+ "automatisch": "otomatik",
+ "Automatisch heißt: neuer Plugin-Code läuft ohne Rückfrage auf dem Host. Die Einstellung gilt für das aktive Profil des Dashboards.": "Otomatik demek: yeni eklenti kodu sormadan ana makinede çalışır. Ayar panelin etkin profili için geçerlidir.",
+ "Zum Einschalten „automatisch“ eintippen": "Açmak için “automatisch” yazın"
 }

@@ -541,7 +541,8 @@ def test_plugin_auto_update_needs_fresh_login_and_is_read_back(ext):
     c, s, _reg, _tmp = ext
     assert c.get(f"{E}/plugins/auto-update").json() == {"auto_apply": False, "check_hours": 24}
     assert c.put(f"{E}/plugins/auto-update", json={"enabled": "ja"}).status_code == 422
-    assert c.put(f"{E}/plugins/auto-update", json={"enabled": True}).json()["auto_apply"] is True
+    assert c.put(f"{E}/plugins/auto-update", json={"enabled": True}).status_code == 422  # Einschalten braucht das Wort
+    assert c.put(f"{E}/plugins/auto-update", json={"enabled": True, "confirm": "automatisch"}).json()["auto_apply"] is True
     s.drop_auto = True
     assert c.put(f"{E}/plugins/auto-update", json={"enabled": False}).status_code == 502  # Dashboard übernimmt nichts
 

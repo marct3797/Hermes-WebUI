@@ -12,6 +12,7 @@ export function PluginUpdates({ scope, onDone }: { scope: Scope; onDone: () => v
   const [auto, setAuto] = useState<boolean | null>(null);
   const [hours, setHours] = useState<number | null>(null);
   const [typed, setTyped] = useState("");
+  const [autoWord, setAutoWord] = useState("");
   const [out, setOut] = useState<Outcome | null>(null);
   const { run, notes, busy } = useAction();
   useEffect(() => { extApi.pluginAutoUpdate(scope.host, scope.profile).then((s) => { setAuto(s.auto_apply); setHours(s.check_hours); }, () => setAuto(null)); }, [scope.host, scope.profile]);
@@ -20,9 +21,10 @@ export function PluginUpdates({ scope, onDone }: { scope: Scope; onDone: () => v
     <section aria-label={t("Plugin-Aktualisierung")} className="card" style={{ padding: 12 }}>
       <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
         <b className="grow">{t("Plugins aktualisieren")}</b>
-        <Switch on={auto} label={t("Automatisch aktualisieren")} onChange={(v) => void run(async () => { const s = await extApi.setPluginAutoUpdate(scope.host, scope.profile, v); setAuto(s.auto_apply); setHours(s.check_hours); })} />
+        <Switch on={auto} label={t("Automatisch aktualisieren")} onChange={(v) => void run(async () => { const s = await extApi.setPluginAutoUpdate(scope.host, scope.profile, v, v ? autoWord.trim() : undefined); setAuto(s.auto_apply); setHours(s.check_hours); setAutoWord(""); })} />
       </div>
-      <p className="small muted" style={{ margin: "6px 0" }}>{t("Automatisch heißt: neuer Plugin-Code läuft ohne Rückfrage auf dem Host.")}{hours ? ` ${t("Prüfung alle {h} Stunden.", { h: hours })}` : ""}</p>
+      {!auto && <input className="field field-line" aria-label={t("Zum Einschalten „automatisch“ eintippen")} placeholder={t("automatisch")} value={autoWord} onChange={(e) => setAutoWord(e.target.value)} />}
+      <p className="small muted" style={{ margin: "6px 0" }}>{t("Automatisch heißt: neuer Plugin-Code läuft ohne Rückfrage auf dem Host. Die Einstellung gilt für das aktive Profil des Dashboards.")}{hours ? ` ${t("Prüfung alle {h} Stunden.", { h: hours })}` : ""}</p>
       {notes}
       <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
         <input className="field field-line" aria-label={t("Zum Aktualisieren „aktualisieren“ eintippen")} placeholder={t("aktualisieren")} value={typed} onChange={(e) => setTyped(e.target.value)} />

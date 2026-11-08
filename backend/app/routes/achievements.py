@@ -4,6 +4,7 @@ Geheime Erfolge zeigen weder Namen noch Kriterium; Sitzungen und Belege (Titel e
 """
 from __future__ import annotations
 
+import hashlib
 from typing import Annotated, Any
 from urllib.parse import quote
 
@@ -26,9 +27,9 @@ def _limit(request: Request, user: User) -> None:
 
 def _item(a: dict[str, Any]) -> dict[str, Any]:
     secret = a.get("state") == "secret"
-    return {"id": str(a.get("id"))[:80], "name": "???" if secret else str(a.get("name", ""))[:100],
+    return {"id": ("secret-" + hashlib.sha256(str(a.get("id")).encode()).hexdigest()[:8]) if secret else str(a.get("id"))[:80], "name": "???" if secret else str(a.get("name", ""))[:100],
             "description": "Geheim, bis Hermes das erste passende Verhalten sieht." if secret else str(a.get("description", ""))[:300],
-            "category": str(a.get("category", ""))[:60], "icon": str(a.get("icon", ""))[:30], "state": str(a.get("state", ""))[:20], "unlocked": bool(a.get("unlocked")),
+            "category": "" if secret else str(a.get("category", ""))[:60], "icon": str(a.get("icon", ""))[:30], "state": str(a.get("state", ""))[:20], "unlocked": bool(a.get("unlocked")),
             "tier": a.get("tier") if isinstance(a.get("tier"), str) else None, "progress": a.get("progress") if isinstance(a.get("progress"), int) else 0,
             "next_threshold": a.get("next_threshold") if isinstance(a.get("next_threshold"), int) else None,
             "progress_pct": a.get("progress_pct") if isinstance(a.get("progress_pct"), int) else 0,
@@ -94,7 +95,7 @@ async def recent(request: Request, host: HostId, user: User = Depends(current_us
 
 
 @router.get("/h/{host}/_achievements/sessions/{session_id}/badges")
-async def session_badges(request: Request, host: HostId, session_id: Annotated[str, Path(pattern=r"^[A-Za-z0-9_.:-]{1,128}$")], user: User = Depends(current_user)):
+async def session_badges(request: Request, host: HostId, session_id: Annotated[str, Path(pattern=r"^[A-Za-z0-9_:-][A-Za-z0-9_.:-]{0,127}$")], user: User = Depends(current_user)):
     """Was eine einzelne Sitzung freischalten würde. Nur Erfolge, nie Inhalte der Sitzung."""
     raw = await dash(request, host, "GET", f"{P}/sessions/{quote(session_id, safe='')}/badges", missing=MISSING)
     badges = raw.get("badges") if isinstance(raw, dict) else None

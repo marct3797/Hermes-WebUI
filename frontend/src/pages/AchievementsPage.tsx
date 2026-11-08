@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { hostApi, type AchScan, type Achievements } from "../p3Api";
 import { useHosts } from "../hosts";
 import { PageHead } from "../components/PageHead";
@@ -28,24 +28,28 @@ function Body({ host }: { host: string }) {
   const [scan, setScan] = useState<AchScan | null>(null);
   const [recent, setRecent] = useState<Achievements["items"]>([]);
   const [sid, setSid] = useState("");
+  const sidRef = useRef("");
+  sidRef.current = sid;
   const [badges, setBadges] = useState<Achievements["items"] | null>(null);
   const load = useCallback(async () => {
     setA(await hostApi.achievements(host));
     hostApi.achRecent(host).then((r) => setRecent(r.items), () => setRecent([]));
   }, [host]);
   useEffect(() => { load().catch((e) => setLoadErr((e as Error).message)); }, [load]);
-  // Der erste Lauf über den ganzen Verlauf dauert: solange er läuft, nachfragen und danach neu laden.
+  // Der erste Lauf über den ganzen Verlauf dauert: solange er läuft, nachfragen; beim Übergang laufend → fertig immer neu laden.
+  const wasRunning = useRef(false);
+  const [tick, setTick] = useState(0);
   useEffect(() => {
     let live = true; let timer: ReturnType<typeof setTimeout> | undefined;
     const poll = () => hostApi.achScan(host).then((s) => {
       if (!live) return;
       setScan(s);
-      if (s.state === "running") timer = setTimeout(poll, 3000);
-      else if (a?.is_stale) void load().catch(() => undefined);
+      if (s.state === "running") { wasRunning.current = true; timer = setTimeout(poll, 3000); return; }
+      if (wasRunning.current) { wasRunning.current = false; void load().catch(() => undefined); }
     }, () => undefined);
     void poll();
     return () => { live = false; if (timer) clearTimeout(timer); };
-  }, [host, a?.is_stale]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [host, tick]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <>
       {notes}
@@ -56,11 +60,11 @@ function Body({ host }: { host: string }) {
         {recent.length > 0 && <section aria-label={t("Zuletzt freigeschaltet")}><h2>{t("Zuletzt freigeschaltet")}</h2><ul>{recent.map((i) => <li key={i.id}><strong>{i.name}</strong>{i.tier ? ` (${i.tier})` : ""}</li>)}</ul></section>}
         <ul aria-label={t("Erfolge")}>{a.items.map((i) => (
           <li key={i.id}><strong>{i.name}</strong> {i.tier ? `(${i.tier}) ` : ""}{i.unlocked ? "freigeschaltet" : i.state === "secret" ? "geheim" : `${i.progress_pct} %`}<br />{i.description}</li>))}</ul>
-        <button type="button" disabled={busy} onClick={() => void run(async () => setA(await hostApi.achRescan(host)))}>{t("Neu scannen")}</button>
+        <button type="button" disabled={busy} onClick={() => void run(async () => { setA(await hostApi.achRescan(host)); setTick((n) => n + 1); })}>{t("Neu scannen")}</button>
         <section aria-label={t("Erfolge einer Sitzung")}>
           <h2>{t("Erfolge einer Sitzung")}</h2>
           <label>{t("Sitzungs-ID")} <input aria-label={t("Sitzungs-ID")} value={sid} onChange={(e) => { setSid(e.target.value); setBadges(null); }} /></label>
-          <button type="button" disabled={busy || !/^[A-Za-z0-9_.:-]{1,128}$/.test(sid.trim())} onClick={() => void run(async () => setBadges((await hostApi.achBadges(host, sid.trim())).items))}>{t("Erfolge prüfen")}</button>
+          <button type="button" disabled={busy || !/^[A-Za-z0-9_.:-]{1,128}$/.test(sid.trim())} onClick={() => void run(async () => { const asked = sid.trim(); const r = await hostApi.achBadges(host, asked); if (asked === sidRef.current.trim()) setBadges(r.items); })}>{t("Erfolge prüfen")}</button>
           {badges && (badges.length ? <ul aria-label={t("Erfolge dieser Sitzung")}>{badges.map((i) => <li key={i.id}>{i.name}</li>)}</ul> : <p role="status">{t("Diese Sitzung schaltet nichts frei.")}</p>)}
         </section>
         <label>{t("Zum Zurücksetzen „reset“ eintippen")} <input aria-label={t("Zurücksetzen bestätigen")} value={typed} onChange={(e) => setTyped(e.target.value)} /></label>

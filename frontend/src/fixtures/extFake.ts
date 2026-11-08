@@ -93,7 +93,7 @@ export class FakeBff {
     if ((x = rest.match(/^mcp\/([^/]+)$/)) && m === "DELETE") { this.mcp = this.mcp.filter((s) => s.name !== x![1]); return { ok: true }; }
     if (rest === "plugins" && m === "GET") return { plugins: this.plugins };
     if (rest === "plugins/catalog") return { entries: [] };
-    if (rest === "plugins/auto-update") { if (m === "PUT") this.autoApply = Boolean(b!.enabled); return { auto_apply: this.autoApply, check_hours: 24 }; }
+    if (rest === "plugins/auto-update") { if (m === "PUT") { if (b!.enabled && b!.confirm !== "automatisch") throw new Error("automatisch eintippen"); this.autoApply = Boolean(b!.enabled); } return { auto_apply: this.autoApply, check_hours: 24 }; }
     if (rest === "plugins/update-all") return { results: [{ name: "alpha", status: "updated", detail: "" }, { name: "beta", status: "needs_review", detail: "neue Berechtigungen" }], skipped: [], current: 2 };
     if (rest === "plugins/install") return { ok: true, name: "installed" };
     if ((x = rest.match(/^plugins\/([^/]+)\/(enable|disable)$/))) { this.plugins.find((s) => s.name === x![1])!.runtime_status = x[2] === "enable" ? "enabled" : "disabled"; return { ok: true }; }

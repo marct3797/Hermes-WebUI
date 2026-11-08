@@ -11,8 +11,8 @@ export function RelayPanel({ agent }: { agent: AgentRef }) {
   const [state, setState] = useState("");
   const [typed, setTyped] = useState<Record<string, string>>({});
   const { run, notes, busy } = useAction();
-  const load = useCallback(() => api.relayStatus(agent).then(setSt, () => setSt(null)), [agent.host, agent.runtime, agent.agent]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { void load(); }, [load]);
+  const load = useCallback((first = false) => api.relayStatus(agent).then(setSt, () => { if (first) setSt(null); }), [agent.host, agent.runtime, agent.agent]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void load(true); }, [load]);
   if (!st || st.platforms.length === 0) return null;
 
   return (
@@ -28,7 +28,7 @@ export function RelayPanel({ agent }: { agent: AgentRef }) {
             {p.accounts.map((a) => (
               <li key={a.id}>
                 <strong>{a.label || a.id}</strong> {a.linked_at && <span className="muted">{a.linked_at}</span>}
-                <input aria-label={t("Zum Trennen „trennen“ eintippen: {name}", { name: a.label || a.id })} value={typed[`${p.platform}:${a.id}`] ?? ""} onChange={(e) => setTyped({ ...typed, [`${p.platform}:${a.id}`]: e.target.value })} />
+                <input aria-label={t("Zum Trennen „trennen“ eintippen: {name}", { name: a.label || a.id })} value={typed[`${p.platform}:${a.id}`] ?? ""} onChange={(e) => { const v = e.target.value; const k = `${p.platform}:${a.id}`; setTyped((o) => ({ ...o, [k]: v })); }} />
                 <button type="button" disabled={busy || typed[`${p.platform}:${a.id}`]?.trim() !== "trennen"} onClick={() => void run(async () => { await api.relayUnlink(agent, p.platform, a.id, "trennen"); await load(); })}>{t("Konto {name} trennen", { name: a.label || a.id })}</button>
               </li>
             ))}

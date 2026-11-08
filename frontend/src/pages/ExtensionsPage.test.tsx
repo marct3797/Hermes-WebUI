@@ -226,9 +226,10 @@ describe("Erweiterungen: Plugin-Aktualisierung", () => {
     fireEvent.click(await screen.findByRole("tab", { name: /Plugins/ }));
     const sw = await screen.findByRole("switch", { name: "Automatisch aktualisieren" });
     expect(sw).toHaveAttribute("aria-checked", "false");
+    fireEvent.change(screen.getByLabelText("Zum Einschalten „automatisch“ eintippen"), { target: { value: "automatisch" } });
     fireEvent.click(sw);
     await waitFor(() => expect(screen.getByRole("switch", { name: "Automatisch aktualisieren" })).toHaveAttribute("aria-checked", "true"));
-    expect(bff.find("PUT", "/plugins/auto-update")[0].body).toEqual({ enabled: true });
+    expect(bff.find("PUT", "/plugins/auto-update")[0].body).toEqual({ enabled: true, confirm: "automatisch" });
     const go = screen.getByRole("button", { name: "Alle Plugins aktualisieren" });
     expect(go).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Zum Aktualisieren „aktualisieren“ eintippen"), { target: { value: "aktualisieren" } });

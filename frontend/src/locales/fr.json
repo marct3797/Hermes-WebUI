@@ -2432,7 +2432,6 @@
  "Aufgaben automatisch zerlegen": "Décomposer les tâches automatiquement",
  "Automatisch aktualisieren": "Mettre à jour automatiquement",
  "Automatisch beschreiben …": "Décrire automatiquement …",
- "Automatisch heißt: neuer Plugin-Code läuft ohne Rückfrage auf dem Host.": "Automatique signifie : le nouveau code du plugin s'exécute sur l'hôte sans demander.",
  "Bei Änderungen in {name} ({platform}) melden": "Me prévenir des changements dans {name} ({platform})",
  "Benannte Modelle, aus denen der Agent für Unteraufgaben wählt. Schlüssel werden nie angezeigt; ein leeres Feld behält den gespeicherten.": "Modèles nommés parmi lesquels l'agent choisit pour les sous-tâches. Les clés ne sont jamais affichées ; un champ vide conserve celle enregistrée.",
  "Bereinigte Ansicht von config.yaml und der Standardwerte. Geheimnisse, MCP-Umgebung und Pfade sind ersetzt, Kommentare entfallen. Ändern geht über die Einstellungsseite.": "Vue nettoyée de config.yaml et des valeurs par défaut. Secrets, environnement MCP et chemins sont remplacés, les commentaires sont supprimés. Les modifications passent par la page des réglages.",
@@ -2610,5 +2609,8 @@
  "Routen-Namen müssen eindeutig sein.": "Les noms de routes doivent être uniques.",
  "Zum Bestätigen „aktualisieren“ eintippen.": "Pour confirmer, tapez « aktualisieren ».",
  "Zum Bestätigen „trennen“ eintippen.": "Pour confirmer, tapez « trennen ».",
- "Zum Bestätigen „verwerfen“ eintippen.": "Pour confirmer, tapez « verwerfen »."
+ "Zum Bestätigen „verwerfen“ eintippen.": "Pour confirmer, tapez « verwerfen ».",
+ "automatisch": "automatique",
+ "Automatisch heißt: neuer Plugin-Code läuft ohne Rückfrage auf dem Host. Die Einstellung gilt für das aktive Profil des Dashboards.": "Automatique signifie : le nouveau code de plugin s'exécute sur l'hôte sans demander. Le réglage s'applique au profil actif du tableau de bord.",
+ "Zum Einschalten „automatisch“ eintippen": "Pour activer, saisissez « automatisch »"
 }

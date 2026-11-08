@@ -107,9 +107,10 @@ async def skill_lock(request: Request, host: HostId, profile: ProfileId, name: S
         raise HTTPException(404, "Skill nicht gefunden")
     await dash(request, host, "PUT", "/api/skills/lock", params=scope(profile), body={"name": name, "locked": body.locked})
     now = next((s for s in await skills_of(request, host, profile) if s["name"] == name), None)
-    if now is None or now["locked"] != body.locked:
+    ok = now is not None and now["locked"] == body.locked
+    rec(request, user, "ext.skill.lock" if body.locked else "ext.skill.unlock", host, profile=profile, skill=name, verified=ok)
+    if not ok:
         raise HTTPException(502, "Das Dashboard hat die Sperre nicht übernommen")
-    rec(request, user, "ext.skill.lock" if body.locked else "ext.skill.unlock", host, profile=profile, skill=name)
     return {"ok": True, "name": name, "locked": body.locked}
 
 
@@ -274,15 +275,23 @@ def _auto_state(raw: Any) -> dict[str, Any]:
 
 
 @router.put(P + "/plugins/auto-update")
-async def plugin_auto_update_set(request: Request, host: HostId, profile: ProfileId, body: Toggle, user: User = Depends(fresh_user)):
-    """Automatisch aktualisieren führt neuen Plugin-Code ohne Rückfrage aus: darum frische Anmeldung und Gegenlesen."""
+async def plugin_auto_update_set(request: Request, host: HostId, profile: ProfileId, body: AutoUpdate, user: User = Depends(fresh_user)):
+    """Automatisch aktualisieren führt neuen Plugin-Code ohne Rückfrage aus: darum frische Anmeldung, beim Einschalten das Wort „automatisch“ und Gegenlesen.
+    Die Einstellung gilt für das aktive Profil des Dashboards, nicht für das Profil in der Adresse."""
+    if body.enabled and body.confirm.strip() != "automatisch":
+        raise HTTPException(422, "Zum Bestätigen „automatisch“ eintippen.")
     request.app.state.limiter.check(f"{user.id}:ext-plugin-auto")
     await dash(request, host, "PUT", "/api/dashboard/plugins/auto-update", body={"enabled": body.enabled})
     state = _auto_state(await dash(request, host, "GET", "/api/dashboard/plugins/auto-update"))
+    rec(request, user, "ext.plugin.auto_update_on" if body.enabled else "ext.plugin.auto_update_off", host, verified=state["auto_apply"] == body.enabled)
     if state["auto_apply"] != body.enabled:
         raise HTTPException(502, "Das Dashboard hat die automatische Aktualisierung nicht übernommen")
-    rec(request, user, "ext.plugin.auto_update_on" if body.enabled else "ext.plugin.auto_update_off", host, profile=profile)
     return state
+
+
+class AutoUpdate(Strict):
+    enabled: bool
+    confirm: str = Field(default="", max_length=30)
 
 
 class UpdateAll(Strict):

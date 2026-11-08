@@ -77,7 +77,7 @@ def test_endpoint_list_exposes_only_key_presence(env):
     assert row["has_api_key"] is True and KEY not in r.text
 
 
-@pytest.mark.parametrize("url", ["file:///etc/passwd", "ftp://x/v1", "http://user:pw@example.com/v1", "http://169.254.169.254/latest", "not a url", ""])
+@pytest.mark.parametrize("url", ["file:///etc/passwd", "ftp://x/v1", "http://user:pw@example.com/v1", "http://169.254.169.254/latest", "http://2852039166/x", "http://169.254.169.254./x", "http://0xa9fea9fe/x", "not a url", ""])
 def test_endpoint_rejects_dangerous_urls(env, url):
     r = env.post(E, json={**GOOD, "base_url": url})
     assert r.status_code == 422, (url, r.text)

@@ -67,3 +67,28 @@ def test_profile_routes_validate_and_read_back(env, lossy):
     r = pr(env)
     assert r.status_code == 200 and r.json()["profiles"][0]["name"] == "beta" and r.json()["default"] == "beta"
     assert pr(lossy).status_code == 502
+
+
+def test_read_gives_only_the_fields_of_the_form_with_defaults(env):
+    env.dash.state.profiles["default"]["profile_routes"] = {"profiles": [{"name": "beta", "description": "hilft", "has_api_key": False, "secret_extra": "geheim-extra"}], "default": None}
+    env.dash.state.profiles["default"]["model_map"] = {"options": [{"name": "nururl", "description": "d", "model": "m", "base_url": "http://127.0.0.1:1/v1", "request_overrides": {"headers": {"Authorization": "Bearer geheim-header"}}}], "default": None, "_keys": {}}
+    r = env.get(D)
+    assert "geheim-extra" not in r.text and "geheim-header" not in r.text
+    assert r.json()["profile_routes"]["profiles"] == [{"name": "beta", "description": "hilft"}]
+    assert r.json()["model_map"]["options"][0]["provider"] == "" and r.json()["model_map"]["options"][0]["reasoning_effort"] == ""
+    # was die Maske liest, lässt sich unverändert wieder speichern
+    ok = env.put(f"{D}/profile-routes", json={"profiles": r.json()["profile_routes"]["profiles"], "default": "", "confirm": "default"})
+    assert ok.status_code == 200, ok.text
+
+
+def test_a_stored_key_does_not_follow_a_changed_target(env):
+    moved = {**ROUTE, "base_url": "https://angreifer.example/v1"}
+    r = put(env, options=[moved])
+    assert r.status_code == 422 and "Schlüssel" in r.json()["detail"]
+    assert put(env, options=[{**moved, "api_key": NEW}]).status_code == 200  # neuer Schlüssel: erlaubt
+    assert put(env, options=[{**moved, "original_name": "schnell", "clear_api_key": True}]).status_code == 200
+
+
+def test_values_hermes_allows_are_not_blocked_here(env):
+    assert put(env, options=[{**ROUTE, "reasoning_effort": "max", "service_tier": "priority"}]).status_code == 200
+    assert put(env, options=[{**ROUTE, "reasoning_effort": "mit Leerzeichen!"}]).status_code == 422

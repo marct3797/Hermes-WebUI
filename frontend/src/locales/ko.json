@@ -2432,7 +2432,6 @@
  "Aufgaben automatisch zerlegen": "작업을 자동으로 나누기",
  "Automatisch aktualisieren": "자동으로 업데이트",
  "Automatisch beschreiben …": "자동으로 설명 작성 …",
- "Automatisch heißt: neuer Plugin-Code läuft ohne Rückfrage auf dem Host.": "자동이란 새 플러그인 코드가 묻지 않고 호스트에서 실행된다는 뜻입니다.",
  "Bei Änderungen in {name} ({platform}) melden": "{name}({platform})의 변경 사항 알림",
  "Benannte Modelle, aus denen der Agent für Unteraufgaben wählt. Schlüssel werden nie angezeigt; ein leeres Feld behält den gespeicherten.": "에이전트가 하위 작업에 고르는 이름 있는 모델. 키는 표시되지 않으며, 비워 두면 저장된 키를 유지합니다.",
  "Bereinigte Ansicht von config.yaml und der Standardwerte. Geheimnisse, MCP-Umgebung und Pfade sind ersetzt, Kommentare entfallen. Ändern geht über die Einstellungsseite.": "config.yaml과 기본값의 정리된 보기. 비밀 값, MCP 환경, 경로는 대체되고 주석은 생략됩니다. 변경은 설정 페이지에서 합니다.",
@@ -2610,5 +2609,8 @@
  "Routen-Namen müssen eindeutig sein.": "경로 이름은 고유해야 합니다.",
  "Zum Bestätigen „aktualisieren“ eintippen.": "확인하려면 “aktualisieren”을 입력하세요.",
  "Zum Bestätigen „trennen“ eintippen.": "확인하려면 “trennen”을 입력하세요.",
- "Zum Bestätigen „verwerfen“ eintippen.": "확인하려면 “verwerfen”을 입력하세요."
+ "Zum Bestätigen „verwerfen“ eintippen.": "확인하려면 “verwerfen”을 입력하세요.",
+ "automatisch": "자동",
+ "Automatisch heißt: neuer Plugin-Code läuft ohne Rückfrage auf dem Host. Die Einstellung gilt für das aktive Profil des Dashboards.": "자동이란 새 플러그인 코드가 묻지 않고 호스트에서 실행된다는 뜻입니다. 이 설정은 대시보드의 활성 프로필에 적용됩니다.",
+ "Zum Einschalten „automatisch“ eintippen": "켜려면 “automatisch”를 입력하세요"
 }

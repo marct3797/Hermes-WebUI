@@ -2432,7 +2432,6 @@
  "Aufgaben automatisch zerlegen": "Suddividi le attività automaticamente",
  "Automatisch aktualisieren": "Aggiorna automaticamente",
  "Automatisch beschreiben …": "Descrivi automaticamente …",
- "Automatisch heißt: neuer Plugin-Code läuft ohne Rückfrage auf dem Host.": "Automatico significa: il nuovo codice del plugin viene eseguito sull'host senza chiedere.",
  "Bei Änderungen in {name} ({platform}) melden": "Avvisami dei cambiamenti in {name} ({platform})",
  "Benannte Modelle, aus denen der Agent für Unteraufgaben wählt. Schlüssel werden nie angezeigt; ein leeres Feld behält den gespeicherten.": "Modelli con nome tra cui l'agente sceglie per le sottoattività. Le chiavi non vengono mai mostrate; un campo vuoto mantiene quella salvata.",
  "Bereinigte Ansicht von config.yaml und der Standardwerte. Geheimnisse, MCP-Umgebung und Pfade sind ersetzt, Kommentare entfallen. Ändern geht über die Einstellungsseite.": "Vista ripulita di config.yaml e dei valori predefiniti. Segreti, ambiente MCP e percorsi sono sostituiti, i commenti vengono omessi. Le modifiche si fanno nella pagina delle impostazioni.",
@@ -2610,5 +2609,8 @@
  "Routen-Namen müssen eindeutig sein.": "I nomi dei percorsi devono essere univoci.",
  "Zum Bestätigen „aktualisieren“ eintippen.": "Per confermare, digita «aktualisieren».",
  "Zum Bestätigen „trennen“ eintippen.": "Per confermare, digita «trennen».",
- "Zum Bestätigen „verwerfen“ eintippen.": "Per confermare, digita «verwerfen»."
+ "Zum Bestätigen „verwerfen“ eintippen.": "Per confermare, digita «verwerfen».",
+ "automatisch": "automatico",
+ "Automatisch heißt: neuer Plugin-Code läuft ohne Rückfrage auf dem Host. Die Einstellung gilt für das aktive Profil des Dashboards.": "Automatico significa: il nuovo codice dei plugin viene eseguito sull'host senza chiedere. L'impostazione vale per il profilo attivo della dashboard.",
+ "Zum Einschalten „automatisch“ eintippen": "Per attivare, digita «automatisch»"
 }
