@@ -220,10 +220,10 @@ def test_runtime_quota_timeout_is_per_profile(build, monkeypatch):
 
     async def quota(self, name, refresh):
         if name == "beta":
-            await asyncio.sleep(1)
+            await asyncio.sleep(5)
         return await orig(self, name, refresh)
 
-    monkeypatch.setattr(r, "QUOTA_TIMEOUT_S", 0.05)
+    monkeypatch.setattr(r, "QUOTA_TIMEOUT_S", 0.5)  # großzügig: "default" darf auf langsamen Runnern nicht in die Zeitgrenze laufen
     monkeypatch.setattr(DashboardClient, "quota", quota)
     profiles = build().get("/bff/h/server/hermes/_quota").json()["profiles"]
     assert profiles["beta"]["state"] == "error" and "rechtzeitig" in profiles["beta"]["reason"]
