@@ -205,6 +205,10 @@ def native_env(profile):
     # Do not let an active parent profile/board silently override the configured target.
     for key in ('HERMES_PROFILE', 'HERMES_KANBAN_DB', 'HERMES_KANBAN_BOARD', 'HERMES_ACCEPT_HOOKS'):
         environment.pop(key, None)
+    # Das Bearer-Token des Dienstes gehört keinem Kindprozess (Plugins, Secret-Quellen, Hilfsskripte).
+    for key in list(environment):
+        if key.startswith('HERMES_HOSTD_'):
+            del environment[key]
     return environment
 
 

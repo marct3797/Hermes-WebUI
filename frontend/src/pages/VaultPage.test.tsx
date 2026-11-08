@@ -66,4 +66,18 @@ describe("Tresor und Geheimnisse", () => {
     await open(true);
     expect((await screen.findAllByText(/allow_vault/)).length).toBeGreaterThan(0);
   });
+
+  it("verlangt bei Adressen die Pflichtfelder von Hermes, aber keine Seitenadresse", async () => {
+    const backend = await open();
+    await screen.findByText("GitHub");
+    fireEvent.change(screen.getByLabelText("Art"), { target: { value: "address" } });
+    type("Name des Eintrags", "Zuhause");
+    const save = screen.getByRole("button", { name: "Im Tresor speichern" });
+    type("Adresszeile 1 *", "Weg 1"); type("Ort *", "Berlin"); type("Postleitzahl *", "10115");
+    expect(save).toBeDisabled();
+    type("Land *", "Deutschland");
+    expect(save).not.toBeDisabled();
+    fireEvent.click(save);
+    await waitFor(() => expect(backend.dash.vault.added).toHaveLength(1));
+  });
 });

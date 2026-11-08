@@ -43,6 +43,7 @@ def hostd(mode="ok"):
     @app.post("/v1/profiles/{profile}/secrets")
     async def secrets(profile: str, body: dict):
         SEEN.append(body)
+        missing = body["action"] == "remove" and body["env_var"] not in state["refs"]
         if body["action"] == "disable" and mode != "keep":
             state["enabled"] = False
         if body["action"] == "set" and mode != "keep":
@@ -50,6 +51,10 @@ def hostd(mode="ok"):
         if body["action"] == "remove" and mode != "keep":
             state["refs"].pop(body["env_var"], None)
         rows = "\n".join(f"{k} {v}" for k, v in state["refs"].items())
+        if mode == "status_fail" and body["action"] == "status":
+            return {"ok": False, "output": "Traceback", "truncated": False}
+        if missing:
+            return {"ok": False, "output": "not set", "truncated": False}
         return {"ok": True, "output": f"Enabled   {'yes' if state['enabled'] else 'no'}\n{rows}", "truncated": False}
     return app
 
@@ -72,7 +77,7 @@ def test_list_returns_metadata_only(tmp_path, make_settings, monkeypatch):
         assert "LEAK" not in str(body) and "secret" not in body["items"][0]
 
 
-@pytest.mark.parametrize("mode,status", [("old", 501), ("forbidden", 403)])
+@pytest.mark.parametrize("mode,status", [("old", 404), ("forbidden", 403)])
 def test_hostd_problems_become_clear_errors(tmp_path, make_settings, monkeypatch, mode, status):
     for c in make(tmp_path, make_settings, monkeypatch, mode):
         r = c.get(f"{BASE}/vault")
@@ -139,7 +144,8 @@ def test_secrets_disable_set_remove(tmp_path, make_settings, monkeypatch):
         assert c.post(url, json={"action": "set", "env_var": "kaputt", "reference": "op://x"}).status_code == 422
         assert c.post(url, json={"action": "set", "env_var": "A", "reference": "https://evil"}).status_code == 422
         assert c.post(f"{BASE}/secrets/bitwarden/change", json={"action": "set", "env_var": "A", "reference": "op://x/y/z"}).status_code == 422
-        assert "OPENAI" in c.audit_file.read_text() or "secrets.set" in c.audit_file.read_text()
+        log = c.audit_file.read_text()
+        assert "secrets.set" in log and "verified" in log and "OPENAI_API_KEY" not in log and "op://" not in log
 
 
 def test_secrets_change_not_taken_over_is_502(tmp_path, make_settings, monkeypatch):
@@ -147,3 +153,45 @@ def test_secrets_change_not_taken_over_is_502(tmp_path, make_settings, monkeypat
         assert c.post(f"{BASE}/secrets/onepassword/change", json={"action": "disable", "confirm": "ausschalten"}).status_code == 502
         stale(c)
         assert c.post(f"{BASE}/secrets/onepassword/change", json={"action": "disable", "confirm": "ausschalten"}).status_code == 401
+
+
+def test_remove_of_a_missing_mapping_is_404(tmp_path, make_settings, monkeypatch):
+    for c in make(tmp_path, make_settings, monkeypatch):
+        r = c.post(f"{BASE}/secrets/onepassword/change", json={"action": "remove", "env_var": "NOPE", "confirm": "NOPE"})
+        assert r.status_code == 404
+
+
+def test_unreadable_status_never_counts_as_proof(tmp_path, make_settings, monkeypatch):
+    for c in make(tmp_path, make_settings, monkeypatch, "status_fail"):
+        for body in ({"action": "disable", "confirm": "ausschalten"}, {"action": "set", "env_var": "A", "reference": "op://x/y/z"},
+                     {"action": "remove", "env_var": "A", "confirm": "A"}):
+            assert c.post(f"{BASE}/secrets/onepassword/change", json=body).status_code == 502, body
+
+
+def test_sync_needs_fresh_login(tmp_path, make_settings, monkeypatch):
+    for c in make(tmp_path, make_settings, monkeypatch):
+        stale(c)
+        assert c.post(f"{BASE}/secrets/bitwarden/sync").status_code == 401
+        assert not SEEN
+
+
+def test_references_with_brackets_or_control_characters_are_refused(tmp_path, make_settings, monkeypatch):
+    for c in make(tmp_path, make_settings, monkeypatch):
+        for ref in ("op://v/i/f[/x]", "op://v/i/f\u2028x", "op://" + "a" * 130):
+            assert c.post(f"{BASE}/secrets/onepassword/change", json={"action": "set", "env_var": "A", "reference": ref}).status_code == 422, ref
+        assert not SEEN
+
+
+def test_payment_and_address_need_hermes_required_fields(tmp_path, make_settings, monkeypatch):
+    for c in make(tmp_path, make_settings, monkeypatch):
+        r = c.post(f"{BASE}/vault", json={"kind": "payment", "label": "K", "fields": {"card_number": "4111"}})
+        assert r.status_code == 422 and "exp_month" in r.text and not SEEN
+        ok = c.post(f"{BASE}/vault", json={"kind": "address", "label": "Zuhause", "fields": {"address_line1": "x", "city": "y", "postal_code": "1", "country": "DE"}})
+        assert ok.status_code == 200
+
+
+def test_failed_write_attempts_are_audited(tmp_path, make_settings, monkeypatch):
+    for c in make(tmp_path, make_settings, monkeypatch, "bad"):
+        assert c.post(f"{BASE}/vault", json=LOGIN).status_code == 422
+        log = c.audit_file.read_text()
+        assert "vault.add" in log and "422" in log and "Pa$$w0rd" not in log

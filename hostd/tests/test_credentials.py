@@ -150,3 +150,61 @@ def test_secrets_flag_and_failure(tmp_path, monkeypatch):
     monkeypatch.setenv('FAKE_CODE', '1')
     r = c.post('/v1/profiles/p/secrets', json={'provider': 'bitwarden', 'action': 'sync'})
     assert r.status_code == 200 and r.json()['ok'] is False
+
+
+def test_planted_module_in_profile_folder_is_not_imported(tmp_path, monkeypatch):
+    c = setup(tmp_path, monkeypatch)
+    (tmp_path / 'p' / 'json.py').write_text('raise SystemExit("PLANTED")\n')
+    (tmp_path / 'p' / 'agent').mkdir()
+    (tmp_path / 'p' / 'agent' / '__init__.py').write_text('raise SystemExit("PLANTED")\n')
+    assert c.post('/v1/profiles/p/vault', json=LOGIN).status_code == 200
+
+
+def test_vault_needs_native_source(tmp_path, monkeypatch):
+    c = setup(tmp_path, monkeypatch)
+    c.app.state.settings.pop('native_source')
+    assert c.get('/v1/profiles/p/vault').status_code == 501
+
+
+def test_service_token_is_not_passed_to_children(tmp_path, monkeypatch):
+    from hostd import native
+    seen = []
+    real = native.run
+
+    def spy(argv, **kw):
+        seen.append(kw['env'])
+        return real(argv, **kw)
+    monkeypatch.setattr(native, 'run', spy)
+    monkeypatch.setenv('HERMES_HOSTD_TOKEN', 'daemon-token')
+    monkeypatch.setenv('MY_TOKEN', 'other-token')
+    c = setup(tmp_path, monkeypatch)
+    c.app.state.settings['token_env'] = 'MY_TOKEN'
+    c.get('/v1/profiles/p/vault')
+    c.post('/v1/profiles/p/secrets', json={'provider': 'bitwarden', 'action': 'status'})
+    assert len(seen) == 2 and all('HERMES_HOSTD_TOKEN' not in e and 'MY_TOKEN' not in e for e in seen)
+
+
+def test_secrets_refuse_a_sticky_active_profile(tmp_path, monkeypatch):
+    c = setup(tmp_path, monkeypatch)
+    (tmp_path / 'p' / 'active_profile').write_text('work\n')
+    assert c.post('/v1/profiles/p/secrets', json={'provider': 'bitwarden', 'action': 'status'}).status_code == 409
+    (tmp_path / 'p' / 'active_profile').write_text('default\n')
+    assert c.post('/v1/profiles/p/secrets', json={'provider': 'bitwarden', 'action': 'status'}).status_code == 200
+
+
+def test_references_stay_readable_and_odd_characters_are_refused(tmp_path, monkeypatch):
+    from hostd import credentials
+    long_ref = 'op://Employee/OpenAI_API_Key_Production_Environment/credential'
+    assert long_ref in credentials.clean(f'│ X │ {long_ref} │')
+    c = setup(tmp_path, monkeypatch)
+    for ref in ('op://v/i/f[/x]', 'op://v/i/f\x7f', 'op://v/i/f x', 'op://' + 'a' * 130):
+        body = {'provider': 'onepassword', 'action': 'set', 'env_var': 'A', 'reference': ref}
+        assert c.post('/v1/profiles/p/secrets', json=body).status_code == 422, ref
+
+
+def test_oversized_request_is_refused_before_a_process_starts(tmp_path, monkeypatch):
+    c = setup(tmp_path, monkeypatch)
+    big = {**LOGIN, 'secret': {**LOGIN['secret'], 'password': ' ' * 2000, 'otp_secret': ' ' * 2000}}
+    assert c.post('/v1/profiles/p/vault', json=big).status_code in (200, 422)
+    huge = {'kind': 'address', 'label': 'x', 'origin': '', 'secret': {k: ' ' * 2000 for k in ('address_line1', 'address_line2', 'city', 'state', 'postal_code', 'country')}}
+    assert c.post('/v1/profiles/p/vault', json=huge).status_code == 422

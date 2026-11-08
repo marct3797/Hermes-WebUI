@@ -17,10 +17,12 @@ from . import native
 
 MARK = '@@RESULT@@'
 TIMEOUT = 20
+MAX_REQUEST = 60000  # stdin passt in den Pipe-Puffer: das Schreiben blockiert nie
 PROVIDERS = ('bitwarden', 'onepassword')
 SECRET_ACTIONS = {'status', 'sync', 'disable', 'set', 'remove'}
 ENV_NAME = re.compile(r'^[A-Z][A-Z0-9_]{0,99}$')
-REFERENCE = re.compile(r'^op://[^\t\n\r\x00-\x1f"\'`$\\;|&<>]{1,400}$')  # Leerzeichen erlaubt (Feldnamen wie „api key“)
+# Leerzeichen erlaubt (Feldnamen wie „api key“); keine Steuerzeichen, Zeilentrenner, eckigen Klammern (Rich-Markup) oder Shell-Zeichen.
+REFERENCE = re.compile(r'^op://[^\x00-\x1f\x7f-\x9f\u2028\u2029"\'`$\\;|&<>\[\]]{1,120}$')
 
 SCRIPT = r"""import sys, json
 if sys.argv[1]:
@@ -36,13 +38,20 @@ def meta(m):
     keep = ('id', 'kind', 'label', 'origin', 'created_at', 'identifier', 'identifier_type', 'has_otp')
     return {k: d.get(k) for k in keep if k in d}
 
+class TooOld(Exception):
+    pass
+
 def main():
-    from agent.vault_store import VaultError, get_vault_store, LOGIN_IDENTIFIER_TYPES, VAULT_KINDS
+    try:
+        from agent.vault_store import VaultError, get_vault_store
+    except ImportError as exc:
+        raise TooOld(str(exc)[:200])
     store = get_vault_store()
     act = req['action']
     try:
         if act == 'list':
-            where = store.key_location()
+            locate = getattr(store, 'key_location', None)
+            where = locate() if callable(locate) else {}
             return {'items': [meta(m) for m in store.list_items()], 'key_storage': where.get('storage')}
         if act == 'add':
             secret = dict(req['secret'])
@@ -56,8 +65,8 @@ def main():
 
 try:
     out = {'ok': True, 'reply': main()}
-except ImportError as exc:
-    out = {'ok': False, 'error': 'hermes_too_old: ' + type(exc).__name__ + ': ' + str(exc)[:200]}
+except TooOld as exc:
+    out = {'ok': False, 'error': 'hermes_too_old: ' + str(exc)}
 except BaseException as exc:
     out = {'ok': False, 'error': type(exc).__name__ + ': ' + str(exc)[:200]}
 print('@@RESULT@@' + json.dumps(out))
@@ -71,7 +80,8 @@ USERINFO = re.compile(r'(?i)\b([a-z][a-z0-9+.-]*://)[^/\s@]*@')
 def clean(text):
     text = ANSI.sub('', str(text)).replace('\r', '')
     text = USERINFO.sub(r'\1', text)
-    return LONG.sub('[redacted]', text)
+    # Referenzen (`op://Vault/Item/Feld`) sind keine Geheimnisse und müssen für das Rücklesen heil bleiben.
+    return '\n'.join(l if 'op://' in l else LONG.sub('[redacted]', l) for l in text.split('\n'))
 
 
 def _need(settings, profile, flag):
@@ -80,17 +90,30 @@ def _need(settings, profile, flag):
     python = native.value(settings, 'native_python')
     source = native.value(settings, 'native_source') or ''
     path = native.value(profile, 'path')
-    if not python or not Path(python).is_absolute() or (source and not Path(source).is_absolute()) or not path:
-        raise HTTPException(501, 'Hermes client not configured (native_python)')
+    # native_source ist Pflicht: ohne ihn käme Hermes' Code aus dem Profilordner, den auch der Agent beschreiben kann.
+    if not python or not Path(python).is_absolute() or not source or not Path(source).is_absolute() or not Path(source).is_dir() or not path:
+        raise HTTPException(501, 'Hermes client not configured (native_python, native_source)')
     return python, source, path
+
+
+def _env(settings, profile):
+    env = native.native_env(profile)
+    token = native.value(settings, 'token_env')
+    if isinstance(token, str):
+        env.pop(token, None)
+    return env
 
 
 def vault(settings, profile, request):
     """Ruft das Tresor-Skript mit einer Anfrage (stdin). Liefert die Antwort oder wirft HTTPException."""
     python, source, path = _need(settings, profile, 'allow_vault')
+    data = json.dumps(request).encode()
+    if len(data) > MAX_REQUEST:
+        raise HTTPException(422, 'Request too large')
     try:
-        output, cut, code = native.run([python, '-c', SCRIPT, source], cwd=path, env=native.native_env(profile),
-                                       timeout=TIMEOUT, stdin_data=json.dumps(request).encode())
+        # -I: weder das aktuelle Verzeichnis noch PYTHON*-Variablen kommen in den Suchpfad; Arbeitsverzeichnis ist der Hermes-Quelltext, nie der Profilordner.
+        output, cut, code = native.run([python, '-I', '-c', SCRIPT, source], cwd=source, env=_env(settings, profile),
+                                       timeout=TIMEOUT, stdin_data=data)
     except OSError:
         raise HTTPException(503, 'Hermes client unavailable') from None
     line = next((l for l in reversed(output.splitlines()) if l.startswith(MARK)), None)
@@ -129,9 +152,18 @@ def secrets(settings, profile, provider, action, env_var=None, reference=None):
             if not reference or not REFERENCE.fullmatch(reference):
                 raise HTTPException(422, 'Invalid reference')
             extra.append(reference)
+    path = Path(native.value(profile, 'path'))
+    if path.parent.name != 'profiles':
+        # Hermes folgt bei einem Wurzel-Ordner der Datei `active_profile` und würde ein anderes Profil ändern als das konfigurierte.
+        try:
+            sticky = (path / 'active_profile').read_text(encoding='utf-8-sig').strip()
+        except (OSError, UnicodeDecodeError):
+            sticky = ''
+        if sticky and sticky != 'default':
+            raise HTTPException(409, 'active_profile is set: Hermes would act on another profile')
     cmd = native.command(settings) + ['secrets', provider, action, *extra]
-    env = native.native_env(profile)
-    env.update(NO_COLOR='1', TERM='dumb', COLUMNS='200', PYTHONIOENCODING='utf-8')
+    env = _env(settings, profile)
+    env.update(NO_COLOR='1', TERM='dumb', COLUMNS='400', PYTHONIOENCODING='utf-8')
     try:
         output, cut, code = native.run(cmd, cwd=native.value(profile, 'path'), env=env, timeout=30)
     except OSError:

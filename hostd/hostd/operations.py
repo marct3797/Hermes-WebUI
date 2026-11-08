@@ -336,7 +336,7 @@ class SecretsAct(BaseModel):
     provider: Literal['bitwarden', 'onepassword']
     action: Literal['status', 'sync', 'disable', 'set', 'remove']
     env_var: str | None = Field(default=None, max_length=100)
-    reference: str | None = Field(default=None, max_length=500)
+    reference: str | None = Field(default=None, max_length=120)
 
 
 @router.post('/profiles/{profile}/secrets')

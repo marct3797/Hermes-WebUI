@@ -11,6 +11,7 @@ const FIELD_LABEL: Record<string, string> = {
   card_number: "Kartennummer", cardholder_name: "Name auf der Karte", exp_month: "Ablauf Monat", exp_year: "Ablauf Jahr", cvc: "Prüfziffer", billing_postal_code: "Postleitzahl der Rechnung",
   address_line1: "Adresszeile 1", address_line2: "Adresszeile 2", city: "Ort", state: "Bundesland", postal_code: "Postleitzahl", country: "Land",
 };
+const REQUIRED: Record<string, readonly string[]> = { payment: ["card_number", "exp_month", "exp_year", "cvc"], address: ["address_line1", "city", "postal_code", "country"] };
 const label = (k: string) => t(FIELD_LABEL[k] ?? k);
 
 function VaultSection({ agent }: { agent: AgentRef }) {
@@ -30,15 +31,18 @@ function VaultSection({ agent }: { agent: AgentRef }) {
   useEffect(() => { void load(); }, [load]);
 
   const names: readonly string[] = kind === "payment" ? PAYMENT : ADDRESS;
-  const ready = name.trim() && origin.trim() && (kind === "login" ? ident.trim() && password : Object.values(fields).some((v) => v.trim()));
-  const add = () => run(async () => {
+  const ready = name.trim() && (kind === "login" ? origin.trim() && ident.trim() && password : (REQUIRED[kind] ?? []).every((k) => fields[k]?.trim()));
+  const add = async () => {
+    const ok = await run(async () => {
     const body = kind === "login"
       ? { kind, label: name.trim(), origin: origin.trim(), identifier_type: idType, identifier: ident.trim(), password, ...(otp.trim() ? { otp_secret: otp.trim() } : {}) }
       : { kind, label: name.trim(), origin: origin.trim(), fields };
     await api.vaultAdd(agent, body);
     setName(""); setOrigin(""); setIdent(""); setPassword(""); setOtp(""); setFields({});   // Geheimnisse sofort aus dem Speicher der Maske
     await load();
-  });
+    });
+    if (!ok) void load();   // nach Zeitüberschreitung oder 502 ist unklar, ob der Eintrag schon liegt: nachsehen, nicht blind noch einmal senden
+  };
 
   return (
     <section aria-label={t("Tresor")}>
@@ -66,7 +70,7 @@ function VaultSection({ agent }: { agent: AgentRef }) {
         <label>{t("Passwort")} <input type="password" aria-label={t("Passwort")} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} /></label>
         <label>{t("Authenticator-Schlüssel (optional)")} <input type="password" aria-label={t("Authenticator-Schlüssel")} autoComplete="off" value={otp} onChange={(e) => setOtp(e.target.value)} /></label>
       </> : names.map((k) => (
-        <label key={k}>{label(k)} <input type={kind === "payment" ? "password" : "text"} aria-label={label(k)} autoComplete="off" value={fields[k] ?? ""} onChange={(e) => { const v = e.target.value; setFields((o) => ({ ...o, [k]: v })); }} /></label>))}
+        <label key={k}>{label(k)}{REQUIRED[kind]?.includes(k) ? " *" : ""} <input type={kind === "payment" ? "password" : "text"} aria-label={label(k)} autoComplete="off" value={fields[k] ?? ""} onChange={(e) => { const v = e.target.value; setFields((o) => ({ ...o, [k]: v })); }} /></label>))}
       <button type="button" disabled={busy || !ready} onClick={() => void add()}>{t("Im Tresor speichern")}</button>
     </section>
   );
