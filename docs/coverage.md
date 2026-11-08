@@ -1,6 +1,6 @@
 # Abdeckung: was Hermes nativ bietet und was die WebUI davon abbildet
 
-Stand: Hermes Agent v0.22.5 (2026.9.24), Commit `bf0203a794a07aac3ff764972ab9087baa4e4f4e`. Zwei Quellen, getrennt ausgewiesen:
+Stand: gemessen am 08.11.2026 gegen Hermes Agent `main` (Commit `228111652`, 07.11.2026) und gegen v0.22.5 (2026.9.24, Commit `bf0203a79`). Die Funktionsbereiche stammen aus der Dokumentation zu v0.22.5, der Nachtrag unten aus `website/docs/user-guide/features` von `main`. Zwei Quellen, getrennt ausgewiesen:
 
 - **Routen** (maschinell, reproduzierbar): jede Route, die Dashboard, Plugins und Gateway-API von Hermes anbieten.
 - **Funktionsbereiche**: die Gliederung der offiziellen Dokumentation (https://hermes-agent.nousresearch.com/docs/llms.txt, Abschnitte „Core Features“,
@@ -15,39 +15,61 @@ cd backend
 python -m devtools.check_upstream /pfad/zu/hermes-agent --coverage
 ```
 
-Von 390 Routen (Modul, Methode, Pfad) nutzt das BFF 206 pfadgenau. Nach Modul, wenig genutzte zuerst:
+Von 425 Routen auf Hermes `main` (Modul, Methode, Pfad) nutzt das BFF 219 pfadgenau; bei v0.22.5 sind es 219 von 390 (der Unterschied sind 35 neue Routen, die die WebUI noch nicht nutzt). Nach Modul, wenig genutzte zuerst:
 
 | Modul | Routen | genutzt | Inhalt |
 |---|---|---:|---|
 | `web_routers/git.py` | 21 | 0 | Git im Dashboard (die WebUI nutzt dafür `hostd`) |
-| `web_routers/files.py` | 18 | 0 | Dateien im Dashboard (die WebUI nutzt dafür `hostd`) |
+| `web_routers/files.py` | 19 | 0 | Dateien im Dashboard (die WebUI nutzt dafür `hostd`) |
 | `web_routers/chat_ws.py` | 5 | 0 | Terminal-Chat per WebSocket (die WebUI nutzt die Gateway-API) |
 | `dashboard_auth/routes.py` | 3 | 0 | Anmeldeschranke des Dashboards (Login-Seite, keine API für die WebUI) |
 | `web_routers/chat_workspaces.py` | 1 | 0 | Chat-Arbeitsbereiche im Dashboard (die WebUI nutzt eigene Routen) |
 | `web_routers/display.py` | 1 | 0 | Anzeigesteuerung im Dashboard (kein Thema einer WebUI) |
 | `web_routers/local_models.py` | 18 | 1 | lokale Modelle: Status (genutzt); **bewusst nicht**: Katalog, Hardware, Download, Server, Installieren (CLI) |
-| `web_routers/messaging.py` | 11 | 7 | Messaging-Plattformen: Liste, Konfiguration, Test, Telegram-Einrichtung. **Nicht**: WhatsApp-Kopplung (4 Routen, QR-Code) |
+| `web_routers/messaging.py` | 11 | 11 | Messaging-Plattformen: Liste, Konfiguration, Test, Telegram-Einrichtung. WhatsApp-Kopplung mit QR-Bild im Guide, Relay-Routen siehe unten |
 | `web_routers/audio.py` | 10 | 3 | Sprache: Live-Status, Vorlesen, Abschrift (genutzt, Aufnahmen höchstens 1,4 MB); **bewusst nicht**: `voice-config` (liefert Anbieter-Schlüssel), Live-Sitzungen, WebSockets |
-| `web_routers/actions.py` | 8 | 3 | Gateway neu starten (genutzt), Aktions-Status, Update-Prüfung (genutzt); **nicht**: leeren (Drain), Hermes-Update, Migration |
+| `web_routers/actions.py` | 8 | 6 | Gateway neu starten (genutzt), Aktions-Status, Update-Prüfung (genutzt); **nicht**: leeren (Drain), Hermes-Update, Migration |
 | `web_routers/delegation.py` | 4 | 2 | Delegation: Routing lesen, Backend wählen (genutzt); **nicht**: Modellzuordnung und Profil-Routen schreiben |
 | `web_routers/memory_providers.py` | 3 | 2 | Felder lesen/schreiben (genutzt); **bewusst nicht**: `POST .../setup` (führt `curl \| sh` aus) |
 | `web_routers/status.py` | 20 | 11 | Status, Systemwerte, Curator (pausieren/starten), Lerngraph (lesen/bearbeiten/löschen, Skills werden archiviert), Computer-Use-Status; **nicht**: Host-Identität, Gesundheit, SSH-Besitz, Portal |
-| `web_routers/tools.py` | 12 | 9 | Toolsets, Anbieter, Keys, Modelle; **bewusst nicht**: Terminal-Backend setzen, `post-setup`, Computer-Use-Rechte, siehe unten |
+| `web_routers/tools.py` | 12 | 12 | Toolsets, Anbieter, Keys, Modelle; **bewusst nicht**: Terminal-Backend setzen, `post-setup`, Computer-Use-Rechte, siehe unten |
 | `web_routers/models.py` | 7 | 7 | Hauptmodell, Auswahl, Hilfsmodelle, Mixture of Agents, empfohlenes Standardmodell (alle genutzt) |
 | `plugins/kanban` | 48 | 27 | Kanban inkl. Diagnose, Worker, Lauf beenden, Dispatch (erst Vorschau), Schätzen, Spezifizieren, Zerlegen, Anhänge, Board-Export/Import mit Gegenlesen, Board-Archivieren/Wechseln; **nicht**: Orchestrierung schreiben, Profil-Metadaten schreiben, hartes Löschen |
 | `web_routers/profiles.py` | 20 | 10 | Profile anlegen, löschen, umbenennen, exportieren, importieren |
-| `web_routers/dashboard_ui.py` | 16 | 11 | Plugin-Verwaltung, Themes, Schrift (nur aus der Liste); **nicht**: eigene Theme-Dateien |
+| `web_routers/dashboard_ui.py` | 19 | 11 | Plugin-Verwaltung, Themes, Schrift (nur aus der Liste); **nicht**: eigene Theme-Dateien |
 | `web_routers/sessions.py` | 18 | 15 | Statistik, Export, Aufräumen, Mehrfach-Löschen, leere löschen, Zeitachse, Import, Profil-Zuordnung (genutzt); **nicht**: Umbenennen/Fork (laufen über die Agent-API) |
-| `gateway/api_server` | 46 | 20 | Läufe, Sitzungen, Jobs, eigene Teamräume (genutzt); ungenutzt u. a. OpenAI-Schnittstellen, Artefakte (Einmal-Transport für die Browser-Erweiterung), Raum-Mitglieder und Nachrichten |
+| `gateway/api_server` | 43 | 20 | Läufe, Sitzungen, Jobs, eigene Teamräume (genutzt); ungenutzt u. a. OpenAI-Schnittstellen, Artefakte (Einmal-Transport für die Browser-Erweiterung), Raum-Mitglieder und Nachrichten |
 | `web_routers/oauth.py` | 7 | 5 | Anmeldestatus, Anmeldung starten/abfragen (genutzt); **nicht**: Rücksprung verarbeiten, Abmelden |
 | `web_routers/analytics.py` | 4 | 1 | Modellnutzung je Zeitraum (genutzt); **nicht**: übrige Auswertungen |
 | `web_routers/shared_metrics.py` | 2 | 2 | Einwilligung für geteilte Metriken lesen/schreiben (genutzt) |
 | `web_routers/mcp.py` | 12 | 11 | MCP testen, aktivieren, entfernen, OAuth |
 | `web_routers/config_env.py` | 15 | 13 | eigene Endpunkte, Egress-Status (genutzt); **offen**: Defaults, Roh-YAML |
-| `web_routers/cron.py` | 13 | 12 | Zeitpläne |
-| `web_routers/skills.py` | 13 | 13 | Skills |
+| `web_routers/cron.py` | 14 | 12 | Zeitpläne |
+| `web_routers/skills.py` | 14 | 13 | Skills |
 
 Pfadgenau heißt: ein Pfad zählt als genutzt, auch wenn nur eine seiner Methoden gebraucht wird.
+
+## Nachtrag: Funktionen und Module, die bisher fehlten
+
+Neue Routen-Module auf Hermes `main`, die die WebUI noch nicht nutzt (Routen, genutzt): Gateway-Connections (7 und 7, je 0), Messaging-Relay (4, 0), Webapp (3, 0) und Webapp-Zugang (4, 0), Desktop-Plugins (4, 0), UI-Einstellungen (2, 0), Uploads (1, 0). Die Prüfung, welche davon eine Webober­fläche überhaupt braucht, steht aus.
+
+Funktionen der Hermes-Dokumentation (`user-guide/features`), die in der Liste oben nicht vorkamen. „Slash“ heißt: im Chat über das Befehlsmenü aufrufbar, die WebUI zeigt aber keinen eigenen Zustand dazu.
+
+| Funktion (Doku) | Stand in der WebUI |
+|---|---|
+| Persistente Ziele (`goals`, `/goal`, `/subgoal`) | Slash. Keine Ansicht des aktuellen Ziels |
+| Session-Heartbeats (`heartbeat`, `/heartbeat`) | Slash. Keine Übersicht aktiver Heartbeats |
+| Wiederkehrende Schleifen (`loops`, `/loop`) | Slash. Keine Übersicht aktiver Schleifen |
+| Fallback-Anbieter (`fallback-providers`) | nur als Config-Feld im Einstellungs-Editor, keine eigene Maske |
+| Anbieter-Routing für OpenRouter (`provider-routing`) | nur als Config-Feld |
+| Bot-Bildschirm (`bot-screen`, `/api/display/ws`) | nicht abgebildet (display.py: 1 Route, 0 genutzt) |
+| Credential-Vault (`credential-vault`, `hermes vault`) | nicht abgebildet (nur CLI) |
+| Kanban-Worker-Lanes, Kanban über mehrere Gateways | Worker-Ansicht und Dispatch vorhanden; Lanes und Multi-Gateway nicht gesondert geprüft |
+| Abo-Proxy (`subscription-proxy`), Tool-Gateway (`tool-gateway`, Portal) | nicht abgebildet (CLI und OpenAI-Schnittstellen) |
+| Tool-Suche (`tool-search`), LSP (`lsp`), X-Suche (`x-search`), Spotify, Wake-Word, Honcho | nicht gesondert abgebildet; teils Config oder Werkzeug-Gruppen |
+| Remote-Config, Secrets (Bitwarden/1Password), Profil-Distributionen, A2A, Hermes-Relay | nicht geprüft (Entwickler-Doku, nicht Nutzerdoku) |
+
+Diese Tabelle ist aus den Titeln und Beschreibungen der Doku abgeleitet, nicht aus einem Lauf gegen eine echte Instanz.
 
 ## Funktionsbereiche
 
@@ -69,7 +91,7 @@ Pfadgenau heißt: ein Pfad zählt als genutzt, auch wenn nur eine seiner Methode
 | Kanban | teilweise (27 von 48): Board, Aufgaben, Kommentare, Verknüpfungen, Anhänge, Zerlegen/Spezifizieren/Schätzen, Läufe prüfen und beenden, Worker, Boards importieren/exportieren/archivieren/wechseln. Fehlt: Orchestrierung schreiben, Profil-Metadaten, hartes Löschen | `plugins/kanban` |
 | Hooks, Webhooks, Pairing | **Pairing** (offene Anfragen freigeben nur per Anfrage-ID, Zugang sperren mit eingetippter ID) und **Webhooks** (anlegen ohne `script` und ohne eigenes Secret, Secret nur einmal sichtbar, ein-/ausschalten, löschen mit Namenseingabe, Plattform einschalten nur mit Neustart-Bestätigung). **Nicht**: Hooks (führen Shell-Befehle aus), Freigabe per Code, `clear-pending` | `routes/access.py` |
 | Delegation, Subagenten | Backend wählen (nur aus der gemeldeten Liste), Routen lesen (Schlüssel nie). **Nicht**: `model_map`/`profile_routes` schreiben (tragen Schlüssel je Route) | `delegation.py`: 2 von 4, `routes/endpoints.py` |
-| Messaging-Plattformen | **ja**: Liste mit Zustand, Variablen setzen/löschen (Tokens nie sichtbar), ein-/ausschalten, Verbindung prüfen, Telegram-Assistent. **Nicht**: WhatsApp koppeln (QR-Code), Heimatkanal setzen, Plattform-Plugins verwalten | `routes/messaging.py`, `MessagingPage.tsx`; `messaging.py`: 7 von 11 |
+| Messaging-Plattformen | **ja**: Liste mit Zustand, Variablen setzen/löschen (Tokens nie sichtbar), ein-/ausschalten, Verbindung prüfen, Telegram-Assistent. WhatsApp koppeln (QR-Bild, `/messaging/whatsapp/onboarding`). **Nicht**: Heimatkanal setzen, Plattform-Plugins verwalten | `routes/messaging.py`, `MessagingPage.tsx`; `messaging.py`: 11 von 11 |
 | Gateway-Betrieb | teilweise: Zustand, starten, anhalten, neu starten (Unterbrechen nur nach Bestätigung), Protokoll des Befehls. **Nicht**: leeren (Drain), migrieren | `actions.py`: 3 von 8, `ops.py` |
 | Sprache (`Voice Mode`, `Text-to-Speech`) | eigene Seite (`VoicePage.tsx`, `routes/voice.py`): Live-Status, Vorlesen, Abschrift (Aufnahmen höchstens 1,4 MB). **Bewusst nicht**: `voice-config` (liefert Anbieter-Schlüssel), Live-Sitzungen, WebSockets | `audio.py`: 3 von 10 |
 | Browser, Vision, Bildgenerierung | Bild-Anhänge im Chat (bis zu 4 je Nachricht); der Rest nur über Einstellungsfelder | `routes/agents.py`, Schema |
@@ -96,7 +118,7 @@ Pfadgenau heißt: ein Pfad zählt als genutzt, auch wenn nur eine seiner Methode
 ## Reihenfolge, die ich vorschlage
 
 **P1: ohne das ist es keine vollständige Oberfläche für Hermes**
-1. ~~Messaging-Plattformen und Gateway-Betrieb~~ umgesetzt und gegen ein echtes Dashboard geprüft (`devtools/real/contract_messaging.py`). Offen daraus: WhatsApp-Kopplung (QR), Drain.
+1. ~~Messaging-Plattformen und Gateway-Betrieb~~ umgesetzt und gegen ein echtes Dashboard geprüft (`devtools/real/contract_messaging.py`). WhatsApp-Kopplung inzwischen mit QR-Bild. Offen daraus: Drain.
 2. ~~Werkzeuge konfigurieren und Werkzeug-Keys setzen~~ umgesetzt und gegen ein echtes Dashboard geprüft (`devtools/real/contract_tools.py`).
 3. ~~Hermes-Gedächtnis~~ umgesetzt und gegen ein echtes Dashboard geprüft (`devtools/real/contract_memory.py`). Stand danach: Inhalt von `MEMORY.md`/`USER.md` wird über hostd gelesen und bearbeitet (`hostd/hostd/memory_files.py`, `hostd/hostd/operations.py`, `routes/hermes_memory.py`, `HermesMemoryPage.tsx`); das Dashboard liefert weiter nur die Größe.
 4. ~~Profil-Lebenszyklus: anlegen, löschen, umbenennen, Import/Export~~ umgesetzt und gegen ein echtes Dashboard geprüft (`devtools/real/contract_lifecycle.py`): Canvas-Regel wie Hermes (klein, kein reservierter Name), Löschen/Backup nur mit Namenseingabe, Import nur per Upload (BFF schreibt in eine temp-Datei und meldet den Pfad; freie Pfade 422), Export nur als Hinweis auf den Agenten-Rechner, Setup-Befehl nur als Text für das Dashboard-Heim.
@@ -132,7 +154,7 @@ Aus dem Hermes-Quelltext (0.22.5, `hermes_cli/web_routers/tools.py`, `config_env
 - **Telegram-Assistent.** Das Bot-Token bleibt im Dashboard-Prozess. Den Dienst von Nous (`setup.hermes-agent.nousresearch.com`) ruft Hermes selbst auf; **dieser Ablauf ist nicht gegen den echten Dienst getestet**, weil er einen Bot bei Telegram anlegen würde. Getestet sind BFF und Oberfläche gegen ein Mock-Dashboard, die Route-Formen gegen den Quelltext.
 - **Zustand nur im Dashboard-Prozess.** Telegram-Kopplungen leben im Speicher des Dashboards; ein Neustart des Dashboards beendet sie (die Oberfläche zeigt dann „abgelaufen“).
 - **Drain** (`POST /api/gateway/drain`) gilt für das Heimatverzeichnis des Dashboards, nicht für ein Profil. Bei mehreren Profilen wäre unklar, welches gemeint ist; deshalb nicht angeboten.
-- **WhatsApp** braucht den QR-Code der Kopplung, installiert ggf. npm-Pakete und startet einen Node-Prozess. Das bleibt bei der Hermes-CLI (`hermes whatsapp`), bis eine QR-Darstellung ohne fremden Dienst und mit Prüfung der Abhängigkeitslizenz entschieden ist.
+- **WhatsApp** installiert ggf. npm-Pakete und startet einen Node-Prozess. Die WebUI startet die Kopplung über das Dashboard und zeigt den QR-Code als Bild (Bibliothek `qrcode`, lokal gerendert, mit Text als Rückfall).
 
 ## Hermes-Gedächtnis: bewusste Grenzen
 
