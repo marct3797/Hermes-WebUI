@@ -15,7 +15,7 @@ cd backend
 python -m devtools.check_upstream /pfad/zu/hermes-agent --coverage
 ```
 
-Von 425 Routen auf Hermes `main` (Modul, Methode, Pfad) nutzt das BFF 241 pfadgenau (Etappe 1 vom 08.11.2026 brachte 10 dazu, Etappe 2 weitere 12). Die Zahl gegen v0.22.5 (zuvor 219 von 390) ist nach Etappe 1 nicht neu gemessen. Nach Modul, wenig genutzte zuerst:
+Von 425 Routen auf Hermes `main` (Modul, Methode, Pfad) nutzt das BFF 255 pfadgenau (Etappe 1 vom 08.11.2026 brachte 10 dazu, Etappe 2 weitere 12, Etappe 3 weitere 14). Die Zahl gegen v0.22.5 (zuvor 219 von 390) ist nach Etappe 1 nicht neu gemessen. Nach Modul, wenig genutzte zuerst:
 
 | Modul | Routen | genutzt | Inhalt |
 |---|---|---:|---|
@@ -26,19 +26,20 @@ Von 425 Routen auf Hermes `main` (Modul, Methode, Pfad) nutzt das BFF 241 pfadge
 | `web_routers/chat_workspaces.py` | 1 | 0 | Chat-Arbeitsbereiche im Dashboard (die WebUI nutzt eigene Routen) |
 | `web_routers/display.py` | 1 | 0 | Anzeigesteuerung im Dashboard (kein Thema einer WebUI) |
 | `web_routers/local_models.py` | 18 | 1 | lokale Modelle: Status (genutzt); **bewusst nicht**: Katalog, Hardware, Download, Server, Installieren (CLI) |
+| `web_routers/messaging_relay.py` | 4 | 4 | Team-Gateway: Konten mit dem gemeinsamen Bot verknüpfen (Einmalcode, nie im Audit), Stand abfragen, Konto trennen (Wort „trennen“, mit Rücklesen). Die Karte erscheint nur, wenn die Instanz Plattformen über das Relay führt |
 | `web_routers/messaging.py` | 11 | 11 | Messaging-Plattformen: Liste, Konfiguration, Test, Telegram-Einrichtung. WhatsApp-Kopplung mit QR-Bild im Guide, Relay-Routen siehe unten |
 | `web_routers/audio.py` | 10 | 3 | Sprache: Live-Status, Vorlesen, Abschrift (genutzt, Aufnahmen höchstens 1,4 MB); **bewusst nicht**: `voice-config` (liefert Anbieter-Schlüssel), Live-Sitzungen, WebSockets |
-| `web_routers/ops.py` | 28 | 24 | Betrieb: Status, Gesundheit, Doctor, Backup, Update-Prüfung, Checkpoints (lesen, aufräumen mit Namenseingabe), Sicherheitsprüfung, Gedächtnis-Routen (siehe Funktionsbereiche „Betrieb“ und „Gedächtnis“) |
-| `plugins/hermes-achievements` | 6 | 3 | Achievements: Liste, erneutes Prüfen, Zurücksetzen (siehe „Achievements, Pets“) |
+| `web_routers/ops.py` | 28 | 25 | Betrieb: Status, Gesundheit, Doctor, Backup, Update-Prüfung, Checkpoints (lesen, aufräumen mit Namenseingabe), Sicherheitsprüfung, offene Kopplungsanfragen verwerfen (Wort „verwerfen“), Gedächtnis-Routen (siehe Funktionsbereiche „Betrieb“ und „Gedächtnis“) |
+| `plugins/hermes-achievements` | 6 | 6 | Achievements: Liste, erneutes Prüfen, Zurücksetzen, Prüfstand, zuletzt freigeschaltet, Erfolge einer Sitzung (siehe „Achievements, Pets“) |
 | `web_routers/actions.py` | 8 | 8 | Gateway neu starten, Aktions-Status, Update-Prüfung, Leeren (Drain) und Abbrechen, Update-Beleg (Kurzfassung); Hermes-Update und Migration mit Bestätigung |
-| `web_routers/delegation.py` | 4 | 2 | Delegation: Routing lesen, Backend wählen (genutzt); **nicht**: Modellzuordnung und Profil-Routen schreiben |
+| `web_routers/delegation.py` | 4 | 4 | Delegation: Routing lesen, Backend wählen, Modellrouten und Profilrouten schreiben (Schlüssel write-only, gespeicherter Schlüssel und Fremdfelder bleiben beim Speichern erhalten, Agent-ID eintippen, Rücklesen) |
 | `web_routers/memory_providers.py` | 3 | 2 | Felder lesen/schreiben (genutzt); **bewusst nicht**: `POST .../setup` (führt `curl \| sh` aus) |
 | `web_routers/status.py` | 20 | 11 | Status, Systemwerte, Curator (pausieren/starten), Lerngraph (lesen/bearbeiten/löschen, Skills werden archiviert), Computer-Use-Status; **nicht**: Host-Identität, Gesundheit, SSH-Besitz, Portal |
 | `web_routers/tools.py` | 12 | 12 | Toolsets, Anbieter, Keys, Modelle; **bewusst nicht**: Terminal-Backend setzen, `post-setup`, Computer-Use-Rechte, siehe unten |
 | `web_routers/models.py` | 7 | 7 | Hauptmodell, Auswahl, Hilfsmodelle, Mixture of Agents, empfohlenes Standardmodell (alle genutzt) |
 | `plugins/kanban` | 48 | 39 | Kanban inkl. Diagnose, Worker, Lauf beenden, Dispatch (erst Vorschau), Schätzen, Spezifizieren, Zerlegen, Anhänge, Board-Export/Import mit Gegenlesen, Board-Archivieren/Wechseln; dazu seit Etappe 2 Orchestrierung (lesen, schreiben mit Rücklesen), Profil-Beschreibungen (setzen, automatisch beschreiben mit Token-Warnung), Heimatkanäle je Aufgabe, Anzeige-Einstellungen, Spalten, Modellauswahl, Projekte; **nicht**: hartes Löschen, Event-WebSocket (die WebUI fragt per Poll) |
 | `web_routers/profiles.py` | 20 | 10 | Profile anlegen, löschen, umbenennen, exportieren, importieren |
-| `web_routers/dashboard_ui.py` | 19 | 11 | Plugin-Verwaltung, Themes, Schrift (nur aus der Liste); **nicht**: eigene Theme-Dateien |
+| `web_routers/dashboard_ui.py` | 19 | 14 | Plugin-Verwaltung, automatische Aktualisierung (lesen, schalten mit Rücklesen), alle Plugins aktualisieren (Wort „aktualisieren“, `needs_review` bleibt ungeändert), Themes, Schrift (nur aus der Liste); **bewusst nicht**: Seitenleisten-Sichtbarkeit und Plugin-Liste des Dashboards (Dashboard-Oberfläche), `rescan`, `agent-plugins/activate` (nimmt einen Dateipfad entgegen), `plugin-providers` (Speicher-Anbieter steht im Einstellungs-Editor), eigene Theme-Dateien |
 | `web_routers/sessions.py` | 18 | 15 | Statistik, Export, Aufräumen, Mehrfach-Löschen, leere löschen, Zeitachse, Import, Profil-Zuordnung (genutzt); **nicht**: Umbenennen/Fork (laufen über die Agent-API) |
 | `gateway/api_server` | 43 | 20 | Läufe, Sitzungen, Jobs, eigene Teamräume (genutzt); ungenutzt u. a. OpenAI-Schnittstellen, Artefakte (Einmal-Transport für die Browser-Erweiterung), Raum-Mitglieder und Nachrichten |
 | `web_routers/oauth.py` | 7 | 6 | Anmeldestatus, Anmeldung starten/abfragen, Abmelden (Anbieternamen eintippen); **nicht**: Rücksprung verarbeiten |
@@ -47,13 +48,13 @@ Von 425 Routen auf Hermes `main` (Modul, Methode, Pfad) nutzt das BFF 241 pfadge
 | `web_routers/mcp.py` | 12 | 11 | MCP testen, aktivieren, entfernen, OAuth |
 | `web_routers/config_env.py` | 15 | 14 | eigene Endpunkte, Egress-Status, Standardwerte (lesen, Geheimnisse entfernt) |
 | `web_routers/cron.py` | 14 | 13 | Zeitpläne inkl. laufenden Lauf stoppen (`cancel`) |
-| `web_routers/skills.py` | 14 | 13 | Skills |
+| `web_routers/skills.py` | 14 | 14 | Skills, inkl. Sperre gegen Änderungen des Agenten (`lock`, mit Rücklesen) |
 
 Pfadgenau heißt: ein Pfad zählt als genutzt, auch wenn nur eine seiner Methoden gebraucht wird.
 
 ## Nachtrag: Funktionen und Module, die bisher fehlten
 
-Neue Routen-Module auf Hermes `main`, die die WebUI noch nicht nutzt (Routen, genutzt): Gateway-Connections (7 und 7, je 0), Messaging-Relay (4, 0), Webapp (3, 0) und Webapp-Zugang (4, 0), Desktop-Plugins (4, 0), UI-Einstellungen (2, 0), Uploads (1, 0). Die Prüfung, welche davon eine Webober­fläche überhaupt braucht, steht aus.
+Neue Routen-Module auf Hermes `main`. Das Messaging-Relay ist seit Etappe 3 angebunden (4 von 4). Die übrigen sind bewusst nicht angebunden, weil sie die Oberfläche der Hermes-Desktop-App oder des Dashboards selbst betreffen und diese WebUI an deren Stelle tritt: Gateway-Connections samt Erreichbarkeit (14 Routen: die Liste der Gateways, die die Desktop-App kennt, mit Token, Headern und SSH; die WebUI hat eigene Host-Einträge in der Konfiguration), Webapp und Webapp-Zugang (7: Fenster-Tickets und Zugang für die Hermes-Webapp, nur für den Besitzer am Rechner), Desktop-Plugins (4), UI-Einstellungen (2: der Einstellungsspeicher der Desktop-App), Uploads (1: Chat-Datei für das Dashboard-Terminal). Ebenfalls bewusst nicht, jeweils Dashboard-eigene Oberfläche oder Betrieb von Sandboxen: `health/idle` und `health/retirement`, `profiles/sessions`, `sessions/sidebar`, `projects/tree`, `desktop-overlay`, `open-terminal` und `sessions/pull-requests` (Seitenleiste der Desktop-App), `cron/fire` (Auslöser für externe Zeitgeber), `analytics/usage` (Rohdaten, die WebUI zeigt `analytics/models`), Sitzungs-Hilfsrouten `messages/around`, `latest-descendant` und `mutation-snapshot` (die Chat-Ansicht holt Verlauf über die Gateway-Sitzungsroute), Audio-Leases und WebSockets, lokale Modelle (Katalog, Download, Server: CLI).
 
 Funktionen der Hermes-Dokumentation (`user-guide/features`), die in der Liste oben nicht vorkamen. „Slash“ heißt: im Chat über das Befehlsmenü aufrufbar, die WebUI zeigt aber keinen eigenen Zustand dazu.
 
@@ -73,7 +74,8 @@ Funktionen der Hermes-Dokumentation (`user-guide/features`), die in der Liste ob
 | Remote-Config (`remote-config`), Managed Scope (`managed-scope`) | nicht abgebildet |
 | Secrets-Anbieter (`user-guide/secrets`: Bitwarden, 1Password, Befehl) | nicht abgebildet |
 | Profil-Distributionen (`profile-distributions`) | nicht abgebildet; Profil-Import/Export ist vorhanden |
-| Messaging-Relay (`messaging/relay`, `messaging_relay.py`: 4 Routen, 0 genutzt) und A2A (`messaging/a2a`) | nicht abgebildet |
+| Messaging-Relay (`messaging/relay`, `messaging_relay.py`: 4 von 4) | abgebildet in der Messaging-Seite (`RelayPanel.tsx`, `routes/messaging_relay.py`) |
+| A2A (`messaging/a2a`) | nicht abgebildet, Etappe 4 prüft, ob Hermes dafür eine HTTP-Schnittstelle hat |
 
 Die letzten fünf Zeilen stammen aus dem Nutzerhandbuch (`website/docs/user-guide`), nicht aus der Entwickler-Doku. Diese Tabelle ist aus den Titeln und Beschreibungen der Doku abgeleitet, nicht aus einem Lauf gegen eine echte Instanz.
 
@@ -89,14 +91,14 @@ Die letzten fünf Zeilen stammen aus dem Nutzerhandbuch (`website/docs/user-guid
 | Konfiguration (`Configuration`) | abgebildet über das Schema (alle Felder, Geheimnisse ausgenommen). Roh-YAML und Standardwerte nur lesend (Etappe 1; Geheimnisse und Pfade entfernt, Schreiben bewusst nur über das Schema). Fehlt: Migration | `config_env.py`, `analytics.py` |
 | Modelle und Anbieter (`Providers`) | eigene Seite mit Schlüssel-Pools, eigenen Endpunkten, Hilfsmodellen und Mixture of Agents (`routes/endpoints.py`, `routes/credentials.py`, `routes/models.py`, `ModelsPage.tsx`, `EndpointsPage.tsx`); lokale Modelle nur lesend (Status). **Offen**: lokale Modelle installieren/laden (bewusst CLI), Delegations-Routen schreiben | `models.py`: 7 von 7; `oauth.py`: 5 von 7; `analytics.py`: 1 von 4 |
 | Werkzeuge (`Tools`) | ja: Gruppen ein-/ausschalten, Anbieter wählen (bei `web` getrennt für Suche und Extraktion), Werkzeug-Keys setzen (nur Variablen, die die Gruppe selbst nennt, nie angezeigt), Bild-/Video-Modell wählen, Terminal-Backend anzeigen. **Bewusst nicht**: Terminal-Backend umstellen, `post-setup` starten, Computer-Use-Rechte vergeben (Hermes prüft das serverseitig nicht) | `tools.py`: 9 von 12; `routes/tools.py`, `ToolsetPanel.tsx` |
-| Skills (`Skills System`) | abgebildet. Fehlt: Curator | `skills.py`: 13 von 13 |
+| Skills (`Skills System`) | abgebildet inkl. Sperre gegen den Agenten. Fehlt: Curator | `skills.py`: 14 von 14 |
 | Gedächtnis (`Memory`, `Memory Providers`) | Hindsight über einen eigenen Client **und** Hermes-Gedächtnis (`hostd/hostd/memory_files.py`, `hostd/hostd/operations.py`, `backend/app/routes/hermes_memory.py`, `HermesMemoryPage.tsx`): Inhalt von `MEMORY.md`/`USER.md` lesen und bearbeiten, SHA-256-Prüfung, 5 Sicherungen, Schreiben nur mit frischer Anmeldung. Anbieter wählen und einrichten mit echten Feld-Arten (`text/select/secret/bool/number/json`), Gruppen, Info-Texten, Options-Beschreibungen und Anbieter-Docs-Link. **Nicht**: Anbieter-Programme installieren | `routes/hermes_memory.py`, `HermesMemoryPage.tsx`; `ops.py` Gedächtnis-Routen: 3 von 3 |
 | MCP | Liste, Katalog, Installieren, Testen, Aktivieren, Entfernen, OAuth. **Nicht**: ganze `mcp_servers`-Map ersetzen (`PUT /api/mcp/servers`) | `mcp.py`, `routes/extensions.py` |
-| Plugins | Hub, Katalog, Installieren, Aktivieren, Deaktivieren, Aktualisieren, Entfernen. **Nicht**: Sichtbarkeit in der Seitenleiste, Speicher-/Kontext-Anbieter über `plugin-providers` (stehen im Einstellungs-Editor) | `dashboard_ui.py`, `routes/extensions.py` |
+| Plugins | Hub, Katalog, Installieren, Aktivieren, Deaktivieren, Aktualisieren, Entfernen. Automatisch aktualisieren (schalten) und alle aktualisieren. **Nicht**: Sichtbarkeit in der Seitenleiste des Dashboards, Speicher-/Kontext-Anbieter über `plugin-providers` (stehen im Einstellungs-Editor) | `dashboard_ui.py`: 14 von 19, `routes/extensions.py` |
 | Zeitpläne (`Cron Jobs`) | abgebildet (12 von 13 Routen); `POST /api/cron/fire` ist der NAS-Webhook (kein manueller Auslöser, bewusst nicht verdrahtet), manuell auslösen geht über `trigger`. Skript-Jobs ohne Agent (`no_agent`) lassen sich mit eingetippter Bestätigung anlegen | `cron.py`, `app/cron.py` |
 | Kanban | weitgehend (39 von 48): Board, Aufgaben, Kommentare, Verknüpfungen, Anhänge, Zerlegen/Spezifizieren/Schätzen, Läufe prüfen und beenden, Worker, Boards importieren/exportieren/archivieren/wechseln. Seit Etappe 2 unter dem Board „Kanban-Einstellungen“ (`routes/kanban_settings.py`, `KanbanSettingsPanel.tsx`): Orchestrator-Profil, Standard-Zuweisung, Auto-Zerlegen/-Freigeben, Profil-Beschreibungen, Spalten und Anzeige (lesend); je Aufgabe Heimatkanal-Benachrichtigung (`HomeChannels.tsx`). Fehlt: hartes Löschen (bewusst), Event-WebSocket. Forgejo-Issues baut ein eigener Thread | `plugins/kanban` |
 | Hooks, Webhooks, Pairing | **Pairing** (offene Anfragen freigeben nur per Anfrage-ID, Zugang sperren mit eingetippter ID) und **Webhooks** (anlegen ohne `script` und ohne eigenes Secret, Secret nur einmal sichtbar, ein-/ausschalten, löschen mit Namenseingabe, Plattform einschalten nur mit Neustart-Bestätigung). **Nicht**: Hooks (führen Shell-Befehle aus), Freigabe per Code, `clear-pending` | `routes/access.py` |
-| Delegation, Subagenten | Backend wählen (nur aus der gemeldeten Liste), Routen lesen (Schlüssel nie). **Nicht**: `model_map`/`profile_routes` schreiben (tragen Schlüssel je Route) | `delegation.py`: 2 von 4, `routes/endpoints.py` |
+| Delegation, Subagenten | Backend wählen (nur aus der gemeldeten Liste), Routen lesen (Schlüssel nie). Modell- und Profilrouten bearbeiten (Schlüssel nur schreibend, vorhandener bleibt beim Speichern, Fremdfelder wie `request_overrides` bleiben unverändert) | `delegation.py`: 4 von 4, `routes/endpoints.py`, `routes/delegation_routes.py` |
 | Messaging-Plattformen | **ja**: Liste mit Zustand, Variablen setzen/löschen (Tokens nie sichtbar), ein-/ausschalten, Verbindung prüfen, Telegram-Assistent. WhatsApp koppeln (QR-Bild, `/messaging/whatsapp/onboarding`). **Nicht**: Heimatkanal setzen, Plattform-Plugins verwalten | `routes/messaging.py`, `MessagingPage.tsx`; `messaging.py`: 11 von 11 |
 | Gateway-Betrieb | teilweise: Zustand, starten, anhalten, neu starten (Unterbrechen nur nach Bestätigung), Protokoll des Befehls, Leeren (Drain, Wort „leeren“ eintippen) und Leeren abbrechen (`routes/ops_more.py`, `OpsMore.tsx`). Umzug (Migration) nur mit eingetipptem Wort | `actions.py`: 8 von 8, `ops.py` |
 | Sprache (`Voice Mode`, `Text-to-Speech`) | eigene Seite (`VoicePage.tsx`, `routes/voice.py`): Live-Status, Vorlesen, Abschrift (Aufnahmen höchstens 1,4 MB). **Bewusst nicht**: `voice-config` (liefert Anbieter-Schlüssel), Live-Sitzungen, WebSockets | `audio.py`: 3 von 10 |
@@ -106,7 +108,7 @@ Die letzten fünf Zeilen stammen aus dem Nutzerhandbuch (`website/docs/user-guid
 | Status, Gesundheit, Systemwerte, Curator, Lerngraph | eigene Seiten (`InsightsPage.tsx` mit Systemwerten, Datenschutz und Computer-Use-Status; `LearningPage.tsx` für den Lerngraphen mit Lesen/Bearbeiten/Löschen; Curator mit Pausieren/Starten und Protokoll; `routes/insights.py`). **Nicht**: Host-Identität, Gesundheit, SSH-Besitz, Portal | `status.py`: 11 von 20; `shared_metrics.py`: 2 von 2 |
 | Räume und Bots | **eigenes Konzept der WebUI** (`rooms.db`), nicht die Raum-Funktion von Hermes (`/v1/room-members/*`) | `routes/rooms.py` |
 | Themes, Schriften, Sprachpakete von Hermes | Hermes-Themes und Schrift wählen (`InsightsPage.tsx`, `routes/insights.py`); **nicht**: eigene Theme-Dateien ablegen. Die WebUI hat eigene Themes (`ui.json`); Sprachpakete von Hermes nutzt sie nicht, die Oberfläche hat zwölf Sprachen | `dashboard_ui.py`: 11 von 16 |
-| Achievements, Pets | eigene Seite (`AchievementsPage.tsx`, `routes/achievements.py`): Liste, erneutes Prüfen, Zurücksetzen mit Schranke. Pets zeigt Hermes nicht als eigene Daten; was das Plugin liefert, steht in der Liste | `plugins/hermes-achievements`: 3 von 6 |
+| Achievements, Pets | eigene Seite (`AchievementsPage.tsx`, `routes/achievements.py`): Liste, erneutes Prüfen, Zurücksetzen mit Schranke, Prüfstand (läuft, fehlgeschlagen, ohne Pfade), zuletzt freigeschaltet, Erfolge einer Sitzung. Pets zeigt Hermes nicht als eigene Daten; was das Plugin liefert, steht in der Liste | `plugins/hermes-achievements`: 6 von 6 |
 | OpenAI-kompatible Schnittstellen (`/v1/chat/completions`, `/v1/responses`) | bewusst nicht genutzt (die WebUI nutzt die Läufe-Schnittstelle) | Gateway |
 | ACP, Hermes als Python-Bibliothek, Editor-Anbindung | kein Thema einer Weboberfläche | |
 
