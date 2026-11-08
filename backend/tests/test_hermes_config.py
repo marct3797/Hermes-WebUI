@@ -242,3 +242,17 @@ def test_a_new_or_changed_provider_entry_gets_no_foreign_secret_and_secrets_cann
     assert "api_key" not in env.dash.state.profiles["default"]["config"]["fallback_providers"][0]
     r = env.put(CFG, json={"changes": {"fallback_providers": [{"provider": "nous", "model": "m", "api_key": "sk-neu"}]}})
     assert r.status_code == 422 and "sk-neu" not in env.dash.state.profiles["default"]["config"]["fallback_providers"][0].values()
+
+
+def test_secrets_follow_provider_model_and_base_url_not_the_position(env):
+    """Zwei Einträge desselben Anbieters mit verschiedener base_url: Umsortieren und Modellwechsel dürfen die Schlüssel nicht vertauschen."""
+    env.dash.state.profiles["default"]["config"]["fallback_providers"] = [
+        {"provider": "custom", "model": "a", "base_url": "http://eins/v1", "api_key": "sk-eins"},
+        {"provider": "custom", "model": "a", "base_url": "http://zwei/v1", "api_key": "sk-zwei"}]
+    value = fields(env)["fallback_providers"]["value"]
+    value.reverse()
+    value[0]["model"] = "b"  # base_url zwei, Modell geändert
+    assert env.put(CFG, json={"changes": {"fallback_providers": value}}).status_code == 200
+    now = env.dash.state.profiles["default"]["config"]["fallback_providers"]
+    assert (now[0]["base_url"], now[0]["api_key"]) == ("http://zwei/v1", "sk-zwei")
+    assert (now[1]["base_url"], now[1]["api_key"]) == ("http://eins/v1", "sk-eins")

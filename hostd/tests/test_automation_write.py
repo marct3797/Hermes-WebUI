@@ -22,6 +22,8 @@ class Client:
             return {} if os.environ.get("FAKE_NO_ADMISSION") else {"admission_id": "a1"}
         if params["call"] == "set" and params["kind"] == "heartbeat" and params["args"][1] < 60:
             return {"error": {"type": "ValueError", "message": "interval must be at least 60s"}, "state": None}
+        if params["call"] == "state":
+            return {"value": None, "state": None}
         if params["call"] == "clear":
             return {"value": True, "state": None}
         if params["call"] == "command":
@@ -34,14 +36,20 @@ class _Ctx:
 def connect_gateway(endpoint=None, *a, **k):
     if endpoint is None:
         raise AssertionError("connect_gateway without endpoint would start a gateway")
-    return _Ctx(endpoint)
+    return _Ctx({"url": endpoint.url, "control_home": endpoint.control_home})
 '''
 RUNTIME = '''
 import os
+import dataclasses
+@dataclasses.dataclass(frozen=True)
+class Endpoint:
+    url: str
+    control_home: str | None = None
 class Found:
     def __init__(self):
         down = os.environ.get("FAKE_GATEWAY") == "down"
-        self.state, self.reason_code, self.endpoint = ("not_running", "no_owner", None) if down else ("ready", None, "ws://127.0.0.1:1")
+        own = os.environ.get("FAKE_CONTROL_HOME")  # Multiplexer: der Endpunkt nennt schon einen Steuer-Ordner
+        self.state, self.reason_code, self.endpoint = ("not_running", "no_owner", None) if down else ("ready", None, Endpoint("ws://127.0.0.1:1", own))
 def discover_gateway_endpoint(home, timeout=2.0): return Found()
 def attachable(found): return found.endpoint is not None and found.state == "ready"
 def gateway_profile_home(home): return home
@@ -92,7 +100,8 @@ def test_goal_set_resumes_the_session_then_calls_session_automation(tmp_path, mo
     assert r.json()['started'] is True
     done = calls(log)
     assert [c[0] for c in done] == ['connect_gateway', 'session.resume', 'session.automation', 'prompt.submit']
-    assert done[0][1] == {'endpoint': 'ws://127.0.0.1:1'}  # nie ohne Endpunkt: hostd startet keinen Gateway
+    assert done[0][1]['endpoint']['url'] == 'ws://127.0.0.1:1'  # nie ohne Endpunkt: hostd startet keinen Gateway
+    assert done[0][1]['endpoint']['control_home'] == str((tmp_path / 'p').resolve())  # Profil ohne eigenen Steuer-Ordner: wie das Dashboard von Hermes setzen
     assert done[2][1] == {'session_id': 'live-s1', 'kind': 'goal', 'call': 'set', 'args': ['Alle Tests grün'], 'kwargs': {'max_turns': 12}}
     assert done[3][1]['text'] == 'Alle Tests grün' and done[3][1]['session_id'] == 'live-s1' and done[3][1]['queued'] is True
 
@@ -180,3 +189,24 @@ def test_no_running_gateway_means_503_and_nothing_is_started(tmp_path, monkeypat
     r = post(client, kind='goal', action='set', text='Ziel')
     assert r.status_code == 503
     assert calls(log) == []  # weder verbunden noch gestartet
+
+
+def test_multiplexer_control_home_from_discovery_is_kept(tmp_path, monkeypatch):
+    monkeypatch.setenv('FAKE_CONTROL_HOME', '/srv/mux-root')
+    client, log = setup(tmp_path, monkeypatch)
+    assert post(client, kind='goal', action='pause').status_code == 200
+    assert calls(log)[0][1]['endpoint']['control_home'] == '/srv/mux-root'
+
+
+def test_probe_tool_runs_the_same_helper(tmp_path, monkeypatch):
+    """Das Prüfwerkzeug für den Laptop nutzt den echten Helfer (hier mit dem Ersatz-Paket)."""
+    import subprocess
+    from pathlib import Path
+    _, log = setup(tmp_path, monkeypatch)
+    tool = Path(__file__).resolve().parent.parent / 'tools' / 'probe_automation.py'
+    base = [sys.executable, str(tool), '--python', sys.executable, '--home', str(tmp_path / 'p'), '--source', str(tmp_path / 'src'), '--session', 's1']
+    read = subprocess.run(base, capture_output=True, text=True, env={**__import__('os').environ, 'FAKE_LOG': str(log)})
+    assert read.returncode == 0, read.stdout + read.stderr
+    assert 'prompt.submit' not in [c[0] for c in calls(log)]  # Standard: nur lesen, kein Lauf
+    wrote = subprocess.run(base + ['--set', 'Probe-Ziel'], capture_output=True, text=True, env={**__import__('os').environ, 'FAKE_LOG': str(log)})
+    assert wrote.returncode == 0 and calls(log)[-1][0] == 'prompt.submit'

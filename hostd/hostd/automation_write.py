@@ -22,7 +22,8 @@ CALLS = {('goal', 'set'): 'set', ('goal', 'pause'): 'pause', ('goal', 'resume'):
          ('heartbeat', 'set'): 'set', ('heartbeat', 'pause'): 'pause', ('heartbeat', 'resume'): 'resume', ('heartbeat', 'clear'): 'clear',
          ('loop', 'pause'): 'pause', ('loop', 'resume'): 'resume', ('loop', 'clear'): 'clear'}
 
-SCRIPT = r"""import sys, json, asyncio, uuid
+SCRIPT = r"""import sys, json, asyncio, uuid, dataclasses
+from pathlib import Path
 if sys.argv[1]:
     sys.path.insert(0, sys.argv[1])
 try:
@@ -35,10 +36,15 @@ async def main():
     from hermes_cli.gateway_client import connect_gateway
     from hermes_cli.gateway_runtime import attachable, discover_gateway_endpoint, gateway_profile_home
     from hermes_constants import get_hermes_home
-    found = discover_gateway_endpoint(gateway_profile_home(get_hermes_home()), timeout=2.0)
+    home = gateway_profile_home(get_hermes_home())
+    found = discover_gateway_endpoint(home, timeout=2.0)
     if not attachable(found):
         raise RuntimeError('gateway_not_running: ' + str(getattr(found, 'state', '')) + ' ' + str(getattr(found, 'reason_code', '')))
-    async with connect_gateway(found.endpoint) as client:
+    endpoint = found.endpoint
+    if not getattr(endpoint, 'control_home', True):
+        # Wie das Dashboard von Hermes: antwortet das gewählte Profil auf einem eigenen Socket (vom Multiplexer bedient), das Ticket dort prägen lassen.
+        endpoint = dataclasses.replace(endpoint, control_home=str(Path(home).expanduser().resolve()))
+    async with connect_gateway(endpoint) as client:
         snapshot = await client.rpc('session.resume', session_id=req['session_id'])
         live = snapshot.get('session_id') or snapshot.get('stored_session_id') or req['session_id']
         reply = await client.rpc('session.automation', session_id=live, kind=req['kind'], call=req['call'],

@@ -55,20 +55,36 @@ def has_secret(value: Any) -> bool:
 
 def restore(new: Any, old: Any) -> Any:
     """Listeneinträge, die wir ohne Geheimnisse ausgeliefert haben, bekommen sie beim Speichern aus dem gespeicherten Stand zurück
-    (gleiche Stelle und gleicher Anbieter; sonst der einzige Eintrag dieses Anbieters; sonst gleicher Anbieter mit gleichem Modell). Ein neuer Eintrag bekommt nichts."""
+    (Anbieter+Modell+base_url, dann Anbieter+base_url, dann Anbieter+Modell, zuletzt die Stelle). Ein neuer Eintrag bekommt nichts."""
     if not (isinstance(new, list) and isinstance(old, list)):
         return new
+    taken: set[int] = set()
+    # Strenge Zuordnung zuerst (Anbieter, Modell und base_url), dann lockerer; die Stelle zählt zuletzt, damit Umsortieren keine Schlüssel vertauscht.
+    rules = (lambda e, o: all(e.get(k) == o.get(k) for k in ("provider", "model", "base_url")),
+             lambda e, o: e.get("provider") == o.get("provider") and e.get("base_url") == o.get("base_url"),
+             lambda e, o: e.get("provider") == o.get("provider") and e.get("model") == o.get("model"))
+    match: dict[int, int] = {}
+    for rule in rules:
+        for i, entry in enumerate(new):
+            if i in match or not (isinstance(entry, dict) and "provider" in entry):
+                continue
+            hits = [j for j, o in enumerate(old) if j not in taken and isinstance(o, dict) and rule(entry, o)]
+            if len(hits) == 1:
+                match[i] = hits[0]
+                taken.add(hits[0])
+    for i, entry in enumerate(new):  # Rest: gleiche Stelle und gleicher Anbieter, sonst der einzige noch freie Eintrag dieses Anbieters
+        if i in match or not (isinstance(entry, dict) and "provider" in entry):
+            continue
+        free = [j for j, o in enumerate(old) if j not in taken and isinstance(o, dict) and o.get("provider") == entry.get("provider")]
+        pick = i if i in free else free[0] if len(free) == 1 else None
+        if pick is not None:
+            match[i] = pick
+            taken.add(pick)
     out = []
     for i, entry in enumerate(new):
-        if not (isinstance(entry, dict) and "provider" in entry):
-            out.append(entry)
-            continue
-        same = lambda o: isinstance(o, dict) and o.get("provider") == entry.get("provider")
-        same_provider = [o for o in old if same(o)]
-        match = (old[i] if i < len(old) and same(old[i]) else same_provider[0] if len(same_provider) == 1
-                 else next((o for o in same_provider if o.get("model") == entry.get("model")), None))
-        secrets = {k: v for k, v in (match or {}).items() if isinstance(v, str) and SECRET_RE.search(k) and k not in entry}
-        out.append({**entry, **secrets})
+        found = old[match[i]] if i in match else {}
+        secrets = {k: v for k, v in found.items() if isinstance(v, str) and SECRET_RE.search(k) and k not in entry}
+        out.append({**entry, **secrets} if isinstance(entry, dict) else entry)
     return out
 
 
