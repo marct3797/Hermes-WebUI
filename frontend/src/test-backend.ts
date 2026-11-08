@@ -184,6 +184,7 @@ export type DashState = {
   routing: { sort: string | null; only: string[]; ignore: string[]; order: string[]; require_parameters: boolean; data_collection: string | null }; routingModels: string[];
   auto: Array<Record<string, unknown>>; autoOld: boolean;
   dist: { off: boolean; sources: Array<{ id: string; label: string; source: string }>; existing: boolean; installs: Array<Record<string, unknown>> }; // Distributionen
+  peers: { off: boolean; rows: Array<{ name: string; url: string; note: string; has_key: boolean }>; sent: unknown[]; keys: string[] }; // Bot-Modus-Peers
   vault: { off: boolean; items: Array<Record<string, unknown>>; enabled: Record<string, boolean>; refs: Record<string, string>; added: unknown[] }; // Tresor und Secrets-Anbieter
   keys: Record<string, string>; // gesetzte Anbieter-Keys (Variable → Wert); der Wert verlässt die Attrappe nie
   loggedIn: Set<string>; // Anbieter mit Anmeldung (Codex ist von Anfang an angemeldet)
@@ -402,6 +403,22 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
     if (path === "/distributions/preview" && method === "POST") return json({ preview: { name: body?.name ?? body?.profile, version: "1.2.0", description: "Späher", files: ["SOUL.md", "mcp.json"], file_count: 2, has_mcp: true, has_cron: false, existing: d.existing, existing_is_distribution: false, preserves_config: d.existing, risky_config: ["hooks"], extra_top_level: ["plugins"], source: d.sources[0]?.source, digest: "a".repeat(64), env_requires: [{ name: "API_KEY", description: "", required: true }] } });
     const chg = /^\/distributions\/(install|update)$/.exec(path);
     if (chg && method === "POST") { d.installs.push({ action: chg[1], ...body }); return json({ ok: true, name: body?.name ?? body?.profile, version: "1.2.0" }); }
+  }
+  if (path === "/peers" || path.startsWith("/peers/")) {
+    const p = dash.peers;
+    if (p.off) return json({ detail: "Für dieses Profil nicht freigeschaltet. Setze allow_peers in der hostd-Konfiguration." }, 403);
+    if (path === "/peers" && method === "GET") return json({ peers: p.rows });
+    if (path === "/peers" && method === "POST") {
+      if (body?.key) p.keys.push(String(body.key));
+      const row = { name: String(body?.name), url: String(body?.url).replace(/\/$/, ""), note: String(body?.note ?? ""), has_key: true };
+      p.rows = [...p.rows.filter((r) => r.name !== row.name), row];
+      return json({ ok: true, peer: row });
+    }
+    const rm = /^\/peers\/([^?]+)/.exec(path);
+    if (rm && method === "DELETE") { p.rows = p.rows.filter((r) => r.name !== decodeURIComponent(rm[1])); return json({ ok: true }); }
+    if (path === "/peers/send" && method === "POST") { p.sent.push(body); return json({ ok: true, peer: "spark", run_id: "run_1", status: "started", session_id: "s1" }); }
+    if (path === "/peers/status" && method === "POST") return json({ ok: true, run_id: body?.run_id, status: "completed", output: "Antwort vom Peer" });
+    if (path === "/peers/stop" && method === "POST") return json({ ok: true, run_id: body?.run_id, status: "stopped" });
   }
   if (path === "/vault" || path.startsWith("/vault/") || path.startsWith("/secrets/")) {
     const v = dash.vault;
@@ -906,6 +923,7 @@ export function installBackend(agents: string[] = ["gamma"], features = ["runs",
     history: [], versions: {}, stepUp: false, routing: { sort: null, only: [], ignore: [], order: [], require_parameters: false, data_collection: null }, routingModels: ["anthropic/x"],
     autoOld: false,
     dist: { off: false, sources: [{ id: "team", label: "Team", source: "https://git.example.org/team/profile.git" }], existing: false, installs: [] },
+    peers: { off: false, rows: [{ name: "spark", url: "http://spark.lan:8377", note: "Labor", has_key: true }], sent: [], keys: [] },
     vault: { off: false, items: [{ id: "vault_aaa", kind: "login", label: "GitHub", origin: "https://github.com", identifier: "a@b.de", identifier_type: "email" }], enabled: { bitwarden: true, onepassword: true }, refs: {}, added: [] },
     auto: [
       { kind: "goal", session_id: "s1", title: "Release prüfen", text: "Alle Tests grün", status: "active", turns_used: 3, max_turns: 20, gates: 1, subgoals: ["ruff sauber"], last_reason: "noch 2 rot", last_turn_at: Date.now() / 1000 - 120 },
