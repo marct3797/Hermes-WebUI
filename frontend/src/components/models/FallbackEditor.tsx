@@ -5,7 +5,8 @@ import { useAction } from "../useAction";
 import { t } from "../../i18n";
 import type { AgentRef, MdOptions } from "../../types";
 
-type Entry = { provider: string; model: string };
+/** Weitere Felder (base_url, api_key_env, reasoning_echo …) bleiben beim Speichern unverändert erhalten. */
+type Entry = { provider: string; model: string; [extra: string]: unknown };
 const MAX = 10;
 
 /** Ersatz-Anbieter in Reihenfolge (`fallback_providers`) und Mindest-Wartezeit (`fallback.min_switch_reset_seconds`): läuft über die Einstellungen des Profils. */
@@ -27,8 +28,8 @@ export function FallbackEditor({ agent, opts }: { agent: AgentRef; opts: MdOptio
       const min = c.fields.find((f) => f.key === "fallback.min_switch_reset_seconds");
       setMissing(!list); setHasMin(!!min);
       const rows = Array.isArray(list?.value) ? (list!.value as unknown[]).filter((e): e is Entry => !!e && typeof (e as Entry).provider === "string" && typeof (e as Entry).model === "string") : [];
-      setEntries(rows.map((e) => ({ provider: e.provider, model: e.model })));
-      setSaved(JSON.stringify(rows.map((e) => ({ provider: e.provider, model: e.model }))));
+      setEntries(rows.map((e) => ({ ...e })));
+      setSaved(JSON.stringify(rows));
       const m = String(typeof min?.value === "number" ? min.value : 0);
       setMinReset(m); setSavedMin(m);
     }, (e: Error) => { if (!stop) setLoadErr(e.message); });
@@ -47,7 +48,7 @@ export function FallbackEditor({ agent, opts }: { agent: AgentRef; opts: MdOptio
   const bad = entries.some((e) => !e.provider.trim() || !e.model.trim()) || dup || (hasMin && (!Number.isInteger(seconds) || seconds < 0));
   const dirty = JSON.stringify(entries) !== saved || minReset !== savedMin;
   const save = () => run(async () => {
-    const clean = entries.map((e) => ({ provider: e.provider.trim(), model: e.model.trim() }));
+    const clean = entries.map((e) => ({ ...e, provider: e.provider.trim(), model: e.model.trim() }));
     await api.saveHermesConfig(agent, hasMin ? { fallback_providers: clean, "fallback.min_switch_reset_seconds": seconds } : { fallback_providers: clean });
     setEntries(clean); setSaved(JSON.stringify(clean)); setMinReset(String(seconds)); setSavedMin(String(seconds));
   });
@@ -61,7 +62,7 @@ export function FallbackEditor({ agent, opts }: { agent: AgentRef; opts: MdOptio
           return (
             <li key={i} className="card ext-detail">
               <label>{t("Anbieter")}
-                <select className="field" value={e.provider} onChange={(ev) => patch(i, { provider: ev.target.value, model: "" })} aria-label={t("Anbieter {n}", { n: i + 1 })}>
+                <select className="field" value={e.provider} onChange={(ev) => setEntries(entries.map((x, k) => (k === i ? { provider: ev.target.value, model: "" } : x)))} aria-label={t("Anbieter {n}", { n: i + 1 })}>
                   {!info && <option value={e.provider}>{e.provider || "–"}</option>}
                   {providers.map((p) => <option key={p.slug} value={p.slug}>{p.name}</option>)}
                 </select>

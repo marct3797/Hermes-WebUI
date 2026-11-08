@@ -84,4 +84,16 @@ describe("Modelle", () => {
     expect(body.changes.fallback_providers).toHaveLength(1);
     expect(body.changes.fallback_providers[0].model).toBe("claude-small");
   });
+
+  it("keeps unknown fields of existing fallback entries when saving", async () => {
+    backend = installBackend(["gamma"]);
+    backend.dash.config.fallback_providers = [{ provider: "custom", model: "m1", base_url: "http://x/v1", api_key_env: "X_KEY", reasoning_echo: true }];
+    history.pushState(null, "", "/h/server/hermes/gamma/modelle");
+    render(<App />);
+    fireEvent.change(await screen.findByLabelText("Modell 1"), { target: { value: "m2" } });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(sent("PUT", "/config")).toHaveLength(1));
+    const body = sent("PUT", "/config")[0].body as { changes: Record<string, any> };
+    expect(body.changes.fallback_providers).toEqual([{ provider: "custom", model: "m2", base_url: "http://x/v1", api_key_env: "X_KEY", reasoning_echo: true }]);
+  });
 });
