@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from . import workspace as files
 from . import memory_files as memfiles
-from . import native, sessions
+from . import automation, native, sessions
 
 router = APIRouter(prefix='/v1')
 
@@ -146,6 +146,11 @@ class MemoryWrite(BaseModel):
     model_config = ConfigDict(extra='forbid')
     content: str = Field(max_length=1100000)
     expected_sha256: str = Field(pattern=r'^[0-9a-f]{64}$')
+
+
+@router.get('/profiles/{profile}/automation')
+def automation_list(profile: str, request: Request):
+    return automation.read(memfiles.profile_root(request.app.state.settings, profile))
 
 
 @router.get('/profiles/{profile}/memory-files')

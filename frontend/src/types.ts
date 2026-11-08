@@ -214,6 +214,13 @@ export type ShellHooks = { hooks: ShellHook[]; valid_events: string[] };
 
 /** Eingebautes Hermes-Gedächtnis (nur Dateigrößen) und externe Anbieter. Geheimnisfelder haben nie einen Wert, nur `is_set`. */
 export type HmProvider = { name: string; label?: string; docs_url?: string | null; description?: string; status?: string; configured: boolean; available: boolean; required_env: string[]; missing: Array<{ name: string; install: string }> };
+export type AutomationItem = {
+  kind: "goal" | "heartbeat" | "loop"; session_id: string; title: string; text: string; status: string | null;
+  turns_used?: number | null; max_turns?: number | null; last_verdict?: string | null; last_reason?: string | null; paused_reason?: string | null;
+  subgoals?: string[]; gates?: number; interval_seconds?: number | null; fire_count?: number | null; ticks_fired?: number | null; mode?: string | null;
+  until?: string | null; times?: number | null; last_turn_at?: number | null; last_fired_at?: number | null; next_due_at?: number | null; created_at?: number | null;
+};
+export type AutomationResp = { items: AutomationItem[]; truncated: boolean; available: boolean; reason: string | null };
 export type HmOverview = { active: string; providers: HmProvider[]; files: { memory: number; user: number } };
 export type HmField = { key: string; label?: string; kind: string; description?: string; info?: string; inline?: boolean; group?: string; placeholder?: string; required?: boolean; is_set: boolean; options: Array<{ value: string; label?: string; description?: string }>; url?: string | null; value?: string | boolean | number };
 export type HmFileName = "MEMORY.md" | "USER.md";

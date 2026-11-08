@@ -75,6 +75,7 @@ const MODULES = [
   { module: "skills", get label() { return t("Skills"); }, icon: "layers" },
   { module: "tools", get label() { return t("Werkzeuge"); }, icon: "wrench" },
   { module: "messaging", get label() { return t("Messaging"); }, icon: "send" },
+  { module: "automation", get label() { return t("Ziele und Schleifen"); }, icon: "spark" },
   { module: "hermes-memory", get label() { return t("Hermes-Gedächtnis"); }, icon: "memory" },
 ] as const;
 

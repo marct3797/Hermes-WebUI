@@ -497,6 +497,10 @@ function dashboardRoute(rest: string, method: string, agent: string, dash: DashS
     }
     return json({ detail: "Unbekannte Modell-Route" }, 404);
   }
+  if (path === "/automation") return json({ available: true, truncated: false, reason: null, items: [
+    { kind: "goal", session_id: "s1", title: "Release prüfen", text: "Alle Tests grün", status: "active", turns_used: 3, max_turns: 20, gates: 1, subgoals: ["ruff sauber"], last_reason: "noch 2 rot", last_turn_at: Date.now() / 1000 - 120 },
+    { kind: "heartbeat", session_id: "s1", title: "Release prüfen", text: "CI prüfen", status: "paused", interval_seconds: 600, fire_count: 4 },
+  ] });
   if (/^\/hermes-(credentials|voice|system|computer-use|curator|learning|appearance|privacy)/.test(path)) {
     if (!dash.available) return json({ detail: "Für diesen Host ist kein Dashboard eingerichtet" }, 501);
     const x = dash.p3;

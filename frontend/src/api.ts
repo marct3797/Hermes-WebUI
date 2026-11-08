@@ -1,6 +1,6 @@
 import { invalidate } from "./dataCache";
 import { getPreferences } from "./preferences";
-import type { AcCreated, AcHooks, AcPairing, SaPreview, SaStats, SaTimeline, EpDelegation, EpList, EpLocal, EpValidate, LcCreated, LcList, MdAuxiliary, MdInfo, MdMoa, MdOptions, MdRecommended, MdSetResult, HmField, HmFile, HmFileList, HmFileName, HmFileSaved, HmOverview, GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, WhatsAppPairing, ComputerUse, ShellHooks, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
+import type { AutomationResp, AcCreated, AcHooks, AcPairing, SaPreview, SaStats, SaTimeline, EpDelegation, EpList, EpLocal, EpValidate, LcCreated, LcList, MdAuxiliary, MdInfo, MdMoa, MdOptions, MdRecommended, MdSetResult, HmField, HmFile, HmFileList, HmFileName, HmFileSaved, HmOverview, GatewayAction, GatewayState, MsgPlatform, TelegramPairing, TelegramPoll, WhatsAppPairing, ComputerUse, ShellHooks, HermesConfig, TerminalBackends, ToolConfig, ToolModels, ToolsetRow, AgentRef, AgentStatus, CliAuth, Security, Decision, DiagReport, HostsResponse, KnowledgeDocs, KnowledgeHit, KnowledgeProvider, KnowledgeSources, KnowledgeStats, MemEntity, MemGraph, MemSeries, MemItem, MemModel, MemPage, MemProvider, Me, ProfileInput, SoulSaved, SoulState, SoulVersion, DashboardStatus, KeyCheck, ModelProvider, OAuthPoll, OAuthStart, ProviderMatrix, ProvidersOverview, Quota, QuotaSummary, Room, RoomMessage, ShaderConfig, UiConfig } from "./types";
 import { t, tm } from "./i18n";
 
 export class ApiError extends Error {
@@ -180,6 +180,7 @@ export const api = {
   deleteHook: (a: AgentRef, body: { event: string; command: string; confirm: string }) => call<{ ok: boolean }>("DELETE", `${base(a)}/hermes-hooks`, body),
   deleteEnv: (a: AgentRef, key: string) => call<{ ok: boolean; key: string }>("DELETE", `${base(a)}/env/${encodeURIComponent(key)}`, { key, confirm: key }),
   hmSetup: (a: AgentRef, name: string) => call<{ ok: boolean; provider: string }>("POST", `${base(a)}/hermes-memory/providers/${encodeURIComponent(name)}/setup`, { confirm: "einrichten" }),
+  automation: (a: AgentRef) => call<AutomationResp>("GET", `${base(a)}/automation`),
   hmOverview: (a: AgentRef) => call<HmOverview>("GET", `${base(a)}/hermes-memory`),
   hmSetProvider: (a: AgentRef, provider: string) => call<{ ok: boolean; active: string }>("PUT", `${base(a)}/hermes-memory/provider`, { provider }),
   hmReset: (a: AgentRef, target: "all" | "memory" | "user", confirm: string) => call<{ ok: boolean; deleted: string[] }>("POST", `${base(a)}/hermes-memory/reset`, { target, confirm }),
