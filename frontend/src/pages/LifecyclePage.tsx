@@ -3,6 +3,7 @@ import { ApiError, api } from "../api";
 import { Icon } from "../components/Icon";
 import { PageHead } from "../components/PageHead";
 import { OpsMore } from "../components/OpsMore";
+import { DistributionPanel } from "../components/DistributionPanel";
 import { useAction } from "../useAction";
 import type { AgentRef, LcEntry } from "../types";
 import { t } from "../i18n";
@@ -39,6 +40,7 @@ export function LifecyclePage({ agent, label }: { agent: AgentRef; label: string
       {loadError && <p className="banner" role="alert"><Icon name="alert" />{loadError}</p>}
       {!profiles && !loadError && !loadMissing && <p className="muted">{t("Lade…")}</p>}
       {profiles && <Create agent={agent} onDone={() => void load()} />}
+      {profiles && <DistributionPanel agent={agent} onDone={() => void load()} />}
       {profiles && <List agent={agent} profiles={profiles} active={active} onDone={() => void load()} />}
       {profiles && <Ops agent={agent} agentName={agent.agent} />}
     </main>

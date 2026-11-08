@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from . import workspace as files
 from . import memory_files as memfiles
-from . import automation, automation_write, credentials, native, sessions
+from . import automation, automation_write, credentials, distributions, native, sessions
 
 router = APIRouter(prefix='/v1')
 
@@ -343,3 +343,25 @@ class SecretsAct(BaseModel):
 def secrets_act(profile: str, body: SecretsAct, request: Request):
     settings = request.app.state.settings
     return credentials.secrets(settings, selected(settings, 'profiles', profile), body.provider, body.action, body.env_var, body.reference)
+
+
+class DistributionAct(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    source_id: str = Field(pattern=r'^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$')
+    name: str | None = Field(default=None, pattern=r'^[a-z0-9][a-z0-9_-]{0,63}$')
+    profile: str | None = Field(default=None, pattern=r'^[a-z0-9][a-z0-9_-]{0,63}$')
+    digest: str | None = Field(default=None, pattern=r'^[0-9a-f]{64}$')
+    force: bool = False
+    force_config: bool = False
+
+
+@router.get('/profiles/{profile}/distributions')
+def distribution_sources(profile: str, request: Request):
+    settings = request.app.state.settings
+    return distributions.listing(settings, selected(settings, 'profiles', profile))
+
+
+@router.post('/profiles/{profile}/distributions/{action}')
+def distribution_act(profile: str, action: Literal['preview', 'install', 'update'], body: DistributionAct, request: Request):
+    settings = request.app.state.settings
+    return distributions.act(settings, selected(settings, 'profiles', profile), action, body.source_id, body.name, body.profile, body.digest, body.force, body.force_config)
