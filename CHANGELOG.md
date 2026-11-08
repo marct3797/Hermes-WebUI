@@ -3,7 +3,7 @@
 ## Unveröffentlicht
 
 ### Neu
-- Kanban: Reiter „Forgejo-Issues“ als eigenes Board neben dem Hermes-Board (Lesen, Anlegen, Bearbeiten, Verschieben, Kommentieren über das BFF; Token nur als Umgebungsvariable, Freigabeliste der Repos, Step-up und Audit). Übersetzungen der neuen Texte stehen noch aus (Rückfall auf Deutsch).
+- Kanban: Reiter „Forgejo-Issues“ als eigenes Board neben dem Hermes-Board (Lesen, Anlegen, Bearbeiten, Verschieben, Kommentieren über das BFF; Token nur als Umgebungsvariable, Freigabeliste der Repos, Step-up und Audit). Oberflächentexte in allen 11 Sprachen; Fehlermeldungen des BFF fallen auf Deutsch zurück.
 
 ### Behoben
 - Datums-, Zeit- und Zahlenformate sowie „vor 5 Min“ folgen der gewählten Oberflächensprache (vorher fest Deutsch, dadurch Sprachmix mit englischer Oberfläche).
