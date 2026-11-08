@@ -68,6 +68,7 @@ const MODULES = [
   { module: "endpunkte", get label() { return t("Eigene Endpunkte"); }, icon: "spark" },
   { module: "sitzungen-verwalten", get label() { return t("Sitzungen verwalten"); }, icon: "spark" },
   { module: "zugang", get label() { return t("Zugang und Webhooks"); }, icon: "spark" },
+  { module: "tresor", get label() { return t("Tresor und Geheimnisse"); }, icon: "spark" },
   { module: "sprache", get label() { return t("Sprache"); }, icon: "spark" },
   { module: "lerngraph", get label() { return t("Lerngraph"); }, icon: "spark" },
   { module: "einblicke", get label() { return t("System und Datenschutz"); }, icon: "spark" },

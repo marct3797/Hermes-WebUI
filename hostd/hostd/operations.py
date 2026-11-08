@@ -1,6 +1,7 @@
 """Operations router; mount inside the daemon's bearer/origin boundary."""
 import hashlib
 import os
+import re
 import stat
 from contextlib import contextmanager
 from pathlib import Path
@@ -8,11 +9,11 @@ from typing import Literal
 from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from . import workspace as files
 from . import memory_files as memfiles
-from . import automation, automation_write, native, sessions
+from . import automation, automation_write, credentials, native, sessions
 
 router = APIRouter(prefix='/v1')
 
@@ -283,3 +284,62 @@ def _memory_store(sub, name, data, expected, *, existed, mode=0o600):
 def management_action(request: Request, profile: str, kind: str, action: str, body: Action):
     settings = request.app.state.settings
     return native.act(settings, selected(settings, 'profiles', profile), kind, action, body.id)
+
+
+VAULT_FIELDS = ('identifier_type', 'identifier', 'password', 'otp_secret', 'card_number', 'cardholder_name', 'exp_month', 'exp_year', 'cvc',
+                'billing_postal_code', 'address_line1', 'address_line2', 'city', 'state', 'postal_code', 'country')
+
+
+class VaultAdd(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    kind: Literal['login', 'payment', 'address']
+    label: str = Field(min_length=1, max_length=200)
+    origin: str = Field(default='', max_length=500)
+    secret: dict[str, str] = Field(max_length=20)
+
+    @field_validator('secret')
+    @classmethod
+    def _fields(cls, v):
+        if any(k not in VAULT_FIELDS or len(x) > 2000 for k, x in v.items()):
+            raise ValueError('unknown or too long field')
+        return v
+
+
+@router.get('/profiles/{profile}/vault')
+def vault_list(profile: str, request: Request):
+    settings = request.app.state.settings
+    reply = credentials.vault(settings, selected(settings, 'profiles', profile), {'action': 'list'})
+    return {'items': reply.get('items') or [], 'key_storage': reply.get('key_storage')}
+
+
+@router.post('/profiles/{profile}/vault')
+def vault_add(profile: str, body: VaultAdd, request: Request):
+    settings = request.app.state.settings
+    reply = credentials.vault(settings, selected(settings, 'profiles', profile),
+                              {'action': 'add', 'kind': body.kind, 'label': body.label, 'origin': body.origin, 'secret': body.secret})
+    return {'ok': True, 'item': reply.get('item')}
+
+
+@router.delete('/profiles/{profile}/vault/{item}')
+def vault_remove(profile: str, item: str, request: Request):
+    if not re.fullmatch(r'[A-Za-z0-9_-]{1,64}', item):
+        raise HTTPException(422, 'Invalid item id')
+    settings = request.app.state.settings
+    reply = credentials.vault(settings, selected(settings, 'profiles', profile), {'action': 'remove', 'id': item})
+    if reply.get('removed') is not True:
+        raise HTTPException(404, 'No such vault item')
+    return {'ok': True}
+
+
+class SecretsAct(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    provider: Literal['bitwarden', 'onepassword']
+    action: Literal['status', 'sync', 'disable', 'set', 'remove']
+    env_var: str | None = Field(default=None, max_length=100)
+    reference: str | None = Field(default=None, max_length=500)
+
+
+@router.post('/profiles/{profile}/secrets')
+def secrets_act(profile: str, body: SecretsAct, request: Request):
+    settings = request.app.state.settings
+    return credentials.secrets(settings, selected(settings, 'profiles', profile), body.provider, body.action, body.env_var, body.reference)
